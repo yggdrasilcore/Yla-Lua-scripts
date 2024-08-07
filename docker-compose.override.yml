@@ -1,0 +1,10 @@
+services:
+  ac-worldserver:
+    volumes:
+      - ./ygg_confs/lua_scripts:/azerothcore/lua_scripts
+      - ${DOCKER_VOL_DATA:-ac-client-data}:/azerothcore/env/dist/data
+    env_file:
+      - ygg_confs/worldserver.env
+      - ygg_confs/ahbot.env
+      - ygg_confs/eluna.env
+      - ygg_confs/transmog.env
