@@ -4,7 +4,7 @@
 local EnableModule = true
 
 local MaxPlayerLevel = 80   -- Max player level change to your liking.
-local GM_RANK_REQ = 2 
+local GM_RANK_REQ = 3
 
 local AutoDualSpec = false   -- Auto learn Dual Specialization
 local AutoRiding = false     -- Auto learn Riding
@@ -27,7 +27,7 @@ local NorthrendFlyLevel = 77 -- Which level to learn Cold Weather Flying
     Function: When the player levels up, automatically learn the skills of the corresponding level
     Completely remade by kebabstorm
     Code edits and update missin spells by clotic
-	Conditionals for GM rank added by mostly nick :)
+    Conditionals for GM rank added by mostly nick :)
 ]]
 if (not EnableModule) then
     return
