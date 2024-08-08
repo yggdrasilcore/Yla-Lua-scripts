@@ -18,6 +18,11 @@ local petTypes = {
     [26125] = "Raise Dead pet"  -- For Death Knight
 }
 
+-- New constants for INTID ranges
+local MENU_OFFSET = 100000
+local PET_TYPE_OFFSET = MENU_OFFSET + 100
+local PAGE_CONTROL_OFFSET = MENU_OFFSET + 200
+
 -- Function to load pet names from the database and sort them
 local function LoadPetNames()
     local query = WorldDBQuery("SELECT id, word, entry, half FROM pet_name_generation")
@@ -46,43 +51,43 @@ LoadPetNames()
 local function OnPlayerCommand(event, player, command)
     if command == "petname" then
         player:GossipClearMenu()
-        player:GossipMenuAddItem(4, "How does this work?", 0, 1)
+        player:GossipMenuAddItem(4, "How does this work?", 0, MENU_OFFSET + 1)
         
         if player:GetClass() == 9 then -- Warlock
-            player:GossipMenuAddItem(0, "Imp", 0, 416)
-            player:GossipMenuAddItem(0, "Felhunter", 0, 417)
-            player:GossipMenuAddItem(0, "Voidwalker", 0, 1860)
-            player:GossipMenuAddItem(0, "Succubus", 0, 1863)
-            player:GossipMenuAddItem(0, "Felguard", 0, 17252)
+            player:GossipMenuAddItem(0, "Imp", 0, PET_TYPE_OFFSET + 416)
+            player:GossipMenuAddItem(0, "Felhunter", 0, PET_TYPE_OFFSET + 417)
+            player:GossipMenuAddItem(0, "Voidwalker", 0, PET_TYPE_OFFSET + 1860)
+            player:GossipMenuAddItem(0, "Succubus", 0, PET_TYPE_OFFSET + 1863)
+            player:GossipMenuAddItem(0, "Felguard", 0, PET_TYPE_OFFSET + 17252)
         elseif player:GetClass() == 6 then -- Death Knight
-            player:GossipMenuAddItem(0, "What do you want to rename your undead pet to?", 0, 6)
+            player:GossipMenuAddItem(0, "What do you want to rename your undead pet to?", 0, PET_TYPE_OFFSET + 26125)
         end
         
-        player:GossipMenuAddItem(4, "Nevermind", 0, 2)
+        player:GossipMenuAddItem(4, "Nevermind", 0, MENU_OFFSET + 2)
         player:GossipSendMenu(1, player, 60)
     end
 end
 
 local function OnGossipHello(event, player, creature)
-	if player:GetClass() == 9 or player:GetClass() == 6 then
-		player:GossipClearMenu()
-		player:GossipMenuAddItem(4, "How does this work?", 0, 1)
-		
-		if player:GetClass() == 9 then -- Warlock
-			player:GossipMenuAddItem(0, "Imp", 0, 416)
-			player:GossipMenuAddItem(0, "Felhunter", 0, 417)
-			player:GossipMenuAddItem(0, "Voidwalker", 0, 1860)
-			player:GossipMenuAddItem(0, "Succubus", 0, 1863)
-			player:GossipMenuAddItem(0, "Felguard", 0, 17252)
-		elseif player:GetClass() == 6 then -- Death Knight
-			player:GossipMenuAddItem(0, "What do you want to rename your undead pet to?", 0, 6)
-		end
-		
-		player:GossipMenuAddItem(4, "Nevermind", 0, 2)
-		player:GossipSendMenu(1, player, 60)
-	else
-		player:SendBroadcastMessage("I only cater to Warlocks and Death Knights.")
-	end
+    if player:GetClass() == 9 then -- DK support removed as pet's name is dynamic (or player:GetClass() == 6)
+        player:GossipClearMenu()
+        player:GossipMenuAddItem(4, "How does this work?", 0, MENU_OFFSET + 1)
+        
+        if player:GetClass() == 9 then -- Warlock
+            player:GossipMenuAddItem(0, "Imp", 0, PET_TYPE_OFFSET + 416)
+            player:GossipMenuAddItem(0, "Felhunter", 0, PET_TYPE_OFFSET + 417)
+            player:GossipMenuAddItem(0, "Voidwalker", 0, PET_TYPE_OFFSET + 1860)
+            player:GossipMenuAddItem(0, "Succubus", 0, PET_TYPE_OFFSET + 1863)
+            player:GossipMenuAddItem(0, "Felguard", 0, PET_TYPE_OFFSET + 17252)
+        elseif player:GetClass() == 6 then -- Death Knight
+            player:GossipMenuAddItem(0, "What do you want to rename your undead pet to?", 0, PET_TYPE_OFFSET + 26125)
+        end
+        
+        player:GossipMenuAddItem(4, "Nevermind", 0, MENU_OFFSET + 2)
+        player:GossipSendMenu(1, player, 60)
+    else
+        player:SendBroadcastMessage("I only cater to Warlocks.")
+    end
 end
 
 local function ShowPage(player, entry, half, page)
@@ -104,7 +109,7 @@ local function ShowPage(player, entry, half, page)
     player:GossipClearMenu()
 
     -- Add the indicator for which half of the name is being selected
-    player:GossipMenuAddItem(4, half == 0 and "Selecting first half of name" or "Selecting second half of name", 0, 0)
+    player:GossipMenuAddItem(4, half == 0 and "Selecting first half of name" or "Selecting second half of name", 0, PAGE_CONTROL_OFFSET)
 
     -- Show items for the current page
     local itemsShown = 0
@@ -122,12 +127,12 @@ local function ShowPage(player, entry, half, page)
 
     -- Add previous page button if not on the first page
     if page > 1 then
-        player:GossipMenuAddItem(4, "Previous Page", 0, 10001)
+        player:GossipMenuAddItem(4, "Previous Page", 0, PAGE_CONTROL_OFFSET + 1)
     end
 
     -- Add next page button if there are more items
     if totalItems > endIdx then
-        player:GossipMenuAddItem(4, "Next Page", 0, 10002)
+        player:GossipMenuAddItem(4, "Next Page", 0, PAGE_CONTROL_OFFSET + 2)
     end
 
     player:GossipSendMenu(1, player, 60)
@@ -145,31 +150,25 @@ local function UpdatePetName(playerGUID)
 end
 
 local function OnGossipSelect(event, player, object, sender, intid, code)
-    if intid == 416 or intid == 417 or intid == 1860 or intid == 1863 or intid == 17252 then
+    if intid >= PET_TYPE_OFFSET and intid < PET_TYPE_OFFSET + 30000 then
+        local petEntry = intid - PET_TYPE_OFFSET
         firstHalfSelection = ""
         secondHalfSelection = ""
-        currentEntry = intid
+        currentEntry = petEntry
         currentHalf = 0
         player:GossipClearMenu()
-        ShowPage(player, intid, 0, 1)
-    elseif intid == 6 then
-        firstHalfSelection = ""
-        secondHalfSelection = ""
-        currentEntry = 26125
-        currentHalf = 0
-        player:GossipClearMenu()
-        ShowPage(player, 26125, 0, 1)
-    elseif intid == 1 then
+        ShowPage(player, petEntry, 0, 1)
+    elseif intid == MENU_OFFSET + 1 then
         player:GossipClearMenu()
         player:GossipMenuAddItem(0, "I possess the ability to permanently rename your pets through manipulating the threads in the Twisting Nether. Simply choose what kind of pet you want to rename and select the name. I charge "..cost.." "..currencyName.." for my services. To complete the process, I will log you out. When you return, your pet will be renamed.", 0, intid)
-        player:GossipMenuAddItem(4, "Back", 0, 20001)
+        player:GossipMenuAddItem(4, "Back", 0, MENU_OFFSET + 3)
         player:GossipSendMenu(1, player, 60)
-    elseif intid == 2 then
+    elseif intid == MENU_OFFSET + 2 then
         player:GossipComplete()
-    elseif intid == 10001 then
+    elseif intid == PAGE_CONTROL_OFFSET + 1 then
         player:GossipClearMenu()
         ShowPage(player, currentEntry, currentHalf, currentPage - 1)
-    elseif intid == 10002 then
+    elseif intid == PAGE_CONTROL_OFFSET + 2 then
         player:GossipClearMenu()
         ShowPage(player, currentEntry, currentHalf, currentPage + 1)
     elseif petNameCache[intid] then
@@ -186,12 +185,12 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
                 local petType = petTypes[currentEntry] or "Pet"
                 
                 player:GossipClearMenu()
-                player:GossipMenuAddItem(4, string.format("Rename %s to %s?", petType, fullPetName), 0, 20000, false, string.format("Are you sure you want to rename your %s to '%s'? This process costs "..cost.." "..currencyName.." and will log you out to save the change.", petType, fullPetName))
-                player:GossipMenuAddItem(0, "Cancel", 0, 20001)
+                player:GossipMenuAddItem(4, string.format("Rename %s to %s?", petType, fullPetName), 0, MENU_OFFSET + 4, false, string.format("Are you sure you want to rename your %s to '%s'? This process costs "..cost.." "..currencyName.." and will log you out to save the change.", petType, fullPetName))
+                player:GossipMenuAddItem(0, "Cancel", 0, MENU_OFFSET + 3)
                 player:GossipSendMenu(1, player, 60)
             end
         end
-    elseif intid == 20000 then
+    elseif intid == MENU_OFFSET + 4 then
         local petType = petTypes[currentEntry] or "Pet"
         local fullPetName = firstHalfSelection .. secondHalfSelection
         local playerGUID = player:GetGUIDLow()
@@ -218,24 +217,23 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
             player:SendBroadcastMessage("You don't have enough "..currencyName..". "..cost.." "..currencyName.." are required to rename your pet.")
             player:GossipComplete()
         end
-    elseif intid == 20001 then
+    elseif intid == MENU_OFFSET + 3 then
         firstHalfSelection = ""
         secondHalfSelection = ""
         currentHalf = 0
         player:GossipClearMenu()
-        player:GossipClearMenu()
-        player:GossipMenuAddItem(4, "How does this work?", 0, 1)
+        player:GossipMenuAddItem(4, "How does this work?", 0, MENU_OFFSET + 1)
         
         if player:GetClass() == 9 then -- Warlock
-            player:GossipMenuAddItem(0, "Imp", 0, 416)
-            player:GossipMenuAddItem(0, "Felhunter", 0, 417)
-            player:GossipMenuAddItem(0, "Voidwalker", 0, 1860)
-            player:GossipMenuAddItem(0, "Succubus", 0, 1863)
-            player:GossipMenuAddItem(0, "Felguard", 0, 17252)
+            player:GossipMenuAddItem(0, "Imp", 0, PET_TYPE_OFFSET + 416)
+            player:GossipMenuAddItem(0, "Felhunter", 0, PET_TYPE_OFFSET + 417)
+            player:GossipMenuAddItem(0, "Voidwalker", 0, PET_TYPE_OFFSET + 1860)
+            player:GossipMenuAddItem(0, "Succubus", 0, PET_TYPE_OFFSET + 1863)
+            player:GossipMenuAddItem(0, "Felguard", 0, PET_TYPE_OFFSET + 17252)
         elseif player:GetClass() == 6 then -- Death Knight
-            player:GossipMenuAddItem(0, "What do you want to rename your undead pet to?", 0, 6)
+            player:GossipMenuAddItem(0, "What do you want to rename your undead pet to?", 0, PET_TYPE_OFFSET + 26125)
         end
-        player:GossipMenuAddItem(4, "Nevermind", 0, 2)
+        player:GossipMenuAddItem(4, "Nevermind", 0, MENU_OFFSET + 2)
         
         player:GossipSendMenu(1, player, 60)
     end
