@@ -421,6 +421,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
                         player:AddItem(itemId, 1)
                         player:RemoveItem(CURRENCY_ID, itemCost)
                         player:SendBroadcastMessage("You have purchased " .. GetItemLink(itemId) .. " for " .. itemCost .. " " .. CURRENCY_NAME .. ".")
+                        print("Player "..player:GetName().." has purchased " .. GetItemLink(itemId) .. " for " .. itemCost .. " " .. CURRENCY_NAME .. ".")
                     else
                         player:SendBroadcastMessage("You cannot have more than " .. maxcount .. " of " .. GetItemLink(itemId) .. ".")
                     end
