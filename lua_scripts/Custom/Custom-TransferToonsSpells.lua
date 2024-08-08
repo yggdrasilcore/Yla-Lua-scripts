@@ -7,7 +7,7 @@ local MaxPlayerLevel = 80   -- Max player level change to your liking.
 local GM_RANK_REQ = 3
 
 local AutoDualSpec = false   -- Auto learn Dual Specialization
-local AutoRiding = false     -- Auto learn Riding
+local AutoRiding = true     -- Auto learn Riding
 
 local NorthrendFlyLevel = 77 -- Which level to learn Cold Weather Flying
 --
@@ -910,11 +910,11 @@ local TALENTSKILL = {
 }
 
 local RIDING = {
-    [10] = { 33388 },                -- Apprentince Riding (75)
-    [20] = { 33391, 34090 },         -- Journeyman Riding (150)
+    -- [10] = { 33388 },                -- Apprentince Riding (75)
+    -- [20] = { 33391, 34090 },         -- Journeyman Riding (150)
     -- [40] = { 34090 },                -- Expert Riding (225)
     [NorthrendFlyLevel] = { 54197 }, -- Cold Weather Flying
-    [70] = { 34091 }                 -- Artisan Riding (300)
+    -- [70] = { 34091 }                 -- Artisan Riding (300)
 }
 local function onLevelChange(event, player, oldLevel)
 	if player:GetGMRank() >= GM_RANK_REQ then
