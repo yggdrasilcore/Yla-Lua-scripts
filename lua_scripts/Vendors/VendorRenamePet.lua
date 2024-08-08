@@ -1,5 +1,7 @@
-local cost = 25
+local cost = 30
+local communityCost = cost/10
 local currencyName = "Vote Tokens"
+local communityCurrencyName = "Community Tokens"
 local petNameCache = {}
 local sortedPetNameCache = {}
 local PAGE_SIZE = 13
@@ -109,7 +111,8 @@ local function ShowPage(player, entry, half, page)
     player:GossipClearMenu()
 
     -- Add the indicator for which half of the name is being selected
-    player:GossipMenuAddItem(4, half == 0 and "Selecting first half of name" or "Selecting second half of name", 0, PAGE_CONTROL_OFFSET)
+    local petType = petTypes[currentEntry] or "Pet"
+    player:GossipMenuAddItem(4, half == 0 and "Selecting first half of "..petType.." name" or "Selecting second half of "..petType.." name", 0, PAGE_CONTROL_OFFSET)
 
     -- Show items for the current page
     local itemsShown = 0
@@ -119,9 +122,6 @@ local function ShowPage(player, entry, half, page)
                 player:GossipMenuAddItem(0, data.word, 0, data.id)
             end
             itemsShown = itemsShown + 1
-            if itemsShown >= endIdx then
-                break
-            end
         end
     end
 
@@ -135,6 +135,9 @@ local function ShowPage(player, entry, half, page)
         player:GossipMenuAddItem(4, "Next Page", 0, PAGE_CONTROL_OFFSET + 2)
     end
 
+    -- Add a "Back" button
+    player:GossipMenuAddItem(4, "Back", 0, MENU_OFFSET + 3)
+
     player:GossipSendMenu(1, player, 60)
 end
 
@@ -144,13 +147,19 @@ local function UpdatePetName(playerGUID)
         local query = string.format("UPDATE character_pet SET name = '%s' WHERE owner = %d AND entry = %d",
             renameInfo.petName, playerGUID, renameInfo.petEntry)
         CharDBExecute(query)
-        print(string.format("Updated pet name in database for player GUID %d to %s", playerGUID, renameInfo.petName))
+        print(string.format("Pet Renamer]: Updated pet name in database for player GUID %d to %s", playerGUID, renameInfo.petName))
         pendingRenames[playerGUID] = nil
     end
 end
 
 local function OnGossipSelect(event, player, object, sender, intid, code)
-    if intid >= PET_TYPE_OFFSET and intid < PET_TYPE_OFFSET + 30000 then
+    if intid == PAGE_CONTROL_OFFSET + 1 then
+        player:GossipClearMenu()
+        ShowPage(player, currentEntry, currentHalf, currentPage - 1)
+    elseif intid == PAGE_CONTROL_OFFSET + 2 then
+        player:GossipClearMenu()
+        ShowPage(player, currentEntry, currentHalf, currentPage + 1)
+    elseif intid >= PET_TYPE_OFFSET and intid < PET_TYPE_OFFSET + 30000 then
         local petEntry = intid - PET_TYPE_OFFSET
         firstHalfSelection = ""
         secondHalfSelection = ""
@@ -165,12 +174,6 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
         player:GossipSendMenu(1, player, 60)
     elseif intid == MENU_OFFSET + 2 then
         player:GossipComplete()
-    elseif intid == PAGE_CONTROL_OFFSET + 1 then
-        player:GossipClearMenu()
-        ShowPage(player, currentEntry, currentHalf, currentPage - 1)
-    elseif intid == PAGE_CONTROL_OFFSET + 2 then
-        player:GossipClearMenu()
-        ShowPage(player, currentEntry, currentHalf, currentPage + 1)
     elseif petNameCache[intid] then
         local selectedName = petNameCache[intid]
         if selectedName then
@@ -185,10 +188,40 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
                 local petType = petTypes[currentEntry] or "Pet"
                 
                 player:GossipClearMenu()
-                player:GossipMenuAddItem(4, string.format("Rename %s to %s?", petType, fullPetName), 0, MENU_OFFSET + 4, false, string.format("Are you sure you want to rename your %s to '%s'? This process costs "..cost.." "..currencyName.." and will log you out to save the change.", petType, fullPetName))
-                player:GossipMenuAddItem(0, "Cancel", 0, MENU_OFFSET + 3)
+                player:GossipMenuAddItem(4, string.format("How do you want to pay to rename your %s to %s?", petType, fullPetName), 0, MENU_OFFSET, false)
+                player:GossipMenuAddItem(1, cost.." "..currencyName, 0, MENU_OFFSET + 4, false, string.format("Are you sure you want to rename your %s to '%s'? This process costs "..cost.." "..currencyName.." and will log you out to save the change.", petType, fullPetName))
+                player:GossipMenuAddItem(1, communityCost.." "..communityCurrencyName, 0, MENU_OFFSET + 5, false, string.format("Are you sure you want to rename your %s to '%s'? This process costs "..communityCost.." "..communityCurrencyName.." and will log you out to save the change.", petType, fullPetName))
+                player:GossipMenuAddItem(4, "Cancel", 0, MENU_OFFSET + 3)
                 player:GossipSendMenu(1, player, 60)
             end
+        end
+	elseif intid == MENU_OFFSET + 5 then
+        local petType = petTypes[currentEntry] or "Pet"
+        local fullPetName = firstHalfSelection .. secondHalfSelection
+        local playerGUID = player:GetGUIDLow()
+        
+        -- Check if the player has enough vote tokens
+        if player:GetItemCount(17829) >= communityCost then
+            player:RemoveItem(17829, communityCost)
+            player:SaveToDB()
+            
+            pendingRenames[playerGUID] = {
+                petName = fullPetName,
+                petEntry = currentEntry
+            }
+            
+            --print(string.format("Player %s will rename their %s to: %s", player:GetName(), petType, fullPetName))
+            player:GossipComplete()
+            
+            -- Schedule the database update
+            CreateLuaEvent(function() UpdatePetName(playerGUID) end, 1000, 1)
+            
+            -- Log out the player
+            player:LogoutPlayer(false)
+			print("[Pet Renamer]: Player "..player:GetName().." has paid "..communityCost.." "..communityCurrencyName.." to rename pet to.")
+        else
+            player:SendBroadcastMessage("You don't have enough "..communityCurrencyName..". "..communityCost.." "..communityCurrencyName.." are required to rename your pet.")
+            player:GossipComplete()
         end
     elseif intid == MENU_OFFSET + 4 then
         local petType = petTypes[currentEntry] or "Pet"
@@ -205,7 +238,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
                 petEntry = currentEntry
             }
             
-            print(string.format("Player %s will rename their %s to: %s", player:GetName(), petType, fullPetName))
+            --print(string.format("Player %s will rename their %s to: %s", player:GetName(), petType, fullPetName))
             player:GossipComplete()
             
             -- Schedule the database update
@@ -213,6 +246,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
             
             -- Log out the player
             player:LogoutPlayer(false)
+			print("Pet Renamer]: Player "..player:GetName().." has paid "..cost.." "..currencyName.." to rename pet.")
         else
             player:SendBroadcastMessage("You don't have enough "..currencyName..". "..cost.." "..currencyName.." are required to rename your pet.")
             player:GossipComplete()
