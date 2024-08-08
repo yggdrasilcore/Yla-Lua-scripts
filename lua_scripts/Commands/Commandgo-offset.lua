@@ -13,7 +13,7 @@ local function TeleportOffset(event, player, message, type, language)
     -- Check if the message starts with the command
     if (message:lower():match("^" .. commandPrefix .. " " .. commandName)) then
         -- Only allow GMs to use this command
-        if (player:IsGM()) then
+        if player:GetGMRank() > 0 then
             -- Parse the message to get the X, Y, Z offsets
             local x, y, z = ParseCommand(message)
             
