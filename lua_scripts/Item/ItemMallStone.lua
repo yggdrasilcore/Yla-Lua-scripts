@@ -33,12 +33,12 @@ end
 
 function OnUse(event, player, item, target)
     if player:IsInCombat() then
-        player:SendNotification("You cannot use this item in combat.")
+        player:SendAreaTriggerMessage("You cannot use this item in combat.")
         return false
     end
 
     if player:GetBattlegroundId() ~= 0 then
-        player:SendNotification("You cannot use this item in a battleground.")
+        player:SendAreaTriggerMessage("You cannot use this item in a battleground.")
         return false
     end
 
@@ -50,7 +50,7 @@ function OnUse(event, player, item, target)
         local hours = math.floor(remainingCooldown / 3600)
         local minutes = math.floor((remainingCooldown % 3600) / 60)
         local seconds = math.floor(remainingCooldown % 60)
-        player:SendNotification("This item is on cooldown for " .. hours .. " hours, " .. minutes .. " minutes, and " .. seconds .. " seconds.")
+        player:SendAreaTriggerMessage("This item is on cooldown for " .. hours .. " hours, " .. minutes .. " minutes, and " .. seconds .. " seconds.")
         return false
     end
 
