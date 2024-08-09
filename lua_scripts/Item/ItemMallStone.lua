@@ -77,4 +77,4 @@ RegisterItemEvent(ITEM_ID, 2, OnUse)
 RegisterPlayerEvent(3, OnLogin) -- 3 is the event ID for player login
 RegisterPlayerEvent(5, OnItemCast) -- 5 is the event ID for spell cast start
 
-print("Mall Stone Teleport Stone loaded!")
+print("[Item]: Mall Stone Teleport Stone loaded!")
