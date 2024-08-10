@@ -6,19 +6,19 @@ local opcodeCount = {}
 local function OnPacket(event, packet, player)
 	local opcode = packet:GetOpcode()
 	local guid = player:GetGUIDLow()
-	print("Packet is hex: " .. string.format("0x%X", opcode))
+	--print("Packet is hex: " .. string.format("0x%X", opcode))
     if player:HasQuest(12325) then
-		print("Player has quest OK")
+		--print("Player has quest OK")
 		if player:GetNearestCreature(5, 27661) then
 			if not opcodeCount[guid] or (opcodeCount[guid] and opcodeCount[guid] == 0) and player:GetNearestCreature(15, 26878) then
 				opcodeCount[guid] = 1
 				verifyMounting[player:GetName()] = player:GetName()
 				CreateLuaEvent(function()
-					print("Checking for players mounting...")
+					--print("Checking for players mounting...")
 					for name in pairs(verifyMounting) do
 						local player = GetPlayerByName(name)
 						if player then
-							print("Player found! Dismounting...")
+							--print("Player found! Dismounting...")
 							player:AddAura(46598, player)
 							player:RemoveAura(46598)
 							player:Dismount()
@@ -37,7 +37,7 @@ local function OnPacket(event, packet, player)
 				opcodeCount[guid] = 0
 			end
 			if opcodeCount[guid] == 2 and player:GetNearestCreature(15, 26878) then
-				print(opcodeCount[guid])
+				--print(opcodeCount[guid])
 		 
 				if player:IsMounted() then player:Dismount() end
 				
@@ -75,7 +75,7 @@ local function OnPacket(event, packet, player)
 					end
 				end, 2000, 1)
 				
-				--print("Player inserted into movement table: "..playersToMove[player:GetName()])
+				----print("Player inserted into movement table: "..playersToMove[player:GetName()])
 				
 				-- Schedule the movement event
 				CreateLuaEvent(function()
@@ -89,10 +89,10 @@ local function OnPacket(event, packet, player)
 							mount:SetSpeed(1, 4)
 							mount:SetSpeed(6, 4)
 							mount:MoveTo(1, 3890, -1431, 170)
-							--print("Moving player")
+							----print("Moving player")
 							playersToMove[name] = nil
 						--else
-							--print("player not ready or not found")
+							----print("player not ready or not found")
 						end
 					end
 				end, 6200, 1)
@@ -128,15 +128,15 @@ local function OnEnterArea(event, player, newZone, newArea)
 			if oldRider then oldRider:SendUnitSay("This is your stop, pal. Safe landing!",0) end
 			--oldRider:AddAura(44312, oldRider)
 			CreateLuaEvent(function()
-				--print("Attempting to despawn mount and rider...")
+				----print("Attempting to despawn mount and rider...")
 				local players = GetPlayersInWorld()
 					for _, player in pairs(players) do
 					if player:GetAreaId() == 4190 then
-						--print("Player on Thorson's farm found!")
+						----print("Player on Thorson's farm found!")
 						local oldRider = player:GetNearestCreature(300, 27662)
 						local mount = player:GetNearestCreature(300, 27661)
 						if (mount and mount:GetAreaId() == 4190) and (oldRider and oldRider:GetAreaId() == 4190) then
-							--print("Mount and rider in correct area, despawning!")
+							----print("Mount and rider in correct area, despawning!")
 							oldRider:DespawnOrUnsummon()
 							mount:DespawnOrUnsummon()
 						end
