@@ -55,6 +55,17 @@ local function OnPacket(event, packet, player)
 				local moveTime = os.time() + 6
 				playersToMove[player:GetName()] = moveTime
 				
+				-- Get all creatures with the specified ID within the radius of the player
+				local oldMounts = player:GetCreaturesInRange(50, 27661)
+
+				-- Iterate through the list of oldMounts
+				for _, oldMount in ipairs(oldMounts) do
+					if not oldMount:HasAura(48365) then
+						oldMount:SetRespawnDelay(30)
+						oldMount:DespawnOrUnsummon()
+					end
+				end
+				
 				-- Schedule the movement event
 				CreateLuaEvent(function()
 					for name in pairs(playersToMove) do
@@ -99,17 +110,22 @@ local function OnEnterArea(event, player, newZone, newArea)
 			accidentalRider:DespawnOrUnsummon()
 		end
 		if accidentalBird and not accidentalBird:HasAura(48365) then
-			accidentalBird:SpawnCreature(27661, accidentalBird:GetX(), accidentalBird:GetY(), accidentalBird:GetZ(), accidentalBird:GetO(), 8)
 			accidentalBird:DespawnOrUnsummon()
 		end
 	end
     if newArea == 4190 then
+		local oldRider = player:GetNearestCreature(300, 27662)
+		if oldRider and oldRider:GetAreaId() == 4190 and not oldRider:HasAura(48365) then
+			oldRider:DespawnOrUnsummon()
+		end
+		
 		mount = player:GetNearestCreature(100, 27661)
+		
 		if mount and mount:GetAreaId() == 4190 then
 			player:Dismount()
 			player:AddAura(66657, player)
-			local oldRider = player:GetNearestCreature(15, 27662)
-			oldRider:SendUnitSay("This is your stop, pal. Safe landing!",0)
+			local oldRider = player:GetNearestCreature(80, 27662)
+			if oldRider then oldRider:SendUnitSay("This is your stop, pal. Safe landing!",0) end
 			--oldRider:AddAura(44312, oldRider)
 			CreateLuaEvent(function()
 				--print("Attempting to despawn mount and rider...")
@@ -119,7 +135,7 @@ local function OnEnterArea(event, player, newZone, newArea)
 						--print("Player on Thorson's farm found!")
 						local oldRider = player:GetNearestCreature(300, 27662)
 						local mount = player:GetNearestCreature(300, 27661)
-						if mount:GetAreaId() == 4190 and oldRider:GetAreaId() == 4190 then
+						if (mount and mount:GetAreaId() == 4190) and (oldRider and oldRider:GetAreaId() == 4190) then
 							--print("Mount and rider in correct area, despawning!")
 							oldRider:DespawnOrUnsummon()
 							mount:DespawnOrUnsummon()
