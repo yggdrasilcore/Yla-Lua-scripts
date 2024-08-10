@@ -1,68 +1,106 @@
+
 local playersToMove = {}
-local function OnGossipHello(event, player, creature)
-    if creature:GetEntry() == 27317 and player:HasQuest(12325) then
-		if player:HasAura(71561) or player:HasAura(71484) -- Various shapeshifts, can't mount bird with these on
-		or player:HasAura(71560) or player:HasAura(71556)
-		or player:HasAura(71485) or player:HasAura(71492)
-		or player:HasAura(2645) or player:HasAura(3025)
-		or player:HasAura(9634) or player:HasAura(783)
-		or player:HasAura(40120) or player:HasAura(33943)
-		or player:HasAura(33891) or player:HasAura(24858)
-		or player:HasAura(6405) or player:HasAura(16591)
-		or player:HasAura(73320) or player:HasAura(59672)
-		or player:HasAura(71487) or player:HasAura(71491)
-		or player:HasAura(71486) or player:HasAura(71558)
-		or player:HasAura(71557) or player:HasAura(71559)
-		then player:SendAreaTriggerMessage("|cFFFF0000You are in shapeshift form.|r") return end
- 
-		if player:IsMounted() then player:Dismount() end
-		
-		local mount = player:SpawnCreature(27661, player:GetX(), player:GetY(), player:GetZ(), player:GetO(), 1, 40000)
-		
-		player:CastSpell(mount, 46598)
-		
-		mount:SetHover(false)
-		mount:SetDisableGravity(true)
-		mount:SetSpeed(0, 3)
-		mount:SetSpeed(1, 3)
-		mount:SetSpeed(6, 3)
-        mount:MoveTo(1, 3607, -870, 238)
-		
-        local oldRider = player:GetNearestCreature(3, 27662)
-		oldRider:SendUnitSay("Hang on to your hat, pal! We're in for a bumpy ride.",0)
-        
-        local moveTime = os.time() + 6
-        playersToMove[player:GetName()] = moveTime
-        
-		--print("Player inserted into movement table: "..playersToMove[player:GetName()])
-        
-        -- Schedule the movement event
-        CreateLuaEvent(function()
-			for name, scheduledTime in pairs(playersToMove) do
-				local player = GetPlayerByName(name)
-				if player and os.time() >= scheduledTime then
-                    local mount = player:GetNearestCreature(3, 27661)
-					mount:SetHover(false)
-					mount:SetDisableGravity(true)
-					mount:SetSpeed(0, 4)
-					mount:SetSpeed(1, 4)
-					mount:SetSpeed(6, 4)
-					mount:MoveTo(1, 3890, -1431, 170)
-					--print("Moving player")
-					playersToMove[name] = nil
-				--else
-					--print("player not ready or not found")
-				end
+local verifyMounting = {}
+local opcodeCount = {}
+
+local function OnPacket(event, packet, player)
+	local opcode = packet:GetOpcode()
+	local guid = player:GetGUIDLow()
+	print("Packet is hex: " .. string.format("0x%X", opcode))
+    if player:HasQuest(12325) then
+		print("Player has quest OK")
+		if player:GetNearestCreature(5, 27661) then
+			if not opcodeCount[guid] or (opcodeCount[guid] and opcodeCount[guid] == 0) and player:GetNearestCreature(15, 26878) then
+				opcodeCount[guid] = 1
+				verifyMounting[player:GetName()] = player:GetName()
+				CreateLuaEvent(function()
+					print("Checking for players mounting...")
+					for name in pairs(verifyMounting) do
+						local player = GetPlayerByName(name)
+						if player then
+							print("Player found! Dismounting...")
+							player:AddAura(46598, player)
+							player:RemoveAura(46598)
+							player:Dismount()
+							verifyMounting[name] = 0
+							local accidentalRider = player:GetNearestCreature(500, 27662)
+							if accidentalRider and not accidentalRider:HasAura(48365) then
+								accidentalRider:DespawnOrUnsummon()
+							end
+						end
+					end
+				end, 1000, 1)
+			elseif opcodeCount[guid] then
+				opcodeCount[guid] = opcodeCount[guid] + 1
 			end
-        end, 6200, 1)
-    end
+			if opcodeCount[guid] > 2 then
+				opcodeCount[guid] = 0
+			end
+			if opcodeCount[guid] == 2 and player:GetNearestCreature(15, 26878) then
+				print(opcodeCount[guid])
+		 
+				if player:IsMounted() then player:Dismount() end
+				
+				local mount = player:SpawnCreature(27661, player:GetX(), player:GetY(), player:GetZ(), player:GetO(), 1, 40000)
+				
+				player:CastSpell(mount, 46598)
+				
+				mount:SetHover(false)
+				mount:SetDisableGravity(true)
+				mount:SetSpeed(0, 3)
+				mount:SetSpeed(1, 3)
+				mount:SetSpeed(6, 3)
+				mount:MoveTo(1, 3607, -870, 238)
+								
+				local moveTime = os.time() + 6
+				playersToMove[player:GetName()] = moveTime
+				
+				-- Schedule the movement event
+				CreateLuaEvent(function()
+					for name in pairs(playersToMove) do
+						local player = GetPlayerByName(name)
+						local oldRider = player:GetNearestCreature(3, 27662)
+						oldRider:SendUnitSay("Hang on to your hat, pal! We're in for a bumpy ride.",0)
+					end
+				end, 2000, 1)
+				
+				--print("Player inserted into movement table: "..playersToMove[player:GetName()])
+				
+				-- Schedule the movement event
+				CreateLuaEvent(function()
+					for name, scheduledTime in pairs(playersToMove) do
+						local player = GetPlayerByName(name)
+						if player and os.time() >= scheduledTime then
+							local mount = player:GetNearestCreature(3, 27661)
+							mount:SetHover(false)
+							mount:SetDisableGravity(true)
+							mount:SetSpeed(0, 4)
+							mount:SetSpeed(1, 4)
+							mount:SetSpeed(6, 4)
+							mount:MoveTo(1, 3890, -1431, 170)
+							--print("Moving player")
+							playersToMove[name] = nil
+						--else
+							--print("player not ready or not found")
+						end
+					end
+				end, 6200, 1)
+			end
+		end
+	end
+	return false
 end
 
 local function OnEnterArea(event, player, newZone, newArea)
 	if newArea == 4177 or newArea == 4188 then
 		local accidentalRider = player:GetNearestCreature(500, 27662)
+		local accidentalBird = player:GetNearestCreature(500, 27661)
 		if accidentalRider and not accidentalRider:HasAura(48365) then
 			accidentalRider:DespawnOrUnsummon()
+		end
+		if accidentalBird and not accidentalBird:HasAura(48365) then
+			accidentalBird:SpawnCreature(27661, accidentalBird:GetX(), accidentalBird:GetY(), accidentalBird:GetZ(), accidentalBird:GetO(), 8)
+			accidentalBird:DespawnOrUnsummon()
 		end
 	end
     if newArea == 4190 then
@@ -93,5 +131,5 @@ local function OnEnterArea(event, player, newZone, newArea)
     end
 end
 
-RegisterCreatureGossipEvent(27317, 1, OnGossipHello)
+RegisterPacketEvent(0x38D, 5, OnPacket)
 RegisterPlayerEvent(27, OnEnterArea)
