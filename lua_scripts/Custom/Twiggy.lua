@@ -19,7 +19,7 @@ local timeMessage = 0
 CharDBExecute("CREATE TABLE IF NOT EXISTS ACCOUNTS_VIP (ACCOUNT INT(6) NOT NULL PRIMARY KEY, VIPTIME INT(11) NOT NULL);")
 
 -- Prepares Twiggy in the database
-WorldDBExecute("UPDATE creature_template_model SET CreatureDisplayID = 13098, DisplayScale = 0.33 WHERE CreatureID = 23198;")
+WorldDBExecute("UPDATE creature_template_model SET CreatureDisplayID = 13098, DisplayScale = 0.23, npcflag = 1 WHERE CreatureID = 23198;")
 WorldDBExecute("UPDATE creature_template SET name = 'Twiggy', scale = 0.45 WHERE entry = 23198;")
 WorldDBExecute("UPDATE item_template SET description = 'Teaches you how to summon Twiggy, your personal branch of Yggdrasil.', name = 'Twiggy''s Wooden Chip' WHERE entry = 32498;")
 
