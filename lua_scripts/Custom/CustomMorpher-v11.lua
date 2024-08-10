@@ -107,7 +107,7 @@ local function CacheCreatures()
         until not treeResults:NextRow()
     end
 		-- Aquatic cache
-	local aquaticResults = WorldDBQuery("SELECT entry, name FROM creature_template WHERE ((name LIKE '%jaws%' OR name LIKE '%sewer beast%' OR name LIKE '%mako%' OR name LIKE '%seal%' OR name LIKE '%rippa%' OR name LIKE '%orca%' OR name LIKE '%lake frenzy%' OR name LIKE '%sporewind frenzy%' OR name LIKE '%underbog frenzy%' OR name LIKE '%yellowgill frenzy%' OR name LIKE '%reef frenzy%' OR name LIKE '%canal frenzy%' OR name LIKE '%muck frenzy%' OR name LIKE '%coilfang frenzy%' OR name LIKE '%sharptooth frenzy%' OR name LIKE '%coastal frenzy%' OR name LIKE '%drakkari frenzy%' OR name LIKE '%loch frenzy%' OR name LIKE '%hooktooth%' OR name LIKE '%mudfin%' OR name LIKE '%shark%' OR name LIKE '%thresh%' OR name LIKE '%eel%' OR name LIKE '%hammerhead%' OR name LIKE '%whitetail%' OR name LIKE '%crocolisk%' OR name LIKE '%sawfin%') AND type = 1)")
+	local aquaticResults = WorldDBQuery("SELECT entry, name FROM creature_template WHERE ((name LIKE '%sewer beast%' OR name LIKE '%mako%' OR name LIKE '%seal%' OR name LIKE '%rippa%' OR name LIKE '%orca%' OR name LIKE '%lake frenzy%' OR name LIKE '%sporewind frenzy%' OR name LIKE '%underbog frenzy%' OR name LIKE '%yellowgill frenzy%' OR name LIKE '%reef frenzy%' OR name LIKE '%canal frenzy%' OR name LIKE '%muck frenzy%' OR name LIKE '%coilfang frenzy%' OR name LIKE '%sharptooth frenzy%' OR name LIKE '%coastal frenzy%' OR name LIKE '%drakkari frenzy%' OR name LIKE '%loch frenzy%' OR name LIKE '%hooktooth%' OR name LIKE '%mudfin%' OR name LIKE '%shark%' OR name LIKE '%thresh%' OR name LIKE '%eel%' OR name LIKE '%hammerhead%' OR name LIKE '%whitetail%' OR name LIKE '%crocolisk%' OR name LIKE '%sawfin%') AND type = 1)")
     if aquaticResults then
         repeat
             local entry, name = aquaticResults:GetUInt32(0), aquaticResults:GetString(1)
@@ -700,8 +700,16 @@ local function Morpher(eventId, delay, repeats, worldobject) -- TO-DO: Reduce se
 				local morphdb3 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 3") -- Load active morph status
 				if morphdb3 then 
 					morphSelection3[guid] = morphdb3:GetUInt32(0)
-					if #creatureCache[guid][3] >= 50 then 
+					if #creatureCache[guid][3] >= 10 then 
+						player:SetSpeed(1, 1.5)
+					elseif #creatureCache[guid][3] >= 20 then 
+						player:SetSpeed(1, 1.6)
+					elseif #creatureCache[guid][3] >= 30 then 
+						player:SetSpeed(1, 1.7)
+					elseif #creatureCache[guid][3] >= 40 then 
 						player:SetSpeed(1, 1.8)
+					elseif #creatureCache[guid][3] >= 50 then 
+						player:SetSpeed(1, 1.9)
 					end
 					print("[Druid Morph Module]: Morpher - Setting travel form of "..player:GetName().." to display ID "..morphSelection3[guid])
 				end
@@ -925,15 +933,15 @@ local function ReloadEluna(event)
 				local morphdb3 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 3") -- Load active morph status
 				if morphdb3 then 
 					morphSelection3[guid] = morphdb3:GetUInt32(0)
-					if #creatureCache[guid][3] >= 10 then 
+					if player:HasAura(783) and #creatureCache[guid][3] >= 10 then 
 						player:SetSpeed(1, 1.5)
-					elseif #creatureCache[guid][3] >= 20 then 
+					elseif player:HasAura(783) and #creatureCache[guid][3] >= 20 then 
 						player:SetSpeed(1, 1.6)
-					elseif #creatureCache[guid][3] >= 30 then 
+					elseif player:HasAura(783) and #creatureCache[guid][3] >= 30 then 
 						player:SetSpeed(1, 1.7)
-					elseif #creatureCache[guid][3] >= 40 then 
+					elseif player:HasAura(783) and #creatureCache[guid][3] >= 40 then 
 						player:SetSpeed(1, 1.8)
-					elseif #creatureCache[guid][3] >= 50 then 
+					elseif player:HasAura(783) and #creatureCache[guid][3] >= 50 then 
 						player:SetSpeed(1, 1.9)
 					end
 				end
