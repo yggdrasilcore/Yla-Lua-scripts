@@ -30,7 +30,7 @@ local function CheckLowZPlayers()
         if player:GetAreaId() == AREA_ID then
             local playerZ = player:GetZ()
             if playerZ < PLAYER_LOW_Z_THRESHOLD then
-                print("Player found below Z 700. Teleporting to Z 640 and stopping movement...")
+                print("ICC, Lich King - Player found below Z 700. Teleporting to Z 640 and stopping movement...")
                 player:Teleport(player:GetMapId(), player:GetX(), player:GetY(), PLAYER_LOW_Z_TELEPORT, player:GetO())
                 player:MoveStop()
             end
@@ -48,13 +48,13 @@ local function CheckPlayersInArea()
             local playerZ = player:GetZ()
             
             if playerZ >= 835 and playerZ <= 836 then
-                print("Player found between Z 835 and 836. Teleporting to Z 834...")
+                print("ICC, Lich King - Player found between Z 835 and 836. Teleporting to Z 834...")
                 player:Teleport(player:GetMapId(), player:GetX(), player:GetY(), PLAYER_TELEPORT_Z, player:GetO())
             end
             
             if player:IsInCombat() and not combatOnThrone then
                 nothingHappening = false
-                print("Combat on Frozen Throne detected! Checking for all NPCs...")
+                --print("Combat on Frozen Throne detected! Checking for all NPCs...")
                 combatOnThrone = true
             elseif player:IsInCombat() and combatOnThrone then
                 local creatures = player:GetCreaturesInRange(SEARCH_RANGE)
@@ -64,7 +64,7 @@ local function CheckPlayersInArea()
                         --print("NPC found: " .. name)
                         local x, y, z, o = creature:GetX(), creature:GetY(), creature:GetZ(), creature:GetO()
                         if z < Z_THRESHOLD then
-                            print("NPC has fallen! Teleporting up: " .. name)
+                            print("ICC, Lich King - NPC has fallen! Teleporting up: " .. name)
                             creature:NearTeleport(x, y, NPC_TELEPORT_Z, o)
                         end
                     end
