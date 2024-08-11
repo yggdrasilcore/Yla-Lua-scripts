@@ -50,9 +50,9 @@ local function OnPacket(event, packet, player)
 				mount:SetSpeed(0, 3)
 				mount:SetSpeed(1, 3)
 				mount:SetSpeed(6, 3)
-				mount:MoveTo(1, 3607, -870, 238)
+				mount:MoveTo(1, 3647, -750, 240)
 								
-				local moveTime = os.time() + 6
+				local moveTime = os.time() + 6.5
 				playersToMove[player:GetName()] = moveTime
 				
 				-- Get all creatures with the specified ID within the radius of the player
@@ -94,7 +94,7 @@ local function OnPacket(event, packet, player)
 							--print("player not ready or not found")
 						end
 					end
-				end, 6200, 1)
+				end, 6700, 1)
 			end
 		end
 	end
