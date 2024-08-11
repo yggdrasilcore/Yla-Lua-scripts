@@ -915,8 +915,8 @@ local function serverSideTeleportCheck(event, packet, player)
 		canTeleportTime[guid] = os.time() + teleportTimer
 		--print("canteleporttime[guid] = "..canTeleportTime[guid]-os.time())
     end
-	if opcode == 0x1AE then
-		skipTeleportCheck[guid] = os.time() + 20 * 60
+	if opcode == 0x1AE or opcode == 0x38D then
+		skipTeleportCheck[guid] = os.time() + 19 * 60 -- Longest FP is about 18.5-19 minutes, so disabling TP checks for duration of max flight path
 		print("Skip teleport check active for "..player:GetName())
 	end
     if (opcode == 0x390 or opcode == 0x4F7 or opcode == 0x043 or opcode == 0x0AA) and not player:IsFalling() then
@@ -1494,4 +1494,5 @@ if antiTeleportHack == 1 then
 	RegisterPacketEvent(0x390, 7, serverSideTeleportCheck)
 	RegisterPacketEvent(0x043, 7, serverSideTeleportCheck)
 	RegisterPacketEvent(0x1AE, 7, serverSideTeleportCheck)
+	RegisterPacketEvent(0x38D, 7, serverSideTeleportCheck)
 end
