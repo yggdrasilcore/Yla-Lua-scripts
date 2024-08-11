@@ -280,7 +280,9 @@ local function antiStuckHackCheck(player)
 		if GMwarningEnabled == 1 then
 			local GMs = GetPlayersInWorld()
 			for _, GM in pairs(GMs) do
-				GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been imprisoned for using anti stuck hack!|r")
+				if GM:GetGMRank() >= 1 then		
+					GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been imprisoned for using anti stuck hack!|r")
+				end
 			end
 		end
         print("[Anticheat Module]: Anti stuck - Player "..player:GetName().." has been imprisoned for using anti stuck cheats!")
@@ -389,7 +391,9 @@ local function periodicSpeedCheck(player)
 					if GMwarningEnabled == 1 then
 						local GMs = GetPlayersInWorld()
 						for _, GM in pairs(GMs) do
-							GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using very fast speed hack!|r")
+							if GM:GetGMRank() >= 1 then
+								GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using very fast speed hack!|r")
+							end
 						end
 					end
 					if punishmentEnabled == 1 then
@@ -422,7 +426,9 @@ local function periodicSpeedCheck(player)
 					if GMwarningEnabled == 1 then
 						local GMs = GetPlayersInWorld()
 						for _, GM in pairs(GMs) do
-							GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using general speed hack!|r")
+							if GM:GetGMRank() >= 1 then
+								GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using general speed hack!|r")
+							end
 						end
 					end
 					if punishmentEnabled == 1 then
@@ -535,8 +541,10 @@ local function superJumpOrWallJumpCheck()
                             if GMwarningEnabled == 1 then
                                 local GMs = GetPlayersInWorld()
                                 for _, GM in pairs(GMs) do
-                                    GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using super jump or wall jump hack!|r")
-                                end
+									if GM:GetGMRank() >= 1 then
+										GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using super jump or wall jump hack!|r")
+									end
+								end
                             end
                             if punishmentEnabled == 1 then
                                 player:AddAura(punishmentId, player)
@@ -596,7 +604,9 @@ local function antiJump(event, packet, player)
 		if GMwarningEnabled == 1 then
 			local GMs = GetPlayersInWorld()
 			for _, GM in pairs(GMs) do
-				GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using air jump hack!|r")
+				if GM:GetGMRank() >= 1 then
+					GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using air jump hack!|r")
+				end
 			end
 		end
 		if punishmentEnabled == 1 then
@@ -640,7 +650,9 @@ local function antiGargarinSpeed(event, packet, player)
 			if GMwarningEnabled == 1 then
 				local GMs = GetPlayersInWorld()
 				for _, GM in pairs(GMs) do
-					GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using Gargarin speed hack!|r")
+					if GM:GetGMRank() >= 1 then
+						GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using Gargarin speed hack!|r")
+					end
 				end
 			end
 			
@@ -723,7 +735,9 @@ local function processFlightVerification()
 							if GMwarningEnabled == 1 then
 								local GMs = GetPlayersInWorld()
 								for _, GM in pairs(GMs) do
-									GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using flight hack!|r")
+									if GM:GetGMRank() >= 1  then
+										GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using flight hack!|r")
+									end
 								end
 							end
 							
@@ -834,7 +848,9 @@ local function clientSideTeleportCheck(event, packet, player)
 					if GMwarningEnabled == 1 then
 						local GMs = GetPlayersInWorld()
 						for _, GM in pairs(GMs) do
-							GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using XYZ teleport hack!|r")
+							if GM:GetGMRank() >= 1  then
+								GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using XYZ teleport hack!|r")
+							end
 						end
 					end
 					if punishmentEnabled == 1 then
@@ -866,7 +882,9 @@ local function clientSideTeleportCheck(event, packet, player)
 					if GMwarningEnabled == 1 then
 						local GMs = GetPlayersInWorld()
 						for _, GM in pairs(GMs) do
-							GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using teleport hack!|r")
+							if GM:GetGMRank() >= 1  then
+								GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using teleport hack!|r")
+							end
 						end
 					end
 					if punishmentEnabled == 1 then
@@ -923,7 +941,9 @@ local function antiGMIslandCheat(event, player, newZone, newArea)
 		if GMwarningEnabled == 1 then
 			local GMs = GetPlayersInWorld()
 			for _, GM in pairs(GMs) do
-				GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected trespassing on GM island!|r")
+				if GM:GetGMRank() >= 1  then
+					GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected trespassing on GM island!|r")
+				end
 			end
 		end
     end
@@ -976,7 +996,9 @@ local function checkPlayerZMovement(player)
 					if GMwarningEnabled == 1 then
 						local GMs = GetPlayersInWorld()
 						for _, GM in pairs(GMs) do
-							GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using water walk or Z lock hack!|r")
+							if GM:GetGMRank() >= 1 then
+								GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using water walk or Z lock hack!|r")
+							end
 						end
 					end
 					if punishmentEnabled == 1 then
@@ -1111,7 +1133,9 @@ local function checkWallClimb(eventId, delay, repeats)
 								if GMwarningEnabled == 1 then
 									local GMs = GetPlayersInWorld()
 									for _, GM in pairs(GMs) do
-										GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using wall climb/jump hack!|r")
+										if GM:GetGMRank() >= 1  then
+											GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using wall climb/jump hack!|r")
+										end
 									end
 								end
 								if punishmentEnabled == 1 then
@@ -1135,7 +1159,9 @@ local function checkWallClimb(eventId, delay, repeats)
 									if GMwarningEnabled == 1 then
 										local GMs = GetPlayersInWorld()
 										for _, GM in pairs(GMs) do
-											GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using wall climb/jump hack!|r")
+											if GM:GetGMRank() >= 1  then
+												GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using wall climb/jump hack!|r")
+											end
 										end
 									end
 									if punishmentEnabled == 1 then
@@ -1225,17 +1251,23 @@ local function KickMaxHackers()
 		if not player then return end
         local player = GetPlayerByGUID(guid)
 		
-		local GMs = GetPlayersInWorld()
-		for _, GM in pairs(GMs) do
+		local players = GetPlayersInWorld()
+		for _, player in pairs(players) do
 		
 			if hackReportsLimit > 0 and hackReports[guid] > hackReportsLimit then
-				player:LogoutPlayer()
-				print("[Anticheat Module]: Hacker "..player:GetName().." kicked for too many strikes!")
-				GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Hacker "..player:GetName().." kicked for too many strikes!|r")
+				if punishmentEnabled == 1 and player:GetGMRank() == 0 then
+					player:LogoutPlayer()
+				end
+				if player:GetGMRank() >= 1 then
+					GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Hacker "..player:GetName().." kicked for too many strikes!|r")
+				end
 				hackReports[guid] = 0
+				print("[Anticheat Module]: Hacker "..player:GetName().." kicked for too many strikes!")
 			elseif hackReports[guid] > 0 then
 				print("[Anticheat Module]: Current hack report counts: "..player:GetName()..", number of hacks: "..hackReports[guid].." in the last 5 minutes.")
-				GM:SendBroadcastMessage("[Anticheat Module]: Current hack report counts: "..player:GetName()..", number of hacks: "..hackReports[guid].." in the last 5 minutes.")
+				if player:GetGMRank() >= 1 then
+					GM:SendBroadcastMessage("[Anticheat Module]: Current hack report counts: "..player:GetName()..", number of hacks: "..hackReports[guid].." in the last 5 minutes.")
+				end
 			end
 		end
 	end
@@ -1369,7 +1401,9 @@ if antiKnockBackHack == 1 then
 					if GMwarningEnabled == 1 then
 						local GMs = GetPlayersInWorld()
 						for _, GM in pairs(GMs) do
-							GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using anti knockback hack!|r")
+							if GM:GetGMRank() >= 1 then
+								GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using anti knockback hack!|r")
+							end
 						end
 					end
 					if punishmentEnabled == 1 then
