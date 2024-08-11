@@ -62,6 +62,7 @@ local function OnPacket(event, packet, player)
 				for _, oldMount in ipairs(oldMounts) do
 					if not oldMount:HasAura(48365) then
 						oldMount:SetRespawnDelay(30)
+						oldMount:DespawnOrUnsummon()
 					end
 				end
 				
