@@ -760,7 +760,10 @@ local function clientSideTeleportCheck(event, packet, player)
     local guid = player:GetGUIDLow()
     local opcode = packet:GetOpcode()
 	
-	if skipTeleportCheck[guid] and skipTeleportCheck[guid] >= os.time() then print("Skipping hack check for "..player:GetName().." due to taxiing.") return end
+	if skipTeleportCheck[guid] and skipTeleportCheck[guid] >= os.time() then
+		--print("Skipping hack check for "..player:GetName().." due to taxiing.")
+		return
+	end
 
 	if not moveTypeChangeFlag[guid] then
 		moveTypeChangeFlag[guid] = 0
@@ -1046,7 +1049,7 @@ local function checkWallClimb(eventId, delay, repeats)
             end
             
             if allClear[guid] then
-				print("all clear")
+				--print("all clear")
                 return -- Exit the function if all LOS checks are clear
             end
 		
