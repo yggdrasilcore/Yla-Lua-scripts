@@ -13,7 +13,7 @@ local Z_COORD = 853.4
 local Z_VARIANCE = 2
 local CHASE_RADIUS = 200
 local WANDER_RADIUS = 5
-local EXPLOSION_RADIUS = 1.5
+local EXPLOSION_RADIUS = 1
 
 -- Table to store event IDs for each creature
 local creatureEvents = {}
