@@ -65,7 +65,7 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
     brann:RegisterEvent(function(eventId, delay, repeats, creature)
         creature:SendUnitSay("He's here in Northrend, brother, looking for you. A seer in Wintergarde brought word that you were not dead, and he left Ironforge immediately to come find you.", 0)
 	end, currentDelay, 1)
-    currentDelay = currentDelay + 100
+    currentDelay = currentDelay + 1000
 	
 	magni:RegisterEvent(function(eventId, delay, repeats, creature)
 		creature:SendUnitYell("Look, Lagnus, I consider you a capable man, but my patience is wearing thin. I know that Muradin is here, can you point me to him or not?", 0)
