@@ -90,10 +90,10 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
         creature:SendUnitYell("Brother! There you are! I can barely believe my eyes... you're alive!", 0)
         creature:NearTeleport(creature:GetX(), creature:GetY(), creature:GetZ(), 3.44)
 		
-		local muradin = creature:GetNearestCreature(20, 29593)
+		local muradin = creature:GetNearestCreature(100, 29593)
         muradin:NearTeleport(muradin:GetX(), muradin:GetY(), muradin:GetZ(), 0.18)
 		
-		local brann = creature:GetNearestCreature(20, 30107)
+		local brann = creature:GetNearestCreature(100, 30107)
         brann:NearTeleport(brann:GetX(), brann:GetY(), brann:GetZ(), 2.86)
 		
     end, currentDelay, 1)
@@ -186,6 +186,7 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
         creature:MoveHome()
 		local magni = creature:GetNearestCreature(10, 30411)
         magni:SendUnitSay("...farewell brother.", 0)
+		eventActive = false
     end, currentDelay, 1)
     currentDelay = currentDelay + 1000*0.61
 	
@@ -210,7 +211,6 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
 	
 	magni:RegisterEvent(function(eventId, delay, repeats, creature)
         creature:DespawnOrUnsummon()
-		eventActive = false
     end, currentDelay, 1)
 end
 
@@ -218,11 +218,11 @@ end
 local function SpawnAndMoveBrann(eventId, delay, repeats, player)
 	player:SetPhaseMask(1)
     local brann = player:SpawnCreature(30107, 6731, -296, 993.82, 0, 3, 200000)
-    brann:SetSpeed(1, 0.4)
+    brann:SetSpeed(1, 0.5)
     brann:MoveTo(1, 6697, -302.8, 989.4)
 	
     local muradin = player:SpawnCreature(29593, 6652, -310, 989.38, 0, 3, 200000)
-    muradin:SetSpeed(1, 0.4)
+    muradin:SetSpeed(1, 0.5)
     muradin:MoveTo(1, 6691, -300.9, 989.38)
 	
     local magni = player:SpawnCreature(30411, 6710.89, -278.15, 956.42, 0, 3, 200000)
