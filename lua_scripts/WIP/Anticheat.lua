@@ -124,6 +124,7 @@ local knockBackAck = {}
 local knockBackAckTime = {}
 local GMsingame = {}
 local allClear = {}
+local skipTeleportCheck = {}
 
 local BUFFIDS = { 
     3363, 8153, 8980, 10788, 10790, 10792, 24576, 25675, 25858, 28828, 32235, 32239, 32240,
@@ -758,18 +759,14 @@ local function clientSideTeleportCheck(event, packet, player)
 
     local guid = player:GetGUIDLow()
     local opcode = packet:GetOpcode()
+	
+	if skipTeleportCheck[guid] and skipTeleportCheck[guid] >= os.time() then print("Skipping hack check for "..player:GetName().." due to taxiing.") return end
 
 	if not moveTypeChangeFlag[guid] then
 		moveTypeChangeFlag[guid] = 0
 	end
 	
 	if not abortTeleCheck[guid] then abortTeleCheck[guid] = 0 end
-	
-	--if notTeleporting[guid] == 1 then
-	--	print("Player is moving and therefore bypasses teleport hack check.")
-	--	notTeleporting[guid] = 0
-	--	return
-	--end
 	
 	if player:IsAlive() and not player:IsOnVehicle() and not player:HasAura(59656)
 	and not player:IsFalling() and abortTeleCheck[guid] > 0 then
@@ -915,6 +912,10 @@ local function serverSideTeleportCheck(event, packet, player)
 		canTeleportTime[guid] = os.time() + teleportTimer
 		--print("canteleporttime[guid] = "..canTeleportTime[guid]-os.time())
     end
+	if opcode == 0x1AE then
+		skipTeleportCheck[guid] = os.time() + 20 * 60
+		print("Skip teleport check active for "..player:GetName())
+	end
     if (opcode == 0x390 or opcode == 0x4F7 or opcode == 0x043 or opcode == 0x0AA) and not player:IsFalling() then
 	    serverMap[guid] = player:GetMapId()
         serverX[guid] = player:GetX()
@@ -958,56 +959,60 @@ local function checkPlayerZMovement(player)
 	and not player:HasAura(59656) and not player:IsFlying() then
 
         if not player:HasAura(546) and not player:HasAura(75341) -- Water walk and similar auras
-			and not player:HasAura(74079) and not player:HasAura(61922)
-			and not player:HasAura(3714) and not player:HasAura(11319)
-			and not player:HasAura(10665) and not player:HasAura(8827)
-			and not player:HasAura(3714) and not player:HasAura(1706)
-			and not player:HasAura(30424) and not player:HasAura(51358)
-			and not player:HasAura(61174) and not player:HasAura(58258)
-			and not player:HasAura(punishmentId) and not player:IsInWater() then
+		and not player:HasAura(74079) and not player:HasAura(61922)
+		and not player:HasAura(3714) and not player:HasAura(11319)
+		and not player:HasAura(10665) and not player:HasAura(8827)
+		and not player:HasAura(3714) and not player:HasAura(1706)
+		and not player:HasAura(30424) and not player:HasAura(51358)
+		and not player:HasAura(61174) and not player:HasAura(58258)
+		and not player:HasAura(punishmentId) and not player:IsInWater()
+		and ((skipTeleportCheck[guid] and skipTeleportCheck[guid] < os.time()) or not skipTeleportCheck[guid]) then
 		
-        if not playerZMovementTable[guid] then
-            playerZMovementTable[guid] = {
-                lastZ = z,
-                checkCount = 0,
-                teleported = false
-            }
-        end
+			if not playerZMovementTable[guid] then
+				playerZMovementTable[guid] = {
+					lastZ = z,
+					checkCount = 0,
+					teleported = false
+				}
+			end
 
-        local playerData = playerZMovementTable[guid]
-			
-            if math.abs(playerData.lastZ - z) <= 0.05 then
-                playerData.checkCount = playerData.checkCount + 1
-            else
-                playerData.checkCount = 0
-                playerData.lastZ = z
-                playerData.teleported = false
-            end
+			local playerData = playerZMovementTable[guid]
+				
+				if math.abs(playerData.lastZ - z) <= 0.05 then
+					playerData.checkCount = playerData.checkCount + 1
+				else
+					playerData.checkCount = 0
+					playerData.lastZ = z
+					playerData.teleported = false
+				end
 
-            if playerData.checkCount == 3 then
-                local isNearObstacle = checkObstaclesForPlayer(player)
-                if not isNearObstacle then
-					--print("Checking "..player:GetName().." for water or Z-locked walking!")
-					if playerWarningEnabled == 1 then
-						if player:GetGMRank() == 0  then
-							player:SendAreaTriggerMessage("You have been detected using water walk or Z lock hack!")
-						end
-					end
-					if GMwarningEnabled == 1 then
-						local GMs = GetPlayersInWorld()
-						for _, GM in pairs(GMs) do
-							if GM:GetGMRank() >= 1 then
-								GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using water walk or Z lock hack!|r")
+				if playerData.checkCount == 3 then
+					local isNearObstacle = checkObstaclesForPlayer(player)
+					if not isNearObstacle then
+						--print("Checking "..player:GetName().." for water or Z-locked walking!")
+						if playerWarningEnabled == 1 then
+							if player:GetGMRank() == 0  then
+								player:SendAreaTriggerMessage("You have been detected using water walk or Z lock hack!")
 							end
 						end
-					end
-					if punishmentEnabled == 1 then
-						player:AddAura(punishmentId, player)
-						if player:GetGMRank() > 0 then player:SendBroadcastMessage("Use command '.unaura "..punishmentId.."' to move again. Only GMs can see this message.") end
-						if not hackReports[guid] then hackReports[guid] = 1 else hackReports[guid] = hackReports[guid] + 1 end
-					end
-					print("[Anticheat Module]: Z and water walk anti cheat - Player " .. player:GetName() .. " might be water walk or Z lock hacking!")		
-				  end
+						if GMwarningEnabled == 1 then
+							local GMs = GetPlayersInWorld()
+							for _, GM in pairs(GMs) do
+								if GM:GetGMRank() >= 1 then
+									GM:SendAreaTriggerMessage("|cFFFF66FF[Nick's Anticheat] Player "..player:GetName().." has been detected using water walk or Z lock hack!|r")
+								end
+							end
+						end
+						if punishmentEnabled == 1 then
+							player:AddAura(punishmentId, player)
+							if player:GetGMRank() > 0 then
+								player:SendBroadcastMessage("Use command '.unaura "..punishmentId.."' to move again. Only GMs can see this message.")
+							end
+							if not hackReports[guid] then
+								hackReports[guid] = 1 else hackReports[guid] = hackReports[guid] + 1 end
+							end
+							print("[Anticheat Module]: Z and water walk anti cheat - Player " .. player:GetName() .. " might be water walk or Z lock hacking!")		
+						end
                 playerData.checkCount = 0
                 playerData.teleported = false
             end
@@ -1220,6 +1225,23 @@ local function onLogin(event, player) -- Part of anti stuck and helps initiate a
 	end
 	
 	speedHackGraceTimer[guid] = 0
+	
+	if antiTeleportHack == 1 then
+		local query = CharDBQuery("SELECT LENGTH(taxi_path) FROM characters WHERE guid = " .. guid)
+		
+		if query then
+			local length = query:GetUInt32(0)
+			-- Check if the length of taxi_path is greater than 1 (indicating more than 1 byte of information)
+			if length > 1 then
+				skipTeleportCheck[guid] = os.time() + 20 * 60 -- Set skipTeleportCheck to current time + 15 minutes
+				player:SendBroadcastMessage("Teleport check skipped for 20 minutes.")
+			else
+				player:SendBroadcastMessage("No active taxi path.")
+			end
+		else
+			player:SendBroadcastMessage("Error: Could not retrieve taxi path information.")
+		end
+	end
 	
 	if player:GetMapId() == 13 then
 		imprisoned[guid] = 1 
@@ -1468,4 +1490,5 @@ if antiTeleportHack == 1 then
 	RegisterPacketEvent(0x4F7, 7, serverSideTeleportCheck)
 	RegisterPacketEvent(0x390, 7, serverSideTeleportCheck)
 	RegisterPacketEvent(0x043, 7, serverSideTeleportCheck)
+	RegisterPacketEvent(0x1AE, 7, serverSideTeleportCheck)
 end
