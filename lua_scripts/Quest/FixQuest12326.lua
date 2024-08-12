@@ -13,8 +13,8 @@ WorldDBExecute(query)
 local function OnUpdateArea(event, player, oldArea, newArea)
     if newArea == AREA_CARRION_WASTES then
         --print("Quest ID 12326 - Player in Carrion Wastes detected. Starting event tracker for tank buff and sabotage credit event.")
-        player:RegisterEvent(CheckPlayerBuff, CHECK_INTERVAL * 1000, 0) -- This triggers event 2, check for tank buff
-    else
+        player:RegisterEvent(CheckPlayerBuff, CHECK_INTERVAL * 1000, 60) -- This triggers event 2, check for tank buff. Time-limited to 15 min (tank buff duration)
+    elseif oldArea == AREA_CARRION_WASTES then
         player:RemoveEvents() -- If player leaves area, stop all scheduled events
     end
 end
@@ -55,4 +55,4 @@ function SpawnAndCastOnNPC(player)
 end
 
 RegisterPlayerEvent(47, OnUpdateArea)
-print("[FixQuest12326 Debug] Kill Credit on tank buff in carrion wastes loaded.")
+print("[Quest 12326 Fix]: Kill Credit on tank buff in carrion wastes loaded.")
