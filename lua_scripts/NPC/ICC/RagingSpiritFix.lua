@@ -49,8 +49,13 @@ local function CheckPlayersInArea()
             
             if playerZ >= 835 and playerZ <= 836 then
                 print("ICC, Lich King - Player found between Z 835 and 836. Teleporting to Z 834...")
-                player:Teleport(player:GetMapId(), player:GetX(), player:GetY(), PLAYER_TELEPORT_Z, player:GetO())
-            end
+                if player:IsAlive() then
+					player:Teleport(player:GetMapId(), player:GetX(), player:GetY(), PLAYER_TELEPORT_Z, player:GetO())
+				end
+				if not player:IsAlive() then
+					player:MoveTo(1, player:GetX(), player:GetY(), 640)
+				end
+			end
             
             if player:IsInCombat() and not combatOnThrone then
                 nothingHappening = false
@@ -75,6 +80,10 @@ local function CheckPlayersInArea()
                 nothingHappening = true
             end
         end
+    end
+    
+    if not playersInArea then
+        print("ICC, Lich King - No players in Frozen Throne. Stopping the recurring events.")
     end
 end
 
