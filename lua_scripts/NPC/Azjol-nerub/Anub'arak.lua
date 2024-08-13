@@ -42,11 +42,11 @@ end
 local function OnEnterArea(event, player, oldArea, newArea)
     local playerGuid = player:GetGUID()
 	if newArea == 4405 then
-		print("[Instance]: Azjol-Nerub: Player changed location! New zone ID: "..player:GetZoneId())
+		--print("[Instance]: Azjol-Nerub: Player changed location! New zone ID: "..player:GetZoneId())
 		if not playerTimers[playerGuid] then
 			playerTimers[playerGuid] = true
 			player:RegisterEvent(CheckCreatureHP, CHECK_INTERVAL, 0)
-			print("[Instance]: Azjol-Nerub: Entered target area. Starting creature HP check.")
+			--print("[Instance]: Azjol-Nerub: Entered target area. Starting creature HP check.")
 		end
 	end
 end
