@@ -373,7 +373,7 @@ local function periodicSpeedCheck(player)
 				if transguid > 0 then
 					speedHackStrikes[guid] = 0
 					speedHackGraceTimer[guid] = os.time() + 300
-					print("[Anticheat Module]: Speed hack - Aborting check, player " .. player:GetName() .. " is on transport!")
+					--print("[Anticheat Module]: Speed hack - Aborting check, player " .. player:GetName() .. " is on transport!")
 				end
 			end
 			elseif displacement > (maxDisplacement + veryFastSpeedLimit*20) then -- Probably not speed hacks. Teleport anti hack will catch these
@@ -414,7 +414,7 @@ local function periodicSpeedCheck(player)
 				end
 
 			elseif displacement > maxDisplacement then -- Moderate speed hacks
-				print("[Anticheat Module]: Speed hack - Moderate speed discrepancy detected on player "..player:GetName().."! Displacement: "..displacement..". Max theortical displacement: "..maxDisplacement)
+				--print("[Anticheat Module]: Speed hack - Moderate speed discrepancy detected on player "..player:GetName().."! Displacement: "..displacement..". Max theortical displacement: "..maxDisplacement)
 				if not speedHackStrikes[guid] or speedHackStrikes[guid] == 0 then
 					speedHackStrikes[guid] = 1
 					speedHackTimer[guid] = os.time()
