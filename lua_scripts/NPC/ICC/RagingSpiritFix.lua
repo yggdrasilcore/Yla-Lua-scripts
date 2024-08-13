@@ -24,66 +24,60 @@ local function ShouldIgnoreNPC(name)
     return false
 end
 
-local function CheckLowZPlayers()
-    local players = GetPlayersInWorld()
-    for _, player in ipairs(players) do
-        if player:GetAreaId() == AREA_ID then
-            local playerZ = player:GetZ()
-            if playerZ < PLAYER_LOW_Z_THRESHOLD then
-                print("ICC, Lich King - Player found below Z 700. Teleporting to Z 640 and stopping movement...")
-                player:Teleport(player:GetMapId(), player:GetX(), player:GetY(), PLAYER_LOW_Z_TELEPORT, player:GetO())
-                player:MoveStop()
-            end
-        end
-    end
+local function CheckLowZPlayers(eventid, delay, repeats, player)
+	if player:GetAreaId() == AREA_ID then
+		local playerZ = player:GetZ()
+		if playerZ < PLAYER_LOW_Z_THRESHOLD then
+			print("ICC, Lich King - Player found below Z 700. Teleporting to Z 640 and stopping movement...")
+			player:Teleport(player:GetMapId(), player:GetX(), player:GetY(), PLAYER_LOW_Z_TELEPORT, player:GetO())
+			player:MoveStop()
+		end
+	end
 end
 
-local function CheckPlayersInArea()
-    local players = GetPlayersInWorld()
+local function CheckPlayersInArea(eventid, delay, repeats, player)
     local playersInArea = false
-    
-    for _, player in ipairs(players) do
-        if player:GetAreaId() == AREA_ID then
-            playersInArea = true
-            local playerZ = player:GetZ()
-            
-            if playerZ >= 835 and playerZ <= 836 then
-                print("ICC, Lich King - Player found between Z 835 and 836. Teleporting to Z 834...")
-                if player:IsAlive() then
-					player:Teleport(player:GetMapId(), player:GetX(), player:GetY(), PLAYER_TELEPORT_Z, player:GetO())
-				end
-				if not player:IsAlive() then
-					player:MoveTo(1, player:GetX(), player:GetY(), 640)
+	if player:GetAreaId() == AREA_ID then
+		playersInArea = true
+		local playerZ = player:GetZ()
+		
+		if playerZ >= 835 and playerZ <= 836 then
+			print("ICC, Lich King - Player found between Z 835 and 836. Teleporting to Z 834...")
+			if player:IsAlive() then
+				player:Teleport(player:GetMapId(), player:GetX(), player:GetY(), PLAYER_TELEPORT_Z, player:GetO())
+			end
+			if not player:IsAlive() then
+				player:MoveTo(1, player:GetX(), player:GetY(), 640)
+			end
+		end
+		
+		if player:IsInCombat() and not combatOnThrone then
+			nothingHappening = false
+			--print("Combat on Frozen Throne detected! Checking for all NPCs...")
+			combatOnThrone = true
+		elseif player:IsInCombat() and combatOnThrone then
+			local creatures = player:GetCreaturesInRange(SEARCH_RANGE)
+			for _, creature in ipairs(creatures) do
+				local name = creature:GetName()
+				if not ShouldIgnoreNPC(name) then
+					--print("NPC found: " .. name)
+					local x, y, z, o = creature:GetX(), creature:GetY(), creature:GetZ(), creature:GetO()
+					if z < Z_THRESHOLD then
+						print("ICC, Lich King - NPC has fallen! Teleporting up: " .. name)
+						creature:NearTeleport(x, y, NPC_TELEPORT_Z, o)
+					end
 				end
 			end
-            
-            if player:IsInCombat() and not combatOnThrone then
-                nothingHappening = false
-                --print("Combat on Frozen Throne detected! Checking for all NPCs...")
-                combatOnThrone = true
-            elseif player:IsInCombat() and combatOnThrone then
-                local creatures = player:GetCreaturesInRange(SEARCH_RANGE)
-                for _, creature in ipairs(creatures) do
-                    local name = creature:GetName()
-                    if not ShouldIgnoreNPC(name) then
-                        --print("NPC found: " .. name)
-                        local x, y, z, o = creature:GetX(), creature:GetY(), creature:GetZ(), creature:GetO()
-                        if z < Z_THRESHOLD then
-                            print("ICC, Lich King - NPC has fallen! Teleporting up: " .. name)
-                            creature:NearTeleport(x, y, NPC_TELEPORT_Z, o)
-                        end
-                    end
-                end
-            elseif nothingHappening == false then
-                combatOnThrone = false
-                --print("Nothing happening on Frozen Throne yet.")
-                nothingHappening = true
-            end
-        end
-    end
+		elseif nothingHappening == false then
+			combatOnThrone = false
+			print("Nothing happening on Frozen Throne yet.")
+			nothingHappening = true
+		end
+	end
     
     if not playersInArea then
         print("ICC, Lich King - No players in Frozen Throne. Stopping the recurring events.")
+		player:RemoveEvents()
     end
 end
 
