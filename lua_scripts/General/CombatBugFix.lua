@@ -52,4 +52,4 @@ local function OnEnterCombat(event, player, enemy)
 	print("Calling anti combat bug function!")
 end
 
-RegisterPlayerEvent(33, OnEnterCombat)
+--RegisterPlayerEvent(33, OnEnterCombat)
