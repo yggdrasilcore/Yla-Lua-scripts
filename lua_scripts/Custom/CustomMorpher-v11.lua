@@ -649,117 +649,119 @@ local function Morpher(eventId, delay, repeats, worldobject) -- TO-DO: Reduce se
 	
         local player = GetPlayerByName(playerName)
 		
-		morphQueue[player:GetName()] = nil
-		
-        if player:GetClass() == 11 and player:HasItem(17890) and not player:IsPvPFlagged() then 
-			local guid = player:GetGUIDLow()
+		if player and player ~= nil then
+			morphQueue[player:GetName()] = nil
 			
-			if player:HasAura(71561) or player:HasAura(71484) or player:HasAura(71560) or player:HasAura(71556) or player:HasAura(71485) or player:HasAura(71492) then 
-				print("[Druid Morph Module]: DBW stopped morph for "..player:GetName())
-			
-			elseif player:HasAura(3025) then -- Cat
-				local morphdb1 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 1") -- Load active morph status
-				if morphdb1 then 
-					morphSelection1[guid] = morphdb1:GetUInt32(0)
-				end
-				if morphSelection1[guid] then
-					if morphSelection1[guid] > 0 then
-						player:SetDisplayId(morphSelection1[guid])
-						print("[Druid Morph Module]: Morpher - Setting cat form of "..player:GetName().." to display ID "..morphSelection1[guid])
-						if player:IsInCombat() then
-							if eventIds[guid] then
-								RemoveEventById(eventIds[guid])
-								eventIds[guid] = nil
-								repetitionCount[guid] = nil
-								print("[Druid Morph Module]: Attempting to remove weapon in combat!")
+			if player:GetClass() == 11 and player:HasItem(17890) and not player:IsPvPFlagged() then 
+				local guid = player:GetGUIDLow()
+				
+				if player:HasAura(71561) or player:HasAura(71484) or player:HasAura(71560) or player:HasAura(71556) or player:HasAura(71485) or player:HasAura(71492) then 
+					print("[Druid Morph Module]: DBW stopped morph for "..player:GetName())
+				
+				elseif player:HasAura(3025) then -- Cat
+					local morphdb1 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 1") -- Load active morph status
+					if morphdb1 then 
+						morphSelection1[guid] = morphdb1:GetUInt32(0)
+					end
+					if morphSelection1[guid] then
+						if morphSelection1[guid] > 0 then
+							player:SetDisplayId(morphSelection1[guid])
+							print("[Druid Morph Module]: Morpher - Setting cat form of "..player:GetName().." to display ID "..morphSelection1[guid])
+							if player:IsInCombat() then
+								if eventIds[guid] then
+									RemoveEventById(eventIds[guid])
+									eventIds[guid] = nil
+									repetitionCount[guid] = nil
+									print("[Druid Morph Module]: Attempting to remove weapon in combat!")
+								end
+								eventIds[guid] = CreateLuaEvent(HideWeapon, InvisibleWeaponTimer, 1) -- 0 repetitions = infinite
+							elseif not player:IsInCombat() then
+								if eventIds[guid] then
+									RemoveEventById(eventIds[guid])
+									eventIds[guid] = nil
+									repetitionCount[guid] = nil
+									print("[Druid Morph Module]: Attempting to remove weapon outside of combat!")
+								end
+								eventIds[guid] = CreateLuaEvent(HideWeapon, InvisibleWeaponTimer, 2)
 							end
-							eventIds[guid] = CreateLuaEvent(HideWeapon, InvisibleWeaponTimer, 1) -- 0 repetitions = infinite
-						elseif not player:IsInCombat() then
-							if eventIds[guid] then
-								RemoveEventById(eventIds[guid])
-								eventIds[guid] = nil
-								repetitionCount[guid] = nil
-								print("[Druid Morph Module]: Attempting to remove weapon outside of combat!")
-							end
-							eventIds[guid] = CreateLuaEvent(HideWeapon, InvisibleWeaponTimer, 2)
 						end
 					end
-				end
-			elseif player:HasAura(9634) then -- Bear
-				local morphdb2 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 2") -- Load active morph status
-				if morphdb2 then 
-					morphSelection2[guid] = morphdb2:GetUInt32(0)
-				end
-				if morphSelection2[guid] then
-					if morphSelection2[guid] > 0 then
-						player:SetDisplayId(morphSelection2[guid])
-						print("[Druid Morph Module]: Morpher - Setting bear form of "..player:GetName().." to display ID "..morphSelection2[guid])
+				elseif player:HasAura(9634) then -- Bear
+					local morphdb2 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 2") -- Load active morph status
+					if morphdb2 then 
+						morphSelection2[guid] = morphdb2:GetUInt32(0)
 					end
-				end
-			elseif player:HasAura(783) then -- Travel
-				local morphdb3 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 3") -- Load active morph status
-				if morphdb3 then 
-					morphSelection3[guid] = morphdb3:GetUInt32(0)
-					if #creatureCache[guid][3] >= 10 then 
-						player:SetSpeed(1, 1.5)
-					elseif #creatureCache[guid][3] >= 20 then 
-						player:SetSpeed(1, 1.6)
-					elseif #creatureCache[guid][3] >= 30 then 
-						player:SetSpeed(1, 1.7)
-					elseif #creatureCache[guid][3] >= 40 then 
-						player:SetSpeed(1, 1.8)
-					elseif #creatureCache[guid][3] >= 50 then 
-						player:SetSpeed(1, 1.9)
+					if morphSelection2[guid] then
+						if morphSelection2[guid] > 0 then
+							player:SetDisplayId(morphSelection2[guid])
+							print("[Druid Morph Module]: Morpher - Setting bear form of "..player:GetName().." to display ID "..morphSelection2[guid])
+						end
 					end
-					print("[Druid Morph Module]: Morpher - Setting travel form of "..player:GetName().." to display ID "..morphSelection3[guid])
-				end
-				if morphSelection3[guid] then
-					if morphSelection3[guid] > 0 then
-						player:SetDisplayId(morphSelection3[guid])
+				elseif player:HasAura(783) then -- Travel
+					local morphdb3 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 3") -- Load active morph status
+					if morphdb3 then 
+						morphSelection3[guid] = morphdb3:GetUInt32(0)
+						if #creatureCache[guid][3] >= 10 then 
+							player:SetSpeed(1, 1.5)
+						elseif #creatureCache[guid][3] >= 20 then 
+							player:SetSpeed(1, 1.6)
+						elseif #creatureCache[guid][3] >= 30 then 
+							player:SetSpeed(1, 1.7)
+						elseif #creatureCache[guid][3] >= 40 then 
+							player:SetSpeed(1, 1.8)
+						elseif #creatureCache[guid][3] >= 50 then 
+							player:SetSpeed(1, 1.9)
+						end
+						print("[Druid Morph Module]: Morpher - Setting travel form of "..player:GetName().." to display ID "..morphSelection3[guid])
 					end
-				end
-			elseif player:HasAura(40120) or player:HasAura(33943) then -- Fly
-				local morphdb4 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 4") -- Load active morph status
-				if morphdb4 then 
-					morphSelection4[guid] = morphdb4:GetUInt32(0)
-				end
-				if morphSelection4[guid] then
-					if morphSelection4[guid] > 0 then
-						player:SetDisplayId(morphSelection4[guid])
-						print("[Druid Morph Module]: Morpher - Setting flight form of "..player:GetName().." to display ID "..morphSelection4[guid])
+					if morphSelection3[guid] then
+						if morphSelection3[guid] > 0 then
+							player:SetDisplayId(morphSelection3[guid])
+						end
 					end
-				end
-			elseif player:HasAura(33891) then -- Tree
-				local morphdb5 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 5") -- Load active morph status
-				if morphdb5 then 
-					morphSelection5[guid] = morphdb5:GetUInt32(0)
-				end
-				if morphSelection5[guid] then
-					if morphSelection5[guid] > 0 then
-						player:SetDisplayId(morphSelection5[guid])
-						print("[Druid Morph Module]: Morpher - Setting tree form of "..player:GetName().." to display ID "..morphSelection5[guid])
+				elseif player:HasAura(40120) or player:HasAura(33943) then -- Fly
+					local morphdb4 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 4") -- Load active morph status
+					if morphdb4 then 
+						morphSelection4[guid] = morphdb4:GetUInt32(0)
 					end
-				end
-			elseif player:HasAura(24858) then -- Boomkin
-				local morphdb6 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 6") -- Load active morph status
-				if morphdb6 then 
-					morphSelection6[guid] = morphdb6:GetUInt32(0)
-				end
-				if morphSelection6[guid] then
-					if morphSelection6[guid] > 0 then
-						player:SetDisplayId(morphSelection6[guid])
-						print("[Druid Morph Module]: Morpher - Setting boomkin form of "..player:GetName().." to display ID "..morphSelection6[guid])
+					if morphSelection4[guid] then
+						if morphSelection4[guid] > 0 then
+							player:SetDisplayId(morphSelection4[guid])
+							print("[Druid Morph Module]: Morpher - Setting flight form of "..player:GetName().." to display ID "..morphSelection4[guid])
+						end
 					end
-				end
-			elseif player:HasAura(1066) then -- Aquatic
-				local morphdb7 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 7") -- Load active morph status
-				if morphdb7 then 
-					morphSelection7[guid] = morphdb7:GetUInt32(0)
-				end
-				if morphSelection7[guid] then
-					if morphSelection7[guid] > 0 then
-						player:SetDisplayId(morphSelection7[guid])
-						print("[Druid Morph Module]: Morpher - Setting aquatic form of "..player:GetName().." to display ID "..morphSelection7[guid])
+				elseif player:HasAura(33891) then -- Tree
+					local morphdb5 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 5") -- Load active morph status
+					if morphdb5 then 
+						morphSelection5[guid] = morphdb5:GetUInt32(0)
+					end
+					if morphSelection5[guid] then
+						if morphSelection5[guid] > 0 then
+							player:SetDisplayId(morphSelection5[guid])
+							print("[Druid Morph Module]: Morpher - Setting tree form of "..player:GetName().." to display ID "..morphSelection5[guid])
+						end
+					end
+				elseif player:HasAura(24858) then -- Boomkin
+					local morphdb6 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 6") -- Load active morph status
+					if morphdb6 then 
+						morphSelection6[guid] = morphdb6:GetUInt32(0)
+					end
+					if morphSelection6[guid] then
+						if morphSelection6[guid] > 0 then
+							player:SetDisplayId(morphSelection6[guid])
+							print("[Druid Morph Module]: Morpher - Setting boomkin form of "..player:GetName().." to display ID "..morphSelection6[guid])
+						end
+					end
+				elseif player:HasAura(1066) then -- Aquatic
+					local morphdb7 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 7") -- Load active morph status
+					if morphdb7 then 
+						morphSelection7[guid] = morphdb7:GetUInt32(0)
+					end
+					if morphSelection7[guid] then
+						if morphSelection7[guid] > 0 then
+							player:SetDisplayId(morphSelection7[guid])
+							print("[Druid Morph Module]: Morpher - Setting aquatic form of "..player:GetName().." to display ID "..morphSelection7[guid])
+						end
 					end
 				end
 			end
