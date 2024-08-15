@@ -5,10 +5,10 @@ local SPAWN_NPC_ID = 27625 -- Kill credit NPC re quest_template entry for Quest 
 local CAST_SPELL_ID = 19901 -- High dmg ability
 local OBJECT_ID = 189970 -- Temp gobject spawn by gnome engineers, last for about 15 seconds. Re check_interval
 local invisibleDisplayID = 15435  -- Invisible NPC model
-local query = string.format("UPDATE creature_template_model SET CreatureDisplayID = %d WHERE CreatureID = %d", invisibleDisplayID, SPAWN_NPC_ID)
+-- local query = string.format("UPDATE creature_template_model SET CreatureDisplayID = %d WHERE CreatureID = %d", invisibleDisplayID, SPAWN_NPC_ID)
 
--- Make kill credit NPC invisible on server startup
-WorldDBExecute(query)
+-- Make kill credit NPC invisible on server startup. Commented out as already in DB
+-- WorldDBExecute(query)
 
 local function OnUpdateArea(event, player, oldArea, newArea)
     if newArea == AREA_CARRION_WASTES then
