@@ -36,7 +36,7 @@ local function OnQuestComplete(event, player, quest)
         local guid = player:GetGUIDLow()
         questCompletedPlayers[guid] = { eventCount = 200 } -- Store the GUID with event count set to 200
         print("[Quest]: Last Rites teleporter fix - Player with ID "..guid.." just completed quest. Activating teleporters!")
-        CreateLuaEvent(CheckPlayersAndTeleport, CHECK_INTERVAL, 200)
+        CreateLuaEvent(CheckPlayersAndTeleport, CHECK_INTERVAL, 200) -- Consider optimizing by changing to player:RegisterEvent
     end
 end
 
