@@ -7,9 +7,6 @@ local AREA_Z = 10
 local CHECK_INTERVAL = 60 -- Check every 60 seconds
 local AREA_RADIUS = 5 -- Radius around the area to check
 
-local function DebugPrint(msg)
-    print("[FixQuest11343 Debug] " .. msg)
-end
 
 local function CheckPlayersForQuestCompletion()
     --DebugPrint("Checking players for quest completion")
@@ -35,4 +32,3 @@ end
 
 -- Start the global check event
 CreateLuaEvent(CheckPlayersForQuestCompletion, CHECK_INTERVAL * 1000, 0)  -- 0 means it will repeat indefinitely
-DebugPrint("Secrets of Wrymskull completion event loaded.")
