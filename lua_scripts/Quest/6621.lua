@@ -23,4 +23,4 @@ end
 
 RegisterCreatureEvent(12921, 5, OnSpawn)
 RegisterCreatureEvent(12918, 5, OnSpawn)
-print("[Quest Fix 6621]: Foulweald quest fix loaded!")
+--print("[Quest Fix 6621]: Foulweald quest fix loaded!")
