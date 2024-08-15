@@ -104,4 +104,4 @@ end
 
 RegisterPlayerEvent(5, onSpellCast)
 RegisterPlayerEvent(27, onAreaChange)
-print("[Quest 12291 Fix]: Binding Life reapplication script loaded.")
+--print("[Quest 12291 Fix]: Binding Life reapplication script loaded.")
