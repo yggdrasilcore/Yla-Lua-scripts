@@ -55,4 +55,4 @@ function SpawnAndCastOnNPC(player)
 end
 
 RegisterPlayerEvent(47, OnUpdateArea)
-print("[Quest 12326 Fix]: Kill Credit on tank buff in carrion wastes loaded.")
+--print("[Quest 12326 Fix]: Kill Credit on tank buff in carrion wastes loaded.")
