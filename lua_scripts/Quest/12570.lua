@@ -24,13 +24,13 @@ local function CheckAndCompleteQuest()
     end
     
     -- Schedule the next check
-    CreateLuaEvent(CheckAndCompleteQuest, CHECK_INTERVAL, 1)
+    CreateLuaEvent(CheckAndCompleteQuest, CHECK_INTERVAL, 1) -- Consider optimizing by using player:RegisterEvent instead
 end
 
 local function OnAreaChange(event, player, oldArea, newArea)
     if newArea == AREA_ID then
         -- Player entered the area, start the periodic check
-        CreateLuaEvent(CheckAndCompleteQuest, CHECK_INTERVAL, 1)
+        CreateLuaEvent(CheckAndCompleteQuest, CHECK_INTERVAL, 1) -- Consider optimizing by using player:RegisterEvent instead
 		--print("[FixQuest12570 Debug] Player entered Rainspeaker Canopy!")
 	--elseif oldArea == AREA_ID then
 		--print("[FixQuest12570 Debug] Player left Rainspeaker Canopy!")
