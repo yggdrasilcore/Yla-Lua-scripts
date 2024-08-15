@@ -82,7 +82,7 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
         player:GossipSendMenu(1, creature)
     elseif intid == 98 then -- Reload gossip menu
         player:GossipClearMenu()
-        player:GossipMenuAddItem(0, "Information about Character Services", 0, 98, false)
+        player:GossipMenuAddItem(0, "Information about Character Services", 0, 99, false)
         player:GossipMenuAddItem(1, "Rename Character", 0, 1, false)
         player:GossipMenuAddItem(1, "Customize Character", 0, 2, false)
         player:GossipMenuAddItem(1, "Change Faction", 0, 3, false)
