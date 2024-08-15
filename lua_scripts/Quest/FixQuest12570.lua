@@ -31,11 +31,11 @@ local function OnAreaChange(event, player, oldArea, newArea)
     if newArea == AREA_ID then
         -- Player entered the area, start the periodic check
         CreateLuaEvent(CheckAndCompleteQuest, CHECK_INTERVAL, 1)
-		print("[FixQuest12570 Debug] Player entered Rainspeaker Canopy!")
-	elseif oldArea == AREA_ID then
-		print("[FixQuest12570 Debug] Player left Rainspeaker Canopy!")
+		--print("[FixQuest12570 Debug] Player entered Rainspeaker Canopy!")
+	--elseif oldArea == AREA_ID then
+		--print("[FixQuest12570 Debug] Player left Rainspeaker Canopy!")
     end
 end
 
 RegisterPlayerEvent(47, OnAreaChange)
-print("[FixQuest12570 Debug] Completion check in Rainspeaker Canopy loaded.")
+--print("[FixQuest12570 Debug] Completion check in Rainspeaker Canopy loaded.")
