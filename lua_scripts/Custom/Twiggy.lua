@@ -18,16 +18,16 @@ local VIPtime = {}
 -- End VIP vars
 
 -- Initiates VIP table if not already present
-CharDBExecute("CREATE TABLE IF NOT EXISTS ACCOUNTS_VIP (ACCOUNT INT(6) NOT NULL PRIMARY KEY, VIPTIME INT(11) NOT NULL);")
+-- CharDBExecute("CREATE TABLE IF NOT EXISTS ACCOUNTS_VIP (ACCOUNT INT(6) NOT NULL PRIMARY KEY, VIPTIME INT(11) NOT NULL);")
 
 -- Prepares Twiggy in the database
-WorldDBExecute("UPDATE creature_template_model SET CreatureDisplayID = 13098, DisplayScale = 0.33 WHERE CreatureID = 23198;")
-WorldDBExecute("UPDATE creature_template SET name = 'Twiggy', npcflag = 2097153, scale = 0.23 WHERE entry = 23198;")
- WorldDBExecute("UPDATE item_template SET description = 'Teaches you how to summon Twiggy, your personal branch of Yggdrasil.', name = 'Twiggy''s Wooden Chip' WHERE entry = 32498;")
+-- WorldDBExecute("UPDATE creature_template_model SET CreatureDisplayID = 13098, DisplayScale = 0.33 WHERE CreatureID = 23198;")
+-- WorldDBExecute("UPDATE creature_template SET name = 'Twiggy', npcflag = 2097153, scale = 0.23 WHERE entry = 23198;")
+-- WorldDBExecute("UPDATE item_template SET description = 'Teaches you how to summon Twiggy, your personal branch of Yggdrasil.', name = 'Twiggy''s Wooden Chip' WHERE entry = 32498;")
 
 -- Prepares VIP trash vendor
- WorldDBExecute("UPDATE creature_template SET name = 'All-Buying Hobgoblin Repair' WHERE entry = 26309;")
- WorldDBExecute("UPDATE creature_template SET name = 'All-Buying Hobgoblin' WHERE entry = 26300;")
+-- WorldDBExecute("UPDATE creature_template SET name = 'All-Buying Hobgoblin Repair' WHERE entry = 26309;")
+-- WorldDBExecute("UPDATE creature_template SET name = 'All-Buying Hobgoblin' WHERE entry = 26300;")
 
 local function LoadCooldown(player) -- For mall stone
     local guid = player:GetGUIDLow()
