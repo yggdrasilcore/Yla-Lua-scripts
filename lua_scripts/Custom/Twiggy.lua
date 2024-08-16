@@ -285,8 +285,7 @@ local function ShowCategoryContents(player, creature, category, page)
 end
 
 local function VIPmenu(player, creature)
-	print(VIPtime[player:GetGUIDLow()])
-	if VIPtime[player:GetGUIDLow()] > 0 then
+	if VIPtime[player:GetGUIDLow()] > os.time() then
 		local vipTime = VIPtime[player:GetGUIDLow()]
 		local remainingTime = vipTime - os.time()
 
@@ -302,17 +301,18 @@ local function VIPmenu(player, creature)
 
 		print("VIPTIME for account " .. player:GetAccountId() .. " is: " .. timeMessage)
 		player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_holy_borrowedtime:32:32:-22:0|tVIP status: On (" .. timeMessage .. ")", 0, 2)
+		player:GossipMenuAddItem(1, "|TInterface/ICONS/Trade_blacksmithing:32:32:-20:0|tVIP repair", 0, 12)
+		player:GossipMenuAddItem(1, "|TInterface/ICONS/Inv_misc_coin_01:32:32:-20:0|tVIP bank", 0, 13)
+		player:GossipMenuAddItem(1, "|TInterface/ICONS/Inv_letter_01:32:32:-20:0|tVIP mail", 2, 14)
+		player:GossipMenuAddItem(1, "|TInterface/ICONS/Inv_misc_bag_07:32:32:-20:0|tVIP vendor", 0, 17)
+		player:GossipMenuAddItem(1, "|TInterface/ICONS/Racial_dwarf_findtreasure:32:32:-20:0|tVIP auction house", 0, 18)
+		player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 1)
 	else 
 		player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_holy_borrowedtime:32:32:-22:0|tVIP status: Off. Activate VIP?", 0, 20)
 		player:GossipMenuAddItem(0, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tWhy should I get VIP?", 0, 19)
+		player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 1)
 		print("No VIPTIME found for account " .. player:GetAccountId())
 	end
-	player:GossipMenuAddItem(1, "|TInterface/ICONS/Trade_blacksmithing:32:32:-20:0|tVIP repair", 0, 12)
-	player:GossipMenuAddItem(1, "|TInterface/ICONS/Inv_misc_coin_01:32:32:-20:0|tVIP bank", 0, 13)
-	player:GossipMenuAddItem(1, "|TInterface/ICONS/Inv_letter_01:32:32:-20:0|tVIP mail", 2, 14)
-	player:GossipMenuAddItem(1, "|TInterface/ICONS/Inv_misc_bag_07:32:32:-20:0|tVIP vendor", 0, 17)
-	player:GossipMenuAddItem(1, "|TInterface/ICONS/Racial_dwarf_findtreasure:32:32:-20:0|tVIP auction house", 0, 18)
-	player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 1)
 	player:GossipSendMenu(1, creature, 60)
 end
 
@@ -321,7 +321,7 @@ local function mainMenu(player, creature)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tVIP options", 0, 2)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_Coin_16:32:32:-22:0|tSee my currencies", 0, 3)
 	player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_gem_diamond_07:32:32:-22:0|tExplore Yggdrasil's features", 0, 5)
-    player:GossipMenuAddItem(2, "|TInterface/ICONS/spell_arcane_teleportdarnassus:32:32:-22:0|tLet's go to the Mall!", 0, 4)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_arcane_teleportdarnassus:32:32:-22:0|tLet's go to the Mall!", 0, 4)
     player:GossipSendMenu(1, creature, 60)
 end
 
@@ -394,7 +394,6 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 		player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_scroll_11:32:32:-22:0|tRename demons: \n \nFor the mere price of 30 Vote Tokens or 3 Community Tokens, you can pick any morphologically correct Demonic name for your demons.\n ", 0, 52)
 		player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_shadow_demonictactics:32:32:-22:0|tDemon morphs: \n \nFor 50 Vote Tokens or 5 Community Tokens, youy other race compatible with your class.\n ", 0, 52)
 		player:GossipMenuAddItem(0, "|TInterface/ICONS/ability_tracking:32:32:-22:0|tHunter pet beastmaster: \n \nFor 100 Vote Tokens or 10 Community Tokens, you can purchase virtually any hunter pet you want.\n ", 0, 52)
-		player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_pet_babyblizzardbear:32:32:-22:0|tCompanion Carrier: \n \nAt the mall, the Companion Carrier breeds companions for players to purchase for 100 Vote Tokens or 10 Community Tokens each.\n ", 0, 52)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 5)
         player:GossipSendMenu(1, creature, 60)
 	elseif intId == 51 then
@@ -457,19 +456,21 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 	elseif intId == 2 then
 		VIPmenu(player, creature)
 	elseif intId == 19 then
-		player:GossipMenuAddItem(0, "As VIP, you get access to free repairs, banking, mailing, and a vendor to sell your accumulated items anywhere you are!",  0, 19)
+		player:GossipMenuAddItem(0, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tWhy should I get VIP?\n \nAs VIP, you get access to free repairs, banking, mailing, an auction house, and a vendor to sell your accumulated items anywhere you are!\n ",  0, 19)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 2)
         player:GossipSendMenu(1, creature, 60)
 	elseif intId == 20 then
-        player:GossipMenuAddItem(1, "For how long do you want VIP?", 0, 20)
-        player:GossipMenuAddItem(1, "7 days (7 Community Tokens)", 0, 21)
-        player:GossipMenuAddItem(1, "14 days (12 Community Tokens)", 0, 22)
-		player:GossipMenuAddItem(1, "21 days (15 Community Tokens)", 0, 23)
+        player:GossipMenuAddItem(1, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tFor how long do you want VIP?", 0, 20)
+        player:GossipMenuAddItem(1, "|TInterface/ICONS/Inv_misc_coin_08:32:32:-22:0|t7 days (7 Community Tokens)", 0, 21)
+        player:GossipMenuAddItem(1, "|TInterface/ICONS/Inv_misc_coin_08:32:32:-22:0|t14 days (12 Community Tokens)", 0, 22)
+		player:GossipMenuAddItem(1, "|TInterface/ICONS/Inv_misc_coin_08:32:32:-22:0|t21 days (15 Community Tokens)", 0, 23)
+		player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 2)
         player:GossipSendMenu(1, creature, 60)
 	elseif intId == 21 then
 		if player:HasItem(17829,7) then
 			player:RemoveItem(17829,7)
-
+			VIPtime[player:GetGUIDLow()] = (os.time() + 7 * 24 * 60 * 60)
+			
 			CharDBExecute("INSERT INTO ACCOUNTS_VIP (ACCOUNT, VIPTIME) VALUES (" .. player:GetAccountId() .. ", " .. (os.time() + 7 * 24 * 60 * 60) .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
 
 			VIPmenu(player, creature)
@@ -479,7 +480,8 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 	elseif intId == 22 then
 		if player:HasItem(17829,12) then
 			player:RemoveItem(17829,12)
-
+			VIPtime[player:GetGUIDLow()] = (os.time() + 14 * 24 * 60 * 60)
+			
 			CharDBExecute("INSERT INTO ACCOUNTS_VIP (ACCOUNT, VIPTIME) VALUES (" .. player:GetAccountId() .. ", " .. (os.time() + 14 * 24 * 60 * 60) .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
 
 			VIPmenu(player, creature)
@@ -489,7 +491,10 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 	elseif intId == 23 then
 		if player:HasItem(17829,15) then
 			player:RemoveItem(17829,15)
+			VIPtime[player:GetGUIDLow()] = (os.time() + 21 * 24 * 60 * 60)
+			
 			CharDBExecute("INSERT INTO ACCOUNTS_VIP (ACCOUNT, VIPTIME) VALUES (" .. player:GetAccountId() .. ", " .. (os.time() + 21 * 24 * 60 * 60) .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+			
 			VIPmenu(player, creature)
 		else 
 			player:SendAreaTriggerMessage("You don't have enough Community Tokens.")
