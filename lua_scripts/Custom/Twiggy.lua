@@ -345,6 +345,7 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
     if intId == 1 then
 		mainMenu(player, creature)
 	elseif intId == 5 then
+		player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_fire_burningspeed:32:32:-22:0|tRates", 0, 49)
 		player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_helmet_89:32:32:-22:0|tTransmog and morph services", 0, 50)
 		player:GossipMenuAddItem(0, "|TInterface/ICONS/achievement_character_nightelf_female:32:32:-22:0|tCharacter services", 0, 51)
 		player:GossipMenuAddItem(0, "|TInterface/ICONS/ability_hunter_beastcall:32:32:-22:0|tPets", 0, 52)
@@ -353,6 +354,13 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 		player:GossipMenuAddItem(0, "|TInterface/ICONS/achievement_zone_easternkingdoms_01:32:32:-22:0|tAzeroth flight", 0, 54)
 		player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_arcane_teleportdarnassus:32:32:-22:0|tMall information", 0, 55)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 1)
+        player:GossipSendMenu(1, creature, 60)
+	elseif intId == 49 then
+		player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_fire_burningspeed:32:32:-22:0|tRates information:\n ", 0, 49)
+		player:GossipMenuAddItem(0, "|TInterface/ICONS/achievement_pvp_a_03:32:32:-20:0|tXP rates: \n \nFlexible between 1x and 10x. \nThe higher tiers cost Vote Tokens. \nVisit a Time-Warper at any starter zone, Orgrimmar or Stormwind to adjust your XP rate.\n ", 0, 49)
+		player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_coin_02:32:32:-20:0|tGold rates: 2x\n ", 0, 49)
+		player:GossipMenuAddItem(0, "|TInterface/ICONS/achievement_reputation_08:32:32:-20:0|tReputation rates: 2x\n ", 0, 49)
+		player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 5)
         player:GossipSendMenu(1, creature, 60)
 	elseif intId == 55 then
 		player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_arcane_teleportdarnassus:32:32:-22:0|tMall information:\n ", 0, 55)
