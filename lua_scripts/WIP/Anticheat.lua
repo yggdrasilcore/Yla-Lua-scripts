@@ -895,12 +895,12 @@ local function clientSideTeleportCheck(event, packet, player)
 					end
 				end
 			else
-				if distance > (teleDistance * (currentSpeed / 2)) then -- Check if distance is more than 50 yards
-					if os.time() - (canTeleportTime[guid] or 0) >= teleportTimer then
-						player:Teleport(oldTeleMap[guid], oldTeleX[guid], oldTeleY[guid], oldTeleZ[guid], 0)
-						teleportGraceTimer[guid] = os.time() + teleportTimer
-					end
-				end
+				--if distance > (teleDistance * (currentSpeed / 2)) then -- Check if distance is more than 50 yards
+				--	if os.time() - (canTeleportTime[guid] or 0) >= teleportTimer then
+				--		player:Teleport(oldTeleMap[guid], oldTeleX[guid], oldTeleY[guid], oldTeleZ[guid], 0)
+				--		teleportGraceTimer[guid] = os.time() + teleportTimer
+				--	end
+				--end
 			end
 		end
 	end
