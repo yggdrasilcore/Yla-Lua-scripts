@@ -18,16 +18,16 @@ local VIPtime = {}
 -- End VIP vars
 
 -- Initiates VIP table if not already present
--- CharDBExecute("CREATE TABLE IF NOT EXISTS ACCOUNTS_VIP (ACCOUNT INT(6) NOT NULL PRIMARY KEY, VIPTIME INT(11) NOT NULL);")
+CharDBExecute("CREATE TABLE IF NOT EXISTS ACCOUNTS_VIP (ACCOUNT INT(6) NOT NULL PRIMARY KEY, VIPTIME INT(11) NOT NULL);")
 
 -- Prepares Twiggy in the database
--- WorldDBExecute("UPDATE creature_template_model SET CreatureDisplayID = 13098, DisplayScale = 0.33 WHERE CreatureID = 23198;")
--- WorldDBExecute("UPDATE creature_template SET name = 'Twiggy', npcflag = 2097153, scale = 0.23 WHERE entry = 23198;")
--- WorldDBExecute("UPDATE item_template SET description = 'Teaches you how to summon Twiggy, your personal branch of Yggdrasil.', name = 'Twiggy''s Wooden Chip' WHERE entry = 32498;")
+WorldDBExecute("UPDATE creature_template_model SET CreatureDisplayID = 13098, DisplayScale = 0.33 WHERE CreatureID = 23198;")
+WorldDBExecute("UPDATE creature_template SET name = 'Twiggy', npcflag = 2097153, scale = 0.23 WHERE entry = 23198;")
+WorldDBExecute("UPDATE item_template SET description = 'Teaches you how to summon Twiggy, your personal branch of Yggdrasil.', name = 'Twiggy''s Wooden Chip' WHERE entry = 32498;")
 
 -- Prepares VIP trash vendor
--- WorldDBExecute("UPDATE creature_template SET name = 'All-Buying Hobgoblin Repair' WHERE entry = 26309;")
--- WorldDBExecute("UPDATE creature_template SET name = 'All-Buying Hobgoblin' WHERE entry = 26300;")
+WorldDBExecute("UPDATE creature_template SET name = 'All-Buying Hobgoblin Repair' WHERE entry = 26309;")
+WorldDBExecute("UPDATE creature_template SET name = 'All-Buying Hobgoblin' WHERE entry = 26300;")
 
 local function LoadCooldown(player) -- For mall stone
     local guid = player:GetGUIDLow()
@@ -467,8 +467,8 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 2)
         player:GossipSendMenu(1, creature, 60)
 	elseif intId == 21 then
-		if player:HasItem(17829,7) then
-			player:RemoveItem(17829,7)
+		if player:HasItem(386440,7) then
+			player:RemoveItem(386440,7)
 			VIPtime[player:GetGUIDLow()] = (os.time() + 7 * 24 * 60 * 60)
 			
 			CharDBExecute("INSERT INTO ACCOUNTS_VIP (ACCOUNT, VIPTIME) VALUES (" .. player:GetAccountId() .. ", " .. (os.time() + 7 * 24 * 60 * 60) .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
@@ -478,8 +478,8 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 			player:SendAreaTriggerMessage("You don't have enough Community Tokens.")
 		end
 	elseif intId == 22 then
-		if player:HasItem(17829,12) then
-			player:RemoveItem(17829,12)
+		if player:HasItem(386440,12) then
+			player:RemoveItem(386440,12)
 			VIPtime[player:GetGUIDLow()] = (os.time() + 14 * 24 * 60 * 60)
 			
 			CharDBExecute("INSERT INTO ACCOUNTS_VIP (ACCOUNT, VIPTIME) VALUES (" .. player:GetAccountId() .. ", " .. (os.time() + 14 * 24 * 60 * 60) .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
@@ -489,8 +489,8 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 			player:SendAreaTriggerMessage("You don't have enough Community Tokens.")
 		end
 	elseif intId == 23 then
-		if player:HasItem(17829,15) then
-			player:RemoveItem(17829,15)
+		if player:HasItem(386440,15) then
+			player:RemoveItem(386440,15)
 			VIPtime[player:GetGUIDLow()] = (os.time() + 21 * 24 * 60 * 60)
 			
 			CharDBExecute("INSERT INTO ACCOUNTS_VIP (ACCOUNT, VIPTIME) VALUES (" .. player:GetAccountId() .. ", " .. (os.time() + 21 * 24 * 60 * 60) .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
@@ -507,7 +507,7 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 		
         player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tWhat can I use my currencies for?", 0, 30)
 		
-		local CommunityTokenQuery = CharDBQuery("SELECT count FROM accountwide_currency WHERE accountId = " .. player:GetAccountId() .. " AND currencyId = " .. 17829)
+		local CommunityTokenQuery = CharDBQuery("SELECT count FROM accountwide_currency WHERE accountId = " .. player:GetAccountId() .. " AND currencyId = " .. 386440)
 		
 		if not CommunityTokenQuery then
 			CommunityToken = 0
@@ -524,7 +524,7 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 		end
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tTransmog Tokens: "..TransmogToken, 0, 3)
 		
-		local VoteTokenQuery = CharDBQuery("SELECT count FROM accountwide_currency WHERE accountId = " .. player:GetAccountId() .. " AND currencyId = " .. 20880)
+		local VoteTokenQuery = CharDBQuery("SELECT count FROM accountwide_currency WHERE accountId = " .. player:GetAccountId() .. " AND currencyId = " .. 377420)
 		if not VoteTokenQuery then
 			VoteToken = 0
 		else
@@ -634,14 +634,13 @@ local function OnPlayerLogin(event, player)
     else
         player:AddItem(32498, 1)
     end
-	if player:HasItem(37430) then
-		player:RemoveItem(37430, 1)
-		player:SendBroadcastMessage("Twiggy has removed your mall stone to provide this service for you.")
-	end
+	--if player:HasItem(37430) then
+	--	player:RemoveItem(37430, 1)
+	--	player:SendBroadcastMessage("Twiggy has removed your mall stone to provide this service for you.")
+	--end
 end
 
 
 RegisterPlayerEvent(3, OnPlayerLogin)
 RegisterCreatureGossipEvent(23198, 1, OnGossipHello)
 RegisterCreatureGossipEvent(23198, 2, OnGossipSelect)
-print("[Custom]: Twiggy loaded!")
