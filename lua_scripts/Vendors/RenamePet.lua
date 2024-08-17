@@ -229,8 +229,8 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
         local playerGUID = player:GetGUIDLow()
         
         -- Check if the player has enough vote tokens
-        if player:GetItemCount(377420) >= cost then
-            player:RemoveItem(377420, cost)
+        if player:GetItemCount(20880) >= cost then
+            player:RemoveItem(20880, cost)
             player:SaveToDB()
             
             pendingRenames[playerGUID] = {
