@@ -1,5 +1,5 @@
 local NPC_ID = 190098
-local VOTE_TOKEN_ID = 377420
+local VOTE_TOKEN_ID = 20880
 local MORPH_ITEM = 17890
 local PRICE = 50
 
