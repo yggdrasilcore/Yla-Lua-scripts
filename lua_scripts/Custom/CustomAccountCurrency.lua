@@ -2,6 +2,7 @@
 -- ACCOUNTWIDE CURRENCY CONFIG 
 --
 -- Hosted by Aldori15 on Github: https://github.com/Aldori15/azerothcore-lua-accountwide
+-- Adapted to Yggdrasil WoW by mostly nick :)
 -- ----------------------------------------------------------------------------------------------
 local ENABLE_ACCOUNTWIDE_CURRENCY = true 
 local ANNOUNCE_ON_LOGIN = false 
@@ -10,9 +11,10 @@ local ANNOUNCEMENT = "This server is running the |cFF00B0E8AccountWide Currency 
 -- -- END CONFIG
 -- -- -------------------------------------------------------------------------------------------
 
--- Note: these ItemIDs are currently configured in CurrencyTypes.dbc for Dinkledork's Ashen Order repack, so your mileage may vary with custom currencies, etc.  Just add/remove any as necessary.
 local currencyItemIDs = {
     37742,  -- Transmog Token 
+    38644,  -- Vote Token 
+    17829,  -- Community Token 
 }
 
 if not ENABLE_ACCOUNTWIDE_CURRENCY then return end
@@ -26,9 +28,6 @@ local function UpdateAccountCurrency(accountId, currencyId, newCount)
     CharDBExecute("INSERT INTO accountwide_currency (accountId, currencyId, count) VALUES (" .. accountId .. ", " .. currencyId .. ", " .. newCount .. ") ON DUPLICATE KEY UPDATE count = " .. newCount)
 end
 
--- Purpose of this function is to populate the accountwide_currency table if it is empty, usually when the table is first created and the first character login.
--- Once the table has been populated, this function should always return out early since checkQuery will have records and the function will not proceed.
--- If the table is empty, then it will check item_instance for a sum of currencies on the account and use those to populate the table.
 local function InitializeAccountCurrencyOnEmptyTable(accountId)
     local checkQuery = CharDBQuery("SELECT 1 FROM accountwide_currency LIMIT 1")
 
