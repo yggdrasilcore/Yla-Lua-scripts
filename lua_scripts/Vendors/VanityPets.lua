@@ -1,7 +1,7 @@
 -- WorldDB queries to insert data if not exists
 local NPC_ID = 600000
 local model_ID = 21113
-local VoteTokenItemID = 377420
+local VoteTokenItemID = 20880
 
 local ItemsToSell = {
     13582, 13583, 13584, 25535, 33816, 48527, 20371, 20651, 22114,
