@@ -629,13 +629,13 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 			vendor:SendUnitSay("Ah, another potential treasure arrives! Let's see what you've brought, "..player:GetName().."!",0)
 			
 			vendor:RegisterEvent(function(eventId, delay, repeats, creature)
-				vendor:SetRooted(false)
+				creature:SetRooted(false)
 			end, 5000, 1)
 			
 			vendor:RegisterEvent(function(eventId, delay, repeats, creature)
-				vendor:SetRooted(true)
-				vendor:PerformEmote(3)
-				vendor:SendUnitSay("Until next time, when your trash is truly treasure.",0)
+				creature:SetRooted(true)
+				creature:PerformEmote(3)
+				creature:SendUnitSay("Until next time, when your trash is truly treasure.",0)
 			end, VIPVendorDuration-3000, 1)
 			
 			CharDBExecute("REPLACE INTO character_cooldowns (guid, item_id, cooldown_end) VALUES (" .. player:GetGUIDLow() .. ", " .. 99999 .. ", " .. cooldownEnd .. ")")
