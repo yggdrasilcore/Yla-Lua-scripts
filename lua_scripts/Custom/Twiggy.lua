@@ -603,7 +603,29 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
     elseif intId == 13 then
         player:SendShowBank(player)
     elseif intId == 14 then
-        player:SendShowMailBox(player:GetGUID())
+		player:GossipComplete()
+		local guid = player:GetGUIDLow()
+		local currentTime = os.time()
+
+		if not mailboxtime[guid] then 
+			mailboxtime[guid] = 0
+		end
+		
+		if mailboxtime[guid] <= currentTime then
+			local mailbox = player:SummonGameObject(176404, player:GetX(), player:GetY()+2, player:GetZ(), player:GetO())
+		
+			mailbox:RegisterEvent(function(eventid, delay, repeats, mailbox)
+				mailbox:Despawn()
+			end, 45000, 1)
+			
+			mailboxtime[guid] = currentTime + 900
+		else
+			local remainingTime = mailboxtime[guid] - currentTime
+			local minutes = math.floor(remainingTime / 60)
+			local seconds = remainingTime % 60
+			
+			player:SendAreaTriggerMessage(string.format("Your VIP mailbox is on cooldown for %d minutes and %d seconds.", minutes, seconds))
+		end
     elseif intId == 15 then
         player:SendTaxiMenu(creature)
     elseif intId == 16 then
@@ -617,7 +639,7 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 			local hours = math.floor(remainingCooldown / 3600)
 			local minutes = math.floor((remainingCooldown % 3600) / 60)
 			local seconds = math.floor(remainingCooldown % 60)
-			player:SendAreaTriggerMessage("Your VIP vendor is on cooldown for " .. minutes .. " minutes, and " .. seconds .. " seconds.")
+			player:SendAreaTriggerMessage("Your VIP vendor is on cooldown for " .. minutes .. " minutes and " .. seconds .. " seconds.")
 		else
 
 			cooldownEnd = os.time() + vendorCD
