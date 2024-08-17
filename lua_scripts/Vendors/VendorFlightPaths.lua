@@ -1,5 +1,5 @@
 local logoutTimer = 1000
-local voteTokenItemId = 20880 -- ID for Vote Tokens
+local voteTokenItemId = 377420 -- ID for Vote Tokens
 local voteTokenCost = 50 -- Cost in Vote Tokens
 
 local playersToUpdate = {}
@@ -279,7 +279,7 @@ local function onCommand(event, player, command)
 end
 
 local function OnGossipHello(event, player, creature)
-    player:GossipMenuAddItem(0, "Flight path sets cost 50 Vote Tokens each", 0, 0, false)
+    player:GossipMenuAddItem(0, "Flight path sets cost 50 Vote Tokens each", 0, 4, false)
     player:GossipMenuAddItem(3, "Kalimdor flight paths", 0, 1, false, "Are you sure you want to pay 50 Vote Tokens for all Kalimdor flight paths? This process will log you out as the flight paths load.")
     player:GossipMenuAddItem(3, "Eastern Kingdoms flight paths", 0, 2, false, "Are you sure you want to pay 50 Vote Tokens for all Eastern Kingdoms flight paths? This process will log you out as the flight paths load.")
     player:GossipMenuAddItem(3, "Outland flight paths", 0, 3, false, "Are you sure you want to pay 50 Vote Tokens for all Outland flight paths? This process will log you out as the flight paths load.")
@@ -296,7 +296,14 @@ local function removeVoteTokens(player, amount)
 end
 
 local function OnGossipSelect(event, player, creature, sender, intid, code)
-    if intid == 1 then -- Kalimdor
+    if intid == 4 then -- Recreate gossip menu
+		player:GossipClearMenu()
+		player:GossipMenuAddItem(0, "Flight path sets cost 50 Vote Tokens each", 0, 4, false)
+		player:GossipMenuAddItem(3, "Kalimdor flight paths", 0, 1, false, "Are you sure you want to pay 50 Vote Tokens for all Kalimdor flight paths? This process will log you out as the flight paths load.")
+		player:GossipMenuAddItem(3, "Eastern Kingdoms flight paths", 0, 2, false, "Are you sure you want to pay 50 Vote Tokens for all Eastern Kingdoms flight paths? This process will log you out as the flight paths load.")
+		player:GossipMenuAddItem(3, "Outland flight paths", 0, 3, false, "Are you sure you want to pay 50 Vote Tokens for all Outland flight paths? This process will log you out as the flight paths load.")
+		player:GossipSendMenu(1, creature)
+    elseif intid == 1 then -- Kalimdor
         if hasSufficientVoteTokens(player, voteTokenCost) then
             removeVoteTokens(player, voteTokenCost)
             local playerGuid = player:GetGUIDLow()
