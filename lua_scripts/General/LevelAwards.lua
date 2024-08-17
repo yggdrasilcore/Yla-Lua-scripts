@@ -6,7 +6,6 @@ function OnLevelUp(event, player, oldLevel)
     local team = player:GetTeam()
 
     if newLevel >= LEVEL_MOUNTS_AND_STONE and oldLevel < LEVEL_MOUNTS_AND_STONE then
-        player:AddItem(37430, 1) --mall stone
         player:LearnSpell(33389) --riding
         if team == 0 then
             player:LearnSpell(472)  --alliance mount

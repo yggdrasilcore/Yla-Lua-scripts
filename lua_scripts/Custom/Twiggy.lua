@@ -634,10 +634,10 @@ local function OnPlayerLogin(event, player)
     else
         player:AddItem(32498, 1)
     end
-	--if player:HasItem(37430) then
-	--	player:RemoveItem(37430, 1)
-	--	player:SendBroadcastMessage("Twiggy has removed your mall stone to provide this service for you.")
-	--end
+	if player:HasItem(37430) then
+		player:RemoveItem(37430, 1)
+		player:SendBroadcastMessage("Twiggy has removed your mall stone to provide this service for you.")
+	end
 end
 
 

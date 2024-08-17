@@ -1,5 +1,5 @@
 local npcid = 190022
-local requiredItemID = 20880
+local requiredItemID = 377420
 local requiredItemCount = 1
 
 local T = {

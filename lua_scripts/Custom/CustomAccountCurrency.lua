@@ -59,12 +59,12 @@ local function AccountWideCurrency(event, player)
     local accountId = player:GetAccountId()
 
     if event == 3 then
-		if player:HasItem(20880) or player:HasItem(17829) then
-			if player:HasItem(20880) then 
-				local itemCount = player:GetItemCount(20880) -- Converts bag vote tokens to currency vote tokens
+		if player:HasItem(377420) or player:HasItem(17829) then
+			if player:HasItem(377420) then 
+				local itemCount = player:GetItemCount(377420) -- Converts bag vote tokens to currency vote tokens
 				
 				if itemCount > 0 then -- Converts bag vote tokens to currency vote tokens
-					player:RemoveItem(20880, itemCount)
+					player:RemoveItem(377420, itemCount)
 					player:AddItem(377420, itemCount)
 				end
 			end
