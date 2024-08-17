@@ -406,7 +406,7 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 	elseif intId == 56 then
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/Ability_Mount_RidingHorse:32:32:-22:0|tMount and companion features:\n ", 0, 53)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_mount_gyrocoptor:32:32:-22:0|tAccount-shared mounts and companions: \n \nAll mounts are automatically synchronized across your eligible characters. All companions are account-bound and can be sent to your other characters.\n ", 0, 53)
-		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_pet_babyblizzardbear:32:32:-22:0|tCompanion Carrier: \n \nAt the mall, the Companion Carrier breeds companions for players to purchase for 100 Vote Tokens or 10 Community Tokens each.\n ", 0, 52)
+		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_pet_babyblizzardbear:32:32:-22:0|tCompanion Carrier: \n \nAt the mall, the Companion Carrier breeds companions for players to purchase for 50 Vote Tokens or 5 Community Tokens each.\n ", 0, 52)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 5)
         player:GossipSendMenu(1, creature, 60)
 	elseif intId == 53 then
@@ -427,7 +427,7 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_scroll_11:32:32:-22:0|tRename: \n \nFor the mere price of 50 Vote Tokens or 5 Community Tokens, you can select any name you want.\n ", 0, 51)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_throwingknife_02:32:32:-22:0|tCustomize: \n \nFor 50 Vote Tokens or 5 Community Tokens, you can get your character a makeover.\n ", 0, 51)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/achievement_pvp_a_h:32:32:-22:0|tChange faction: \n \nFor 100 Vote Tokens or 10 Community Tokens, you can change your faction.\n ", 0, 51)
-		player:GossipMenuAddItem(4, "|TInterface/ICONS/achievement_character_orc_male:32:32:-22:0|tChange race: \n \nFor 150 Vote Tokens or 150 Community Tokens, you can reroll your race to any other race compatible with your class.\n ", 0, 51)
+		player:GossipMenuAddItem(4, "|TInterface/ICONS/achievement_character_orc_male:32:32:-22:0|tChange race: \n \nFor 150 Vote Tokens or 15 Community Tokens, you can reroll your race to any other race compatible with your class.\n ", 0, 51)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 5)
         player:GossipSendMenu(1, creature, 60)
 	elseif intId == 50 then
