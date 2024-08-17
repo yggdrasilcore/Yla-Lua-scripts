@@ -1,5 +1,5 @@
 local NPC_ID = 190090
-local TOKEN_ITEM_ID = 20880
+local TOKEN_ITEM_ID = 377420
 local MAX_MENU_ITEMS = 8
 local model_ID = 27486
 
@@ -210,7 +210,7 @@ local function GenerateMenu(page, player, creature)
             local difficultyName = GetDifficultyName(difficulty, instanceData[map].size)
             local tokenCost = GetTokenCost(difficulty)
             
-            local gossipText = "Reset " .. instanceName .. " " .. difficultyName .. "                 (Cost: " .. tokenCost .. " Vote Tokens)"
+            local gossipText = "Reset " .. instanceName .. " " .. difficultyName .. "                 (Cost: " .. tokenCost .. " tokens)"
             player:GossipMenuAddItem(2, gossipText, 0, map * 10 + difficulty, false, "Are you sure you want to reset " .. instanceName .. " " .. difficultyName .. " for " .. tokenCost .. " vote tokens?")
             
             hasValidOptions = true
