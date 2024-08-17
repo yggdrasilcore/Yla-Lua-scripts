@@ -64,7 +64,7 @@ local function AccountWideCurrency(event, player)
 				local itemCount = player:GetItemCount(20880) -- Converts bag vote tokens to currency vote tokens
 				
 				if itemCount > 0 then -- Converts bag vote tokens to currency vote tokens
-					player:RemoveItem(20880, itemCount)
+					--player:RemoveItem(20880, itemCount)
 					player:AddItem(377420, itemCount)
 				end
 			end
