@@ -1,7 +1,7 @@
 local GOSSIP_MENU_ID = 1000
 local NPC_ID = 190000
 
-local VOTE_TOKEN = 377420
+local VOTE_TOKEN = 20880
 local EMBLEM_OF_FROST = 49426
 local EMBLEM_OF_TRIUMPH = 47241
 local TRANSMOG_TOKEN = 37742
@@ -120,4 +120,4 @@ end
 RegisterCreatureGossipEvent(NPC_ID, 1, OnGossipHello)
 RegisterCreatureGossipEvent(NPC_ID, 2, OnGossipSelect)
 
-print("[NPC]: Exchanger script loaded")
+print("NPC Exchanger script loaded")
