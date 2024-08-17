@@ -1,4 +1,4 @@
-WorldDBExecute([[UPDATE item_template SET name = 'Vote Token', maxcount = 0, stackable = 9999, Quality = 7, Flags = 134217728, Description = 'A shimmering token of gratitude.' WHERE entry = 377420;]])
+WorldDBExecute([[UPDATE item_template SET name = 'Vote Token', maxcount = 0, stackable = 9999, Quality = 7, Flags = 134217728, Description = 'A shimmering token of gratitude.' WHERE entry = 20880;]])
 CharDBQuery([[CREATE TABLE IF NOT EXISTS account_currencies (
     id INT PRIMARY KEY,
     vp INT,
@@ -20,7 +20,6 @@ end
 local function OnPlayerLogin(event, player)
     local accountId = player:GetAccountId()
     local playerGUID = player:GetGUID()
-    print("Player Login detected. Account ID: " .. accountId)  -- Debugging line
     local query = CharDBQuery("SELECT vp FROM account_currencies WHERE id = " .. accountId)
 
     if query then
@@ -28,6 +27,7 @@ local function OnPlayerLogin(event, player)
         if vpValue and vpValue > 0 then
             local itemCount = vpValue
             player:AddItem(20880, itemCount)
+			print("Awarding VP to Account ID: " .. accountId)  -- Debugging line
             CharDBExecute("UPDATE account_currencies SET vp = 0 WHERE id = " .. accountId)
             CreateLuaEvent(function() SendBroadcastWithCheck(playerGUID, "You have been awarded " .. itemCount .. " vote tokens, which can be redeemed for XP boosts, transmogs, and vanity items. Thank you for your support!") end, 3000, 1)
         else
