@@ -3,7 +3,6 @@
 
 local TELE_TO_GM_MODE   = 1
 local ITEM_HEARTHSTONE  = 6948
-local ITEM_MALLSTONE  = 37430
 
 -- Class
 local CLASS_DEATHKNIGHT = 6
@@ -71,7 +70,6 @@ local function DeathKnightSkipStarterZone(event, player, message, Type, lang)
 
     -- Add Hearthstone
     player:AddItem(ITEM_HEARTHSTONE)
-    player:AddItem(ITEM_MALLSTONE)
     
     -- Complete quests
     AutoCompleteQuests(player, SHARED_QUESTS)
