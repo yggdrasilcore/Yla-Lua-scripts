@@ -521,7 +521,7 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 		end
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tTransmog Tokens: "..TransmogToken, 0, 3)
 		
-		local VoteTokenQuery = CharDBQuery("SELECT count FROM accountwide_currency WHERE accountId = " .. player:GetAccountId() .. " AND currencyId = " .. 377420)
+		local VoteTokenQuery = CharDBQuery("SELECT count FROM accountwide_currency WHERE accountId = " .. player:GetAccountId() .. " AND currencyId = " .. 20880)
 		if not VoteTokenQuery then
 			VoteToken = 0
 		else
