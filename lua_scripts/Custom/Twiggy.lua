@@ -16,6 +16,14 @@ local timeMessage = 0
 local VIPtime = {}
 -- End VIP vars
 
+-- Tables
+local catCache, bearCache, birdCache, travelCache, owlCache, treeCache, aquaticCache = {}, {}, {}, {}, {}, {}, {}
+local catCount, bearCount, birdCount, travelCount, owlCount, treeCount, aquaticCount = 0, 0, 0, 0, 0, 0, 0
+local cacheChoice = {}
+local intIdChoice = {}
+local tickleCount = {}
+-- End tables
+
 -- Initiates VIP table if not already present
 --CharDBExecute("CREATE TABLE IF NOT EXISTS ACCOUNTS_VIP (ACCOUNT INT(6) NOT NULL PRIMARY KEY, VIPTIME INT(11) NOT NULL);")
 
@@ -45,11 +53,6 @@ local function LoadVIPVendorCooldown(player) -- For mall stone
     end
     return 0
 end
-
-local catCache, bearCache, birdCache, travelCache, owlCache, treeCache, aquaticCache = {}, {}, {}, {}, {}, {}, {}
-local catCount, bearCount, birdCount, travelCount, owlCount, treeCount, aquaticCount = 0, 0, 0, 0, 0, 0, 0
-local cacheChoice = {}
-local intIdChoice = {}
 
 local function PopulateMorphCache()
     local catResults = WorldDBQuery([[
@@ -316,7 +319,7 @@ local function VIPmenu(player, creature)
 end
 
 local function mainMenu(player, creature)
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/ABILITY_DRUID_MANATREE:32:32:-22:0|tI'm Twiggy, your branch of Yggdrasil!\n        How can I help you, "..player:GetName().."?\n ", 0, 1)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/ABILITY_DRUID_MANATREE:32:32:-22:0|tI'm Twiggy, your personal branch of\n         Yggdrasil! How can I help you?\n ", 0, 1)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tVIP options", 0, 2)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_Coin_16:32:32:-22:0|tSee my currencies", 0, 3)
 	player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_gem_diamond_07:32:32:-22:0|tExplore Yggdrasil's features", 0, 5)
@@ -325,15 +328,39 @@ local function mainMenu(player, creature)
 end
 
 local function OnGossipHello(event, player, creature)
-	mainMenu(player, creature)
-	
-	if not VIPtime[player:GetGUIDLow()] then
-		local result = CharDBQuery("SELECT VIPTIME FROM ACCOUNTS_VIP WHERE ACCOUNT = " .. player:GetAccountId() .. ";")
-		if result then
-			VIPtime[player:GetGUIDLow()] = result:GetUInt32(0)
-		else
-			VIPtime[player:GetGUIDLow()] = os.time()
+	if creature:GetOwnerGUID() == player:GetGUID() then
+		mainMenu(player, creature)
+		
+		if not VIPtime[player:GetGUIDLow()] then
+			local result = CharDBQuery("SELECT VIPTIME FROM ACCOUNTS_VIP WHERE ACCOUNT = " .. player:GetAccountId() .. ";")
+			if result then
+				VIPtime[player:GetGUIDLow()] = result:GetUInt32(0)
+			else
+				VIPtime[player:GetGUIDLow()] = os.time()
+			end
 		end
+	else
+		-- If it's someone else's companion, don't start gossip
+		if not tickleCount[player:GetGUIDLow()] then
+			tickleCount[player:GetGUIDLow()] = 0
+		end
+		
+		if not tickleCount[player:GetGUIDLow()] or tickleCount[player:GetGUIDLow()] == 0 then
+			creature:SendUnitWhisper("My roots have other matters to attend to. Try asking your own Twiggy.", 0, player)
+			tickleCount[player:GetGUIDLow()] = tickleCount[player:GetGUIDLow()] + 1
+			player:RegisterEvent(function(eventId, delay, repeats, creature)
+				tickleCount[player:GetGUIDLow()] = 0
+			end, 15000, 1)
+		elseif tickleCount[player:GetGUIDLow()] == 8 then
+			creature:SendUnitSay("Help! "..player:GetName().." is tickling my stump, someone ask them to stop!", 0)
+			tickleCount[player:GetGUIDLow()] = tickleCount[player:GetGUIDLow()] + 1
+		else
+			tickleCount[player:GetGUIDLow()] = tickleCount[player:GetGUIDLow()] + 1
+			player:RegisterEvent(function(eventId, delay, repeats, creature)
+				tickleCount[player:GetGUIDLow()] = 0
+			end, 15000, 1)
+		end
+		return
 	end
 end
 
@@ -629,7 +656,7 @@ local function OnPlayerLogin(event, player)
     if player:HasItem(32498) or player:HasSpell(40405) then
 		if player:HasItem(37430) then
 			player:RemoveItem(37430, 1)
-			player:SendBroadcastMessage("Twiggy has removed your mall stone to provide this service for you.")
+			player:SendBroadcastMessage("Twiggy has removed your mall stone to provide this service for you.", 0)
 		end
         return
     else
