@@ -13,8 +13,8 @@ local ANNOUNCEMENT = "This server is running the |cFF00B0E8AccountWide Currency 
 
 local currencyItemIDs = {
     37742,  -- Transmog Token 
-    377420,  -- Vote Token 
-    386440,  -- Community Token 
+    20880,  -- Vote Token 
+    17829,  -- Community Token 
 }
 
 if not ENABLE_ACCOUNTWIDE_CURRENCY then return end
@@ -59,26 +59,6 @@ local function AccountWideCurrency(event, player)
     local accountId = player:GetAccountId()
 
     if event == 3 then
-		if player:HasItem(20880) or player:HasItem(17829) then
-			if player:HasItem(20880) then 
-				local itemCount = player:GetItemCount(20880) -- Converts bag vote tokens to currency vote tokens
-				
-				if itemCount > 0 then -- Converts bag vote tokens to currency vote tokens
-					--player:RemoveItem(20880, itemCount)
-					player:AddItem(377420, itemCount)
-				end
-			end
-			
-			if player:HasItem(17829) then 
-				local itemCount = player:GetItemCount(17829) -- Converts bag vote tokens to currency vote tokens
-				
-				if itemCount > 0 then -- Converts bag vote tokens to currency vote tokens
-					player:RemoveItem(17829, itemCount)
-					player:AddItem(386440, itemCount)
-				end
-			end
-			player:SendBroadcastMessage("Twiggy is now safekeeping your Yggdrasil currencies.")
-		end
 		
         if ANNOUNCE_ON_LOGIN then
             player:SendBroadcastMessage(ANNOUNCEMENT)
