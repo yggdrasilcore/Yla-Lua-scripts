@@ -22,6 +22,7 @@ local catCount, bearCount, birdCount, travelCount, owlCount, treeCount, aquaticC
 local cacheChoice = {}
 local intIdChoice = {}
 local tickleCount = {}
+local mailboxtime = {}
 -- End tables
 
 -- Initiates VIP table if not already present
