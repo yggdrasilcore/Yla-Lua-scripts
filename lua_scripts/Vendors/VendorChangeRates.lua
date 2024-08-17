@@ -8,11 +8,11 @@ local rates = {
     [3] = { 3,         0,        0,       0},
     [4] = { 4,         0,        0,       0},
     [5] = { 5,         0,        0,       0},
-    [6] = { 6,         0,    20880,       1},
-    [7] = { 7,         0,    20880,       2},
-    [8] = { 8,         0,    20880,       3},
-    [9] = { 9,         0,    20880,       4},
-    [10] = { 10,       0,    20880,       5},
+    [6] = { 6,         0,    377420,       1},
+    [7] = { 7,         0,    377420,       2},
+    [8] = { 8,         0,    377420,       3},
+    [9] = { 9,         0,    377420,       4},
+    [10] = { 10,       0,    377420,       5},
 }
 local Cache = {}
 local function LoadCache()
@@ -21,18 +21,10 @@ local function LoadCache()
         repeat
             Cache[result:GetUInt32(0)] = result:GetUInt8(1)
         until not result:NextRow()
-    else
-        -- Initialize Cache with default value of 1 for new players
-        Cache[player:GetGUIDLow()] = 1
     end
 end LoadCache()
 local function OnGossipHello(event, player, object)
     player:GossipClearMenu()
-    
-    -- Add new dialogue option for level 10+ players to receive a mall stone
-    if player:GetLevel() >= 10 then
-        player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/INV_Jewelcrafting_StarOfElune_03:28:28:-15:0|tReceive a Mall Stone", 0, 9999, false, "")
-    end
     
     local currentRate = Cache[player:GetGUIDLow()] or 1
     if player:GetLevel() < 80 then
@@ -51,16 +43,6 @@ local function OnGossipHello(event, player, object)
 end RegisterCreatureGossipEvent(npc, 1, OnGossipHello)
 
 local function OnGossipSelect(event, player, object, sender, intid, code, menu_id)
-    if intid == 9999 then
-        if player:GetLevel() >= 10 then
-            player:AddItem(37430, 1) -- Add Mall Stone to player inventory (item ID 12345)
-            object:SendUnitWhisper("You have received a Mall Stone!", 0, player)
-        else
-            object:SendUnitWhisper("You need to be at least level 10 to receive a Mall Stone.", 0, player)
-        end
-        player:GossipComplete()
-        return
-    end
     
     local currentRate = Cache[player:GetGUIDLow()] or 1
     
@@ -98,4 +80,4 @@ local function OnGiveXP(event, player, amount, victim)
     end
 end RegisterPlayerEvent(12, OnGiveXP)
 
-print("Custom XP rate mob loaded!")
+print("[NPC]: Custom XP rate mob loaded!")
