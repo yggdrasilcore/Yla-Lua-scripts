@@ -1,5 +1,5 @@
 local message1 = "|cff00ccff Welcome to Yggdrasil! Please join our Discord server to stay updated. https://discord.gg/PCcCWFBdTQ"
-local message2 = "|cff00ccff Remember to clear your client's cache folder regularly in order to use custom items like the Mall Stone."
+local message2 = "|cff00ccff Remember to clear your client's cache folder regularly in order to use custom features like Twiggy."
 local message3 = "|cff00ccff Please type \"/join world\" if you'd like to partake in the world chat."
 local interval = 400000 -- 10 minutes in milliseconds (change this to desired interval)
 
