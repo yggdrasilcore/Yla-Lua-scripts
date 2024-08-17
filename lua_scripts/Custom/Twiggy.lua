@@ -348,16 +348,18 @@ local function OnGossipHello(event, player, creature)
 		if not tickleCount[player:GetGUIDLow()] or tickleCount[player:GetGUIDLow()] == 0 then
 			creature:SendUnitWhisper("My roots have other matters to attend to. Try asking your own Twiggy.", 0, player)
 			tickleCount[player:GetGUIDLow()] = tickleCount[player:GetGUIDLow()] + 1
-			player:RegisterEvent(function(eventId, delay, repeats, creature)
+			player:RegisterEvent(function(eventId, delay, repeats, player)
 				tickleCount[player:GetGUIDLow()] = 0
+				player:RemoveEventById(eventId)
 			end, 15000, 1)
 		elseif tickleCount[player:GetGUIDLow()] == 8 then
 			creature:SendUnitSay("Help! "..player:GetName().." is tickling my stump, someone ask them to stop!", 0)
 			tickleCount[player:GetGUIDLow()] = tickleCount[player:GetGUIDLow()] + 1
 		else
 			tickleCount[player:GetGUIDLow()] = tickleCount[player:GetGUIDLow()] + 1
-			player:RegisterEvent(function(eventId, delay, repeats, creature)
+			player:RegisterEvent(function(eventId, delay, repeats, player)
 				tickleCount[player:GetGUIDLow()] = 0
+				player:RemoveEventById(eventId)
 			end, 15000, 1)
 		end
 		return
@@ -566,31 +568,33 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
         player:GossipSendMenu(1, creature, 60)
     elseif intId == 4 then
 	   if player:IsInCombat() then
-			player:SendNotification("You can't teleport to the mall in combat.")
-			return false
+			player:SendAreaTriggerMessage("You can't teleport to the mall in combat.")
+			mainMenu(player, creature)
+		elseif player:GetBattlegroundId() ~= 0 then
+			player:SendAreaTriggerMessage("You can't teleport to the mall in a battleground.")
+			mainMenu(player, creature)
+		elseif player:GetLevel() <= 9 then
+			player:SendAreaTriggerMessage("You have to be at least level 10 to teleport to the mall.")
+			mainMenu(player, creature)
+		else
+		
+			local currentTime = os.time()
+			local cooldownEnd = LoadCooldown(player)
+			local remainingCooldown = cooldownEnd - currentTime
+
+			if remainingCooldown > 0 then
+				local hours = math.floor(remainingCooldown / 3600)
+				local minutes = math.floor((remainingCooldown % 3600) / 60)
+				local seconds = math.floor(remainingCooldown % 60)
+				player:SendAreaTriggerMessage("Your mall teleport is on cooldown for " .. minutes .. " minutes and " .. seconds .. " seconds.")
+				mainMenu(player, creature)
+			else
+				cooldownEnd = currentTime + COOLDOWN
+				CharDBExecute("REPLACE INTO character_cooldowns (guid, item_id, cooldown_end) VALUES (" .. player:GetGUIDLow() .. ", " .. 37430 .. ", " .. cooldownEnd .. ")")
+				player:Teleport(MAP_ID, X, Y, Z, ORIENTATION)
+				return true
+			end
 		end
-
-		if player:GetBattlegroundId() ~= 0 then
-			player:SendNotification("You can't teleport to the mall in a battleground.")
-			return false
-		end
-
-		local currentTime = os.time()
-		local cooldownEnd = LoadCooldown(player)
-		local remainingCooldown = cooldownEnd - currentTime
-
-		if remainingCooldown > 0 then
-			local hours = math.floor(remainingCooldown / 3600)
-			local minutes = math.floor((remainingCooldown % 3600) / 60)
-			local seconds = math.floor(remainingCooldown % 60)
-			player:SendAreaTriggerMessage("Your mall teleport is on cooldown for " .. minutes .. " minutes, and " .. seconds .. " seconds.")
-			return false
-		end
-
-		cooldownEnd = currentTime + COOLDOWN
-		CharDBExecute("REPLACE INTO character_cooldowns (guid, item_id, cooldown_end) VALUES (" .. player:GetGUIDLow() .. ", " .. 37430 .. ", " .. cooldownEnd .. ")")
-		player:Teleport(MAP_ID, X, Y, Z, ORIENTATION)
-		return true
     elseif intId == 12 then
 		player:DurabilityRepairAll(false)
         player:SendBroadcastMessage("You have repaired your items.")
@@ -663,7 +667,6 @@ local function OnPlayerLogin(event, player)
         player:AddItem(32498, 1)
     end
 end
-
 
 RegisterPlayerEvent(3, OnPlayerLogin)
 RegisterCreatureGossipEvent(23198, 1, OnGossipHello)
