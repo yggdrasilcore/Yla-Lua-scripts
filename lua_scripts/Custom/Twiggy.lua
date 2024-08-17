@@ -325,7 +325,6 @@ local function mainMenu(player, creature)
 end
 
 local function OnGossipHello(event, player, creature)
-	print("OnGossipHello called!")
 	mainMenu(player, creature)
 	
 	if not VIPtime[player:GetGUIDLow()] then
@@ -340,7 +339,6 @@ end
 
 local function OnGossipSelect(event, player, creature, sender, intId, code)
 	intIdChoice[player:GetGUIDLow()] = intId
-	print(intId)
     if intId == 1 then
 		mainMenu(player, creature)
 	elseif intId == 5 then
@@ -629,14 +627,14 @@ local function OnPlayerLogin(event, player)
 		end
 	end
     if player:HasItem(32498) or player:HasSpell(40405) then
+		if player:HasItem(37430) then
+			player:RemoveItem(37430, 1)
+			player:SendBroadcastMessage("Twiggy has removed your mall stone to provide this service for you.")
+		end
         return
     else
         player:AddItem(32498, 1)
     end
-	if player:HasItem(37430) then
-		player:RemoveItem(37430, 1)
-		player:SendBroadcastMessage("Twiggy has removed your mall stone to provide this service for you.")
-	end
 end
 
 
