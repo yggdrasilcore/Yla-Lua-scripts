@@ -12,7 +12,7 @@ function OnLevelUp(event, player, oldLevel)
         elseif team == 1 then
             player:LearnSpell(578)  --horde mount
         end
-        player:SendBroadcastMessage("Congratulations on reaching level 10! You have received your mall stone and a mount.")
+        player:SendBroadcastMessage("Congratulations on reaching level 10! You have learened how to ride and received a mount.")
     elseif newLevel >= LEVEL80 and oldLevel < LEVEL80 then
         player:AddItem(40753, 200) --200 EOV
         player:SendBroadcastMessage("Congratulations on reaching level 80! You have been awarded 200 Emblems of Valor for your accomplishment.")
