@@ -76,10 +76,12 @@ local function DeathKnightSkipStarterZone(event, player, message, Type, lang)
     AutoCompleteQuests(player, RACE_QUESTS[player:GetRace()])
 	
 	--Set correct level
-	player:SetLevel(58)
+	if player:GetLevel() > 58 then
+		player:SetLevel(58)
+	end
     
     -- Teleport to Dalaran
-    player:Teleport(571, 5809.55, 503.975, 657.526, 2.38338, TELE_TO_GM_MODE)
+    player:Teleport(571, 5849.55, 637, 647.52, 2.38338, TELE_TO_GM_MODE)
     
     player:SendBroadcastMessage("You have skipped the Death Knight starter zone and been teleported to Dalaran.")
 end
