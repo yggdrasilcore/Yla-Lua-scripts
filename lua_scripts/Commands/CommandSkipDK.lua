@@ -76,7 +76,7 @@ local function DeathKnightSkipStarterZone(event, player, message, Type, lang)
     AutoCompleteQuests(player, RACE_QUESTS[player:GetRace()])
 	
 	--Set correct level
-	if player:GetLevel() > 58 then
+	if player:GetLevel() < 58 then
 		player:SetLevel(58)
 	end
     
