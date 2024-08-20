@@ -47,38 +47,107 @@ local ITEMS_PER_PAGE = 13
 local function CacheCreatures()
 	local catCount, bearCount, birdCount, travelCount, owlCount, treeCount, aquaticCount = 0, 0, 0, 0, 0, 0, 0
 
-    -- Cat cache
-    local catResults = WorldDBQuery("SELECT entry, name FROM creature_template WHERE family = 2 OR ((name LIKE '%panther%' OR name LIKE '%gondria%' OR name LIKE '%loque%') AND type = 1)")
+    local catResults = WorldDBQuery([[
+       SELECT entry, name 
+       FROM creature_template 
+       WHERE (family = 2 
+          OR ((name LIKE '%panther%' 
+          OR name LIKE '%gondria%' 
+          OR name LIKE '%loque%') 
+          AND type = 1))
+          AND name NOT LIKE '%(%'
+          AND name NOT LIKE '%"%'
+          AND name NOT LIKE '%UNUSED%'
+          AND name NOT LIKE '%TEST%'
+          AND name NOT LIKE '%STABLED%'
+          AND name NOT LIKE '%TAMED%'
+          AND name NOT LIKE '%TOTEM%'
+    ]])
     if catResults then
         repeat
             local entry, name = catResults:GetUInt32(0), catResults:GetString(1)
             catCache[entry] = name
-			catCount = catCount + 1
+            catCount = catCount + 1
         until not catResults:NextRow()
     end
 
-    -- Bear cache
-    local bearResults = WorldDBQuery("SELECT entry, name FROM creature_template WHERE family = 4 OR name LIKE '%arcturis%' OR name LIKE '%grizzly cub%'")
+    local bearResults = WorldDBQuery([[
+       SELECT entry, name 
+       FROM creature_template 
+       WHERE (family = 4 
+          OR name LIKE '%arcturis%' 
+          OR name LIKE '%grizzly cub%')
+          AND name NOT LIKE '%(%'
+          AND name NOT LIKE '%"%'
+          AND name NOT LIKE '%UNUSED%'
+          AND name NOT LIKE '%TEST%'
+          AND name NOT LIKE '%STABLED%'
+          AND name NOT LIKE '%TAMED%'
+          AND name NOT LIKE '%TOTEM%'
+    ]])
     if bearResults then
         repeat
             local entry, name = bearResults:GetUInt32(0), bearResults:GetString(1)
             bearCache[entry] = name
-			bearCount = bearCount + 1
+            bearCount = bearCount + 1
         until not bearResults:NextRow()
     end
 
-    -- Bird cache
-    local birdResults = WorldDBQuery("SELECT entry, name FROM creature_template WHERE family IN (7, 26, 30, 33, 34, 37, 38) OR ((name LIKE '%highperch%' OR name LIKE '%wyvern%' OR name LIKE '%heartrazor%') AND type = 1)")
+    local birdResults = WorldDBQuery([[
+       SELECT entry, name 
+       FROM creature_template 
+       WHERE (family IN (7, 26, 30, 33, 34, 37, 38) 
+          OR ((name LIKE '%highperch%' 
+          OR name LIKE '%wyvern%' 
+          OR name LIKE '%heartrazor%') 
+          AND type = 1))
+          AND name NOT LIKE '%(%'
+          AND name NOT LIKE '%"%'
+          AND name NOT LIKE '%UNUSED%'
+          AND name NOT LIKE '%TEST%'
+          AND name NOT LIKE '%STABLED%'
+          AND name NOT LIKE '%TAMED%'
+          AND name NOT LIKE '%TOTEM%'
+    ]])
     if birdResults then
         repeat
             local entry, name = birdResults:GetUInt32(0), birdResults:GetString(1)
             birdCache[entry] = name
-			birdCount = birdCount +1
+            birdCount = birdCount + 1
         until not birdResults:NextRow()
     end
-	
-	-- Travel cache
-	local travelResults = WorldDBQuery("SELECT entry, name FROM creature_template WHERE family IN (1, 11, 12, 39) OR (((name LIKE '%riding wolf%' OR name LIKE '%caribou%' OR name LIKE '%fawn%' OR name LIKE '%bach%' OR name LIKE '%grazer%' OR name LIKE '%giraffe%' OR name LIKE '%gazelle%' OR name LIKE '%zhevra%' OR name LIKE '%snickerfang%' OR name LIKE '%hyena%' OR name LIKE '%mosshoof%' OR name LIKE '%talbuk%' OR name LIKE '%elk%' OR name LIKE '%stag%' OR name LIKE '%goat%' OR name LIKE '%mustang%' OR name LIKE '%buck%' OR name LIKE '%ram%')) AND type = 1)")
+    
+    local travelResults = WorldDBQuery([[
+       SELECT entry, name 
+       FROM creature_template 
+       WHERE (family IN (1, 11, 12, 39) 
+          OR ((name LIKE '%riding wolf%' 
+          OR name LIKE '%caribou%' 
+          OR name LIKE '%fawn%' 
+          OR name LIKE '%bach%' 
+          OR name LIKE '%grazer%' 
+          OR name LIKE '%giraffe%' 
+          OR name LIKE '%gazelle%' 
+          OR name LIKE '%zhevra%' 
+          OR name LIKE '%snickerfang%' 
+          OR name LIKE '%hyena%' 
+          OR name LIKE '%mosshoof%' 
+          OR name LIKE '%talbuk%' 
+          OR name LIKE '%elk%' 
+          OR name LIKE '%stag%' 
+          OR name LIKE '%goat%' 
+          OR name LIKE '%mustang%' 
+          OR name LIKE '%buck%' 
+          OR name LIKE '%ram%') 
+          AND type = 1))
+          AND name NOT LIKE '%(%'
+          AND name NOT LIKE '%"%'
+          AND name NOT LIKE '%UNUSED%'
+          AND name NOT LIKE '%TEST%'
+          AND name NOT LIKE '%STABLED%'
+          AND name NOT LIKE '%TAMED%'
+          AND name NOT LIKE '%TOTEM%'
+    ]])
     if travelResults then
         repeat
             local entry, name = travelResults:GetUInt32(0), travelResults:GetString(1)
@@ -86,9 +155,22 @@ local function CacheCreatures()
             travelCount = travelCount + 1
         until not travelResults:NextRow()
     end
-	
-	-- Owlkin cache
-    local owlResults = WorldDBQuery("SELECT entry, name FROM creature_template WHERE name LIKE '%owlkin%' OR name LIKE '%wildkin%' OR name LIKE '%owlbeast%' OR name LIKE '%moonkin%'")
+    
+    local owlResults = WorldDBQuery([[
+       SELECT entry, name 
+       FROM creature_template 
+       WHERE (name LIKE '%owlkin%' 
+          OR name LIKE '%wildkin%' 
+          OR name LIKE '%owlbeast%' 
+          OR name LIKE '%moonkin%')
+          AND name NOT LIKE '%(%'
+          AND name NOT LIKE '%"%'
+          AND name NOT LIKE '%UNUSED%'
+          AND name NOT LIKE '%TEST%'
+          AND name NOT LIKE '%STABLED%'
+          AND name NOT LIKE '%TAMED%'
+          AND name NOT LIKE '%TOTEM%'
+    ]])
     if owlResults then
         repeat
             local entry, name = owlResults:GetUInt32(0), owlResults:GetString(1)
@@ -96,9 +178,33 @@ local function CacheCreatures()
             owlCount = owlCount + 1
         until not owlResults:NextRow()
     end
-	
-	-- Tree cache
-	local treeResults = WorldDBQuery("SELECT entry, name FROM creature_template WHERE name LIKE '%root-walker%' OR name LIKE '%treant%' OR name LIKE '%withered green keeper%' OR name LIKE '%Withered Ancient%' OR name LIKE '%Wood Ent%' OR name LIKE '%Unbound Ent%' OR name LIKE '%Mangrove Ent%' OR name LIKE '%Dispirited Ent%' OR name LIKE '%sapling%' OR name LIKE '%Darnassian Proector%' OR name LIKE '%Crazed Ancient%' OR name LIKE '%Crystalline Keeper%' OR name LIKE '%Irontree%' OR name LIKE '%tender%' AND type = 4")
+    
+    local treeResults = WorldDBQuery([[
+       SELECT entry, name 
+       FROM creature_template 
+       WHERE (name LIKE '%root-walker%' 
+          OR name LIKE '%treant%' 
+          OR name LIKE '%withered green keeper%' 
+          OR name LIKE '%Withered Ancient%' 
+          OR name LIKE '%Wood Ent%' 
+          OR name LIKE '%Unbound Ent%' 
+          OR name LIKE '%Mangrove Ent%' 
+          OR name LIKE '%Dispirited Ent%' 
+          OR name LIKE '%sapling%' 
+          OR name LIKE '%Darnassian Proector%' 
+          OR name LIKE '%Crazed Ancient%' 
+          OR name LIKE '%Crystalline Keeper%' 
+          OR name LIKE '%Irontree%' 
+          OR name LIKE '%tender%')
+          AND type = 4
+          AND name NOT LIKE '%(%'
+          AND name NOT LIKE '%"%'
+          AND name NOT LIKE '%UNUSED%'
+          AND name NOT LIKE '%TEST%'
+          AND name NOT LIKE '%STABLED%'
+          AND name NOT LIKE '%TAMED%'
+          AND name NOT LIKE '%TOTEM%'
+    ]])
     if treeResults then
         repeat
             local entry, name = treeResults:GetUInt32(0), treeResults:GetString(1)
@@ -106,8 +212,45 @@ local function CacheCreatures()
             treeCount = treeCount + 1
         until not treeResults:NextRow()
     end
-		-- Aquatic cache
-	local aquaticResults = WorldDBQuery("SELECT entry, name FROM creature_template WHERE ((name LIKE '%sewer beast%' OR name LIKE '%mako%' OR name LIKE '%seal%' OR name LIKE '%rippa%' OR name LIKE '%orca%' OR name LIKE '%lake frenzy%' OR name LIKE '%sporewind frenzy%' OR name LIKE '%underbog frenzy%' OR name LIKE '%yellowgill frenzy%' OR name LIKE '%reef frenzy%' OR name LIKE '%canal frenzy%' OR name LIKE '%muck frenzy%' OR name LIKE '%coilfang frenzy%' OR name LIKE '%sharptooth frenzy%' OR name LIKE '%coastal frenzy%' OR name LIKE '%drakkari frenzy%' OR name LIKE '%loch frenzy%' OR name LIKE '%hooktooth%' OR name LIKE '%mudfin%' OR name LIKE '%shark%' OR name LIKE '%thresh%' OR name LIKE '%eel%' OR name LIKE '%hammerhead%' OR name LIKE '%whitetail%' OR name LIKE '%crocolisk%' OR name LIKE '%sawfin%') AND type = 1)")
+    
+    local aquaticResults = WorldDBQuery([[
+       SELECT entry, name 
+       FROM creature_template 
+       WHERE (name LIKE '%sewer beast%' 
+          OR name LIKE '%mako%' 
+          OR name LIKE '%seal%' 
+          OR name LIKE '%rippa%' 
+          OR name LIKE '%orca%' 
+          OR name LIKE '%lake frenzy%' 
+          OR name LIKE '%sporewind frenzy%' 
+          OR name LIKE '%underbog frenzy%' 
+          OR name LIKE '%yellowgill frenzy%' 
+          OR name LIKE '%reef frenzy%' 
+          OR name LIKE '%canal frenzy%' 
+          OR name LIKE '%muck frenzy%' 
+          OR name LIKE '%coilfang frenzy%' 
+          OR name LIKE '%sharptooth frenzy%' 
+          OR name LIKE '%coastal frenzy%' 
+          OR name LIKE '%drakkari frenzy%' 
+          OR name LIKE '%loch frenzy%' 
+          OR name LIKE '%hooktooth%' 
+          OR name LIKE '%mudfin%' 
+          OR name LIKE '%shark%' 
+          OR name LIKE '%thresh%' 
+          OR name LIKE '%eel%' 
+          OR name LIKE '%hammerhead%' 
+          OR name LIKE '%whitetail%' 
+          OR name LIKE '%crocolisk%' 
+          OR name LIKE '%sawfin%')
+          AND type = 1
+          AND name NOT LIKE '%(%'
+          AND name NOT LIKE '%"%'
+          AND name NOT LIKE '%UNUSED%'
+          AND name NOT LIKE '%TEST%'
+          AND name NOT LIKE '%STABLED%'
+          AND name NOT LIKE '%TAMED%'
+          AND name NOT LIKE '%TOTEM%'
+    ]])
     if aquaticResults then
         repeat
             local entry, name = aquaticResults:GetUInt32(0), aquaticResults:GetString(1)
@@ -115,7 +258,7 @@ local function CacheCreatures()
             aquaticCount = aquaticCount + 1
         until not aquaticResults:NextRow()
     end
-	
+
     print("[Druid Morph Module]: Cat forms cached: "..catCount)
     print("[Druid Morph Module]: Bear forms cached: "..bearCount)
     print("[Druid Morph Module]: Bird forms cached: "..birdCount)

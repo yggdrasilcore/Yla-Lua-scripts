@@ -23,6 +23,11 @@ local cacheChoice = {}
 local intIdChoice = {}
 local tickleCount = {}
 local mailboxtime = {}
+
+
+-- Constants
+local cachePopulated
+
 -- End tables
 
 -- Initiates VIP table if not already present
@@ -68,6 +73,9 @@ local function PopulateMorphCache()
           AND name NOT LIKE '%"%'
           AND name NOT LIKE '%UNUSED%'
           AND name NOT LIKE '%TEST%'
+          AND name NOT LIKE '%STABLED%'
+          AND name NOT LIKE '%TAMED%'
+          AND name NOT LIKE '%TOTEM%'
     ]])
     if catResults then
         repeat
@@ -87,6 +95,9 @@ local function PopulateMorphCache()
           AND name NOT LIKE '%"%'
           AND name NOT LIKE '%UNUSED%'
           AND name NOT LIKE '%TEST%'
+          AND name NOT LIKE '%STABLED%'
+          AND name NOT LIKE '%TAMED%'
+          AND name NOT LIKE '%TOTEM%'
     ]])
     if bearResults then
         repeat
@@ -108,6 +119,9 @@ local function PopulateMorphCache()
           AND name NOT LIKE '%"%'
           AND name NOT LIKE '%UNUSED%'
           AND name NOT LIKE '%TEST%'
+          AND name NOT LIKE '%STABLED%'
+          AND name NOT LIKE '%TAMED%'
+          AND name NOT LIKE '%TOTEM%'
     ]])
     if birdResults then
         repeat
@@ -144,6 +158,9 @@ local function PopulateMorphCache()
           AND name NOT LIKE '%"%'
           AND name NOT LIKE '%UNUSED%'
           AND name NOT LIKE '%TEST%'
+          AND name NOT LIKE '%STABLED%'
+          AND name NOT LIKE '%TAMED%'
+          AND name NOT LIKE '%TOTEM%'
     ]])
     if travelResults then
         repeat
@@ -164,6 +181,9 @@ local function PopulateMorphCache()
           AND name NOT LIKE '%"%'
           AND name NOT LIKE '%UNUSED%'
           AND name NOT LIKE '%TEST%'
+          AND name NOT LIKE '%STABLED%'
+          AND name NOT LIKE '%TAMED%'
+          AND name NOT LIKE '%TOTEM%'
     ]])
     if owlResults then
         repeat
@@ -195,6 +215,9 @@ local function PopulateMorphCache()
           AND name NOT LIKE '%"%'
           AND name NOT LIKE '%UNUSED%'
           AND name NOT LIKE '%TEST%'
+          AND name NOT LIKE '%STABLED%'
+          AND name NOT LIKE '%TAMED%'
+          AND name NOT LIKE '%TOTEM%'
     ]])
     if treeResults then
         repeat
@@ -238,6 +261,9 @@ local function PopulateMorphCache()
           AND name NOT LIKE '%"%'
           AND name NOT LIKE '%UNUSED%'
           AND name NOT LIKE '%TEST%'
+          AND name NOT LIKE '%STABLED%'
+          AND name NOT LIKE '%TAMED%'
+          AND name NOT LIKE '%TOTEM%'
     ]])
     if aquaticResults then
         repeat
@@ -439,7 +465,10 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 5)
         player:GossipSendMenu(1, creature, 60)
 	elseif intId == 500 then
-		PopulateMorphCache()
+		if not cachePopulated then
+			PopulateMorphCache()
+			cachePopulated = true
+		end
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/ABILITY_Druid_CatForm:32:32:-22:0|tCat Forms: " .. catCount, 0, 501)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_racial_bearform:32:32:-22:0|tBear Forms: " .. bearCount, 0, 502)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/ABILITY_Druid_FlightForm:32:32:-22:0|tFlight Forms: " .. birdCount, 0, 503)
