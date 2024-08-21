@@ -144,9 +144,9 @@ local function TyrannusRoleplayArea(event, player, oldArea, newArea)
 						slave:SetFaction(1770) -- Separate faction to identify combat-active slaves later
 						slave:RegisterEvent(AttackFallenWarriors, 500, 0)
 					end
-				elseif not player:IsInCombat() then
-					print("no combat - removing player event")
-					player:RemoveEvents()
+				--elseif not player:IsInCombat() then
+				--	print("no combat - removing player event")
+				--	player:RemoveEvents()
 				end
 			end, 1500, 0)
 			
