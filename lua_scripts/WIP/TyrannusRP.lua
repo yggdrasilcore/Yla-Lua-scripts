@@ -114,9 +114,11 @@ local function TyrannusRoleplayArea(event, player, oldArea, newArea)
 				local targetable
 				if Tyrannus then
 					targetable = Tyrannus:IsTargetableForAttack(false)
+					print("tyrannus is OK")
 				end
 				if Tyrannus and Tyrannus:IsInCombat() and (SlaveRPTime and SlaveRPTime <=os.time()) and not targetable then
 					Tyrannus:ClearInCombat()
+					print("tyrannus not ok! in cb and not attackable! resetting...")
 				elseif (Tyrannus and player:IsInCombat()) and not SlaveRPTime then
 					SlaveRPTime = os.time() + 37
 					print("Tyrannus in cb tart detected, spawning slaves in 37 sec")
@@ -143,6 +145,7 @@ local function TyrannusRoleplayArea(event, player, oldArea, newArea)
 						slave:RegisterEvent(AttackFallenWarriors, 500, 0)
 					end
 				elseif not player:IsInCombat() then
+					print("no combat - removing player event")
 					player:RemoveEvents()
 				end
 			end, 1500, 0)
