@@ -149,7 +149,7 @@ local function TyrannusRoleplayArea(event, player, oldArea, newArea)
 						player:SetInCombatWith(Tyrannus)
 						print("Combat error! Force setting combat!")
 					else
-						Tyrannus2 = player:GetNearestCreature(100, 36658)
+						Tyrannus2 = player:GetNearestCreature(250, 36658)
 						if not Tyrannus2 or (Tyrannus2 and Tyrannus2:IsDead()) then
 							print("no combat - removing player event")
 							player:RemoveEvents()
