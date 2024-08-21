@@ -110,7 +110,7 @@ local function TyrannusRoleplayArea(event, player, oldArea, newArea)
 		
 			player:RegisterEvent(function(eventId, delay, repeats, player)
 				print("Looping event...")
-				Tyrannus = player:GetNearestCreature(45, 36658)
+				Tyrannus = player:GetNearestCreature(40, 36658)
 				local targetable
 				if Tyrannus then
 					targetable = Tyrannus:IsTargetableForAttack(false)
@@ -149,8 +149,11 @@ local function TyrannusRoleplayArea(event, player, oldArea, newArea)
 						player:SetInCombatWith(Tyrannus)
 						print("Combat error! Force setting combat!")
 					else
-						print("no combat - removing player event")
-						player:RemoveEvents()
+						Tyrannus2 = player:GetNearestCreature(100, 36658)
+						if not Tyrannus2 or (Tyrannus2 and not Tyrannus2:IsDead()) then
+							print("no combat - removing player event")
+							player:RemoveEvents()
+						end
 					end
 				end
 			end, 1500, 0)
