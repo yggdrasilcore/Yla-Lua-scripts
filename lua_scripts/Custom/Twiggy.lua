@@ -432,7 +432,7 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
         player:GossipSendMenu(1, creature, 60)
 	elseif intId == 56 then
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/Ability_Mount_RidingHorse:32:32:-22:0|tMount and companion features:\n ", 0, 53)
-		player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_mount_gyrocoptor:32:32:-22:0|tAccount-shared mounts and companions: \n \nAll mounts are automatically synchronized across your eligible characters. All companions are account-bound and can be sent to your other characters.\n ", 0, 53)
+		player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_mount_gyrocoptor:32:32:-22:0|tAccount-shared: \n \nAll mounts are automatically synchronized across your eligible characters. All companions are account-bound and can be sent to your other characters.\n ", 0, 53)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_pet_babyblizzardbear:32:32:-22:0|tCompanion Carrier: \n \nAt the mall, the Companion Carrier breeds companions for players to purchase for 50 Vote Tokens or 5 Community Tokens each.\n ", 0, 52)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 5)
         player:GossipSendMenu(1, creature, 60)
