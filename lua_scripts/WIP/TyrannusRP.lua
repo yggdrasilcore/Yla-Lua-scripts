@@ -109,6 +109,7 @@ local function TyrannusRoleplayArea(event, player, oldArea, newArea)
 			local SlaveRPTime
 		
 			player:RegisterEvent(function(eventId, delay, repeats, player)
+				print("Looping event...")
 				Tyrannus = player:GetNearestCreature(45, 36658)
 				local targetable
 				if Tyrannus then
