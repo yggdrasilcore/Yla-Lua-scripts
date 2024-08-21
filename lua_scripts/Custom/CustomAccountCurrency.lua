@@ -14,7 +14,7 @@ local ANNOUNCEMENT = "This server is running the |cFF00B0E8AccountWide Currency 
 local currencyItemIDs = {
     37742,  -- Transmog Token 
     --20880,  -- Vote Token 
-    17829,  -- Community Token 
+    --17829,  -- Community Token 
 }
 
 if not ENABLE_ACCOUNTWIDE_CURRENCY then return end

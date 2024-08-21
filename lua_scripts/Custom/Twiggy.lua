@@ -348,6 +348,7 @@ end
 local function mainMenu(player, creature)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/ABILITY_DRUID_MANATREE:32:32:-22:0|tI'm Twiggy, your personal branch of\n         Yggdrasil! How can I help you?\n ", 0, 1)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tVIP options", 0, 2)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|tRAF menu", 0, 6)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_Coin_16:32:32:-22:0|tSee my currencies", 0, 3)
 	player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_gem_diamond_07:32:32:-22:0|tExplore Yggdrasil's features", 0, 5)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_arcane_teleportdarnassus:32:32:-22:0|tLet's go to the Mall!", 0, 4)
@@ -397,6 +398,8 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 	intIdChoice[player:GetGUIDLow()] = intId
     if intId == 1 then
 		mainMenu(player, creature)
+	elseif intId == 6 then
+		player:RunCommand("rafmenu")
 	elseif intId == 5 then
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_fire_burningspeed:32:32:-22:0|tRates", 0, 49)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_helmet_89:32:32:-22:0|tTransmog and morph services", 0, 50)
