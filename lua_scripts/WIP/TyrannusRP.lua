@@ -32,7 +32,7 @@ local function TyrannusLeaveCombat(event, player)
 			TyrannusSlaves[player:GetInstanceId()] = nil
 		end
 		
-		player:RemoveEvents()
+		--player:RemoveEvents()
 		
         for _, group in ipairs(slaveGroups) do
             for _, slave in ipairs(group) do
