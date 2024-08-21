@@ -118,12 +118,15 @@ local function TyrannusRoleplayArea(event, player, oldArea, newArea)
 					Tyrannus:ClearInCombat()
 				elseif (Tyrannus and player:IsInCombat()) and not SlaveRPTime then
 					SlaveRPTime = os.time() + 37
+					print("Tyrannus in cb tart detected, spawning slaves in 37 sec")
 				elseif (Tyrannus and player:IsInCombat()) and SlaveRPTime <= os.time() and not TyrannusSlaves[player:GetInstanceId()] then
+					print("attempting to spawn slaves")
 
 					TyrannusSlaves[player:GetInstanceId()] = true
 					local slaveIds = ALLIANCE_SLAVE_IDS
 
 					for _ = 1, 15 do
+						print("Spawning slaves")
 						local minX = math.min(1045, 1040, 1051, 1057)
 						local maxX = math.max(1045, 1040, 1051, 1057)
 						local minY = math.min(113, 129, 131, 128)
