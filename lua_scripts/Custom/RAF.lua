@@ -50,7 +50,8 @@ AuthDBExecute([[
         status INT,
         progress INT DEFAULT 0,
         date INT,
-        IP VARCHAR(15)
+        IP VARCHAR(15),
+        IP_referer VARCHAR(15)
     )
 ]])
 
@@ -936,46 +937,45 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         local timeplayed = query:GetUInt32(0)
 
         if timeplayed < 3600 * RegisterRAFTimeLimit then
-            -- Ensure the code is a number
-            local referer_id = tonumber(code)
-            if not referer_id then
-                player:SendAreaTriggerMessage("Please enter a valid number for the referral ID.")
-                ShowRAFLink(player)
-                return
-            end
+			-- Ensure the code is a number
+			local referer_id = tonumber(code)
+			if not referer_id then
+				player:SendAreaTriggerMessage("Please enter a valid number for the referral ID.")
+				ShowRAFLink(player)
+				return
+			end
 
-            -- Verify that the referer ID exists in the account table
-            local refererQuery = AuthDBQuery(string.format([[
-                SELECT id FROM account WHERE id = %d
-            ]], referer_id))
-
-            if not refererQuery then
-                player:SendAreaTriggerMessage("The entered referral ID does not exist. Please check and try again.")
-                ShowRAFLink(player)
-                return
-            end
+			-- Verify that the referer ID exists in the account table
+			local refererQuery = AuthDBQuery(string.format([[
+				SELECT id FROM account WHERE id = %d
+			]], referer_id))
+			if not refererQuery then
+				player:SendAreaTriggerMessage("The entered referral ID does not exist. Please check and try again.")
+				ShowRAFLink(player)
+				return
+			end
 
 			if accountId == referer_id then
 				player:SendBroadcastMessage("You can't refer yourself!")
-                ShowRAFLink(player)
+				ShowRAFLink(player)
 				return
 			end
-			
+
 			local currentTime = os.time()
 			local playerIP = player:GetPlayerIP()
-			
+
+			local refererIPQuery = AuthDBQuery(string.format([[
+				SELECT last_ip FROM account WHERE id = %d
+			]], referer_id))
+
+			local refererIP = refererIPQuery:GetString(0)
+
 			AuthDBExecute(string.format([[
-				INSERT INTO account_raf (account_id, referer_id, status, progress, date, IP)
-				VALUES (%d, %d, 2, 0, %d, '%s')
-				ON DUPLICATE KEY UPDATE referer_id = %d, status = 2, progress = 0, date = %d, IP = '%s'
-			]], accountId, referer_id, currentTime, playerIP, referer_id, currentTime, playerIP))
-			
-			AuthDBExecute(string.format([[
-				UPDATE account
-				SET recruiter = %d
-				WHERE id = %d
-			]], accountId, GUIDlow))
-			
+				INSERT INTO account_raf (account_id, referer_id, status, progress, date, IP, IP_referer)
+				VALUES (%d, %d, 2, 0, %d, '%s', '%s')
+				ON DUPLICATE KEY UPDATE referer_id = %d, status = 2, progress = 0, date = %d, IP = '%s', IP_referer = '%s'
+			]], accountId, referer_id, currentTime, playerIP, refererIP, referer_id, currentTime, playerIP, refererIP))
+
 			RAFreferee[accountId] = true
 			player:SendAreaTriggerMessage(string.format("Successfully linked to referrer with ID: %d. Remember to relog to use the summon function.", referer_id))
         else 
@@ -1141,8 +1141,49 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
 end
 
 local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee, .rafdelete, .rafmenu
+	if not player then return end
     local cmd, param = string.match(command:lower(), "^(%S+)%s*(%d*)$")
     local accountId = player:GetAccountId()
+	
+	if command:lower():find("^rafconnect") then
+		local _, _, accountId, refererId = command:find("^rafconnect%s+(%d+)%s+(%d+)$")
+		
+		if not accountId or not refererId then
+			player:SendBroadcastMessage("Usage: .rafconnect <account_id> <referer_id>")
+			return false
+		end
+		
+		-- Check if both IDs are valid
+		local accountCheck = AuthDBQuery("SELECT 1 FROM account WHERE id = " .. accountId)
+		local refererCheck = AuthDBQuery("SELECT 1 FROM account WHERE id = " .. refererId)
+		
+		if not accountCheck or not refererCheck then
+			player:SendBroadcastMessage("Error: One or both account IDs are invalid.")
+			return false
+		end
+		
+		-- Check if the account_id and referer_id are already linked
+		local linkCheck = AuthDBQuery(string.format("SELECT 1 FROM account_raf WHERE account_id = %s AND referer_id = %s", accountId, refererId))
+		
+		if linkCheck then
+			player:SendBroadcastMessage("Error: These accounts are already linked in RAF.")
+			return false
+		end
+		
+		-- Insert the new RAF connection
+		local currentTime = os.time()
+		local insertQuery = string.format(
+			"INSERT INTO account_raf (account_id, referer_id, status, progress, date) VALUES (%s, %s, 2, 0, %d)",
+			accountId, refererId, currentTime)
+		
+		if AuthDBExecute(insertQuery) then
+			player:SendBroadcastMessage("RAF: Friend " .. accountId .. " successfully linked to referer " .. refererId .. ".")
+		else
+			player:SendBroadcastMessage("Error: Failed to create RAF connection.")
+		end
+		
+		return false
+	end
 	
     if cmd == "rafsummonfriend" then
         if not param or param == "" then
