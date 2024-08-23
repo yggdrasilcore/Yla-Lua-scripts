@@ -449,7 +449,7 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 	elseif intId == 52 then
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_nature_groundingtotem:32:32:-22:0|t Available pet services at the Mall:\n ", 0, 52)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_scroll_11:32:32:-22:0|tRename demons: \n \nFor the mere price of 30 Vote Tokens or 3 Community Tokens, you can pick any morphologically correct Demonic name for your demons.\n ", 0, 52)
-		player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_shadow_demonictactics:32:32:-22:0|tDemon morphs: \n \nFor 50 Vote Tokens or 5 Community Tokens, youy other race compatible with your class.\n ", 0, 52)
+		player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_shadow_demonictactics:32:32:-22:0|tDemon morphs: \n \nFor 50 Vote Tokens or 5 Community Tokens, Warlocks can purchase an item transcending the boundary between your demon and other demons of the same kind. This item lets your demons claim the forms of other demons if they partake in killing them, after which you can change the demon's form to any claimed form.\n ", 0, 52)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_tracking:32:32:-22:0|tHunter pet beastmaster: \n \nFor 100 Vote Tokens or 10 Community Tokens, you can purchase virtually any hunter pet you want.\n ", 0, 52)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 5)
         player:GossipSendMenu(1, creature, 60)
