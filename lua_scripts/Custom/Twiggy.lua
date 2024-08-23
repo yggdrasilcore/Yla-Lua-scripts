@@ -560,8 +560,8 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 2)
         player:GossipSendMenu(1, creature, 60)
 	elseif intId == 21 then
-		if player:HasItem(386440,7) then
-			player:RemoveItem(386440,7)
+		if player:HasItem(19322,7) then
+			player:RemoveItem(19322,7)
 			VIPtime[player:GetGUIDLow()] = (os.time() + 7 * 24 * 60 * 60)
 			
 			CharDBExecute("INSERT INTO ACCOUNTS_VIP (ACCOUNT, VIPTIME) VALUES (" .. player:GetAccountId() .. ", " .. (os.time() + 7 * 24 * 60 * 60) .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
@@ -571,8 +571,8 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 			player:SendAreaTriggerMessage("You don't have enough Community Tokens.")
 		end
 	elseif intId == 22 then
-		if player:HasItem(386440,12) then
-			player:RemoveItem(386440,12)
+		if player:HasItem(19322,12) then
+			player:RemoveItem(19322,12)
 			VIPtime[player:GetGUIDLow()] = (os.time() + 14 * 24 * 60 * 60)
 			
 			CharDBExecute("INSERT INTO ACCOUNTS_VIP (ACCOUNT, VIPTIME) VALUES (" .. player:GetAccountId() .. ", " .. (os.time() + 14 * 24 * 60 * 60) .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
@@ -582,8 +582,8 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 			player:SendAreaTriggerMessage("You don't have enough Community Tokens.")
 		end
 	elseif intId == 23 then
-		if player:HasItem(386440,15) then
-			player:RemoveItem(386440,15)
+		if player:HasItem(19322,15) then
+			player:RemoveItem(19322,15)
 			VIPtime[player:GetGUIDLow()] = (os.time() + 21 * 24 * 60 * 60)
 			
 			CharDBExecute("INSERT INTO ACCOUNTS_VIP (ACCOUNT, VIPTIME) VALUES (" .. player:GetAccountId() .. ", " .. (os.time() + 21 * 24 * 60 * 60) .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
@@ -594,37 +594,10 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 		end
 		
     elseif intId == 3 then
-		local CommunityToken
-		local TransmogToken 
-		local VoteToken
-		
         player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tWhat can I use my currencies for?", 0, 30)
-		
-		local CommunityTokenQuery = CharDBQuery("SELECT count FROM accountwide_currency WHERE accountId = " .. player:GetAccountId() .. " AND currencyId = " .. 386440)
-		
-		if not CommunityTokenQuery then
-			CommunityToken = 0
-		else 
-			CommunityToken = CommunityTokenQuery:GetUInt32(0)
-		end
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tCommunity Tokens: "..CommunityToken, 0, 3)
-		
-		local TransmogTokenQuery = CharDBQuery("SELECT count FROM accountwide_currency WHERE accountId = " .. player:GetAccountId() .. " AND currencyId = " .. 37742)
-		if not TransmogTokenQuery then 
-			TransmogToken = 0
-		else
-			TransmogToken = TransmogTokenQuery:GetUInt32(0)
-		end
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tTransmog Tokens: "..TransmogToken, 0, 3)
-		
-		local VoteTokenQuery = CharDBQuery("SELECT count FROM accountwide_currency WHERE accountId = " .. player:GetAccountId() .. " AND currencyId = " .. 20880)
-		if not VoteTokenQuery then
-			VoteToken = 0
-		else
-			VoteToken = VoteTokenQuery:GetUInt32(0)
-		end
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_bijou_gold:32:32:-22:0|tVote Tokens: "..VoteToken, 0, 3)
-		
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tCommunity Tokens: "..player:GetItemCount(19322), 0, 3)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tTransmog Tokens: "..player:GetItemCount(37742), 0, 3)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_bijou_gold:32:32:-22:0|tVote Tokens: "..player:GetItemCount(20880), 0, 3)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 1)
         player:GossipSendMenu(1, creature, 60)
 	elseif intId == 30 then
