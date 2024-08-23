@@ -3,7 +3,7 @@
 -- START VARS
 local RAFDuration 			= 45 * 24 * 60 * 60 -- RAF validity duration (45 * 24 * 60 * 60 = 45 days)
 local ProgressCheckTimer 	= 5 				-- How often (in minutes) to check if RAF requirements are fulfilled, in minutes
-local RAFRewardReq			= 750				-- How many counts of "activity" to require to achieve RAF rewards (skill points earned, achievements earned, quests completed, area changes, creatures in level ranged killed, etc.)
+local RAFRewardReq			= 10000				-- How many counts of "activity" to require to achieve RAF rewards (skill points earned, achievements earned, quests completed, area changes, creatures in level ranged killed, etc.)
 local RewardTier1			= 5					-- How many referrals required to reach certain reward tiers
 local RewardTier2			= 10
 local RewardTier3			= 15

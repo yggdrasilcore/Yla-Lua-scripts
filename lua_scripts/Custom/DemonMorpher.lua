@@ -81,6 +81,7 @@ local customFamilyNames = {
     ["Collidus"] = 15,
     ["Voidcaller"] = 16,
     ["Voidhunter"] = 16,
+    ["Voidwalker"] = 16,
     ["Nexus Terror"] = 16,
     ["Crazed Mana-Surge"] = 16,
     ["Arcane Devourer"] = 16,
