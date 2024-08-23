@@ -402,7 +402,7 @@ local function OnGossipHello(event, player, object)
 		player:GossipMenuAddItem(0, "I hear you're interested in transforming your demon pets' forms...", 0, 1)
 		player:GossipSendMenu(1, object)
 	else
-		player:SendBroadcastMessage("I only cater to warlocks.") -- add DK
+		player:SendBroadcastMessage("I only cater to Warlocks.") -- add DK
 	end
 end
 
