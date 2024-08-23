@@ -84,6 +84,7 @@ local customFamilyNames = {
     ["Nexus Terror"] = 16,
     ["Crazed Mana-Surge"] = 16,
     ["Arcane Devourer"] = 16,
+    ["Arcanimus"] = 16,
     ["Manawraith"] = 16,
     ["Tainted Arcane Wraith"] = 16,
     ["Doomwhisperer"] = 17,
