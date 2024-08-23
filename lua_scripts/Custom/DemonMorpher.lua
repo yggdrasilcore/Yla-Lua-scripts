@@ -218,6 +218,9 @@ local function OnKillCreature(event, player, creature)
         local skillMessage = CountTotalMorphs(player) < MaxMorphSkill and " Your morph skill has increased to " .. CountTotalMorphs(player)+1 .. "." or ""
 
         player:SendBroadcastMessage("You have captured " .. creatureName .. "'s essence and learned how to morph your " .. familyName .. " into their form." .. skillMessage)
+    else
+        -- Debug print if no family was matched
+        print("[DEBUG] No matching family found for creature: " .. creatureName)
     end
 end
 
@@ -243,7 +246,7 @@ local function OnItemGossipHello(event, player, item, object)
 	end
 end
 
-local function OnGossipHello(player, object)
+local function OnPlayerGossipHello(player, object)
     player:GossipClearMenu()
 
 	player:GossipMenuAddItem(4, "How does demon morphing work?", 0, 997)
@@ -255,9 +258,10 @@ local function OnGossipHello(player, object)
     player:GossipSendMenu(1, object, 99)
 end
 
-local function OnGossipSelect(event, player, object, sender, intid, code)
+local function OnItemGossipSelect(event, player, object, sender, intid, code)
+
     if intid == 999 then
-        OnGossipHello(player, object)
+        OnPlayerGossipHello(player, object)
         return
     end
 	if intid == 997 then
@@ -283,13 +287,13 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
                 -- CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = " .. player:GetGUIDLow() .. " AND form = " .. pet:GetCreatureFamily())
             else
                 player:SendBroadcastMessage("Your demon is too far away!")
-				OnGossipHello(player, player)
+				OnPlayerGossipHello(player, player)
             end
         else
             player:SendBroadcastMessage("No demon pet found.")
-			OnGossipHello(player, player)
+			OnPlayerGossipHello(player, player)
         end
-        OnGossipHello(player, player)
+        OnPlayerGossipHello(player, player)
         return
     end
 	if intid > 997 or intid < 997 then
@@ -325,7 +329,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
 				player:GossipSendMenu(1, object, 99)  -- Use the same gossip event ID for the submenu
 			else
 				player:SendAreaTriggerMessage("You don't have any morphs for this demon!")
-				OnGossipHello(player, object)
+				OnPlayerGossipHello(player, object)
 			end
 		else
 			-- This is the submenu, intid is the display ID
@@ -358,14 +362,14 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
 			CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND form = "..chosenFamily.." AND id = "..intid)
 			player:SendBroadcastMessage("You have morphed your "..familyNames[chosenFamily].." into "..morphName..".")
 			
-			OnGossipHello(player, player)
+			OnPlayerGossipHello(player, player)
 		end
 	end
 end
 
 local function OnCommand(event, player, command)
     if command:lower() == "demonmorph" then
-        OnGossipHello(player, player)
+        OnPlayerGossipHello(player, player)
         return false
     end
 end
@@ -377,6 +381,8 @@ local function OnPetAddedToWorld(event, player, pet)
 	if petName == "Infernal" then
 		summonedPetFamily = 30
 	end
+	--player:SendBroadcastMessage("Pet is family "..summonedPetFamily)
+	print("Player "..player:GetName().." summoned pet in family "..summonedPetFamily..".")
 	local queryResult = CharDBQuery("SELECT id FROM character_morphs WHERE guid = " .. guid .. " AND form = " .. summonedPetFamily .. " AND active = 1")
 	
 	if queryResult then
@@ -441,5 +447,5 @@ RegisterItemGossipEvent(ITEM_ID, 1, OnItemGossipHello)
 RegisterPlayerEvent(7, OnKillCreature)
 RegisterPlayerEvent(42, OnCommand)
 RegisterPlayerEvent(43, OnPetAddedToWorld)
-RegisterPlayerGossipEvent(99, 1, OnGossipHello)
-RegisterPlayerGossipEvent(99, 2, OnGossipSelect)
+RegisterPlayerGossipEvent(99, 1, OnPlayerGossipHello)
+RegisterPlayerGossipEvent(99, 2, OnItemGossipSelect)
