@@ -1145,7 +1145,7 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
     local cmd, param = string.match(command:lower(), "^(%S+)%s*(%d*)$")
     local accountId = player:GetAccountId()
 	
-	if command:lower():find("^rafconnect") then
+	if player:GetGMRank() > 0 and command:lower():find("^rafconnect") then
 		local _, _, accountId, refererId = command:find("^rafconnect%s+(%d+)%s+(%d+)$")
 		
 		if not accountId or not refererId then
