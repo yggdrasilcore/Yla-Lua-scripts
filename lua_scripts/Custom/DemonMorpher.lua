@@ -84,7 +84,8 @@ local customFamilyNames = {
     ["Nexus Terror"] = 16,
     ["Crazed Mana-Surge"] = 16,
     ["Arcane Devourer"] = 16,
-    ["Tainted Arcane Wrath"] = 16,
+    ["Manawraith"] = 16,
+    ["Tainted Arcane Wraith"] = 16,
     ["Doomwhisperer"] = 17,
     ["Sathal"] = 17,
     ["Deathwhisperer"] = 17,
@@ -217,22 +218,19 @@ local function OnKillCreature(event, player, creature)
         local skillMessage = CountTotalMorphs(player) < MaxMorphSkill and " Your morph skill has increased to " .. CountTotalMorphs(player)+1 .. "." or ""
 
         player:SendBroadcastMessage("You have captured " .. creatureName .. "'s essence and learned how to morph your " .. familyName .. " into their form." .. skillMessage)
-    else
-        -- Debug print if no family was matched
-        print("[DEBUG] No matching family found for creature: " .. creatureName)
     end
 end
 
 local function ShowInitialGossipMenu(player)
     player:GossipClearMenu()
 
-    player:GossipMenuAddItem(4, "How does demon morphing work?", 0, 997)
+    player:GossipMenuAddItem(4, "How does demon morphing work?", 0, 507)
 
     for familyId, familyName in pairs(familyNames) do
         player:GossipMenuAddItem(0, familyName, 0, familyId)
     end
 
-    player:GossipMenuAddItem(0, "Reset current morph", 0, 998)
+    player:GossipMenuAddItem(0, "Reset current morph", 0, 508)
 
 	player:GossipSendMenu(1, player, 99)
 end
@@ -248,11 +246,11 @@ end
 local function OnGossipHello(player, object)
     player:GossipClearMenu()
 
-	player:GossipMenuAddItem(4, "How does demon morphing work?", 0, 997)
+	player:GossipMenuAddItem(4, "How does demon morphing work?", 0, 507)
     for familyId, familyName in pairs(familyNames) do
         player:GossipMenuAddItem(0, familyName, 0, familyId)
     end
-    player:GossipMenuAddItem(0, "Reset current morph", 0, 998)
+    player:GossipMenuAddItem(0, "Reset current morph", 0, 508)
 
     player:GossipSendMenu(1, object, 99)
 end
@@ -260,17 +258,17 @@ end
 local function OnGossipSelect(event, player, object, sender, intid, code)
     print("[Warlock Pet Morph Module]: OnGossipSelect called with intid:", intid) -- Debug print
 
-    if intid == 999 then
+    if intid == 509 then
         OnGossipHello(player, object)
         return
     end
-	if intid == 997 then
+	if intid == 507 then
 		player:GossipClearMenu()
-		player:GossipMenuAddItem(0, "Through channeling the spirits of the underworld, you may allow your demon to take on the forms of its enemies. To claim an enemy's form, you must slay it. Every unique form claimed increases your morphing skill by 1. To claim the form of elite or rare creatures, you need to have a morphing skill of at least "..MorphReqEliteandRare, 0, 997)
-		player:GossipMenuAddItem(4, "Go back", 0, 999)
+		player:GossipMenuAddItem(0, "Through channeling the spirits of the underworld, you may allow your demon to take on the forms of its enemies. To claim an enemy's form, you must slay it. Every unique form claimed increases your morphing skill by 1. To claim the form of elite or rare creatures, you need to have a morphing skill of at least "..MorphReqEliteandRare, 0, 507)
+		player:GossipMenuAddItem(4, "Go back", 0, 509)
 		player:GossipSendMenu(1, player, 99)
 	end
-    if intid == 998 then
+    if intid == 508 then
         local petGUID = player:GetPetGUID()
         if petGUID then
             local nearbyUnits = player:GetCreaturesInRange(100)
@@ -296,7 +294,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
         OnGossipHello(player, player)
         return
     end
-	if intid > 997 or intid < 997 then
+	if intid > 507 or intid < 507 then
 		if familyNames[intid] then
 			-- This is the main menu, intid is the family ID
 			local guid = player:GetGUIDLow()
@@ -325,7 +323,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
 					player:GossipMenuAddItem(0, displayName, 0, displayId)
 				until not results:NextRow()
 				
-				player:GossipMenuAddItem(4, "Go back", 0, 999)
+				player:GossipMenuAddItem(4, "Go back", 0, 509)
 				player:GossipSendMenu(1, object, 99)  -- Use the same gossip event ID for the submenu
 			else
 				player:SendAreaTriggerMessage("You don't have any morphs for this demon!")
