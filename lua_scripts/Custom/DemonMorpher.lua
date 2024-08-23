@@ -157,7 +157,7 @@ local function CountTotalMorphs(player)
 end
 
 local function OnKillCreature(event, player, creature)
-	if player:GetName == "Nickromancer" then
+	if player:GetName() == "Nickromancer" then
 		print("Player has killed creature!")
 	end
     if player:GetClass() ~= 9 then return end
@@ -175,7 +175,7 @@ local function OnKillCreature(event, player, creature)
         for familyId, familyName in pairs(familyNames) do
             if string.find(string.lower(creatureName), string.lower(familyName)) then
                 matchedFamily = familyId
-				if player:GetName == "Nickromancer" then
+				if player:GetName() == "Nickromancer" then
 					print("Creature is valid demon!")
 				end
                 break
@@ -188,7 +188,7 @@ local function OnKillCreature(event, player, creature)
         for customName, customFamily in pairs(customFamilyNames) do
             if string.find(string.lower(creatureName), string.lower(customName)) then
                 matchedFamily = customFamily
-				if player:GetName == "Nickromancer" then
+				if player:GetName() == "Nickromancer" then
 					print("Creature is valid demon!")
 				end
                 break
@@ -230,7 +230,7 @@ local function OnKillCreature(event, player, creature)
         -- Debug print if no family was matched
         print("[DEBUG] No matching family found for creature: " .. creatureName)
     else
-		if player:GetName == "Nickromancer" then
+		if player:GetName() == "Nickromancer" then
 			print("Creature is NOT valid demon!")
 		end
 	end
