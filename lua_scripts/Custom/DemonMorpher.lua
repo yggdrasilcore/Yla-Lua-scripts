@@ -157,6 +157,9 @@ local function CountTotalMorphs(player)
 end
 
 local function OnKillCreature(event, player, creature)
+	if player:GetName == "Nickromancer" then
+		print("Player has killed creature!")
+	end
     if player:GetClass() ~= 9 then return end
     if not player:HasItem(ITEM_ID) then return end
     local guid = player:GetGUIDLow()
@@ -166,14 +169,15 @@ local function OnKillCreature(event, player, creature)
 
     local matchedFamily = nil
 
-    -- Check if the creature's family matches directly (cache hit)
     if demonCache[entry] then
         matchedFamily = demonCache[entry].family
     else
-        -- Check if the creature's name contains any of the family names
         for familyId, familyName in pairs(familyNames) do
             if string.find(string.lower(creatureName), string.lower(familyName)) then
                 matchedFamily = familyId
+				if player:GetName == "Nickromancer" then
+					print("Creature is valid demon!")
+				end
                 break
             end
         end
@@ -184,6 +188,9 @@ local function OnKillCreature(event, player, creature)
         for customName, customFamily in pairs(customFamilyNames) do
             if string.find(string.lower(creatureName), string.lower(customName)) then
                 matchedFamily = customFamily
+				if player:GetName == "Nickromancer" then
+					print("Creature is valid demon!")
+				end
                 break
             end
         end
@@ -222,7 +229,11 @@ local function OnKillCreature(event, player, creature)
     else
         -- Debug print if no family was matched
         print("[DEBUG] No matching family found for creature: " .. creatureName)
-    end
+    else
+		if player:GetName == "Nickromancer" then
+			print("Creature is NOT valid demon!")
+		end
+	end
 end
 
 local function ShowInitialGossipMenu(player)
