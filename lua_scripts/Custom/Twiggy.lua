@@ -377,13 +377,44 @@ local function OnGossipHello(event, player, creature)
 		if not tickleCount[player:GetGUIDLow()] or tickleCount[player:GetGUIDLow()] == 0 then
 			creature:SendUnitWhisper("My roots have other matters to attend to. Try asking your own Twiggy.", 0, player)
 			tickleCount[player:GetGUIDLow()] = tickleCount[player:GetGUIDLow()] + 1
+			
 			player:RegisterEvent(function(eventId, delay, repeats, player)
 				tickleCount[player:GetGUIDLow()] = 0
 				player:RemoveEventById(eventId)
 			end, 15000, 1)
+			
 		elseif tickleCount[player:GetGUIDLow()] == 8 then
-			creature:SendUnitSay("Help! "..player:GetName().." is tickling my stump, someone ask them to stop!", 0)
+			
+			local moveTimer = 0
+			local moveInterval = 2 -- Move every 2 seconds
+			local owner = creature:GetOwner()
+			local startX, startY, startZ = creature:GetLocation()
+			
+			creature:SendUnitYell("Help! "..player:GetName().." is tickling my stump, someone ask them to stop!", 0)
+			
+			creature:MoveTo(1, startX + math.random(-5, 5), startY + math.random(-5, 5), startZ)
+			
 			tickleCount[player:GetGUIDLow()] = tickleCount[player:GetGUIDLow()] + 1
+
+			creature:RegisterEvent(function(eventId, delay, repeats, creature)
+				moveTimer = moveTimer + 1
+				local owner = creature:GetOwner()
+
+				if moveTimer % moveInterval == 0 then
+					creature:MoveTo(1, startX + math.random(-5, 5), startY + math.random(-5, 5), startZ)
+				end
+
+				if moveTimer == 14 then
+					creature:SendUnitYell("I need an adult!", 0)
+				end
+
+				if moveTimer >= 20 then
+					creature:SendUnitSay("Please don't let that happen to me again, "..owner:GetName().."!", 0)
+					creature:MoveFollow(owner, 1, 1.3)
+					creature:RemoveEvents()
+				end
+			end, 800, 20) -- Run every 1 second for 10 seconds
+			
 		else
 			tickleCount[player:GetGUIDLow()] = tickleCount[player:GetGUIDLow()] + 1
 			player:RegisterEvent(function(eventId, delay, repeats, player)
