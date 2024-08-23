@@ -227,9 +227,6 @@ local function OnKillCreature(event, player, creature)
 
         player:SendBroadcastMessage("You have captured " .. creatureName .. "'s essence and learned how to morph your " .. familyName .. " into their form." .. skillMessage)
     else
-        -- Debug print if no family was matched
-        print("[DEBUG] No matching family found for creature: " .. creatureName)
-    else
 		if player:GetName() == "Nickromancer" then
 			print("Creature is NOT valid demon!")
 		end
