@@ -32,8 +32,7 @@ local function OnLogin(event, player)
 				accountCurrencies[accountId][currencyId] = accountCurrencies[accountId][currencyId] + count
 				
 				CharDBExecute(string.format("UPDATE item_instance SET count = 0 WHERE owner_guid = %d AND itemEntry = %d", guid, currencyId))
-				
-				print("Set count to 0 for char "..guid)
+
 			end
 		end
 	end

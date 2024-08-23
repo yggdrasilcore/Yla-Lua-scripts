@@ -256,8 +256,6 @@ local function OnGossipHello(player, object)
 end
 
 local function OnGossipSelect(event, player, object, sender, intid, code)
-    print("[Warlock Pet Morph Module]: OnGossipSelect called with intid:", intid) -- Debug print
-
     if intid == 999 then
         OnGossipHello(player, object)
         return
@@ -379,8 +377,6 @@ local function OnPetAddedToWorld(event, player, pet)
 	if petName == "Infernal" then
 		summonedPetFamily = 30
 	end
-	--player:SendBroadcastMessage("Pet is family "..summonedPetFamily)
-	print("Player "..player:GetName().." summoned pet in family "..summonedPetFamily..".")
 	local queryResult = CharDBQuery("SELECT id FROM character_morphs WHERE guid = " .. guid .. " AND form = " .. summonedPetFamily .. " AND active = 1")
 	
 	if queryResult then
