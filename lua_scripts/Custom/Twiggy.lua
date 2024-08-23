@@ -520,9 +520,9 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
         player:GossipSendMenu(1, creature, 60)
 	elseif intId == 20 then
         player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tFor how long do you want VIP?", 0, 20)
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_08:32:32:-22:0|t7 days (7 Community Tokens)", 0, 21)
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_08:32:32:-22:0|t14 days (12 Community Tokens)", 0, 22)
-		player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_08:32:32:-22:0|t21 days (15 Community Tokens)", 0, 23)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|t7 days (7 Community Tokens)", 0, 21)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|t14 days (12 Community Tokens)", 0, 22)
+		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|t21 days (15 Community Tokens)", 0, 23)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 2)
         player:GossipSendMenu(1, creature, 60)
 	elseif intId == 21 then
@@ -573,7 +573,7 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 		else 
 			CommunityToken = CommunityTokenQuery:GetUInt32(0)
 		end
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_08:32:32:-22:0|tCommunity Tokens: "..CommunityToken, 0, 3)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tCommunity Tokens: "..CommunityToken, 0, 3)
 		
 		local TransmogTokenQuery = CharDBQuery("SELECT count FROM accountwide_currency WHERE accountId = " .. player:GetAccountId() .. " AND currencyId = " .. 37742)
 		if not TransmogTokenQuery then 
@@ -594,7 +594,7 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 1)
         player:GossipSendMenu(1, creature, 60)
 	elseif intId == 30 then
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_08:32:32:-22:0|tCommunity Token: \n \nEarned through helping build the Yggdrasil community, these tokens can be traded for vanity pets, mounts, account services and more at the mall, or VIP services with Twiggy.", 0, 30)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tCommunity Token: \n \nEarned through helping build the Yggdrasil community, these tokens can be traded for vanity pets, mounts, account services and more at the mall, or VIP services with Twiggy.", 0, 30)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tTransmog Token: \n \nThis currency can be spent at the transmog item vendor to buy items under item level 200 that you can then later wear as gear or transmog onto your higher item level gear. It is earned by completing end-game quests or slaying bosses above level 71 while at level 80", 0, 30)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_bijou_gold:32:32:-22:0|tVote Token: \n \nEarned through voting for the server, these tokens can be predominantly exchanged for vanity items at the mall, or traded down to Emblems of Frost or Emblems of Triumph at the Mall's exchanger.", 0, 30)	
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 3)
@@ -649,7 +649,7 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 		
 			mailbox:RegisterEvent(function(eventid, delay, repeats, mailbox)
 				mailbox:Despawn()
-			end, 45000, 1)
+			end, 90000, 1)
 			
 			mailboxtime[guid] = currentTime + 900
 		else

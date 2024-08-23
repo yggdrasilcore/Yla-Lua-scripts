@@ -1,4 +1,4 @@
-local communityTokenItemId 	= 17829 -- ID for Community Tokens
+local communityTokenItemId 	= 19322 -- ID for Community Tokens
 local voteTokenItemId		= 20880 -- ID for Vote Tokens
 local priceRename			= 5
 local priceCustomize		= 5

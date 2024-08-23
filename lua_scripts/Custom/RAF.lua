@@ -17,7 +17,7 @@ local PAGINATION_INTID_START = 201
 local SUMMON_PAGINATION_INTID_START = 701
 
 -- Reward token settings
-local TokenID 				= 17829
+local TokenID 				= 19322
 local TokenName 			= "Community Tokens"
 local TokenReward 			= 5
 -- END VARS
@@ -385,7 +385,7 @@ local function ClaimBonuses(player)
 			end
 		end
 	end
-	player:GossipMenuAddItem(0, "|TInterface/ICONS/Inv_misc_coin_08:32:32:-22:0|tFirst referral reward:\n \nStatus: "..CompletionStatus0[GUIDLow]..""..ClaimStatus0[GUIDLow].."\n \nContains: 5 Community Tokens\n \n ", 1, 40) -- This is tier 0
+	player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tFirst referral reward:\n \nStatus: "..CompletionStatus0[GUIDLow]..""..ClaimStatus0[GUIDLow].."\n \nContains: 5 Community Tokens\n \n ", 1, 40) -- This is tier 0
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_01:32:32:-22:0|tReward box 1:\n \nRequirement: ".. RewardTier1 .." referrals.\nStatus: "..CompletionStatus1[GUIDLow]..""..ClaimStatus1[GUIDLow].."\n \nContains:\n- 5 Rotface and Festergut's Acidic Blood\n- Unobtainable Vanilla mounts\n- Fishing Chair\n- 60 Emblems of Frost\n \n ", 1, 41)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_02:32:32:-22:0|tReward box 2:\n \nRequirement: ".. RewardTier2 .." referrals.\nStatus: "..CompletionStatus2[GUIDLow]..""..ClaimStatus2[GUIDLow].."\n \nContains:\n- X-53 Touring Rocket\n- Hard-to-get mounts\n- ToC trinkets and cloaks\n- 95 Emblems of Frost\n \n ", 1, 42)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_03:32:32:-22:0|tReward box 3:\n \nRequirement: ".. RewardTier3 .." referrals.\nStatus: "..CompletionStatus3[GUIDLow]..""..ClaimStatus3[GUIDLow].."\n \nContains:\n- ICC 25 heroic weapons\n- ICC 25 normal trinkets\n- Ashes of Al'ar\n- 95 Emblems of Frost and 1 Sanctification Mark\n \n ", 1, 43)
@@ -409,8 +409,8 @@ local function Reward40(player)
 			SendPurpleBroadcast(player, message)
 			ClaimBonuses(player)
 		else
-			if player:HasItem(17829, 1) or PlayerHasEnoughFreeSlots(player, 1) then
-				player:AddItem(17829, 5)
+			if player:HasItem(19322, 1) or PlayerHasEnoughFreeSlots(player, 1) then
+				player:AddItem(19322, 5)
 				
 				message = "Twiggy: You've been rewarded "..TokenReward.." "..TokenName.."!"
 				SendPurpleBroadcast(player, message)
@@ -449,7 +449,7 @@ local function RewardBase41(player, itemId, itemName)
     if CompletionStatus1[GUIDLow] == "Completed" then
         if ClaimStatus1[GUIDLow] ~= ", claimed." then
 			if player:PlayerHasEnoughFreeSlots(player, 3) then
-				player:AddItem(17829, 5)
+				player:AddItem(19322, 5)
 				if itemId == 50231 then
 					player:AddItem(50226, 1)
 					player:AddItem(50231, 1)
@@ -546,7 +546,7 @@ local function RewardBase42(player, itemId)
     if CompletionStatus2[GUIDLow] == "Completed" then
         if ClaimStatus2[GUIDLow] ~= ", claimed." then
 			if PlayerHasEnoughFreeSlots(player, 3) then
-				player:AddItem(17829, 5)
+				player:AddItem(19322, 5)
 				if itemId == 48668 and (race == 1  or race == 3 or race == 4 or race == 7 or race == 11) then
 					player:AddItem(48673, 1)
 				elseif itemId == 47290 and (race == 1  or race == 3 or race == 4 or race == 7 or race == 11) then
@@ -664,7 +664,7 @@ local function RewardBase43(player, itemId)
     if CompletionStatus3[GUIDLow] == "Completed" then
         if ClaimStatus3[GUIDLow] ~= ", claimed." then
 			if PlayerHasEnoughFreeSlots(player, 3) then
-				player:AddItem(17829, 5)
+				player:AddItem(19322, 5)
 				if itemId == 49426 then
 					player:AddItem(itemId, 95)
 					if class == 4 or class == 6 or class == 8 or class == 11 then
@@ -764,7 +764,7 @@ local function Reward44(player)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/ability_mount_netherdrakeelite:32:32:-22:0|tOption 4: Mount\n \nSwift Nether Drake\n \n", 1, 444)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/ability_mount_netherdrakeelite:32:32:-22:0|tOption 5: Mount\n \nVengeful Nether Drake mount\n \n", 1, 445) 
     player:GossipMenuAddItem(0, "|TInterface/ICONS/ability_mount_netherdrakeelite:32:32:-22:0|tOption 6: Mount\n \nMerciless Nether Drake mount\n \n", 1, 446)
-    player:GossipMenuAddItem(0, "|TInterface/ICONS/Inv_misc_coin_08:32:32:-22:0|tOption 7: Tokens\n \n50 Community Tokens\n \n", 1, 447)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tOption 7: Tokens\n \n50 Community Tokens\n \n", 1, 447)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 4)
     player:GossipSendMenu(1, player, 1)
 end
@@ -778,11 +778,11 @@ local function RewardBase44(player, itemId)
     if CompletionStatus4[GUIDLow] == "Completed" then
         if ClaimStatus4[GUIDLow] ~= ", claimed." then
 			if PlayerHasEnoughFreeSlots(player, 3) then
-				if itemId == 17829 then
-					player:AddItem(17829, 50)
+				if itemId == 19322 then
+					player:AddItem(19322, 50)
 				else
 					player:AddItem(itemId, 1)
-					player:AddItem(17829, 5)
+					player:AddItem(19322, 5)
 				end
 				
 				itemLink = GetItemLink(itemId)
@@ -835,7 +835,7 @@ local function Reward446(player)
 end
 
 local function Reward447(player)
-    RewardBase44(player, 17829)
+    RewardBase44(player, 19322)
 end
 
 local function ShowRAFLink(player)
