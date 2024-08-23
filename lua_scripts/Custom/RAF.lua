@@ -1192,68 +1192,89 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
         return false -- Prevent further command processing
     end
 
-    if command:lower() == "referalinfo" or command:lower() == "rafinfo" then
-        local accountId = player:GetAccountId()
-        local query = AuthDBQuery(string.format([[
-            SELECT account_id, status, date FROM account_raf WHERE referer_id = %d
-        ]], accountId))
+	if command:lower() == "referalinfo" or command:lower() == "rafinfo" then
+		local targetPlayer = player:GetSelection() -- Get the player's current target
+		local accountId
 
-        if query then
-            local count = 0
-            repeat
-                count = count + 1
-                local refereeAccountId = query:GetUInt32(0)
-                local status = query:GetUInt32(1)
-                local date = query:GetUInt32(2)
+		-- Check if the player has a target and the target is a player
+		if targetPlayer and targetPlayer:IsPlayer() then
+			accountId = targetPlayer:GetAccountId()
+		else
+			accountId = player:GetAccountId() -- Fallback to the player's account ID if no target or target is not a player
+		end
 
-                local statusText = (status == 2) and "In progress" or "Completed"
-                local currentTime = os.time()
-                local timeLeft = (date + RAFDuration) - currentTime
-                local daysLeft = math.floor(timeLeft / (24 * 60 * 60))
-                local hoursLeft = math.floor((timeLeft % (24 * 60 * 60)) / 3600)
+		local query = AuthDBQuery(string.format([[
+			SELECT account_id, status, date FROM account_raf WHERE referer_id = %d
+		]], accountId))
 
-                local timeLeftText
-                if daysLeft > 0 then
-                    timeLeftText = string.format("%d days", daysLeft)
-                elseif hoursLeft > 0 then
-                    timeLeftText = string.format("%d hours", hoursLeft)
-                else
-                    timeLeftText = "less than 1 hour"
-                end
+		if query then
+			local count = 0
+			repeat
+				count = count + 1
+				local refereeAccountId = query:GetUInt32(0)
+				local status = query:GetUInt32(1)
+				local date = query:GetUInt32(2)
 
-                player:SendBroadcastMessage(string.format("Referral found with account ID %d, status: %s, RAF active for: %s",
-                    refereeAccountId, statusText, timeLeftText))
-            until not query:NextRow()
+				local statusText = (status == 2) and "In progress" or "Completed"
+				local currentTime = os.time()
+				local timeLeft = (date + RAFDuration) - currentTime
+				local daysLeft = math.floor(timeLeft / (24 * 60 * 60))
+				local hoursLeft = math.floor((timeLeft % (24 * 60 * 60)) / 3600)
 
-            if count == 0 then
-                player:SendBroadcastMessage("You have no referrals.")
-            end
-        else
-            player:SendBroadcastMessage("You have no referrals.")
-        end
-        return false
-    end
+				local timeLeftText
+				if daysLeft > 0 then
+					timeLeftText = string.format("%d days", daysLeft)
+				elseif hoursLeft > 0 then
+					timeLeftText = string.format("%d hours", hoursLeft)
+				else
+					timeLeftText = "less than 1 hour"
+				end
+
+				player:SendBroadcastMessage(string.format("Referral found with account ID %d, status: %s, RAF active for: %s",
+					refereeAccountId, statusText, timeLeftText))
+			until not query:NextRow()
+
+			if count == 0 then
+				player:SendBroadcastMessage("You have no referrals.")
+			end
+		else
+			player:SendBroadcastMessage("You have no referrals.")
+		end
+		return false
+	end
 
     if (cmd == "rafreferee" and param) or (cmd == "rafrefer" and param) or (cmd == "refer" and param) then
 		if player:GetGMRank() > 0 then
-			local referer_id = tonumber(param)
+			local referer_id
+			local target = player:GetSelection()
+			
+			if target and target:IsPlayer() then
+				referer_id = target:GetAccountId()
+			else
+				referer_id = tonumber(param)
+			end
 			
 			if accountId == referer_id then
 				player:SendBroadcastMessage("You can't refer yourself!")
 				return false
 			end
+			
+			if not referer_id then
+            player:SendBroadcastMessage("Usage: .refer <referer_id> or target")
+			elseif referer_id > 0 then
 
-			local currentTime = os.time()
-			local playerIP = player:GetPlayerIP()
+				local currentTime = os.time()
+				local playerIP = player:GetPlayerIP()
 
-			AuthDBExecute(string.format([[
-				INSERT INTO account_raf (account_id, referer_id, status, progress, date, IP)
-				VALUES (%d, %d, 2, 0, %d, '%s')
-				ON DUPLICATE KEY UPDATE referer_id = %d, status = 2, progress = 0, date = %d, IP = '%s'
-			]], accountId, referer_id, currentTime, playerIP, referer_id, currentTime, playerIP))
+				AuthDBExecute(string.format([[
+					INSERT INTO account_raf (account_id, referer_id, status, progress, date, IP)
+					VALUES (%d, %d, 2, 0, %d, '%s')
+					ON DUPLICATE KEY UPDATE referer_id = %d, status = 2, progress = 0, date = %d, IP = '%s'
+				]], accountId, referer_id, currentTime, playerIP, referer_id, currentTime, playerIP))
 
-			RAFreferee[accountId] = true
-			player:SendBroadcastMessage(string.format("You have been registered as a referee with referer ID: %d", referer_id))
+				RAFreferee[accountId] = true
+				player:SendBroadcastMessage(string.format("You have been registered as a referee with referer ID: %d", referer_id))
+			end
 		end
         return false
     elseif cmd == "rafdelete" and param then
