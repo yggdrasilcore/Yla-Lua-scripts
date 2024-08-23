@@ -397,21 +397,23 @@ local function OnGossipHello(event, player, creature)
 			tickleCount[player:GetGUIDLow()] = tickleCount[player:GetGUIDLow()] + 1
 
 			creature:RegisterEvent(function(eventId, delay, repeats, creature)
-				moveTimer = moveTimer + 1
-				local owner = creature:GetOwner()
+				if creature then
+					moveTimer = moveTimer + 1
+					local owner = creature:GetOwner()
 
-				if moveTimer % moveInterval == 0 then
-					creature:MoveTo(1, startX + math.random(-5, 5), startY + math.random(-5, 5), startZ)
-				end
+					if moveTimer % moveInterval == 0 then
+						creature:MoveTo(1, startX + math.random(-5, 5), startY + math.random(-5, 5), startZ)
+					end
 
-				if moveTimer == 14 then
-					creature:SendUnitYell("I need an adult!", 0)
-				end
+					if moveTimer == 14 then
+						creature:SendUnitYell("I need an adult!", 0)
+					end
 
-				if moveTimer >= 20 then
-					creature:SendUnitSay("Please don't let that happen to me again, "..owner:GetName().."!", 0)
-					creature:MoveFollow(owner, 1, 1.3)
-					creature:RemoveEvents()
+					if moveTimer >= 20 then
+						creature:SendUnitSay("Please don't let that happen to me again, "..owner:GetName().."!", 0)
+						creature:MoveFollow(owner, 1, 1.3)
+						creature:RemoveEvents()
+					end
 				end
 			end, 800, 20) -- Run every 1 second for 10 seconds
 			
