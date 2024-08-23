@@ -152,7 +152,8 @@ local function PopulateMorphCache()
           OR name LIKE '%goat%' 
           OR name LIKE '%mustang%' 
           OR name LIKE '%buck%' 
-          OR name LIKE '%ram%') 
+          OR name LIKE '%ram%'
+          OR name LIKE '%twilight serpent%') 
           AND type = 1))
           AND name NOT LIKE '%(%'
           AND name NOT LIKE '%"%'

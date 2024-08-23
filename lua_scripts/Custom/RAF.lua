@@ -136,7 +136,7 @@ local function ShowReferralInfoMenu(player, page)
             elseif statusText == "Completed" then
                 progressText = 100
             else
-                progressText = math.min(100, (entry.progress/RAFRewardReq*100))
+				progressText = string.format("%.2f", math.min(100, (entry.progress / RAFRewardReq * 100)))
             end
             player:GossipMenuAddItem(0, string.format("|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|tReferral ID: %d\n \nStatus: %s \nProgress: %d%% \nRAF active for: %s\n \n ", 
                 entry.refereeAccountId, statusText, progressText, timeLeftText), 1, 2)
@@ -257,7 +257,7 @@ local function ShowRefereeInfo(player)
 		elseif statusText == "Completed" then
 			progressText = 100
 		else
-			progressText = (progress/RAFRewardReq*100)
+			progressText = string.format("%.2f", (progress / RAFRewardReq * 100))
 		end
 		
 		if progressText > 100 then
@@ -1030,7 +1030,19 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
     elseif intid == 417 then
         Reward417(player)
     elseif intid == 42 then
-        Reward42(player)
+		if CompletionStatus2[GUIDLow] ~= "Completed" then
+			message = "Twiggy: You can't claim this reward yet!"
+			SendPurpleBroadcast(player, message)
+			ClaimBonuses(player)
+		elseif CompletionStatus2[GUIDLow] == "Completed" then
+			if ClaimStatus2[GUIDLow] == ", claimed." then
+				message = "Twiggy: You've already claimed this reward!"
+				SendPurpleBroadcast(player, message)
+				ClaimBonuses(player)
+			else
+				Reward42(player)
+			end
+		end	
     elseif intid == 421 then
         Reward421(player)
     elseif intid == 422 then
@@ -1056,9 +1068,19 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
     elseif intid == 462 then
         Reward462(player)
     elseif intid == 43 then
-        Reward43(player)
-	elseif intid == 42 then
-        Reward42(player)
+		if CompletionStatus3[GUIDLow] ~= "Completed" then
+			message = "Twiggy: You can't claim this reward yet!"
+			SendPurpleBroadcast(player, message)
+			ClaimBonuses(player)
+		elseif CompletionStatus3[GUIDLow] == "Completed" then
+			if ClaimStatus3[GUIDLow] == ", claimed." then
+				message = "Twiggy: You've already claimed this reward!"
+				SendPurpleBroadcast(player, message)
+				ClaimBonuses(player)
+			else
+				Reward43(player)
+			end
+		end	
     elseif intid == 431 then
         Reward431(player)
     elseif intid == 432 then
@@ -1086,7 +1108,19 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
     elseif intid == 473 then
         Reward473(player)
     elseif intid == 44 then
-        Reward44(player)
+		if CompletionStatus4[GUIDLow] ~= "Completed" then
+			message = "Twiggy: You can't claim this reward yet!"
+			SendPurpleBroadcast(player, message)
+			ClaimBonuses(player)
+		elseif CompletionStatus4[GUIDLow] == "Completed" then
+			if ClaimStatus4[GUIDLow] == ", claimed." then
+				message = "Twiggy: You've already claimed this reward!"
+				SendPurpleBroadcast(player, message)
+				ClaimBonuses(player)
+			else
+				Reward44(player)
+			end
+		end	
 	elseif intid == 441 then
         Reward441(player)
     elseif intid == 442 then
