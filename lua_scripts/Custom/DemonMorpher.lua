@@ -100,6 +100,7 @@ local customFamilyNames = {
     ["Yalqiz"] = 17,
     ["Sister"] = 17,
     ["Fel Sprite"] = 23,
+    ["Imp"] = 23,
     ["Illidari Agonizer"] = 23,
     ["Vile Familiar"] = 23,
     ["Kraator"] = 30,
