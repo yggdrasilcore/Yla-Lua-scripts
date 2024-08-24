@@ -37,9 +37,11 @@ end
 -- Function to handle player login event
 local function OnLogin(event, player)
     local accountId = player:GetAccountId()
+	local charguid = player:GetGUIDLow()
 	local charguids = {}
 	local accountCurrencies = {}
-    
+	local itemcount 
+	
     -- Query to get character GUIDs for the account
     local query = CharDBQuery(string.format("SELECT guid FROM characters WHERE account = %d", accountId))
     if query then
@@ -54,9 +56,11 @@ local function OnLogin(event, player)
     accountCurrencies[accountId] = {}
     for _, currencyId in ipairs(currencies) do
         accountCurrencies[accountId][currencyId] = 0
-    end
-    
--- Query and sum currency counts for all characters in the account, then reset to 0
+		if player:GetItemCount(currencyId) then itemcount = player:GetItemCount(currencyId) else itemcount = 0 end
+		print(string.format("Currencies before consolidating: Account ID %d, Character GUID %d, Currency %d, Count %d", accountId, charguid, currencyId, itemcount))
+	end
+	
+	-- Query and sum currency counts for all characters in the account, then reset to 0
 	for _, guid in ipairs(charguids[accountId]) do
 		for _, currencyId in ipairs(currencies) do
 			local countQuery = CharDBQuery(string.format("SELECT SUM(count) FROM item_instance WHERE owner_guid = %d AND itemEntry = %d AND count > 0", guid, currencyId))
@@ -64,16 +68,27 @@ local function OnLogin(event, player)
 				local count = countQuery:GetUInt32(0) or 0
 				accountCurrencies[accountId][currencyId] = accountCurrencies[accountId][currencyId] + count
 				CharDBExecute(string.format("UPDATE item_instance SET count = 0 WHERE owner_guid = %d AND itemEntry = %d", guid, currencyId))
-
 			end
 		end
 	end
 
+	for _, currencyId in ipairs(currencies) do
+		if player:GetItemCount(currencyId) then itemcount = player:GetItemCount(currencyId) else itemcount = 0 end
+		print(string.format("Currencies after consolidating: Account ID %d, Character GUID %d, Currency %d, Count %d", accountId, charguid, currencyId, itemcount))
+    end
+
     -- Print the total currency counts for the account
     for _, currencyId in ipairs(currencies) do
-        print(string.format("Account ID %d has %d of currency %d", accountId, accountCurrencies[accountId][currencyId], currencyId))
+		count = accountCurrencies[accountId][currencyId]
+        print(string.format("Account ID %d has %d of currency %d", accountId, count, currencyId))
 		player:RemoveItem(currencyId,player:GetItemCount(currencyId))
 		player:AddItem(currencyId,accountCurrencies[accountId][currencyId])
+		CharDBExecute(string.format("UPDATE item_instance SET count = %d WHERE owner_guid = %d AND itemEntry = %d", count, charguid, currencyId))
+    end
+	
+	for _, currencyId in ipairs(currencies) do
+		if player:GetItemCount(currencyId) then itemcount = player:GetItemCount(currencyId) else itemcount = 0 end
+		print(string.format("Currencies after updating inactive characters: Account ID %d, Character GUID %d, Currency %d, Count %d", accountId, charguid, currencyId, itemcount))
     end
 	
     local playerGUID = player:GetGUID()
@@ -99,16 +114,14 @@ local function OnLogin(event, player)
         if vpValue and vpValue > 0 then
             local itemCount = vpValue
             CreateLuaEvent(function() 
-                SendBroadcastWithCheck(playerGUID, "You have been awarded " .. itemCount .. " Vote Tokens, which can be redeemed for XP boosts, transmogs, and vanity items. Thank you for your support!", 20880, itemCount)
+                SendBroadcastWithCheck(playerGUID, "You have been awarded " .. itemCount .. " Vote Tokens, which can be redeemed for XP boosts, transmogs, and vanity items. Thank you for your vote!", 20880, itemCount)
             end, 3000, 1)
             votemessage = true
         end
     end
     
     if not (communitymessage or votemessage) then
-        CreateLuaEvent(function() 
-            SendBroadcastWithCheck(playerGUID, "Please remember to vote on Yggdrasilwow.com. Vote Tokens can be redeemed for XP boosts, transmogs, and vanity items. Thank you for your support!")
-        end, 3000, 1)
+		player:SendBroadcastMessage("Please remember to vote on Yggdrasilwow.com. Vote Tokens can be redeemed for XP boosts, transmogs, and vanity items.")
     end
 end
 
