@@ -21,8 +21,15 @@ local function SendBroadcastWithCheck(playerGUID, message, itemEntry, itemCount)
     if player then
         if itemEntry and itemCount then
             player:AddItem(itemEntry, itemCount)
+			player:SendBroadcastMessage(message)
+			if itemEntry == 20880 then
+				print("Awarding Vote Tokens to Account ID: " .. accountId)  -- Debugging line
+				CharDBExecute("UPDATE account_currencies SET vp = 0 WHERE id = " .. accountId)
+			else
+				print("Awarding Community Tokens to Account ID: " .. accountId)  -- Debugging line
+				CharDBExecute("UPDATE account_currencies SET dp = 0 WHERE id = " .. accountId)
+			end
         end
-        player:SendBroadcastMessage(message)
     end
 end
 
@@ -55,7 +62,6 @@ local function OnLogin(event, player)
 			if countQuery then
 				local count = countQuery:GetUInt32(0) or 0
 				accountCurrencies[accountId][currencyId] = accountCurrencies[accountId][currencyId] + count
-				
 				CharDBExecute(string.format("UPDATE item_instance SET count = 0 WHERE owner_guid = %d AND itemEntry = %d", guid, currencyId))
 
 			end
@@ -65,7 +71,7 @@ local function OnLogin(event, player)
     -- Print the total currency counts for the account
     for _, currencyId in ipairs(currencies) do
         print(string.format("Account ID %d has %d of currency %d", accountId, accountCurrencies[accountId][currencyId], currencyId))
-		player:RemoveItem(currencyId,accountCurrencies[accountId][currencyId])
+		player:RemoveItem(currencyId,player:GetItemCount(currencyId))
 		player:AddItem(currencyId,accountCurrencies[accountId][currencyId])
     end
 	
@@ -80,8 +86,6 @@ local function OnLogin(event, player)
         local dpValue = dpquery:GetInt32(0)
         if dpValue and dpValue > 0 then
             local itemCount = dpValue
-            print("Awarding Community Tokens to Account ID: " .. accountId)  -- Debugging line
-            CharDBExecute("UPDATE account_currencies SET dp = 0 WHERE id = " .. accountId)
             CreateLuaEvent(function() 
                 SendBroadcastWithCheck(playerGUID, "You have been awarded " .. itemCount .. " Community Tokens. Thank you for supporting our community!", 19322, itemCount)
             end, 3000, 1)
@@ -93,8 +97,6 @@ local function OnLogin(event, player)
         local vpValue = vpquery:GetInt32(0)
         if vpValue and vpValue > 0 then
             local itemCount = vpValue
-            print("Awarding Vote Tokens to Account ID: " .. accountId)  -- Debugging line
-            CharDBExecute("UPDATE account_currencies SET vp = 0 WHERE id = " .. accountId)
             CreateLuaEvent(function() 
                 SendBroadcastWithCheck(playerGUID, "You have been awarded " .. itemCount .. " Vote Tokens, which can be redeemed for XP boosts, transmogs, and vanity items. Thank you for your support!", 20880, itemCount)
             end, 3000, 1)
