@@ -19,6 +19,7 @@ CharDBQuery([[CREATE TABLE IF NOT EXISTS account_currencies (
 local function SendBroadcastWithCheck(playerGUID, message, itemEntry, itemCount)
     local player = GetPlayerByGUID(playerGUID)
     if player then
+		local accountId = player:GetAccountId()
         if itemEntry and itemCount then
             player:AddItem(itemEntry, itemCount)
 			player:SendBroadcastMessage(message)
