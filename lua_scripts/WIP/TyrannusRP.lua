@@ -101,66 +101,73 @@ local function TyrannusRoleplayArea(event, player, oldArea, newArea)
 		player:RemoveEvents()
 	
 	elseif newArea == 4905 then
-		Tyrannus = player:GetNearestCreature(200, 36658)
-		if Tyrannus and not Tyrannus:IsDead() and not TyrannusRP[player:GetInstanceId()] then
+		if #player:GetCreaturesInRange(200, 36658) > 1 then
+			local TyrannusError = player:GetNearestCreature(200, 36658)
+			TyrannusError:DespawnOrUnsummon()
+			print("Extra Tyrannus despawned!")
+		else
+			local Tyrannus = player:GetNearestCreature(200, 36658)
 			
-			targetable = Tyrannus:IsTargetableForAttack(false)
-			print(targetable)
-			local SlaveRPTime
-		
-			player:RegisterEvent(function(eventId, delay, repeats, player)
-				print("Looping Tyrannus RP event for "..player:GetName().."...")
-				Tyrannus = player:GetNearestCreature(40, 36658)
-				local targetable
-				if Tyrannus then
-					targetable = Tyrannus:IsTargetableForAttack(false)
-					print("tyrannus is OK")
-				end
-				if Tyrannus and Tyrannus:IsInCombat() and (SlaveRPTime and SlaveRPTime <=os.time()) and not targetable then
-					Tyrannus:ClearInCombat()
-					print("tyrannus not ok! in cb and not attackable! resetting...")
-				elseif (Tyrannus and player:IsInCombat()) and not SlaveRPTime then
-					SlaveRPTime = os.time() + 37
-					print("Tyrannus in cb tart detected, spawning slaves in 37 sec")
-				elseif (Tyrannus and player:IsInCombat()) and SlaveRPTime <= os.time() and not TyrannusSlaves[player:GetInstanceId()] then
-					print("attempting to spawn slaves")
-
-					TyrannusSlaves[player:GetInstanceId()] = true
-					local slaveIds = ALLIANCE_SLAVE_IDS
-
-					for _ = 1, 15 do
-						print("Spawning slaves")
-						local minX = math.min(1045, 1040, 1051, 1057)
-						local maxX = math.max(1045, 1040, 1051, 1057)
-						local minY = math.min(113, 129, 131, 128)
-						local maxY = math.max(113, 129, 131, 128)
-						local randomX = math.random(minX, maxX)
-						local randomY = math.random(minY, maxY)
-						local randomSlaveId = slaveIds[math.random(#slaveIds)]
-						local slave = player:SpawnCreature(randomSlaveId, randomX, randomY, 628.55, 5.12)
-						slave:MoveIdle()
-						slave:SetReactState(2)
-						slave:SetSheath(0)
-						slave:SetFaction(1770) -- Separate faction to identify combat-active slaves later
-						slave:RegisterEvent(AttackFallenWarriors, 500, 0)
+			if Tyrannus and not Tyrannus:IsDead() and not TyrannusRP[player:GetInstanceId()] then
+				
+				targetable = Tyrannus:IsTargetableForAttack(false)
+				print(targetable)
+				local SlaveRPTime
+			
+				player:RegisterEvent(function(eventId, delay, repeats, player)
+					print("Looping Tyrannus RP event for "..player:GetName().."...")
+					Tyrannus = player:GetNearestCreature(40, 36658)
+					local targetable
+					if Tyrannus then
+						targetable = Tyrannus:IsTargetableForAttack(false)
+						print("Tyrannus is targetable for attack!")
 					end
-				elseif not player:IsInCombat() then
-					if Tyrannus and not Tyrannus:IsDead() and player:IsAlive() then
-						player:SetInCombatWith(Tyrannus)
-						print("Combat error! Force setting combat!")
-					else
-						Tyrannus2 = player:GetNearestCreature(250, 36658)
-						if Tyrannus2 then
-							player:SetInCombatWith(Tyrannus2)
-						elseif not Tyrannus2 or (Tyrannus2 and Tyrannus2:IsDead()) then
-							print("no combat - removing player event")
-							player:RemoveEvents()
+					if Tyrannus and Tyrannus:IsInCombat() and (SlaveRPTime and SlaveRPTime <=os.time()) and not targetable then
+						Tyrannus:ClearInCombat()
+						print("tyrannus not ok! in cb and not attackable! resetting...")
+					elseif (Tyrannus and player:IsInCombat()) and not SlaveRPTime then
+						SlaveRPTime = os.time() + 37
+						print("Tyrannus in cb tart detected, spawning slaves in 37 sec")
+					elseif (Tyrannus and player:IsInCombat()) and SlaveRPTime <= os.time() and not TyrannusSlaves[player:GetInstanceId()] then
+						print("attempting to spawn slaves")
+
+						TyrannusSlaves[player:GetInstanceId()] = true
+						local slaveIds = ALLIANCE_SLAVE_IDS
+
+						for _ = 1, 15 do
+							print("Spawning slaves")
+							local minX = math.min(1045, 1040, 1051, 1057)
+							local maxX = math.max(1045, 1040, 1051, 1057)
+							local minY = math.min(113, 129, 131, 128)
+							local maxY = math.max(113, 129, 131, 128)
+							local randomX = math.random(minX, maxX)
+							local randomY = math.random(minY, maxY)
+							local randomSlaveId = slaveIds[math.random(#slaveIds)]
+							local slave = player:SpawnCreature(randomSlaveId, randomX, randomY, 628.55, 5.12)
+							slave:MoveIdle()
+							slave:SetReactState(2)
+							slave:SetSheath(0)
+							slave:SetFaction(1770) -- Separate faction to identify combat-active slaves later
+							slave:RegisterEvent(AttackFallenWarriors, 500, 0)
+						end
+					elseif not player:IsInCombat() then
+						if Tyrannus and not Tyrannus:IsDead() and player:IsAlive() then
+							player:SetInCombatWith(Tyrannus)
+							print("Combat error! Force setting combat!")
+						else
+							Tyrannus2 = player:GetNearestCreature(250, 36658)
+							if Tyrannus2 then
+								player:SetInCombatWith(Tyrannus2)
+							elseif not Tyrannus2 or (Tyrannus2 and Tyrannus2:IsDead()) then
+								print("no combat - removing player event")
+								player:RemoveEvents()
+							end
 						end
 					end
-				end
-			end, 1500, 0)
-			
-			TyrannusRP[player:GetInstanceId()] = true
+				end, 1500, 0)
+				
+				TyrannusRP[player:GetInstanceId()] = true
+			end
 		end
 	end
 end
