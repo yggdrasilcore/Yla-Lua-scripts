@@ -109,7 +109,7 @@ local function TyrannusRoleplayArea(event, player, oldArea, newArea)
 			local SlaveRPTime
 		
 			player:RegisterEvent(function(eventId, delay, repeats, player)
-				print("Looping event...")
+				print("Looping Tyrannus RP event for "..player:GetName().."...")
 				Tyrannus = player:GetNearestCreature(40, 36658)
 				local targetable
 				if Tyrannus then
@@ -145,7 +145,7 @@ local function TyrannusRoleplayArea(event, player, oldArea, newArea)
 						slave:RegisterEvent(AttackFallenWarriors, 500, 0)
 					end
 				elseif not player:IsInCombat() then
-					if Tyrannus and not Tyrannus:IsDead() then
+					if Tyrannus and not Tyrannus:IsDead() and player:IsAlive() then
 						player:SetInCombatWith(Tyrannus)
 						print("Combat error! Force setting combat!")
 					else
