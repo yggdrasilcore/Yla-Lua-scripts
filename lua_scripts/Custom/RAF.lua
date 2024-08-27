@@ -258,7 +258,7 @@ local function ShowRefereeInfo(player)
 		elseif statusText == "Completed" then
 			progressText = 100
 		else
-			progressText = string.format("%.2f", (progress / RAFRewardReq * 100))
+			progressText = (progress / RAFRewardReq * 100)
 		end
 		
 		if progressText > 100 then
