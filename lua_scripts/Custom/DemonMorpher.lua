@@ -65,7 +65,6 @@ local customFamilyNames = {
     ["Forge Camp Legionnaire"] = 29,
     ["Wrath Herald"] = 29,
     ["Wrath Enforcer"] = 29,
-    ["Warbringer"] = 29,
     ["Fel Soldier"] = 29,
     ["Dreadlord"] = 29,
     ["Dreadcaller"] = 29,
