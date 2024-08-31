@@ -25,7 +25,7 @@ local function onServerUpdate(event, diff)
         highDiffCount = highDiffCount + 1
     end
     
-    if highDiffCount >= 5 then
+    if highDiffCount >= 200 then
         print("ALERT! Diff: "..diff)
         
         -- Prepare alert message for Discord
