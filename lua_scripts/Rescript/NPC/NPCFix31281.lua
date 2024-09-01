@@ -3,10 +3,6 @@ local AURA_ID = 58951
 local AREA_CODE3 = 210
 local APPLIED = 0
 
-local function SetInitialState()
-	local APPLIED = 0
-end
-
 -- Function to apply the aura to a specific NPC
 local function ApplyAura(npc)
     if npc and not npc:HasAura(AURA_ID) then
@@ -18,7 +14,7 @@ end
 
 -- Event handler for when a player enters a new area
 local function OnPlayerEnterArea(event, player, newAreaId, newZoneId)
-	if APPLIED == 1 then end
+	if APPLIED == 1 then return end
     if APPLIED == 0 and newAreaId == AREA_CODE3 then	
 		--print("Area detected!")
         local creature = player:GetNearestCreature(1000,NPC_ID)  -- Adjust range as needed
@@ -30,6 +26,5 @@ end
 
 -- Register the event to trigger when a player enters a new area
 RegisterPlayerEvent(27, OnPlayerEnterArea)
-RegisterServerEvent(33, SetInitialState)
 
 print("[NPC]: Creature no. 31281 fix (Dead Alliance Soldier permanent feign death) loaded!")

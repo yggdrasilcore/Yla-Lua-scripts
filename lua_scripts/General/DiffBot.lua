@@ -21,7 +21,7 @@ local function onServerUpdate(event, diff)
         return  -- Do not track high diff during grace period
     end
     
-    if diff > 50 then
+    if diff > 100 then
         highDiffCount = highDiffCount + 1
     end
     
