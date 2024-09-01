@@ -119,5 +119,3 @@ end
 
 RegisterCreatureGossipEvent(NPC_ID, 1, OnGossipHello)
 RegisterCreatureGossipEvent(NPC_ID, 2, OnGossipSelect)
-
-print("NPC Exchanger script loaded")

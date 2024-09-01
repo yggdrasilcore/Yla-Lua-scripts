@@ -79,5 +79,3 @@ local function OnGiveXP(event, player, amount, victim)
         return amount
     end
 end RegisterPlayerEvent(12, OnGiveXP)
-
-print("[NPC]: Custom XP rate mob loaded!")

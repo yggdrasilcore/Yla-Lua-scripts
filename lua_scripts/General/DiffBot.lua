@@ -49,4 +49,3 @@ local function onServerUpdate(event, diff)
 end
 
 RegisterServerEvent(13, onServerUpdate)
-print("Diff tracker loaded!")

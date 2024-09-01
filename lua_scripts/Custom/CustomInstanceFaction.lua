@@ -40,4 +40,3 @@ local function OnPlayerMapChange(event, player)
 end
 
 RegisterPlayerEvent(28, OnPlayerMapChange)
-print("[Instance]: Neutral Faction Instance module loaded!")

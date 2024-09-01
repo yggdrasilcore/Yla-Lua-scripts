@@ -1516,4 +1516,3 @@ RegisterPlayerEvent(45, OnAchievementComplete)
 RegisterPlayerEvent(54, OnCompleteQuest)
 
 RegisterPlayerGossipEvent(1, 2, OnGossipSelect) -- Register gossip selection event
-print("[RAF]: Nick's friend referral module loaded!")

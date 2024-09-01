@@ -37,5 +37,3 @@ RegisterPlayerEvent(19, antiPublishing)
 RegisterPlayerEvent(20, antiPublishing)
 RegisterPlayerEvent(21, antiPublishing)
 RegisterPlayerEvent(22, antiPublishing)
-
-print("Anti Advertising script loaded!") --for console debugging

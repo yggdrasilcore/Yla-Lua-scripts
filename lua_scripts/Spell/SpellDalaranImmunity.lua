@@ -71,4 +71,3 @@ end
 RegisterPlayerEvent(3, OnLoginAndZoneChange)
 RegisterPlayerEvent(5, OnSpellCast)
 RegisterPlayerEvent(27, OnLoginAndZoneChange)
-print("[Spell]: Dalaran Manabonk Immunity when casting loaded")

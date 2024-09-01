@@ -7,4 +7,3 @@ RegisterPlayerEvent(3, function(event, player)
     end
     ClearChat(player)
 end)
-print("MOTD loaded!")

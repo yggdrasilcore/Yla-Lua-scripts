@@ -1,5 +1,7 @@
 local function CommandHandler(event, player, command)
     local cmd = string.lower(command)
+	
+	if not player then return end
     
     if player:GetGMRank() > 0 and (cmd == "list events" or cmd == "list event") then
         local activeEvents = GetActiveGameEvents()
@@ -59,4 +61,3 @@ local function CommandHandler(event, player, command)
 end
 
 RegisterPlayerEvent(42, CommandHandler) -- Register the command handler
-print("ELUNA commands registered. Type '.eluna' for a list of available commands.")

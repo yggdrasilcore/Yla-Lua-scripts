@@ -103,5 +103,3 @@ end
 
 RegisterPacketEvent(0x206, 7, OnTicketOpen)
 RegisterPacketEvent(0x218, 7, OnTicketClose)
-
-print("[GM Tickets]: Discord Bot loaded!")

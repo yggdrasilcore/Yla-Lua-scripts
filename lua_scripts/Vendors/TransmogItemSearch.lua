@@ -522,4 +522,3 @@ ItemCache.LoadCache()
 RegisterCreatureGossipEvent(NPC_ID, 1, OnGossipHello)
 RegisterCreatureGossipEvent(NPC_ID, 2, OnGossipSelect)
 
-print("[NPC]: Legacy Item Set vendor loaded!")

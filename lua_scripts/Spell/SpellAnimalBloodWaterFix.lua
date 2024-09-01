@@ -63,4 +63,3 @@ end
 
 RegisterPlayerEvent(7, OnKillCreature)
 RegisterPlayerEvent(27, OnZoneUpdate)
-print("[Spell]: Borean Tundra animal blood water spawner loaded!")

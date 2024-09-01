@@ -234,5 +234,3 @@ end
 
 RegisterCreatureGossipEvent(npcid, 1, Enchanter)
 RegisterCreatureGossipEvent(npcid, 2, EnchanterSelect)
-
-print("[NPC]: Enchanter NPC loaded!") --for console debugging

@@ -7,4 +7,3 @@ function MountSpeed(event, player, oldLevel)
 end
 
 RegisterPlayerEvent(13, MountSpeed)  -- 13 is PLAYER_LEVEL_CHANGED
-print("Level 10 mount and riding loaded!") --for console debugging
