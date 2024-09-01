@@ -10,9 +10,10 @@ local function OnSpellCast(event, player, spell, skipCheck)
         if target and target:GetEntry() == NPC_ID then
             player:RemoveItem(34102, 1) --Removes fjord grub
 			print("Fjord Hawk targeted!")
-            player:RegisterEvent(function(eventId, delay, repeats, player)
+            eventId = player:RegisterEvent(function(eventId, delay, repeats, player)
                 player:AddItem(ITEM_ID, 1)
 				print("Awarding Fjord Hawk item!")
+				player:RemoveEventById(eventId)
             end, DELAY, 1)
         end
     end

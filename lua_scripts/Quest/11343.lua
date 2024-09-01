@@ -1,34 +1,52 @@
 local AURA_ID = 42786
 local QUEST_ID = 11343
 local MAP_ID = 571
+local AREA_ID = 3982
 local AREA_X = 1071
 local AREA_Y = -5032
 local AREA_Z = 10
 local CHECK_INTERVAL = 60 -- Check every 60 seconds
 local AREA_RADIUS = 5 -- Radius around the area to check
 
+local checkPlayers = {}
+local eventId = nil
 
 local function CheckPlayersForQuestCompletion()
-    --DebugPrint("Checking players for quest completion")
-    local players = GetPlayersInWorld()
-    for _, player in ipairs(players) do
-        if player:HasAura(AURA_ID) then
-            local playerMapId = player:GetMapId()
-            local distance = player:GetDistance(AREA_X, AREA_Y, AREA_Z)
-            --DebugPrint("Checking location of players with aura ID 42876")
-            
-            if playerMapId == MAP_ID and distance <= AREA_RADIUS then
-                if player:HasQuest(QUEST_ID) then
-                    DebugPrint("Completing quest ID 11343 for player: " .. player:GetName())
-                    player:CompleteQuest(QUEST_ID)
-					player:SendAreaTriggerMessage("Secrets of Wyrmskull Uncovered (Complete)") 
+    local playerCount = 0
+    
+    for playerName, _ in pairs(checkPlayers) do
+        local player = GetPlayerByName(playerName)
+        if player and player:GetAreaId() == AREA_ID then
+            playerCount = playerCount + 1
+            if player:HasAura(AURA_ID) then
+                local playerMapId = player:GetMapId()
+                local distance = player:GetDistance(AREA_X, AREA_Y, AREA_Z)
+                
+                if playerMapId == MAP_ID and distance <= AREA_RADIUS then
+                    if player:HasQuest(QUEST_ID) then
+                        player:CompleteQuest(QUEST_ID)
+                        player:SendAreaTriggerMessage("Secrets of Wyrmskull Uncovered (Complete)")
+                    end
                 end
             end
-		else 
-        --    DebugPrint("No players with aura ID 42786 present.")
+        else
+            checkPlayers[playerName] = nil
+        end
+    end
+    
+    if playerCount == 0 then
+        RemoveEventById(eventId)
+        eventId = nil
+    end
+end
+
+local function OnUpdateArea(event, player, oldArea, newArea)
+    if newArea == AREA_ID then
+        checkPlayers[player:GetName()] = true
+        if not eventId then
+            eventId = CreateLuaEvent(CheckPlayersForQuestCompletion, CHECK_INTERVAL * 1000, 0)
         end
     end
 end
 
--- Start the global check event
-CreateLuaEvent(CheckPlayersForQuestCompletion, CHECK_INTERVAL * 1000, 0)  -- 0 means it will repeat indefinitely
+RegisterPlayerEvent(47, OnUpdateArea)

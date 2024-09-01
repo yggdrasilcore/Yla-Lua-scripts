@@ -16,7 +16,7 @@ local function OnSpellCast(event, player, spell, skipCheck)
             
             if spellCastCount[playerGUID] >= REQUIRED_CASTS then
                 player:CompleteQuest(QUEST_ID)
-                spellCastCount[playerGUID] = 0
+                spellCastCount[playerGUID] = nil
             else
                 local remainingCasts = REQUIRED_CASTS - spellCastCount[playerGUID]
             end

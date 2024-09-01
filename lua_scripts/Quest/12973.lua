@@ -203,14 +203,17 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
 
 	muradin:RegisterEvent(function(eventId, delay, repeats, creature)
         creature:DespawnOrUnsummon()
+		creature:RemoveEvents()
     end, currentDelay, 1)
 	
 	brann:RegisterEvent(function(eventId, delay, repeats, creature)
         creature:DespawnOrUnsummon()
+		creature:RemoveEvents()
     end, currentDelay, 1)
 	
 	magni:RegisterEvent(function(eventId, delay, repeats, creature)
         creature:DespawnOrUnsummon()
+		creature:RemoveEvents()
     end, currentDelay, 1)
 end
 

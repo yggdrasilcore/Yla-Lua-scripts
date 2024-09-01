@@ -5,6 +5,7 @@ local SPAWN_NPC_ID = 27625 -- Kill credit NPC re quest_template entry for Quest 
 local CAST_SPELL_ID = 19901 -- High dmg ability
 local OBJECT_ID = 189970 -- Temp gobject spawn by gnome engineers, last for about 15 seconds. Re check_interval
 local invisibleDisplayID = 15435  -- Invisible NPC model
+local CarrionWastesEvent = {}
 -- local query = string.format("UPDATE creature_template_model SET CreatureDisplayID = %d WHERE CreatureID = %d", invisibleDisplayID, SPAWN_NPC_ID)
 
 -- Make kill credit NPC invisible on server startup. Commented out as already in DB
@@ -13,9 +14,15 @@ local invisibleDisplayID = 15435  -- Invisible NPC model
 local function OnUpdateArea(event, player, oldArea, newArea)
     if newArea == AREA_CARRION_WASTES then
         --print("Quest ID 12326 - Player in Carrion Wastes detected. Starting event tracker for tank buff and sabotage credit event.")
-        player:RegisterEvent(CheckPlayerBuff, CHECK_INTERVAL * 1000, 60) -- This triggers event 2, check for tank buff. Time-limited to 15 min (tank buff duration)
+		if CarrionWastesEvent[player:GetName()] then
+			player:RemoveEventById(CarrionWastesEvent[player:GetName()]) -- If player leaves area, stop event
+			CarrionWastesEvent[player:GetName()] = nil
+		end
+		
+        CarrionWastesEvent[player:GetName()] = player:RegisterEvent(CheckPlayerBuff, CHECK_INTERVAL * 1000, 60) -- This triggers event 2, check for tank buff. Time-limited to 15 min (tank buff duration)
     elseif oldArea == AREA_CARRION_WASTES then
-        player:RemoveEvents() -- If player leaves area, stop all scheduled events
+        player:RemoveEventById(CarrionWastesEvent[player:GetName()]) -- If player leaves area, stop event
+		CarrionWastesEvent[player:GetName()] = nil
     end
 end
 

@@ -11,9 +11,9 @@ local DESPAWN_RANGE = 10 -- 30 yards
 local EntryIDs = {25316, 25474}
 local newScriptName = ""
 
-for _, entry in ipairs(EntryIDs) do
-    WorldDBQuery(string.format("UPDATE creature_template SET ScriptName = '%s' WHERE entry = %d", newScriptName, entry))
-end
+--for _, entry in ipairs(EntryIDs) do
+--    WorldDBQuery(string.format("UPDATE creature_template SET ScriptName = '%s' WHERE entry = %d", newScriptName, entry))
+--end
 
 --print("ScriptName updated for entries 25316 and 25474.")
 
@@ -40,7 +40,7 @@ local function OnSpellCast(event, player, spell, skipCheck)
                 
                 -- Start the periodic check
                 capturedCreature:RegisterEvent(function(eventId, delay, repeats, creature)
-					if not creature then
+					if not creature or creature:IsDead() then
 						RemoveEventById(eventId())
 						--print("Error finding captured creature!")
 						return
