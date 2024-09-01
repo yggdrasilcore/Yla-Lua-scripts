@@ -1,5 +1,5 @@
 local BUFFIDS = {
-    471, 3363, 8153, 8980, 10788, 10790, 10792, 24576, 25675, 25858, 28828, 32235, 32239, 32240,
+    3363, 8153, 25675, 25858, 28828, 32235, 32239, 32240,
     32242, 32243, 32244, 32245, 32246, 32289, 32290, 32292, 32295, 32296, 32297, 32345, 32420,
     33943, 34068, 37015, 39450, 39798, 39800, 39801, 39802, 39803, 39910, 39949, 40120, 40192,
     40212, 41513, 41514, 41515, 41516, 41517, 41518, 42667, 42668, 42673, 42679, 42929, 43810,
@@ -12,9 +12,9 @@ local BUFFIDS = {
     75596, 75617, 75618, 76153
 }
 
-local ITEM_IDS = {39163, 28326, 20739, 208800} -- Items used to trigger initial cast
-
 local playersToCheck = {}
+local buffToCheck = {}
+local flightcheckeventid
 
 local function IsBuffId(spellId)
     for _, id in ipairs(BUFFIDS) do
@@ -25,63 +25,54 @@ local function IsBuffId(spellId)
     return false
 end
 
-local function IsTrackedItem(itemId)
-    for _, id in ipairs(ITEM_IDS) do
-        if id == itemId then
-            return true
-        end
-    end
-    return false
-end
-
-local function CheckUnderwater(eventId, delay, repeats, playerGUID, buffId)
-    local players = GetPlayersInWorld()
-    local foundPlayer = nil
-    for _, player in ipairs(players) do
-        if player and type(player) == "userdata" and player:GetGUID() == playerGUID then
-            foundPlayer = player
-            break
-        end
-    end
-
-    if not foundPlayer then
-        --print("Player not found. Stopping check.")
-        playersToCheck[playerGUID] = nil
-        return true  -- Cancel the event
-    end
-
-    if foundPlayer:IsUnderWater() then
-        if foundPlayer:HasAura(buffId) then
-            foundPlayer:RemoveAura(buffId)
-            print("[Flight]: Removed flight " .. buffId .. " from player " .. foundPlayer:GetName().." as they were underwater.")
-        end
-    end
-    
-    if not foundPlayer:HasAura(buffId) then
-        --print("Stopped checking player " .. foundPlayer:GetName())
-        playersToCheck[playerGUID] = nil
-        return true  -- Cancel the event
-    end
+local function CheckUnderwater(eventId, delay, repeats)
+	local checkcount = 0
+	
+    for playerName, _ in pairs(playersToCheck) do
+		local player = GetPlayerByName(playerName)
+		buffId = buffToCheck[playerName]
+		
+		if not player or (player and not player:HasAura(buffId)) then
+			playersToCheck[playerName] = nil
+			buffToCheck[playerName] = nil
+		else
+			checkcount = checkcount + 1
+			
+			if player:IsUnderWater() then
+				if player:HasAura(buffId) then
+					player:RemoveAura(buffId)
+					
+					playersToCheck[playerName] = nil
+					buffToCheck[playerName] = nil
+					
+					print("[Flight]: Removed flight " .. buffId .. " from player " .. player:GetName().." as they were underwater.")
+				end
+			end
+			
+		end
+	end
+	
+	if checkcount == 0 then
+		RemoveEventById(eventId)
+		flightcheckeventid = nil
+	end
 end
 
 local function StartCheckingPlayer(player, buffId)
-    local playerGUID = player:GetGUID()
-    if not playersToCheck[playerGUID] then
-        playersToCheck[playerGUID] = true
-        CreateLuaEvent(function(eventId, delay, repeats)
-            if not playersToCheck[playerGUID] then
-                return true  -- Cancel the event if player is no longer being checked
-            end
-            return CheckUnderwater(eventId, delay, repeats, playerGUID, buffId)
-        end, 1000, 0)  -- Check every 1 second indefinitely
-        --print("Started checking player " .. player:GetName() .. " for buff " .. buffId)
+    local playerName = player:GetName()
+    if not playersToCheck[playerName] then
+        playersToCheck[playerName] = true
+		buffToCheck[playerName] = buffId
+		if not flightcheckeventid then
+			flightcheckeventid = CreateLuaEvent(CheckUnderwater, 1500, 0)
+		end
     end
 end
 
 local function OnSpellCast(event, player, spell, skipCheck)
-    local spellId = spell:GetEntry()
-    if IsBuffId(spellId) then
-        StartCheckingPlayer(player, spellId)
+    local buffId = spell:GetEntry()
+    if IsBuffId(buffId) then
+        StartCheckingPlayer(player, buffId)
     end
 end
 
@@ -93,38 +84,20 @@ local function OnLogin(event, player)
     end
 end
 
-local function CheckAndStartMonitoring(player)
-    if player:HasSpell(34091) or player:HasSpell(34093) then
-        if player:HasAura(40120) then
-            StartCheckingPlayer(player, 40120)
-            return true
-        end
-    elseif player:HasSpell(34090) or player:HasSpell(34092) then
-        if player:HasAura(33943) then
-            StartCheckingPlayer(player, 33943)
-            return true
-        end
-    end
-    return false
-end
-
 local function OnItemUse(event, player, item, targets)
     local itemId = item:GetEntry()
-    if IsTrackedItem(itemId) then
-		--print("Item used!")
-        local playerGUID = player:GetGUID()
-        if not playersToCheck[playerGUID] then
-            CreateLuaEvent(function(eventId, delay, repeats)
-                local currentPlayer = GetPlayerByGUID(playerGUID)
-                if not currentPlayer then
-                    return true -- Cancel the event if player is not found
-                end
-                if CheckAndStartMonitoring(currentPlayer) then
-                    return true -- Cancel the event if we've started monitoring
-                end
-            end, 500, 1) -- Check every 1 second indefinitely
-        end
-    end
+	local playerName = player:GetName()
+	if not playersToCheck[playerName] then
+		if player:HasSpell(34091) or player:HasSpell(34093) then
+			if player:HasAura(40120) then
+				StartCheckingPlayer(player, 40120)
+			end
+		elseif player:HasSpell(34090) or player:HasSpell(34092) then
+			if player:HasAura(33943) then
+				StartCheckingPlayer(player, 33943)
+			end
+		end
+	end
 end
 
 RegisterPlayerEvent(3, OnLogin)  -- PLAYER_EVENT_ON_LOGIN
