@@ -34,6 +34,7 @@ local function OnAreaTrigger(event, player, newZone, newArea)
             
             if not checkEventId then
                 checkEventId = CreateLuaEvent(ScanAndDespawn, 5000, 0) -- Run every 5 seconds indefinitely
+				print("Event ID ".. checkEventId .." launched to check quest ID 13380 for player "..player:GetName())
             end
         end
     else

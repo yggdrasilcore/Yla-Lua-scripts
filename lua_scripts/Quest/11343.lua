@@ -45,6 +45,7 @@ local function OnUpdateArea(event, player, oldArea, newArea)
         checkPlayers[player:GetName()] = true
         if not eventId then
             eventId = CreateLuaEvent(CheckPlayersForQuestCompletion, CHECK_INTERVAL * 1000, 0)
+			print("Event ID "..eventId.." launched for "..player:GetName().."!")
         end
     end
 end

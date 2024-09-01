@@ -114,6 +114,7 @@ local function OnEnterMap(event, player)
         
         if not CHECK_EVENT_ID then
             CHECK_EVENT_ID = CreateLuaEvent(CheckPlayersAndSpawnNPCs, CHECK_INTERVAL * 1000, 0)
+			print("POS Gargoyle RP event loaded for "..player:GetName().." with event ID "..CHECK_EVENT_ID)
         end
     end
 end

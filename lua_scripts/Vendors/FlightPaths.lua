@@ -95,186 +95,142 @@ local function getTaxiNodes(player)
 end
 
 local function taxieasternkingdomsNodes(playerGuid)
-    local query = CharDBQuery(string.format("SELECT taximask FROM characters WHERE guid = %u", playerGuid))
-    
-    if query then
-        local taximaskStr = query:GetString(0)
-        local taximask = {}
-        
-        for value in taximaskStr:gmatch("%d+") do
-            table.insert(taximask, tonumber(value))
-        end
-        
-        local knownNodes = decodeTaximask(taximask)
-        
-        local azerothNodes = {82, 83, 1,2,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,43,45,56,66,67,68,70,71,74,75,76,78,84,85,86,87,195,224,315,352,377,383,384}
-        
-        for _, nodeId in ipairs(azerothNodes) do
-            if not tableContains(knownNodes, nodeId) then
-                table.insert(knownNodes, nodeId)
-            end
-        end
-        
-        local newTaximask = encodeTaximask(knownNodes)
-        local newTaximaskStr = table.concat(newTaximask, " ")
-        
-        CharDBExecute(string.format("UPDATE characters SET taximask = '%s' WHERE guid = %u", newTaximaskStr, playerGuid))
-        
-        print(string.format("Eastern Kingdoms taxi nodes have been added for player GUID %u.", playerGuid))
-    else
-        print(string.format("Error: Could not retrieve character data for GUID %u.", playerGuid))
-    end
+	print("test 2")
+	player = GetPlayerByGUID(playerGuid)
+	if not player then 
+		print("test 3")
+		local query = CharDBQuery(string.format("SELECT taximask FROM characters WHERE guid = %u", playerGuid))
+		
+		if query then
+			local taximaskStr = query:GetString(0)
+			local taximask = {}
+			
+			for value in taximaskStr:gmatch("%d+") do
+				table.insert(taximask, tonumber(value))
+			end
+			
+			local knownNodes = decodeTaximask(taximask)
+			
+			local azerothNodes = {82, 83, 1,2,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,43,45,56,66,67,68,70,71,74,75,76,78,84,85,86,87,195,224,315,352,377,383,384}
+			
+			for _, nodeId in ipairs(azerothNodes) do
+				if not tableContains(knownNodes, nodeId) then
+					table.insert(knownNodes, nodeId)
+				end
+			end
+			
+			local newTaximask = encodeTaximask(knownNodes)
+			local newTaximaskStr = table.concat(newTaximask, " ")
+			
+			CharDBExecute(string.format("UPDATE characters SET taximask = '%s' WHERE guid = %u", newTaximaskStr, playerGuid))
+			
+			print(string.format("Eastern Kingdoms taxi nodes have been added for player GUID %u.", playerGuid))
+		else
+			print(string.format("Error: Could not retrieve character data for GUID %u.", playerGuid))
+		end
+	else
+        CreateLuaEvent(taxieasternkingdoms, logoutTimer, 1)
+		print("Looping taxi event!")
+	end
 end
 
 local function taxikalimdorNodes(playerGuid)
-    local query = CharDBQuery(string.format("SELECT taximask FROM characters WHERE guid = %u", playerGuid))
-    
-    if query then
-        local taximaskStr = query:GetString(0)
-        local taximask = {}
-        
-        for value in taximaskStr:gmatch("%d+") do
-            table.insert(taximask, tonumber(value))
-        end
-        
-        local knownNodes = decodeTaximask(taximask)
-        
-        local azerothNodes = {93, 94, 22,23,25,26,27,28,29,30,31,32,33,37,38,39,40,41,42,44,48,49,52,53,55,57,58,61,62,63,64,65,69,72,73,77,79,80,166,167,179}
-        
-        for _, nodeId in ipairs(azerothNodes) do
-            if not tableContains(knownNodes, nodeId) then
-                table.insert(knownNodes, nodeId)
-            end
-        end
-        
-        local newTaximask = encodeTaximask(knownNodes)
-        local newTaximaskStr = table.concat(newTaximask, " ")
-        
-        CharDBExecute(string.format("UPDATE characters SET taximask = '%s' WHERE guid = %u", newTaximaskStr, playerGuid))
-        
-        print(string.format("Kalimdor taxi nodes have been added for player GUID %u.", playerGuid))
-    else
-        print(string.format("Error: Could not retrieve character data for GUID %u.", playerGuid))
-    end
+	player = GetPlayerByGUID(playerGuid)
+	if not player then 	
+		local query = CharDBQuery(string.format("SELECT taximask FROM characters WHERE guid = %u", playerGuid))
+		
+		if query then
+			local taximaskStr = query:GetString(0)
+			local taximask = {}
+			
+			for value in taximaskStr:gmatch("%d+") do
+				table.insert(taximask, tonumber(value))
+			end
+			
+			local knownNodes = decodeTaximask(taximask)
+			
+			local azerothNodes = {93, 94, 22,23,25,26,27,28,29,30,31,32,33,37,38,39,40,41,42,44,48,49,52,53,55,57,58,61,62,63,64,65,69,72,73,77,79,80,166,167,179}
+			
+			for _, nodeId in ipairs(azerothNodes) do
+				if not tableContains(knownNodes, nodeId) then
+					table.insert(knownNodes, nodeId)
+				end
+			end
+			
+			local newTaximask = encodeTaximask(knownNodes)
+			local newTaximaskStr = table.concat(newTaximask, " ")
+			
+			CharDBExecute(string.format("UPDATE characters SET taximask = '%s' WHERE guid = %u", newTaximaskStr, playerGuid))
+			
+			print(string.format("Kalimdor taxi nodes have been added for player GUID %u.", playerGuid))
+		else
+			print(string.format("Error: Could not retrieve character data for GUID %u.", playerGuid))
+		end
+	else
+        CreateLuaEvent(taxikalimdor, logoutTimer, 1)
+		print("Looping taxi event!")
+	end
 end
 
 local function taxioutlandNodes(playerGuid)
-    local query = CharDBQuery(string.format("SELECT taximask FROM characters WHERE guid = %u", playerGuid))
-    
-    if query then
-        local taximaskStr = query:GetString(0)
-        local taximask = {}
-        
-        for value in taximaskStr:gmatch("%d+") do
-            table.insert(taximask, tonumber(value))
-        end
-        
-        local knownNodes = decodeTaximask(taximask)
-        
-        local azerothNodes = {99, 100, 101, 102, 111, 112, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 139, 140, 141, 142, 147, 149, 150, 151, 156, 159, 160, 163, 164, 171, 172, 205, 213}
-        
-        for _, nodeId in ipairs(azerothNodes) do
-            if not tableContains(knownNodes, nodeId) then
-                table.insert(knownNodes, nodeId)
-            end
-        end
-        
-        local newTaximask = encodeTaximask(knownNodes)
-        local newTaximaskStr = table.concat(newTaximask, " ")
-        
-        CharDBExecute(string.format("UPDATE characters SET taximask = '%s' WHERE guid = %u", newTaximaskStr, playerGuid))
-        
-        print(string.format("Outland taxi nodes have been added for player GUID %u.", playerGuid))
-    else
-        print(string.format("Error: Could not retrieve character data for GUID %u.", playerGuid))
-    end
+	player = GetPlayerByGUID(playerGuid)
+	if not player then 	
+		local query = CharDBQuery(string.format("SELECT taximask FROM characters WHERE guid = %u", playerGuid))
+		
+		if query then
+			local taximaskStr = query:GetString(0)
+			local taximask = {}
+			
+			for value in taximaskStr:gmatch("%d+") do
+				table.insert(taximask, tonumber(value))
+			end
+			
+			local knownNodes = decodeTaximask(taximask)
+			
+			local azerothNodes = {99, 100, 101, 102, 111, 112, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 139, 140, 141, 142, 147, 149, 150, 151, 156, 159, 160, 163, 164, 171, 172, 205, 213}
+			
+			for _, nodeId in ipairs(azerothNodes) do
+				if not tableContains(knownNodes, nodeId) then
+					table.insert(knownNodes, nodeId)
+				end
+			end
+			
+			local newTaximask = encodeTaximask(knownNodes)
+			local newTaximaskStr = table.concat(newTaximask, " ")
+			
+			CharDBExecute(string.format("UPDATE characters SET taximask = '%s' WHERE guid = %u", newTaximaskStr, playerGuid))
+			
+			print(string.format("Outland taxi nodes have been added for player GUID %u.", playerGuid))
+		else
+			print(string.format("Error: Could not retrieve character data for GUID %u.", playerGuid))
+		end
+	else
+        CreateLuaEvent(taxioutland, logoutTimer, 1)
+		print("Looping taxi outland event!")
+	end
 end
 
 local function taxieasternkingdoms()
-    local currentTime = os.time()
     for i = #playersToUpdate, 1, -1 do
         local playerData = playersToUpdate[i]
-        if currentTime - playerData.logoutTime >= 3 then
-            taxieasternkingdomsNodes(playerData.guid)
-            table.remove(playersToUpdate, i)
-        end
+		taxieasternkingdomsNodes(playerData.guid)
+        table.remove(playersToUpdate, i)
     end
 end
 
 local function taxikalimdor()
-    local currentTime = os.time()
     for i = #playersToUpdate, 1, -1 do
         local playerData = playersToUpdate[i]
-        if currentTime - playerData.logoutTime >= 3 then
-            taxikalimdorNodes(playerData.guid)
-            table.remove(playersToUpdate, i)
-        end
+		taxieasternkingdomsNodes(playerData.guid)
+        table.remove(playersToUpdate, i)
     end
 end
 
 local function taxioutland()
-    local currentTime = os.time()
     for i = #playersToUpdate, 1, -1 do
         local playerData = playersToUpdate[i]
-        if currentTime - playerData.logoutTime >= 3 then
-            taxioutlandNodes(playerData.guid)
-            table.remove(playersToUpdate, i)
-        end
-    end
-end
-
-local function onCommand(event, player, command)
-    if command == "taxinodes" then
-        getTaxiNodes(player)
-        return false
-    elseif command == "taxieasternkingdoms" then
-        local playerGuid = player:GetGUIDLow()
-        local azerothNodes = {82, 83, 1,2,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,43,45,56,66,67,68,70,71,74,75,76,78,84,85,86,87,195,224,315,352,377,383,384}
-        local requiredCount = 35
-        
-        if hasAtLeastTaxiNodes(playerGuid, azerothNodes, requiredCount) then
-            player:SendBroadcastMessage("You already have all Eastern Kingdoms flight paths.")
-			player:GossipComplete()
-        else
-            table.insert(playersToUpdate, {guid = playerGuid, logoutTime = os.time()})
-            player:SendBroadcastMessage("You have purchased all Eastern Kingdoms flight paths. This process will log you out.")
-            player:SaveToDB() -- Save any pending changes
-            player:LogoutPlayer() -- Logout the player immediately
-            CreateLuaEvent(taxieasternkingdoms, logoutTimer, 0)
-        end
-        return false
-    elseif command == "taxikalimdor" then
-        local playerGuid = player:GetGUIDLow()
-        local azerothNodes = {93, 94, 22,23,25,26,27,28,29,30,31,32,33,37,38,39,40,41,42,44,48,49,52,53,55,57,58,61,62,63,64,65,69,72,73,77,79,80,166,167,179}
-        local requiredCount = 31
-        
-        if hasAtLeastTaxiNodes(playerGuid, azerothNodes, requiredCount) then
-            player:SendBroadcastMessage("You already have at least 35 Kalimdor flight paths.")
-			player:GossipComplete()
-        else
-            table.insert(playersToUpdate, {guid = playerGuid, logoutTime = os.time()})
-            player:SendBroadcastMessage("You have purchased all Kalimdor flight paths. This process will log you out.")
-            player:SaveToDB() -- Save any pending changes
-            player:LogoutPlayer() -- Logout the player immediately
-            CreateLuaEvent(taxikalimdor, logoutTimer, 0)
-        end
-        return false
-    elseif command == "taxioutland" then
-        local playerGuid = player:GetGUIDLow()
-        local azerothNodes = {99, 100, 101, 102, 111, 112, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 139, 140, 141, 142, 147, 149, 150, 151, 156, 159, 160, 163, 164, 171, 172, 205, 213}
-        local requiredCount = 17
-        
-        if hasAtLeastTaxiNodes(playerGuid, azerothNodes, requiredCount) then
-            player:SendBroadcastMessage("You already have at least 27 Outland flight paths.")
-			player:GossipComplete()
-        else
-            table.insert(playersToUpdate, {guid = playerGuid, logoutTime = os.time()})
-            player:SendBroadcastMessage("You have purchased all Outland flight paths. This process will log you out.")
-            player:SaveToDB() -- Save any pending changes
-            player:LogoutPlayer() -- Logout the player immediately
-            CreateLuaEvent(taxioutland, logoutTimer, 0)
-        end
-        return false
+		taxieasternkingdomsNodes(playerData.guid)
+        table.remove(playersToUpdate, i)
     end
 end
 
@@ -286,19 +242,10 @@ local function OnGossipHello(event, player, creature)
     player:GossipSendMenu(1, creature)
 end
 
-
-local function hasSufficientVoteTokens(player, amount)
-    return player:GetItemCount(voteTokenItemId) >= amount
-end
-
-local function removeVoteTokens(player, amount)
-    player:RemoveItem(voteTokenItemId, amount)
-end
-
 local function OnGossipSelect(event, player, creature, sender, intid, code)
     if intid == 1 then -- Kalimdor
-        if hasSufficientVoteTokens(player, voteTokenCost) then
-            removeVoteTokens(player, voteTokenCost)
+        if player:HasItem(voteTokenItemId,voteTokenCost) then
+			player:RemoveItem(voteTokenItemId, voteTokenCost)
             local playerGuid = player:GetGUIDLow()
             local azerothNodes = {93, 94, 22,23,25,26,27,28,29,30,31,32,33,37,38,39,40,41,42,44,48,49,52,53,55,57,58,61,62,63,64,65,69,72,73,77,79,80,166,167,179}
             local requiredCount = 35
@@ -311,15 +258,15 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
                 player:SendBroadcastMessage("You have purchased all Kalimdor flight paths. This process will log you out.")
                 player:SaveToDB()
                 player:LogoutPlayer()
-                CreateLuaEvent(taxikalimdor, logoutTimer, 0)
+                CreateLuaEvent(taxikalimdor, logoutTimer, 1)
             end
         else
             player:SendBroadcastMessage("You do not have enough Vote Tokens.")
         end
         player:GossipComplete()
     elseif intid == 2 then -- Eastern Kingdoms
-        if hasSufficientVoteTokens(player, voteTokenCost) then
-            removeVoteTokens(player, voteTokenCost)
+        if player:HasItem(voteTokenItemId,voteTokenCost) then
+			player:RemoveItem(voteTokenItemId, voteTokenCost)
             local playerGuid = player:GetGUIDLow()
             local azerothNodes = {82, 83, 1,2,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,43,45,56,66,67,68,70,71,74,75,76,78,84,85,86,87,195,224,315,352,377,383,384}
             local requiredCount = 31
@@ -332,15 +279,15 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
                 player:SendBroadcastMessage("You have purchased all Eastern Kingdoms flight paths. This process will log you out.")
                 player:SaveToDB()
                 player:LogoutPlayer()
-                CreateLuaEvent(taxieasternkingdoms, logoutTimer, 0)
+                CreateLuaEvent(taxieasternkingdoms, logoutTimer, 1)
             end
         else
             player:SendBroadcastMessage("You do not have enough Vote Tokens.")
         end
         player:GossipComplete()
     elseif intid == 3 then -- Outland
-        if hasSufficientVoteTokens(player, voteTokenCost) then
-            removeVoteTokens(player, voteTokenCost)
+        if player:HasItem(voteTokenItemId,voteTokenCost) then
+			player:RemoveItem(voteTokenItemId, voteTokenCost)
             local playerGuid = player:GetGUIDLow()
             local azerothNodes = {99, 100, 101, 102, 111, 112, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 139, 140, 141, 142, 147, 149, 150, 151, 156, 159, 160, 163, 164, 171, 172, 205, 213}
             local requiredCount = 17
@@ -353,7 +300,7 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
                 player:SendBroadcastMessage("You have purchased all Outland flight paths. This process will log you out.")
                 player:SaveToDB()
                 player:LogoutPlayer()
-                CreateLuaEvent(taxioutland, logoutTimer, 0)
+                CreateLuaEvent(taxioutland, logoutTimer, 1)
             end
         else
             player:SendBroadcastMessage("You do not have enough Vote Tokens.")
@@ -364,4 +311,3 @@ end
 
 RegisterCreatureGossipEvent(190095, 1, OnGossipHello)
 RegisterCreatureGossipEvent(190095, 2, OnGossipSelect)
-RegisterPlayerEvent(42, onCommand)

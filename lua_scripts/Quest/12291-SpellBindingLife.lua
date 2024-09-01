@@ -36,24 +36,15 @@ local function createCheckPlayerCastingFunction(player)
                     
                     local aura = player:GetAura(SPELL_BINDING_LIFE)
                     if aura then
-                        aura:SetDuration(remainingDuration * 1000) -- Convert to milliseconds
-                        --print("Reapplied Binding Life with duration: " .. remainingDuration .. " seconds for " .. playerName)
+                        aura:SetDuration(remainingDuration * 1000)
                     end
-                    
-                    -- Remove the event after successfully reapplying the buff
-                    --RemoveEventById(eventId)
-                    --playerEvents[playerName] = nil
-                    --bindingLifeTimer[playerName] = nil
                 end
-            else
-                --print("ERROR - No timestamp detected for player: " .. playerName)
             end
         elseif not player:HasAura(SPELL_BINDING_LIFE) then
-            -- Remove the event if the player doesn't have the buff and isn't casting
             RemoveEventById(eventId)
             playerEvents[playerName] = nil
             bindingLifeTimer[playerName] = nil
-            print("Removed event for player (no aura and not casting): " .. playerName)
+            print("Removed event ID "..eventId.." for player (no aura and not casting): " .. playerName)
         end
     end
 end
@@ -69,7 +60,7 @@ local function onSpellCast(event, player, spell)
             local checkFunction = createCheckPlayerCastingFunction(player)
             local eventId = CreateLuaEvent(checkFunction, CHECK_INTERVAL, 0)
             playerEvents[playerName] = eventId
-            --print("Binding life cast registered at time " .. bindingLifeTimer[playerName] .. " for player: " .. playerName)
+            print("Binding life cast registered at time " .. bindingLifeTimer[playerName] .. " for player: " .. playerName..". Event ID: "..eventId)
         end
 		
     elseif player:GetAreaId() == AREA_ID and bindingLifeTimer[playerName] and not player:IsInCombat() then
