@@ -1171,17 +1171,13 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
 		end
 		
 		-- Insert the new RAF connection
-		local currentTime = os.time()
 		local insertQuery = string.format(
 			"INSERT INTO account_raf (account_id, referer_id, status, progress, date) VALUES (%s, %s, 2, 0, %d)",
-			accountId, refererId, currentTime)
+			accountId, refererId, os.time())
 		
-		if AuthDBExecute(insertQuery) then
-			player:SendBroadcastMessage("RAF: Friend " .. accountId .. " successfully linked to referer " .. refererId .. ".")
-		else
-			player:SendBroadcastMessage("Error: Failed to create RAF connection.")
-		end
-		
+		AuthDBExecute(insertQuery)
+		player:SendBroadcastMessage("RAF: Friend " .. accountId .. " successfully linked to referer " .. refererId .. ".")
+
 		return false
 	end
 	
