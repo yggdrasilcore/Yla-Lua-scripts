@@ -109,7 +109,7 @@ local function fetchAndConvertToHtml()
             local html = parseJsonToHtml(body)
             
             -- Extract the headline and content
-            local headline = '{"english":"Announcement ' .. getCurrentDate() .. '"}'
+            local headline = '{"english":"Announcement ' .. getCurrentDate() .. '","persian":"","portuguese-brazilian":"","spanish":""}'
             local content = html:gsub("<li><strong>Posted on .-</strong><br>", ""):gsub("</li>", "")
             
             -- Insert into the database
