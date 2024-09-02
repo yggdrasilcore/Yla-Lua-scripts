@@ -158,7 +158,7 @@ local function ShowReferralInfoMenu(player, page)
         player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:32:32:-22:0|tYou have no referrals.", 1, 2)
         player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
     end
-    player:GossipSendMenu(1, player, 1)
+    player:GossipSendMenu(12, player, 1)
 end
 
 local function ShowSummonFriendsMenu(player, page)
@@ -173,14 +173,14 @@ local function ShowSummonFriendsMenu(player, page)
         local secondsLeft = timeLeft % 60
         player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_pocketwatch_01:48:48:-26:0|tSummon grace timer!\n \nYou recently requested to summon someone. Time until you can send next request:\n\n"..minutesLeft.." minutes and "..secondsLeft.." seconds\n \nClick here to refresh cooldown.\n \n \n", 1, 7)
         player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:48:48:-26:0|tBack", 1, 998)
-        player:GossipSendMenu(1, player, 1)
+        player:GossipSendMenu(12, player, 1)
     elseif summonCD[accountId] and summonCD[accountId] > os.time() then
         local timeLeft = summonCD[accountId] - os.time()
         local minutesLeft = math.floor(timeLeft / 60)
         local secondsLeft = timeLeft % 60
         player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_holy_borrowedtime:48:48:-26:0|tRAF summon cooldown:\n \n "..minutesLeft.." minutes and "..secondsLeft.." seconds\n \n", 1, 7)
         player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:48:48:-26:0|tBack", 1, 998)
-        player:GossipSendMenu(1, player, 1)
+        player:GossipSendMenu(12, player, 1)
     else
 	    local MaxRAFDuration = os.time() - RAFDuration
 		
@@ -232,7 +232,7 @@ local function ShowSummonFriendsMenu(player, page)
             player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:48:48:-26:0|tYou have no friends to summon.", 1, 7)
             player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:48:48:-26:0|tBack", 1, 998)
         end
-        player:GossipSendMenu(1, player, 1)
+        player:GossipSendMenu(12, player, 1)
     end
 end
 
@@ -287,7 +287,7 @@ local function ShowRefereeInfo(player)
 		player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
     end
     
-    player:GossipSendMenu(1, player, 1)
+    player:GossipSendMenu(12, player, 1)
 end
 
 local function ShowRAFMenu(player)
@@ -299,7 +299,7 @@ local function ShowRAFMenu(player)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_02:32:32:-22:0|tClaim referral bonuses", 1, 4)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_unused2:32:32:-22:0|tSummon my RAF friend", 1, 7)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tClose RAF menu", 1, 5)
-    player:GossipSendMenu(1, player, 1)
+    player:GossipSendMenu(12, player, 1)
 end
 
 local function ClaimBonuses(player)
@@ -392,7 +392,7 @@ local function ClaimBonuses(player)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_03:32:32:-22:0|tReward box 3:\n \nRequirement: ".. RewardTier3 .." referrals.\nStatus: "..CompletionStatus3[GUIDLow]..""..ClaimStatus3[GUIDLow].."\n \nContains:\n- ICC 25 heroic weapons\n- ICC 25 normal trinkets\n- Ashes of Al'ar\n- 95 Emblems of Frost and 1 Sanctification Mark\n \n ", 1, 43)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_04:32:32:-22:0|tReward box 4:\n \nRequirement: ".. RewardTier4 .." referrals.\nStatus: "..CompletionStatus4[GUIDLow]..""..ClaimStatus4[GUIDLow].."\n \nContains:\n- Sea Turtle mount\n- Unobtainable mounts\n- 50 Community Tokens\n \n ", 1, 44)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
-    player:GossipSendMenu(1, player, 1)
+    player:GossipSendMenu(12, player, 1)
 end
 
 local function Reward40(player)
@@ -439,7 +439,7 @@ local function Reward41(player)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_fishingchair:32:32:-22:0|tOption 6: Toy \n \nFishing Chair\n \n", 1, 415)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_frostemblem_01:32:32:-22:0|tOption 7: Emblems\n \n60 Emblems of Frost\n \n", 1, 417)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 4)
-    player:GossipSendMenu(1, player, 1)
+    player:GossipSendMenu(12, player, 1)
 end
 
 local function RewardBase41(player, itemId, itemName)
@@ -535,7 +535,7 @@ local function Reward42(player)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_holy_summonlightwell:32:32:-22:0|tOption 11: Item\n \nFlare of the Heavens (Normal)\n \n", 1, 461)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_frostemblem_01:32:32:-22:0|tOption 12: Emblems\n \n95 Emblems of Frost\n \n", 1, 462)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 4)
-    player:GossipSendMenu(1, player, 1)
+    player:GossipSendMenu(12, player, 1)
 end
 
 local function RewardBase42(player, itemId)
@@ -652,7 +652,7 @@ local function Reward43(player)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_summerfest_brazierorange:32:32:-22:0|tOption 12: Mount\n \nAshes of Al'ar", 1, 438)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_frostemblem_01:32:32:-22:0|tOption 13: Emblems and Mark\n \n95 Emblems of Frost and 1x Mark of Sanctification", 1, 473)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 4)
-    player:GossipSendMenu(1, player, 1)
+    player:GossipSendMenu(12, player, 1)
 end
 
 local function RewardBase43(player, itemId)
@@ -767,7 +767,7 @@ local function Reward44(player)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/ability_mount_netherdrakeelite:32:32:-22:0|tOption 6: Mount\n \nMerciless Nether Drake mount\n \n", 1, 446)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tOption 7: Tokens\n \n50 Community Tokens\n \n", 1, 447)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 4)
-    player:GossipSendMenu(1, player, 1)
+    player:GossipSendMenu(12, player, 1)
 end
 
 local function RewardBase44(player, itemId)
@@ -854,7 +854,7 @@ local function ShowRAFLink(player)
 	end
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|tHow to refer your friends: \n \nTo refer your friends, you must share your friend referral code with them. \n \nYour referral code is: ".. player:GetAccountId() ..".\n \nAfter they create their account, they must log in and speak to their Twiggy to enter this code at the new player button above.\n \n", 1, 1)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
-    player:GossipSendMenu(1, player, 1)
+    player:GossipSendMenu(12, player, 1)
 end
 
 local function ShowSummonRequest(friend)
@@ -870,7 +870,7 @@ local function ShowSummonRequest(friend)
 	friend:GossipMenuAddItem(0, "|TInterface/ICONS/spell_unused2:48:48:-26:0|tIncoming summon request!\n \n" .. summonerName .. " wants to summon you to "..GetAreaName(summoner:GetAreaId()).."! Do you accept?\n \n", 1, 500)
 	friend:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_groupneedmore:48:48:-26:0|tYes\n \n", 1, 501)
 	friend:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:48:48:-26:0|tNo\n \n", 1, 502)
-	friend:GossipSendMenu(1, friend, 1)
+	friend:GossipSendMenu(12, friend, 1)
 end
 
 local function OnGossipSelect(event, player, object, sender, intid, code, menu_id)
