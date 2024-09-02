@@ -1070,10 +1070,10 @@ RegisterPlayerEvent(47, OnZoneChange)
 RegisterServerEvent(13, StorePlayerFlyingStatus)
 
 -- Periodic events running all the time
-CreateLuaEvent(CheckQuestChanges, REAPPLICATION_ON_BREAK_CHECK_INTERVAL, 0)
-CreateLuaEvent(CheckFlightForm, FLIGHTFORM_SANITY_CHECK_INTERVAL, 0)
-CreateLuaEvent(ParachuteTimerForAllPlayers, PARACHUTE_CHECK_INTERVAL, 0)
-CreateLuaEvent(CanFlyChecks, FALLING_CHECK_INTERVAL, 0)
+flightquestid = CreateLuaEvent(CheckQuestChanges, REAPPLICATION_ON_BREAK_CHECK_INTERVAL, 0)
+flightformid = CreateLuaEvent(CheckFlightForm, FLIGHTFORM_SANITY_CHECK_INTERVAL, 0)
+parachutecheckid = CreateLuaEvent(ParachuteTimerForAllPlayers, PARACHUTE_CHECK_INTERVAL, 0)
+canflycheckid = CreateLuaEvent(CanFlyChecks, FALLING_CHECK_INTERVAL, 0)
 
 -- Item use events
 for _, itemId in ipairs(ITEM_IDS) do
@@ -1082,4 +1082,4 @@ end
 
 CharacterFlyingTable() -- Ensures table exists on startup, used to hot load SQL changes
 
-print("[AZEROTH FLIGHT MODULE]: Flight mode script loaded and events registered.")
+print("[AZEROTH FLIGHT MODULE]: Flight mode script loaded and events registered. Quest check ID "..flightquestid..". Flight form check ID: "..flightformid..". Parachute check ID: "..parachutecheckid..". Can fly check ID: "..canflycheckid)
