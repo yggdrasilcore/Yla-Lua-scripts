@@ -24,7 +24,7 @@ local function BonkTime(eventId, delay, repeats)
         local chosenPlayer = eligiblePlayers[randomIndex]
 
         -- Spawn NPC
-        local npc = chosenPlayer:SpawnCreature(SPAWN_NPC_ID, chosenPlayer:GetX(), chosenPlayer:GetY(), chosenPlayer:GetZ(), chosenPlayer:GetO(), 1, 22000)
+        local npc = chosenPlayer:SpawnCreature(SPAWN_NPC_ID, chosenPlayer:GetX(), chosenPlayer:GetY(), chosenPlayer:GetZ(), chosenPlayer:GetO(), 1, 40000)
         targetplayer = chosenPlayer:GetName()
 		
 		if npc then
@@ -51,7 +51,6 @@ local function BonkTime(eventId, delay, repeats)
 					npc:SetRooted(true)
 					npc:SendUnitEmote("Minigob Manabonk tickles ".. chosenPlayer:GetName()..".")
 					npc:SendUnitSay("Hee hee! Gotcha!", 0)
-					npc:SetFaction(900)
 				end
 			end, 12000, 1)
 			
@@ -59,6 +58,7 @@ local function BonkTime(eventId, delay, repeats)
 				chosenPlayer = GetPlayerByName(targetplayer)
 				if chosenPlayer then
 					npc:EmoteState(11) -- laugh
+					npc:SetFaction(900)
 				end
 			end, 12500, 1)
 			
@@ -73,10 +73,12 @@ local function BonkTime(eventId, delay, repeats)
 			end, 15000, 1)
 			
 			npc:RegisterEvent(function(eventId, delay, repeats, npc)
-				npc:CastSpell(npc, SPELL_ID_2)
-				npc:DespawnOrUnsummon(1000)
 				targetplayer = nil
-			end, 20000, 1)
+				if npc:IsAlive() and not npc:IsInCombat() then
+					npc:CastSpell(npc, SPELL_ID_2)
+					npc:DespawnOrUnsummon(1000)
+				end
+			end, 21000, 1)
 			
         end
     end
