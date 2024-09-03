@@ -123,7 +123,7 @@ local function fetchAndConvertToHtml()
     end)
 end
 
-CreateLuaEvent(fetchAndConvertToHtml, 5000, 1) -- Runs every 6 hrs
+--CreateLuaEvent(fetchAndConvertToHtml, 305000, 1) -- Runs every 6 hrs
 
 
 --Trigger syncing to external website table
