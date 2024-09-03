@@ -26,7 +26,7 @@ local function LazerSpawn(event, creature)
 	if maxrangeplayer == nil then maxrangeplayer = creature:GetNearestPlayer(30) end -- If no players in LOS of Kolagarn (happens if they stand on edge)
 	
 	if creature:GetEntry() == 33802 then -- Move lazers to farthest player
-		if maxrangeplayer:GetDistance(1771, -24, 448) < 30 then
+		if maxrangeplayer:GetDistance(1771, -24, 448) < 23 and maxrangeplayer:GetX() < 1785 then
 			creature:NearTeleport(maxrangeplayer:GetX()-1, maxrangeplayer:GetY()-3, maxrangeplayer:GetZ(), maxrangeplayer:GetO())
 			creature:SetHomePosition(maxrangeplayer:GetX()-1, maxrangeplayer:GetY()-3, maxrangeplayer:GetZ(), maxrangeplayer:GetO())
 		else
@@ -34,7 +34,7 @@ local function LazerSpawn(event, creature)
 			creature:SetHomePosition(maxrangeplayer:GetX(), maxrangeplayer:GetY(), maxrangeplayer:GetZ(), maxrangeplayer:GetO())
 		end
 	else
-		if maxrangeplayer:GetDistance(1771, -24, 448) < 30 then
+		if maxrangeplayer:GetDistance(1771, -24, 448) < 23 and maxrangeplayer:GetX() < 1785 then
 			creature:NearTeleport(maxrangeplayer:GetX()+1, maxrangeplayer:GetY()+3, maxrangeplayer:GetZ(), maxrangeplayer:GetO())
 			creature:SetHomePosition(maxrangeplayer:GetX()+1, maxrangeplayer:GetY()+3, maxrangeplayer:GetZ(), maxrangeplayer:GetO())
 		else
