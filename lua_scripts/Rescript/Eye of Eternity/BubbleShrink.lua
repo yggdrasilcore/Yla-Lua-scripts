@@ -1,15 +1,16 @@
-local NPC_ID = 30282
-local SPELL_ID = 18210
 local function CastSpellPeriodically(eventId, delay, calls, creature)
-    creature:CastSpell(creature, SPELL_ID, true)
+    creature:CastSpell(creature, 18210, true)	
 end
 
 local function OnSpawn(event, creature)
     creature:DespawnOrUnsummon(45000)
     creature:RegisterEvent(CastSpellPeriodically, 1400, 0)
-	creature:SetFaction(35)
-	creature:SetRooted()
 end
 
-RegisterCreatureEvent(NPC_ID, 5, OnSpawn)
-WorldDBExecute("UPDATE creature_template SET scale = 5 WHERE entry = " .. NPC_ID)
+local function OnCombat(event, creature, target)
+    creature:SetRooted()
+end
+
+RegisterCreatureEvent(30282, 5, OnSpawn)
+RegisterCreatureEvent(30282, 5, OnCombat)
+WorldDBExecute("UPDATE creature_template SET scale = 5, BaseAttackTime = 9999999, unit_flags = 33685510, unit_flags2 = 34816 WHERE entry = 30282")
