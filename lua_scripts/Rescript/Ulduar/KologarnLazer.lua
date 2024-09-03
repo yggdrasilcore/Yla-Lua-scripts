@@ -1,18 +1,14 @@
 local function LazerSpawn(event, creature)
 	
-	if creature:GetEntry() == 33802 then
+	if creature:GetEntry() == 33802 then -- Sets original position to ensure lazers are in range of Kologarn and players
 		creature:NearTeleport(1767, -23, 448.80, 0)
-		creature:SetHomePosition(1767, -23, 448.80, 0)
 	else
 		creature:NearTeleport(1770, -28, 448.80, 0)
-		creature:SetHomePosition(1770, -28, 448.80, 0)
 	end
 	
-    -- Find the nearest creature with entry ID 32930 (Kologarn)
-    local kologarn = creature:GetNearestCreature(60, 32930)
+    local kologarn = creature:GetNearestCreature(60, 32930) -- Find the nearest creature with entry ID 32930 (Kologarn), later used to find player
 
-    -- Get all players in range of Kologarn
-    local playersInRange = kologarn:GetPlayersInRange(54, 1, 1)
+    local playersInRange = kologarn:GetPlayersInRange(54, 1, 1) -- Get all players in range of Kologarn
     
     -- Initialize a variable to store the player farthest from Kologarn
     local maxrangeplayer = nil
@@ -24,11 +20,21 @@ local function LazerSpawn(event, creature)
         if distance > maxDistance then
             maxDistance = distance
             maxrangeplayer = player
+			print("player found!")
+        else
+			print("no players in range!")
 		end
     end
-    
-    -- If a player is found, make the creature follow the farthest player
-    if maxrangeplayer then
+	
+	if creature:GetEntry() == 33802 then -- Move lazers to farthest player
+		creature:NearTeleport(maxrangeplayer:GetX()+3, maxrangeplayer:GetY()+3, maxrangeplayer:GetZ(), maxrangeplayer:GetO())
+		creature:SetHomePosition(maxrangeplayer:GetX()+3, maxrangeplayer:GetY()+3, maxrangeplayer:GetZ(), maxrangeplayer:GetO())
+	else
+		creature:NearTeleport(maxrangeplayer:GetX()-3, maxrangeplayer:GetY()-3, maxrangeplayer:GetZ(), maxrangeplayer:GetO())
+		creature:SetHomePosition(maxrangeplayer:GetX()-3, maxrangeplayer:GetY()-3, maxrangeplayer:GetZ(), maxrangeplayer:GetO())
+	end
+	
+    if maxrangeplayer then  -- If a player is found, make the lazer follow the farthest player
 		creature:SetInCombatWith(maxrangeplayer)
 		creature:SetSpeed(0, 0.7)
 		creature:SetSpeed(1, 0.7)
@@ -36,28 +42,30 @@ local function LazerSpawn(event, creature)
 		if creature:GetEntry() == 33802 then
 			creature:MoveFollow(maxrangeplayer, 1, 0.3)
 		else
-			creature:MoveFollow(maxrangeplayer, 1, 2.1)
+			creature:MoveFollow(maxrangeplayer, 1, -2.1)
 		end
 		
 		creature:RegisterEvent(function(eventId, delay, repeats, creature)
-		
-		player = creature:GetNearestPlayer(20)
+			player = creature:GetNearestPlayer(50)
 			if player:GetDifficulty() == 1 then
-				creature:AddAura(63977, creature) -- 25-man eye aoe
+				creature:AddAura(63977, creature) -- 25-man eye AOE
 			else
-				creature:AddAura(63347, creature) -- 10-man eye aoe
+				creature:AddAura(63347, creature) -- 10-man eye AOE
 			end
 			
 			if creature:GetEntry() == 33802 then
 				creature:CastSpell(creature, 63702, true) -- Right beam
 			else
-				creature:CastSpell(creature, 63676, true) -- Left bea,
+				creature:CastSpell(creature, 63676, true) -- Left beam
 			end
-		end, 1000, 1)
+			
+			creature:RemoveEventById(eventId) -- Clean up event in case NPC janks out and stays inactive
+			
+		end, 20, 1)
 			
     end
 end
 
--- Register the event for creatures with entry IDs 33802 and 33632
+-- Register the event for lazer NPCs
 RegisterCreatureEvent(33802, 5, LazerSpawn)
 RegisterCreatureEvent(33632, 5, LazerSpawn)
