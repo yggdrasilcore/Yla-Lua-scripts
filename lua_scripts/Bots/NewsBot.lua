@@ -101,9 +101,9 @@ local function fetchAndConvertToHtml()
             id = math.ceil(tonumber(body:match(',"id":"(%d+)"')) / 100000000000)
             
             if id then
-                print("ID OK: " .. id)
+                print("[News Bot]: Message ID OK: " .. id)
             else    
-                print("NO ID!")
+                print("[News Bot]: Error - No message ID!")
             end
         
             local html = parseJsonToHtml(body)
@@ -118,12 +118,12 @@ local function fetchAndConvertToHtml()
             -- Print HTML (Optional)
             print(html)
         else
-            print("Failed to fetch message. Status code: " .. status)
+            print("[News Bot]: Failed to fetch message. Status code: " .. status)
         end
     end)
 end
 
-CreateLuaEvent(fetchAndConvertToHtml, 43200000, 0) -- Runs every 6 hrs
+CreateLuaEvent(fetchAndConvertToHtml, 5000, 1) -- Runs every 6 hrs
 
 
 --Trigger syncing to external website table
