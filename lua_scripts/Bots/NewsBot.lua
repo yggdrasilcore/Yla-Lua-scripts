@@ -14,124 +14,114 @@ local function getCurrentDate()
     return string.format("%04d-%02d-%02d", year, month, day)
 end
 
--- Function to extract and format the first image URL from attachments
-local function extractFirstImageUrlFromAttachments(attachments)
-    -- Match the URL enclosed in double quotes and ending with .png, .jpg, or .jpeg
-    local imageUrl = attachments:match('"url":"(https?://[%w-_%.%?%.:/%+=&]+%.(png|jpg|jpeg))"')
-    if imageUrl then
-        return '<img src="' .. imageUrl .. '" alt="Image" style="max-width: 500px; max-height: 500px;">'
+-- Function to sanitize strings for SQL insertion
+local function sanitizeString(str)
+    if type(str) ~= "string" then
+        return tostring(str)
     end
-    return ""
+    return str:gsub("'", "''")
+              :gsub("\\", "\\\\")
+              :gsub("\n", "\\n")
+              :gsub("\r", "\\r")
+              :gsub("\000", "\\0")
 end
 
--- Function to convert JSON response to formatted HTML
+-- Function to parse JSON response to formatted HTML
 local function parseJsonToHtml(json)
-    -- Initialize HTML content
-	local html = ""
-
-    -- Extract each message
+    local html = ""
     for message in json:gmatch("{.-}") do
         local content = message:match('"content":"(.-)"') or ""
-        local attachments = message:match('"attachments":%[(.-)%]')
-        local embeds = message:match('"embeds":%[(.-)%]')
-
-        -- Skip empty content or "No content"
+        content = content:gsub("\\\"", "\""):gsub("\\n", "\n")
+        
         if content ~= "" and content ~= "No content" then
-            -- Remove all @ mentions
             content = content:gsub("@", "")
+                     :gsub("\n", "<br>")
+                     :gsub("%*%*%*([^%*]+)%*%*%*", "<h3>%1</h3>")
+                     :gsub("%*%*([^%*]+)%*%*", "<h4><b>%1</b></h4>")
+                     :gsub("%*([^%*]+)%*", "<i>%1</i>")
+                     :gsub("%[(.-)%]%(https?://[%w-_%.%?%.:/%+=&]+%)", '<a href="%2">%1</a>')
             
-            -- Replace newlines with <br>
-            content = content:gsub("\\n", "<br>")
-            
-            -- Replace *** text with <h3>
-            content = content:gsub("%*%*%*([^%*]+)%*%*%*", "<h3>%1</h3>")
-            
-            -- Replace ** text with <h2>
-            content = content:gsub("%*%*([^%*]+)%*%*", "<br><h4><b>%1</b></h4>")
-            
-            -- Replace * text with <i>
-            content = content:gsub("%*([^%*]+)%*", "%1")
-            
-            -- Replace all URLs with HTML anchor tags
-            content = content:gsub("%[(.-)%]%((https?://[%w-_%.%?%.:/%+=&]+)%)", '<a href="%2">%1</a>')
-            
-            -- Remove everything after the second </strong>
-            local endStrongCount = 0
-            content = content:gsub("</strong>", function()
-                endStrongCount = endStrongCount + 1
-                if endStrongCount >= 2 then
-                    return ""  -- Remove additional </strong> tags
-                else
-                    return "</strong>"
-                end
-            end)
-            
-            -- Append message to HTML with the first image if present
             html = html .. "<li><strong>Posted on " .. getCurrentDate() .. "</strong><br>" .. content .. "</li>"
         end
     end
-    
-    html = html .. ""
     return html
 end
 
 -- Function to insert data into the database
 local function insertIntoDatabase(headline, content)
-    local timestamp = os.time()  -- Current UNIX time for timestamp
+    if not id then
+        print("[News Bot]: Error - No valid ID to insert")
+        return false
+    end
 
-    -- Generate a random number between 100 and 110
+    local timestamp = os.time()
     local number = math.random(100, 110)
     local type_content = string.format('[\"%d.jpeg\"]', number)
 
-    local query = string.format([[
-        INSERT INTO articles (id, timestamp, author_id, comments, type, type_content, headline, content)
-        VALUES (%d, %d, 4, -1, 1, '%s', '%s', '%s');
-    ]], id, timestamp, type_content, headline:gsub("'", "''"), content:gsub("'", "''"))
+    local sanitized_headline = sanitizeString(headline)
+    local sanitized_content = sanitizeString(content)
 
-    -- Execute the query
-    AuthDBExecute(query)
+    local query = string.format([[
+        INSERT INTO articles 
+        (id, timestamp, author_id, comments, type, type_content, headline, content)
+        VALUES 
+        (%d, %d, 4, -1, 1, '%s', '%s', '%s');
+    ]], id, timestamp, type_content, sanitized_headline, sanitized_content)
+
+    local success, error_message = pcall(function()
+        AuthDBExecute(query)
+    end)
+
+    if not success then
+        print("[News Bot]: Database insertion failed. Error: " .. tostring(error_message))
+        return false
+    end
+
+    print("[News Bot]: Successfully inserted article with ID: " .. tostring(id))
     id = nil
+    return true
 end
 
--- Updated function to fetch the most recent message and convert to HTML
+-- Function to fetch the most recent message and convert to HTML
 local function fetchAndConvertToHtml()
+	print("[News Bot]: Checking for news...")
     HttpRequest("GET", url, headers, function(status, body, headers)
         if status == 200 then
-            -- Use match to get a single ID value
             id = math.ceil(tonumber(body:match(',"id":"(%d+)"')) / 100000000000)
             
-            if id then
-                print("[News Bot]: Message ID OK: " .. id)
-            else    
+            if not id then
                 print("[News Bot]: Error - No message ID!")
+                return
             end
+            
+            print("[News Bot]: Message ID OK: " .. id)
         
             local html = parseJsonToHtml(body)
             
-            -- Extract the headline and content
-            local headline = '{"english":"Announcement ' .. getCurrentDate() .. '","persian":"","portuguese-brazilian":"","spanish":""}'
+            local headline = string.format('{"english":"Announcement %s","persian":"","portuguese-brazilian":"","spanish":""}', getCurrentDate())
             local content = html:gsub("<li><strong>Posted on .-</strong><br>", ""):gsub("</li>", "")
             
-            -- Insert into the database
-            insertIntoDatabase(headline, content)
-            
-            -- Print HTML (Optional)
-            print(html)
+            if insertIntoDatabase(headline, content) then
+                print("[News Bot]: Successfully processed and inserted new announcement.")
+            else
+                print("[News Bot]: Failed to insert new announcement into database.")
+            end
         else
             print("[News Bot]: Failed to fetch message. Status code: " .. status)
         end
     end)
 end
 
---CreateLuaEvent(fetchAndConvertToHtml, 305000, 1) -- Runs every 6 hrs
+CreateLuaEvent(fetchAndConvertToHtml, 5000, 1) -- Runs every 6 hrs
 
-
---Trigger syncing to external website table
---CREATE TRIGGER after_article_insert
---AFTER INSERT ON acore_auth.articles
---FOR EACH ROW
---BEGIN
-    --INSERT INTO fusioncms.articles
-    --SELECT * FROM acore_auth.articles
-    --WHERE id = NEW.id;
---END
+-- Trigger syncing to external website table (MySQL trigger)
+--[[
+CREATE TRIGGER after_article_insert
+AFTER INSERT ON acore_auth.articles
+FOR EACH ROW
+BEGIN
+    INSERT INTO fusioncms.articles
+    SELECT * FROM acore_auth.articles
+    WHERE id = NEW.id;
+END
+]]
