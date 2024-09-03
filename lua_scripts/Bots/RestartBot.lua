@@ -12,7 +12,6 @@ local function GetTimeUntilNextRestart()
         min = 0, 
         sec = 0
     })
-
     local nextSunday = os.time({
         year = currentDate.year, 
         month = currentDate.month, 
@@ -21,6 +20,14 @@ local function GetTimeUntilNextRestart()
         min = 0, 
         sec = 0
     })
+
+    -- If it's past 10 AM, move to the next occurrence
+    if nextWednesday <= currentTime then
+        nextWednesday = nextWednesday + 7 * 24 * 60 * 60 -- Add 7 days
+    end
+    if nextSunday <= currentTime then
+        nextSunday = nextSunday + 7 * 24 * 60 * 60 -- Add 7 days
+    end
 
     -- Return the time difference until the next restart
     if nextWednesday < nextSunday then
