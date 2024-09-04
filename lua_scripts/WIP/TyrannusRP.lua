@@ -110,7 +110,7 @@ local function TyrannusRoleplayArea(event, player, oldArea, newArea)
 		local Tyrannus = player:GetNearestCreature(200, 36658, 0, 1)
 		local Rimefang = player:GetNearestCreature(200, 36661)
 		
-		if Rimefang and not Rimefang:HasAura(46598) and not Tyrannus:IsTargetableForAttack(false) then
+		if Rimefang and not Rimefang:HasAura(46598) and Tyrannus and not Tyrannus:IsTargetableForAttack(false) then
 			Tyrannus:CastSpell(Rimefang, 46598, true)
 		elseif not Rimefang then
 			print("POS area event - Rimefang not found!")
