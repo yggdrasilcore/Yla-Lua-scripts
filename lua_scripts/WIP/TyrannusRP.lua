@@ -124,6 +124,12 @@ local function TyrannusRoleplayArea(event, player, oldArea, newArea)
 				if TyrannusRP[player:GetInstanceId()] then player:RemoveEventById(eventId) print("POS area event - Active event found, terminating duplicate event") return end
 				
 				print("POS area event - Looping Tyrannus RP event for "..player:GetName().."...")
+				HordeRP = player:GetNearestCreature(200, 37581)
+				if HordeRP then
+					player:RemoveEventById(eventId)
+					return
+				end
+				
 				Tyrannus = player:GetNearestCreature(200, 36658)
 				local targetable
 				if Tyrannus then
@@ -156,7 +162,7 @@ local function TyrannusRoleplayArea(event, player, oldArea, newArea)
 				elseif not Tyrannus or (Tyrannus and Tyrannus:IsDead()) then
 					if Tyrannus and Tyrannus:IsDead() then print("POS area event - Tyrannus dead, removing player event")
 					elseif not Tyrannus then print("POS area event - Tyrannus not foud, removing player event")
-					else  print("POS area event - No combat, removing player event") end
+					else print("POS area event - No combat, removing player event") end
 					player:RemoveEvents()
 				end
 			end, 1500, 0)
@@ -166,7 +172,6 @@ end
 
 local function TrashCombat(event, player, enemy)
 	if enemy:GetEntry() == 36877 then
-		print("POS tunnel trash combat - wrathbone skeleton cb detected")
 		local Tyrannus = player:GetNearestCreature(200, 36658, 0, 1)
 		local Rimefang = player:GetNearestCreature(200, 36661)
 		
@@ -184,8 +189,6 @@ local function TrashCombat(event, player, enemy)
 			else
 				print("POS tunnel trash combat - tyrannus OK")
 			end
-		else
-			print("POS tunnel trash combat - couldnt find tyrannus and/or rimefang")
 		end
 	end
 end
@@ -193,4 +196,4 @@ end
 RegisterPlayerEvent(33, TrashCombat)
 RegisterPlayerEvent(34, TyrannusLeaveCombat)
 RegisterPlayerEvent(47, TyrannusRoleplayArea)
-print("[Instance]: POS - Tyrannus RP and double spawn fix loaded!")
+print("[Instance]: POS - Tyrannus RP and unmounted spawn fix loaded!")

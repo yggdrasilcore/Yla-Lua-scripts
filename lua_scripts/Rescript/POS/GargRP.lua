@@ -34,7 +34,8 @@ local function KillNearest(eventId, delay, repeats, creature)
     local nearestCreature1 = creature:GetNearestCreature(25, 36765, 0, 0)
     local nearestCreature2 = creature:GetNearestCreature(25, 36766, 0, 0)
     local nearestCreature3 = creature:GetNearestCreature(25, 36764, 0, 0)
-    local nearestCreature4 = creature:GetNearestCreature(25, 36772, 0, 0)
+    local nearestCreature4 = creature:GetNearestCreature(25, 36771, 0, 0)
+    local nearestCreature5 = creature:GetNearestCreature(25, 36772, 0, 0)
 	if nearestCreature1 then
 		nearestCreature1:DespawnOrUnsummon()
 	end
@@ -46,6 +47,9 @@ local function KillNearest(eventId, delay, repeats, creature)
 	end
 	if nearestCreature4 then
 		nearestCreature4:DespawnOrUnsummon()
+	end
+	if nearestCreature5 then
+		nearestCreature5:DespawnOrUnsummon()
 	end
     creature:MoveTo(0, creature:GetX(), creature:GetY(), 580)
     creature:RegisterEvent(FlyUpAndDespawn, 9000, 1)
@@ -83,7 +87,8 @@ local function CheckPlayersAndSpawnNPCs()
 					local nearestCreature1 = npc:GetNearestCreature(100, 36765, 0, 0)
 					local nearestCreature2 = npc:GetNearestCreature(100, 36766, 0, 0)
 					local nearestCreature3 = npc:GetNearestCreature(100, 36764, 0, 0)
-					local nearestCreature4 = npc:GetNearestCreature(100, 36772, 0, 0)
+					local nearestCreature4 = npc:GetNearestCreature(100, 36771, 0, 0) 
+					local nearestCreature5 = npc:GetNearestCreature(100, 36772, 0, 0) 
 					if nearestCreature1 then
 						nearestCreature1:EmoteState(431)
 					end
@@ -95,6 +100,9 @@ local function CheckPlayersAndSpawnNPCs()
 					end
 					if nearestCreature4 then
 						nearestCreature4:EmoteState(431)
+					end
+					if nearestCreature5 then
+						nearestCreature5:EmoteState(431)
 					end
 				end
 	
