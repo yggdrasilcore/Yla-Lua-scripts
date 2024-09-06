@@ -40,10 +40,9 @@ local function CompletionEvent(player)
 			end, 31000, 1)
 			
 			oachanoa:RegisterEvent(function(eventId, delay, repeats, oachanoa)
-				oachanoa:PerformEmote(374)
-				oachanoa:PlayDistanceSound(11561)
-				oachanoa:DespawnOrUnsummon(2300)
 				oachanoa:NearTeleport(oachanoa:GetX(), oachanoa:GetY(), oachanoa:GetZ(), -5)
+				oachanoa:PerformEmote(374)
+				oachanoa:DespawnOrUnsummon(2300)
 				oachanoa:RemoveEvents()
 			end, 39000, 1)
 		end
@@ -148,10 +147,9 @@ local function PearloftheDepthsUse(event, go, player)
 						oachanoa:SendUnitYell(" Very well, "..oachanoaeventplayer..", you have failed to act. The prophecy is not yours to learn. Do not call upon me again until you have found your backbone!", 0)
 						
 						oachanoa:RegisterEvent(function(eventId, delay, repeats, oachanoa)
-							oachanoa:PerformEmote(374)
-							oachanoa:PlayDistanceSound(11561)
-							oachanoa:DespawnOrUnsummon(2300)
 							oachanoa:NearTeleport(oachanoa:GetX(), oachanoa:GetY(), oachanoa:GetZ(), -5)
+							oachanoa:PerformEmote(374)
+							oachanoa:DespawnOrUnsummon(2300)
 						end, 10000, 1)
 						
 						oachanoaeventplayer = nil
