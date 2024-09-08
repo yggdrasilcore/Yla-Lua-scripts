@@ -1039,14 +1039,16 @@ local function OnLogin(event, player)
 						morphSelection7[guid] = id
 					end
 				until not morphdb:NextRow()
-			end
-			
-			if (player:HasAura(768)	or player:HasAura(9634)
-			or player:HasAura(5487)	or player:HasAura(783)
-			or player:HasAura(33891) or player:HasAura(24858)
-			or player:HasAura(1066)) or player:HasAura(40120) 
-			then
-				player:RegisterEvent(Morpher, 20, 1)
+				
+				if not morphdb:NextRow() then
+					if (player:HasAura(768)	or player:HasAura(9634)
+					or player:HasAura(5487)	or player:HasAura(783)
+					or player:HasAura(33891) or player:HasAura(24858)
+					or player:HasAura(1066)) or player:HasAura(40120) 
+					then
+						player:RegisterEvent(Morpher, 20, 1)
+					end
+				end
 			end
 		end)
 	end
