@@ -28,6 +28,11 @@ local function BonkTime(eventId, delay, repeats)
         targetplayer = chosenPlayer:GetName()
 		
 		if npc then
+		
+			squirrel = npc:GetNearestCreature(200, 1412) -- Hack fix for missing squirrel movements in Dalaran
+			if squirrel then
+				squirrel:MoveRandom(10)
+			end
 			
 			npc:MoveRandom(10)
 			npc:CastSpell(npc, SPELL_ID_1)
