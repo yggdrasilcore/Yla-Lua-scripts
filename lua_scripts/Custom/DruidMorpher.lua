@@ -3,13 +3,13 @@ local ITEM_ID = 17890 -- On-use trigger item
 local MorphApplicationDelay = 15-- Delay in MS, if too fast it will throw off the shapeshift
 local MorphRepeats = 1 -- In case too fast, try again after a short delay (optional, 1 = only one attempt)
 local DBWDelay = 25 -- Delay in DBW proc failsafe
-local DBWRepeats = 30100/DBWDelay -- Loops reapplication of morph over the duration of DBW, ie. just over 30 sec. Used to be but set to 1 as this caused issues with certain cat abilities
+local DBWRepeats = 30100/DBWDelay -- Loops reapplication of morph over the duration of DBW, ie. just over 30 sec. I had this set to 1 previously but it caused issues with certain cat abilities
 local InvisibleWeapon = 58976 -- Low-impact disarm spell to correct weapon visibility on cat morphs, applied every 3 sec
 local InvisibleWeaponTimer = 800 -- Duration of disarm
 local MAX_REPETITIONS = 1 -- Number of times cat form disarm is applied per spell cast (20 covers about 10 seconds of hidden weapon). (Possibly temporarily set to 1 to reduce loan?)
 local MorphReqRare = 100 -- Skill required to claim morph forms of elites
 local MorphReqElite = 50 -- Skill required to claim morph forms of elites
-local MaxMorphSkill = 150 -- Max morphing skill cap, not sure if this is attainable at the moment
+local MaxMorphSkill = 300 -- Max morphing skill cap, just used to reward players
 
 local creatureCache = {
     [1] = {}, -- Cat form
@@ -20,6 +20,7 @@ local creatureCache = {
     [6] = {},  -- Boomkin form
     [7] = {}  -- Boomkin form
 }
+
 local catCache = {}
 local bearCache = {}
 local birdCache = {}
@@ -44,7 +45,7 @@ local ITEMS_PER_PAGE = 13
 local function CacheCreatures()
 	local catCount, bearCount, birdCount, travelCount, owlCount, treeCount, aquaticCount = 0, 0, 0, 0, 0, 0, 0
 
-    local catResults = WorldDBQuery([[
+    catResults = WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (family = 2 
@@ -59,16 +60,17 @@ local function CacheCreatures()
           AND name NOT LIKE '%STABLED%'
           AND name NOT LIKE '%TAMED%'
           AND name NOT LIKE '%TOTEM%'
-    ]])
-    if catResults then
-        repeat
-            local entry, name = catResults:GetUInt32(0), catResults:GetString(1)
-            catCache[entry] = name
-            catCount = catCount + 1
-        until not catResults:NextRow()
-    end
+    ]], function(catResults)
+		if catResults then
+			repeat
+				local entry, name = catResults:GetUInt32(0), catResults:GetString(1)
+				catCache[entry] = name
+				catCount = catCount + 1
+			until not catResults:NextRow()
+		end
+	end)
 
-    local bearResults = WorldDBQuery([[
+    bearResults = WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (family = 4 
@@ -81,16 +83,17 @@ local function CacheCreatures()
           AND name NOT LIKE '%STABLED%'
           AND name NOT LIKE '%TAMED%'
           AND name NOT LIKE '%TOTEM%'
-    ]])
-    if bearResults then
-        repeat
-            local entry, name = bearResults:GetUInt32(0), bearResults:GetString(1)
-            bearCache[entry] = name
-            bearCount = bearCount + 1
-        until not bearResults:NextRow()
-    end
+    ]], function(bearResults)
+		if bearResults then
+			repeat
+				local entry, name = bearResults:GetUInt32(0), bearResults:GetString(1)
+				bearCache[entry] = name
+				bearCount = bearCount + 1
+			until not bearResults:NextRow()
+		end
+	end)
 
-    local birdResults = WorldDBQuery([[
+    birdResults = WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (family IN (7, 26, 30, 33, 34, 37, 38) 
@@ -105,16 +108,17 @@ local function CacheCreatures()
           AND name NOT LIKE '%STABLED%'
           AND name NOT LIKE '%TAMED%'
           AND name NOT LIKE '%TOTEM%'
-    ]])
-    if birdResults then
-        repeat
-            local entry, name = birdResults:GetUInt32(0), birdResults:GetString(1)
-            birdCache[entry] = name
-            birdCount = birdCount + 1
-        until not birdResults:NextRow()
-    end
+    ]], function(birdResults)
+		if birdResults then
+			repeat
+				local entry, name = birdResults:GetUInt32(0), birdResults:GetString(1)
+				birdCache[entry] = name
+				birdCount = birdCount + 1
+			until not birdResults:NextRow()
+		end
+	end)
     
-    local travelResults = WorldDBQuery([[
+    travelResults = WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (family IN (1, 11, 12, 39) 
@@ -145,16 +149,17 @@ local function CacheCreatures()
           AND name NOT LIKE '%STABLED%'
           AND name NOT LIKE '%TAMED%'
           AND name NOT LIKE '%TOTEM%'
-    ]])
-    if travelResults then
-        repeat
-            local entry, name = travelResults:GetUInt32(0), travelResults:GetString(1)
-            travelCache[entry] = name
-            travelCount = travelCount + 1
-        until not travelResults:NextRow()
-    end
+    ]], function(travelResults)
+		if travelResults then
+			repeat
+				local entry, name = travelResults:GetUInt32(0), travelResults:GetString(1)
+				travelCache[entry] = name
+				travelCount = travelCount + 1
+			until not travelResults:NextRow()
+		end
+	end)
     
-    local owlResults = WorldDBQuery([[
+    owlResults = WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (name LIKE '%owlkin%' 
@@ -168,16 +173,17 @@ local function CacheCreatures()
           AND name NOT LIKE '%STABLED%'
           AND name NOT LIKE '%TAMED%'
           AND name NOT LIKE '%TOTEM%'
-    ]])
-    if owlResults then
-        repeat
-            local entry, name = owlResults:GetUInt32(0), owlResults:GetString(1)
-            owlCache[entry] = name
-            owlCount = owlCount + 1
-        until not owlResults:NextRow()
-    end
+    ]], function(owlResults)
+		if owlResults then
+			repeat
+				local entry, name = owlResults:GetUInt32(0), owlResults:GetString(1)
+				owlCache[entry] = name
+				owlCount = owlCount + 1
+			until not owlResults:NextRow()
+		end
+	end)
     
-    local treeResults = WorldDBQuery([[
+    treeResults = WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (name LIKE '%root-walker%' 
@@ -202,16 +208,17 @@ local function CacheCreatures()
           AND name NOT LIKE '%STABLED%'
           AND name NOT LIKE '%TAMED%'
           AND name NOT LIKE '%TOTEM%'
-    ]])
-    if treeResults then
-        repeat
-            local entry, name = treeResults:GetUInt32(0), treeResults:GetString(1)
-            treeCache[entry] = name
-            treeCount = treeCount + 1
-        until not treeResults:NextRow()
-    end
+    ]], function(treeResults)
+		if treeResults then
+			repeat
+				local entry, name = treeResults:GetUInt32(0), treeResults:GetString(1)
+				treeCache[entry] = name
+				treeCount = treeCount + 1
+			until not treeResults:NextRow()
+		end
+	end)
     
-    local aquaticResults = WorldDBQuery([[
+    aquaticResults = WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (name LIKE '%sewer beast%' 
@@ -248,22 +255,15 @@ local function CacheCreatures()
           AND name NOT LIKE '%STABLED%'
           AND name NOT LIKE '%TAMED%'
           AND name NOT LIKE '%TOTEM%'
-    ]])
-    if aquaticResults then
-        repeat
-            local entry, name = aquaticResults:GetUInt32(0), aquaticResults:GetString(1)
-            aquaticCache[entry] = name
-            aquaticCount = aquaticCount + 1
-        until not aquaticResults:NextRow()
-    end
-
-    print("[Druid Morph Module]: Cat forms cached: "..catCount)
-    print("[Druid Morph Module]: Bear forms cached: "..bearCount)
-    print("[Druid Morph Module]: Bird forms cached: "..birdCount)
-    print("[Druid Morph Module]: Travel forms cached: "..travelCount)
-    print("[Druid Morph Module]: Owlkin forms cached: "..owlCount)
-	print("[Druid Morph Module]: Tree forms cached: "..treeCount)
-	print("[Druid Morph Module]: Aquatic forms cached: "..aquaticCount)
+    ]], function(aquaticResults)
+		if aquaticResults then
+			repeat
+				local entry, name = aquaticResults:GetUInt32(0), aquaticResults:GetString(1)
+				aquaticCache[entry] = name
+				aquaticCount = aquaticCount + 1
+			until not aquaticResults:NextRow()
+		end
+	end)
 end
 
 local function LoadPlayerMorphs(player)
@@ -275,31 +275,31 @@ local function LoadPlayerMorphs(player)
         creatureCache[guid] = {}
     end
     
-    local results = CharDBQuery("SELECT name, id, form FROM character_morphs WHERE guid = "..guid)
-    
-    if results then
-        repeat
-            local name = results:GetString(0)
-            local displayId = results:GetUInt32(1)
-            local formIndex = results:GetUInt32(2)
-            
-            if not creatureCache[guid][formIndex] then
-                creatureCache[guid][formIndex] = {}
-            end
-            
-            local exists = false
-            for _, entry in ipairs(creatureCache[guid][formIndex]) do
-                if entry.displayId == displayId then
-                    exists = true
-                    break
-                end
-            end
-            
-            if not exists then
-                table.insert(creatureCache[guid][formIndex], {name = name, displayId = displayId})
-            end
-        until not results:NextRow()
-    end
+    CharDBQueryAsync("SELECT name, id, form FROM character_morphs WHERE guid = "..guid, function(results)
+		if results then
+			repeat
+				local name = results:GetString(0)
+				local displayId = results:GetUInt32(1)
+				local formIndex = results:GetUInt32(2)
+				
+				if not creatureCache[guid][formIndex] then
+					creatureCache[guid][formIndex] = {}
+				end
+				
+				local exists = false
+				for _, entry in ipairs(creatureCache[guid][formIndex]) do
+					if entry.displayId == displayId then
+						exists = true
+						break
+					end
+				end
+				
+				if not exists then
+					table.insert(creatureCache[guid][formIndex], {name = name, displayId = displayId})
+				end
+			until not results:NextRow()
+		end
+	end)
 end
 
 local function SavePlayerMorph(player, name, displayId, formIndex)
@@ -374,21 +374,18 @@ local function OnKillCreature(event, player, creature)
                     else
                         player:SendBroadcastMessage("You have released "..creatureName.."'s spirit and learned how to morph into their "..formType..".")
                     end
-					if #creatureCache[guid][3] >= 10 then 
-						player:SetSpeed(1, 1.5)
-						player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 50%.")
-					elseif #creatureCache[guid][3] >= 20 then 
-						player:SetSpeed(1, 1.6)
-						player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 60%.")
-					elseif #creatureCache[guid][3] >= 30 then 
-						player:SetSpeed(1, 1.7)
-						player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 70%.")
-					elseif #creatureCache[guid][3] >= 40 then 
-						player:SetSpeed(1, 1.8)
-						player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 80%.")
-					elseif #creatureCache[guid][3] >= 50 then 
-						player:SetSpeed(1, 1.9)
-						player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 90%.")
+					if cacheIndex == 3 then
+						if #creatureCache[guid][3] == 10 then 
+							player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 50%.")
+						elseif #creatureCache[guid][3] == 20 then 
+							player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 60%.")
+						elseif #creatureCache[guid][3] == 30 then 
+							player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 70%.")
+						elseif #creatureCache[guid][3] == 40 then 
+							player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 80%.")
+						elseif #creatureCache[guid][3] == 50 then 
+							player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 90%.")
+						end
 					end
                 end
             elseif creature:GetRank() == 2 or creature:GetRank() == 4 then -- Rares and rare elites
@@ -402,6 +399,19 @@ local function OnKillCreature(event, player, creature)
                     else
                         player:SendBroadcastMessage("You have released "..creatureName.."'s spirit and learned how to morph into their "..formType..".")
                     end
+					if cacheIndex == 3 then
+						if #creatureCache[guid][3] == 10 then 
+							player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 50%.")
+						elseif #creatureCache[guid][3] == 20 then 
+							player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 60%.")
+						elseif #creatureCache[guid][3] == 30 then 
+							player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 70%.")
+						elseif #creatureCache[guid][3] == 40 then 
+							player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 80%.")
+						elseif #creatureCache[guid][3] == 50 then 
+							player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 90%.")
+						end
+					end
                 end
             elseif creature:GetRank() ~= 3 then -- Prevents learning boss display IDs as morphs as their models are usually huge
                 table.insert(creatureCache[guid][cacheIndex], {name = creatureName, displayId = displayId})
@@ -411,6 +421,19 @@ local function OnKillCreature(event, player, creature)
                 else
                     player:SendBroadcastMessage("You have released "..creatureName.."'s spirit and learned how to morph into their "..formType..".")
                 end
+				if cacheIndex == 3 then
+					if #creatureCache[guid][3] == 10 then 
+						player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 50%.")
+					elseif #creatureCache[guid][3] == 20 then 
+						player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 60%.")
+					elseif #creatureCache[guid][3] == 30 then 
+						player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 70%.")
+					elseif #creatureCache[guid][3] == 40 then 
+						player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 80%.")
+					elseif #creatureCache[guid][3] == 50 then 
+						player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 90%.")
+					end
+				end
             end
         end
     end
@@ -569,7 +592,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
     elseif intid >= 100000 and intid < 200000 then
         local formId = formSelections[player:GetGUIDLow()]
         local displayId = intid - 100000 -- Converts gossip menu ID to display ID
-		print("[Druid Morph Module]: Form ID: "..formId..". Display ID: "..displayId..".")
+		--print("[Druid Morph Module]: Form ID: "..formId..". Display ID: "..displayId..".")
         local guid = player:GetGUIDLow()
         
 		if creatureCache[guid] and creatureCache[guid][formId] then
@@ -688,22 +711,17 @@ local function OnGossipHello(event, player, object)
     return false
 end
 
-local function DBWfix(eventId, delay, repeats, player) -- PERFORMANCE KILLER, CHANGE THIS IN THE FUTURE. THIS SCANS ALL PLAYERS FOR GIVEN BUFFS! NOT IDEAL!
-	if (player:GetClass() == 11	and (player:HasAura(71561)
-	or player:HasAura(71484) or player:HasAura(71560)
-	or player:HasAura(71556) or player:HasAura(71485)
-	or player:HasAura(71492))) then
-		return
-	end
-	
-	if (player:GetClass() == 11 and
-	not (player:HasAura(71561) or player:HasAura(71484)
+local function DBWfix(eventId, delay, repeats, player)
+	if player:HasAura(71561) or player:HasAura(71484)
 	or player:HasAura(71560) or player:HasAura(71556)
-	or player:HasAura(71485) or player:HasAura(71492))) then
+	or player:HasAura(71485) or player:HasAura(71492)
+	then
+		return -- If DBW still active, don't change display ID as it will reset once DBW buff ends
+	else
 		local guid = player:GetGUIDLow()
 		if (player:HasAura(768) or player:HasAura(32356) or player:HasAura(3025)) then -- Cat
 			if not morphSelection1[guid] then
-				local morphdb1 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 1") -- Load active morph status
+				local morphdb1 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 1") -- Load active morph status as a failsafe
 				if morphdb1 then 
 					morphSelection1[guid] = morphdb1:GetUInt32(0)
 				end
@@ -801,9 +819,11 @@ local function Morpher(eventId, delay, repeats, player)
 			print("[Druid Morph Module]: DBW stopped morph for "..player:GetName())
 		
 		elseif player:HasAura(3025) then -- Cat
-			local morphdb1 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 1") -- Load active morph status
-			if morphdb1 then 
-				morphSelection1[guid] = morphdb1:GetUInt32(0)
+			if not morphSelection1[guid] then
+				local morphdb1 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 1") -- Load active morph status
+				if morphdb1 then 
+					morphSelection1[guid] = morphdb1:GetUInt32(0)
+				end
 			end
 			if morphSelection1[guid] and morphSelection1[guid] > 0 then
 				player:SetDisplayId(morphSelection1[guid])
@@ -815,9 +835,11 @@ local function Morpher(eventId, delay, repeats, player)
 				end
 			end
 		elseif player:HasAura(9634) then -- Bear
-			local morphdb2 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 2") -- Load active morph status
-			if morphdb2 then 
-				morphSelection2[guid] = morphdb2:GetUInt32(0)
+			if not morphSelection1[guid] then
+				local morphdb2 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 2") -- Load active morph status
+				if morphdb2 then 
+					morphSelection2[guid] = morphdb2:GetUInt32(0)
+				end
 			end
 			if morphSelection2[guid] then
 				if morphSelection2[guid] > 0 then
@@ -826,31 +848,35 @@ local function Morpher(eventId, delay, repeats, player)
 				end
 			end
 		elseif player:HasAura(783) then -- Travel
-			local morphdb3 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 3") -- Load active morph status
-			if morphdb3 then 
-				morphSelection3[guid] = morphdb3:GetUInt32(0)
-				if #creatureCache[guid][3] >= 10 then 
-					player:SetSpeed(1, 1.5)
-				elseif #creatureCache[guid][3] >= 20 then 
-					player:SetSpeed(1, 1.6)
-				elseif #creatureCache[guid][3] >= 30 then 
-					player:SetSpeed(1, 1.7)
-				elseif #creatureCache[guid][3] >= 40 then 
-					player:SetSpeed(1, 1.8)
-				elseif #creatureCache[guid][3] >= 50 then 
-					player:SetSpeed(1, 1.9)
+			if not morphSelection3[guid] then
+				local morphdb3 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 3") -- Load active morph status
+				if morphdb3 then 
+					morphSelection3[guid] = morphdb3:GetUInt32(0)
+					print("[Druid Morph Module]: Morpher - Setting travel form of "..player:GetName().." to display ID "..morphSelection3[guid])
 				end
-				print("[Druid Morph Module]: Morpher - Setting travel form of "..player:GetName().." to display ID "..morphSelection3[guid])
 			end
 			if morphSelection3[guid] then
 				if morphSelection3[guid] > 0 then
 					player:SetDisplayId(morphSelection3[guid])
+					if #creatureCache[guid][3] >= 10 then 
+						player:SetSpeed(1, 1.5)
+					elseif #creatureCache[guid][3] >= 20 then 
+						player:SetSpeed(1, 1.6)
+					elseif #creatureCache[guid][3] >= 30 then 
+						player:SetSpeed(1, 1.7)
+					elseif #creatureCache[guid][3] >= 40 then 
+						player:SetSpeed(1, 1.8)
+					elseif #creatureCache[guid][3] >= 50 then 
+						player:SetSpeed(1, 1.9)
+					end
 				end
 			end
 		elseif player:HasAura(40120) or player:HasAura(33943) then -- Fly
-			local morphdb4 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 4") -- Load active morph status
-			if morphdb4 then 
-				morphSelection4[guid] = morphdb4:GetUInt32(0)
+			if not morphSelection4[guid] then
+				local morphdb4 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 4") -- Load active morph status
+				if morphdb4 then 
+					morphSelection4[guid] = morphdb4:GetUInt32(0)
+				end
 			end
 			if morphSelection4[guid] then
 				if morphSelection4[guid] > 0 then
@@ -859,9 +885,11 @@ local function Morpher(eventId, delay, repeats, player)
 				end
 			end
 		elseif player:HasAura(33891) then -- Tree
-			local morphdb5 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 5") -- Load active morph status
-			if morphdb5 then 
-				morphSelection5[guid] = morphdb5:GetUInt32(0)
+			if not morphSelection5[guid] then
+				local morphdb5 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 5") -- Load active morph status
+				if morphdb5 then 
+					morphSelection5[guid] = morphdb5:GetUInt32(0)
+				end
 			end
 			if morphSelection5[guid] then
 				if morphSelection5[guid] > 0 then
@@ -870,9 +898,11 @@ local function Morpher(eventId, delay, repeats, player)
 				end
 			end
 		elseif player:HasAura(24858) then -- Boomkin
-			local morphdb6 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 6") -- Load active morph status
-			if morphdb6 then 
-				morphSelection6[guid] = morphdb6:GetUInt32(0)
+			if not morphSelection6[guid] then
+				local morphdb6 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 6") -- Load active morph status
+				if morphdb6 then 
+					morphSelection6[guid] = morphdb6:GetUInt32(0)
+				end
 			end
 			if morphSelection6[guid] then
 				if morphSelection6[guid] > 0 then
@@ -881,9 +911,11 @@ local function Morpher(eventId, delay, repeats, player)
 				end
 			end
 		elseif player:HasAura(1066) then -- Aquatic
-			local morphdb7 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 7") -- Load active morph status
-			if morphdb7 then 
-				morphSelection7[guid] = morphdb7:GetUInt32(0)
+			if not morphSelection7[guid] then
+				local morphdb7 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 7") -- Load active morph status
+				if morphdb7 then 
+					morphSelection7[guid] = morphdb7:GetUInt32(0)
+				end
 			end
 			if morphSelection7[guid] then
 				if morphSelection7[guid] > 0 then
@@ -919,31 +951,31 @@ local function Shapeshift(event, player, spell, skipCheck)
 
         if spellId == 768 and morphSelection1[guid] then
             formId = 1 -- Cat Form
-			print("[Druid Morph Module]: Shifter - Cat shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection1[guid])
+			--print("[Druid Morph Module]: Shifter - Cat shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection1[guid])
 			player:RegisterEvent(Morpher, MorphApplicationDelay, MorphRepeats)
         elseif (spellId == 9634 or spellId == 5487) and morphSelection2[guid] then
             formId = 2 -- Bear Form
-			print("[Druid Morph Module]: Shifter - Bear shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection2[guid])
+			--print("[Druid Morph Module]: Shifter - Bear shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection2[guid])
 			player:RegisterEvent(Morpher, MorphApplicationDelay, MorphRepeats)
         elseif spellId == 783 and morphSelection3[guid] then
             formId = 3 -- Travel Form
-			print("[Druid Morph Module]: Shifter - Travel shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection3[guid])
+			--print("[Druid Morph Module]: Shifter - Travel shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection3[guid])
 			player:RegisterEvent(Morpher, MorphApplicationDelay, MorphRepeats)
         elseif (spellId == 40120 or spellId == 33943) and morphSelection4[guid] then
             formId = 4 -- Flight Form
-			print("[Druid Morph Module]: Shifter - Flight shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection4[guid])
+			--print("[Druid Morph Module]: Shifter - Flight shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection4[guid])
 			player:RegisterEvent(Morpher, MorphApplicationDelay, MorphRepeats)
         elseif spellId == 33891 and morphSelection5[guid] then
             formId = 5 -- Tree Form
-			print("[Druid Morph Module]: Shifter - Tree shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection5[guid])
+			--print("[Druid Morph Module]: Shifter - Tree shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection5[guid])
 			player:RegisterEvent(Morpher, MorphApplicationDelay, MorphRepeats)
         elseif spellId == 24858 and morphSelection6[guid] then
             formId = 6 -- Boomkin Form
-			print("[Druid Morph Module]: Shifter - Boomkin shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection6[guid])
+			--print("[Druid Morph Module]: Shifter - Boomkin shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection6[guid])
 			player:RegisterEvent(Morpher, MorphApplicationDelay, MorphRepeats)
         elseif spellId == 1066 and morphSelection7[guid] then
             formId = 7 -- Aquatic Form	
-			print("[Druid Morph Module]: Shifter - Aquatic shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection7[guid])
+			--print("[Druid Morph Module]: Shifter - Aquatic shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection7[guid])
 			player:RegisterEvent(Morpher, MorphApplicationDelay, MorphRepeats)
         elseif (spellId == 71561 or spellId == 71484 or spellId == 71560 or spellId == 71556 or spellId == 71485 or spellId == 71492) then
             if (player:HasAura(768) or player:HasAura(32356) or player:HasAura(3025)) and morphSelection1[guid] then
@@ -961,7 +993,7 @@ local function Shapeshift(event, player, spell, skipCheck)
     end
 end
 
-local function onLogout(event, player) -- Dump all cache on logout
+local function onLogout(event, player) -- Clean up cache on logout
 	if player:GetClass() == 11 and player:HasItem(17890) then
 		local guid = player:GetGUIDLow()
 		repetitionCount[guid] = nil 
@@ -978,156 +1010,97 @@ local function onLogout(event, player) -- Dump all cache on logout
 end
 
 local function OnLogin(event, player)
-	if player:GetClass() == 11 and not player:IsPvPFlagged() then
+    if player:GetClass() == 11 and player:HasItem(17890) and not player:IsPvPFlagged() then 
 		local guid = player:GetGUIDLow()
-
-		if player:HasItem(17890) then 
-			LoadPlayerMorphs(player) -- Load full list of player morphs from db into cache
-			
-			local morphdb1 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 1") -- Load active morph status
-			if morphdb1 then 
-				morphSelection1[guid] = morphdb1:GetUInt32(0)
-			end
-			local morphdb2 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 2") -- Load active morph status
-			if morphdb2 then 
-				morphSelection2[guid] = morphdb2:GetUInt32(0)
-			end
-			local morphdb3 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 3") -- Load active morph status
-			if morphdb3 then 
-				morphSelection3[guid] = morphdb3:GetUInt32(0)
-			end
-			local morphdb4 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 4") -- Load active morph status
-			if morphdb4 then 
-				morphSelection4[guid] = morphdb4:GetUInt32(0)
-			end
-			local morphdb5 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 5") -- Load active morph status
-			if morphdb5 then 
-				morphSelection5[guid] = morphdb5:GetUInt32(0)
-			end
-			local morphdb6 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 6") -- Load active morph status
-			if morphdb6 then 
-				morphSelection6[guid] = morphdb6:GetUInt32(0)
-			end
-			local morphdb7 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 7") -- Load active morph status
-			if morphdb7 then 
-				morphSelection7[guid] = morphdb7:GetUInt32(0)
+		local playername = player:GetName()
+ 
+		LoadPlayerMorphs(player) -- Load full list of player morphs from db into cache
+		
+		CharDBQueryAsync("SELECT id, form FROM character_morphs WHERE guid = "..guid.." AND active = 1", function(morphdb)
+			if morphdb then
+				player = GetPlayerByName(playername)
+				repeat
+					local id = morphdb:GetUInt32(0)
+					local form = morphdb:GetUInt32(1)
+					
+					if form == 1 then
+						morphSelection1[guid] = id
+					elseif form == 2 then
+						morphSelection2[guid] = id
+					elseif form == 3 then
+						morphSelection3[guid] = id
+					elseif form == 4 then
+						morphSelection4[guid] = id
+					elseif form == 5 then
+						morphSelection5[guid] = id
+					elseif form == 6 then
+						morphSelection6[guid] = id
+					elseif form == 7 then
+						morphSelection7[guid] = id
+					end
+				until not morphdb:NextRow()
 			end
 			
-			if (player:HasAura(768) or player:HasAura(32356) or player:HasAura(3025)) then -- Cat
-				if morphSelection1[guid] then
-					player:SetDisplayId(morphSelection1[guid])
-					player:AddAura(InvisibleWeapon, player)
-				end
-			elseif player:HasAura(9634) or player:HasAura(5487) then -- Bear
-				if morphSelection2[guid] then
-					player:SetDisplayId(morphSelection2[guid])
-				end
-			elseif player:HasAura(783) then -- Travel
-				if morphSelection3[guid] then
-					player:SetDisplayId(morphSelection3[guid])
-				end
-			elseif player:HasAura(40120) or player:HasAura(33943) then -- Fly
-				if morphSelection4[guid] then
-					player:SetDisplayId(morphSelection4[guid])
-				end
-			elseif player:HasAura(33891) then -- Tree
-				if morphSelection5[guid] then
-					player:SetDisplayId(morphSelection5[guid])
-				end
-			elseif player:HasAura(24858) then -- Boomkin
-				if morphSelection6[guid] then
-					player:SetDisplayId(morphSelection6[guid])
-				end
-			elseif player:HasAura(1066) then -- Aquatic
-				if morphSelection7[guid] then
-					player:SetDisplayId(morphSelection7[guid])
-				end
-			else
-				return
+			if (player:HasAura(768)	or player:HasAura(9634)
+			or player:HasAura(5487)	or player:HasAura(783)
+			or player:HasAura(33891) or player:HasAura(24858)
+			or player:HasAura(1066)) or player:HasAura(40120) 
+			then
+				player:RegisterEvent(Morpher, 20, 1)
 			end
-		end
+		end)
 	end
 end
 
 local function ReloadEluna(event)
     local players = GetPlayersInWorld()
     for _, player in ipairs(players) do
-        if player:GetClass() == 11 and player:HasItem(17890) then 
-			
+        if player:GetClass() == 11 and player:HasItem(17890) and not player:IsPvPFlagged() then 
 			local guid = player:GetGUIDLow()
-			
+			local playername = player:GetName()
+	 
 			LoadPlayerMorphs(player) -- Load full list of player morphs from db into cache
-			if not player:IsPvPFlagged() then
-				local morphdb1 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 1") -- Load active morph status
-				if morphdb1 then 
-					morphSelection1[guid] = morphdb1:GetUInt32(0)
-				end
-				local morphdb2 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 2") -- Load active morph status
-				if morphdb2 then 
-					morphSelection2[guid] = morphdb2:GetUInt32(0)
-				end
-				local morphdb3 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 3") -- Load active morph status
-				if morphdb3 then 
-					morphSelection3[guid] = morphdb3:GetUInt32(0)
-					if player:HasAura(783) and #creatureCache[guid][3] >= 10 then 
-						player:SetSpeed(1, 1.5)
-					elseif player:HasAura(783) and #creatureCache[guid][3] >= 20 then 
-						player:SetSpeed(1, 1.6)
-					elseif player:HasAura(783) and #creatureCache[guid][3] >= 30 then 
-						player:SetSpeed(1, 1.7)
-					elseif player:HasAura(783) and #creatureCache[guid][3] >= 40 then 
-						player:SetSpeed(1, 1.8)
-					elseif player:HasAura(783) and #creatureCache[guid][3] >= 50 then 
-						player:SetSpeed(1, 1.9)
+			
+			CharDBQueryAsync("SELECT id, form FROM character_morphs WHERE guid = "..guid.." AND active = 1", function(morphdb)
+				if morphdb then
+					player = GetPlayerByName(playername)
+					repeat
+						local id = morphdb:GetUInt32(0)
+						local form = morphdb:GetUInt32(1)
+						
+						if form == 1 then
+							morphSelection1[guid] = id
+						elseif form == 2 then
+							morphSelection2[guid] = id
+						elseif form == 3 then
+							morphSelection3[guid] = id
+						elseif form == 4 then
+							morphSelection4[guid] = id
+						elseif form == 5 then
+							morphSelection5[guid] = id
+						elseif form == 6 then
+							morphSelection6[guid] = id
+						elseif form == 7 then
+							morphSelection7[guid] = id
+						end
+					until not morphdb:NextRow()
+					
+					if not morphdb:NextRow() then
+						if (player:HasAura(768)	or player:HasAura(9634)
+						or player:HasAura(5487)	or player:HasAura(783)
+						or player:HasAura(33891) or player:HasAura(24858)
+						or player:HasAura(1066) or player:HasAura(40120)) and
+						not (player:GetDisplayId() == (
+							morphSelection1[guid] or morphSelection2[guid] or 
+							morphSelection3[guid] or morphSelection4[guid] or 
+							morphSelection5[guid] or morphSelection6[guid] 
+							or morphSelection7[guid]))
+						then
+							player:RegisterEvent(Morpher, 20, 1)
+						end
 					end
 				end
-				local morphdb4 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 4") -- Load active morph status
-				if morphdb4 then 
-					morphSelection4[guid] = morphdb4:GetUInt32(0)
-				end
-				local morphdb5 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 5") -- Load active morph status
-				if morphdb5 then 
-					morphSelection5[guid] = morphdb5:GetUInt32(0)
-				end
-				local morphdb6 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 6") -- Load active morph status
-				if morphdb6 then 
-					morphSelection6[guid] = morphdb6:GetUInt32(0)
-				end
-				local morphdb7 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 7") -- Load active morph status
-				if morphdb7 then 
-					morphSelection7[guid] = morphdb7:GetUInt32(0)
-				end
-				
-				if (player:HasAura(768) or player:HasAura(32356) or player:HasAura(3025)) then -- Cat
-					if morphSelection1[guid] then
-						player:SetDisplayId(morphSelection1[guid])
-					end
-				elseif player:HasAura(9634) or player:HasAura(5487) then -- Bear
-					if morphSelection2[guid] then
-						player:SetDisplayId(morphSelection2[guid])
-					end
-				elseif player:HasAura(783) then -- Travel
-					if morphSelection3[guid] then
-						player:SetDisplayId(morphSelection3[guid])
-					end
-				elseif player:HasAura(40120) or player:HasAura(33943) then -- Fly
-					if morphSelection4[guid] then
-						player:SetDisplayId(morphSelection4[guid])
-					end
-				elseif player:HasAura(33891) then -- Tree
-					if morphSelection5[guid] then
-						player:SetDisplayId(morphSelection5[guid])
-					end
-				elseif player:HasAura(24858) then -- Boomkin
-					if morphSelection6[guid] then
-						player:SetDisplayId(morphSelection6[guid])
-					end
-				elseif player:HasAura(1066) then -- Aquatic
-					if morphSelection7[guid] then
-						player:SetDisplayId(morphSelection7[guid])
-					end
-				end
-			end
+			end)
 		end
 	end
 end
@@ -1174,27 +1147,19 @@ local function OnMapChange(event, player)
 	and not player:IsPvPFlagged() and (player:HasAura(768)
 	or player:HasAura(9634)	or player:HasAura(5487)
 	or player:HasAura(783) or player:HasAura(33891)
-	or  player:HasAura(24858) or player:HasAura(1066)) then
-		--print("Map change of morphable druid detected")
-		
-		playerName = player:GetName()
-		
+	or player:HasAura(24858) or player:HasAura(1066)) then
 		player:RegisterEvent(Morpher, 100, 1)
 	end
 end
 
-
 CacheCreatures() -- Caching available creatures from world DB on script initialization
 
 RegisterPlayerEvent(3, OnLogin) 
---RegisterPlayerEvent(4, onLogout)
+RegisterPlayerEvent(4, onLogout)
 RegisterPlayerEvent(5, Shapeshift) -- On spellcast shapeshifts, to initialize morph application
 RegisterPlayerEvent(7, OnKillCreature)
-RegisterPlayerEvent(27, OnLogin)
 RegisterPlayerEvent(28, OnMapChange)
 RegisterPlayerEvent(33, OnCombat)
 RegisterItemGossipEvent(ITEM_ID, 1, OnGossipHello)
---RegisterItemGossipEvent(ITEM_ID, 2, OnGossipSelect) 
---RegisterPlayerGossipEvent(0, 1, OnGossipHello)
 RegisterPlayerGossipEvent(0, 2, OnGossipSelect)
 RegisterServerEvent(33, ReloadEluna) -- On reload eluna	
