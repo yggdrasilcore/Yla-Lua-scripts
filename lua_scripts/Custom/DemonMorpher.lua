@@ -4,8 +4,10 @@
 local ITEM_ID = 5041
 local MorphApplicationDelay = 15
 local MAX_REPETITIONS = 1
+local morphCount = {}
 local MaxMorphSkill = 100
 local MorphReqEliteandRare = 50
+local morphIdCache = {}
 
 -- Vendor vars
 local NPC_ID = 190087
@@ -114,54 +116,49 @@ local customFamilyNames = {
 
 local demonCache = {}
 local playerMorphChoice = {}
+local morph15 = {}
+local morph16 = {}
+local morph17 = {}
+local morph19 = {}
+local morph23 = {}
+local morph29 = {}
+local morph30 = {}
+local logincheck = {}
 
 local function CacheCreatures()
     local demonCount = 0
 
     -- Demon cache
-    local demonResults = WorldDBQuery("SELECT entry, name FROM creature_template WHERE type = 3 OR name = 'Arcane Devourer' OR name = 'Tainted Arcane Wrath' OR name = 'Vile Familiar'")
+    WorldDBQueryAsync("SELECT entry, name FROM creature_template WHERE type = 3 OR name = 'Arcane Devourer' OR name = 'Tainted Arcane Wrath' OR name = 'Vile Familiar' OR name = 'Grell'", function(demonResults)
 
-    if demonResults then
-        repeat
-            local entry = demonResults:GetUInt32(0)
-            local name = demonResults:GetString(1)
-            demonCache[entry] = {name = name}
-            demonCount = demonCount + 1
-        until not demonResults:NextRow()
-    end
+		if demonResults then
+			repeat
+				local entry = demonResults:GetUInt32(0)
+				local name = demonResults:GetString(1)
+				demonCache[entry] = {name = name}
+				demonCount = demonCount + 1
+			until not demonResults:NextRow()
+		end
+	end)
 
     print("[Warlock Demon Morph Module]: Demon forms cached: "..demonCount)
 end
 
-local function LoadPlayerMorphs(player)
-    if player:GetClass() ~= 9 then return end -- Only proceed for warlocks
-
-    local guid = player:GetGUIDLow()
-
-    local results = CharDBQuery("SELECT name, id FROM character_morphs WHERE guid = "..guid)
-
-    if results then
-        repeat
-            local name = results:GetString(0)
-            local displayId = results:GetUInt32(1)
-            demonCache[displayId] = name
-        until not results:NextRow()
-    end
-end
-
 local function CountTotalMorphs(player)
     local guid = player:GetGUIDLow()
-    local result = CharDBQuery("SELECT COUNT(*) FROM character_morphs WHERE guid = "..guid)
-    if result then
-        return math.min(result:GetUInt32(0), MaxMorphSkill)
+    if morphCount[guid] then
+        return morphCount[guid]
+    else
+        local result = CharDBQuery("SELECT COUNT(*) FROM character_morphs WHERE guid = "..guid)
+        if result then
+            morphCount[guid] = math.min(result:GetUInt32(0), MaxMorphSkill)
+            return morphCount[guid]
+        end
+        return 0
     end
-    return 0
 end
 
 local function OnKillCreature(event, player, creature)
-	if player:GetName() == "Nickromancer" then
-		print("Player has killed creature!")
-	end
     if player:GetClass() ~= 9 then return end
     if not player:HasItem(ITEM_ID) then return end
     local guid = player:GetGUIDLow()
@@ -177,22 +174,15 @@ local function OnKillCreature(event, player, creature)
         for familyId, familyName in pairs(familyNames) do
             if string.find(string.lower(creatureName), string.lower(familyName)) then
                 matchedFamily = familyId
-				if player:GetName() == "Nickromancer" then
-					print("Creature is valid demon!")
-				end
                 break
             end
         end
     end
 
-    -- Check for custom family names
     if not matchedFamily then
         for customName, customFamily in pairs(customFamilyNames) do
             if string.find(string.lower(creatureName), string.lower(customName)) then
                 matchedFamily = customFamily
-				if player:GetName() == "Nickromancer" then
-					print("Creature is valid demon!")
-				end
                 break
             end
         end
@@ -201,17 +191,21 @@ local function OnKillCreature(event, player, creature)
     if matchedFamily then
         local escapedName = string.gsub(creatureName, "'", "''")
 
-        -- Check if the entry already exists
-        local query = CharDBQuery("SELECT COUNT(*) FROM character_morphs WHERE guid = " .. guid .. " AND id = " .. displayId)
-        if query then
-            local count = query:GetUInt32(0)
-            if count > 0 then
-                -- Entry already exists, do not insert
-                return
-            end
-        end
+		if morphIdCache[guid] then
+			local found = false
+			for _, id in ipairs(morphIdCache[guid]) do
+				if id == displayId then
+					found = true
+					break
+				end
+			end
 
-        -- Insert the new entry if it does not exist
+			-- If `displayId` is already in the cache, exit
+			if found then
+				return
+			end
+		end
+		
         CharDBExecute("INSERT INTO character_morphs (guid, name, id, form, active) VALUES (" .. guid .. ", '" .. escapedName .. "', " .. displayId .. ", " .. (matchedFamily or 0) .. ", 0)")
         
         local familyNames = {
@@ -225,13 +219,17 @@ local function OnKillCreature(event, player, creature)
         }
 
         local familyName = familyNames[matchedFamily] or "demon"
+		
+		if morphCount[guid] then morphCount[guid] = morphCount[guid] + 1 end
+		
         local skillMessage = CountTotalMorphs(player) < MaxMorphSkill and " Your morph skill has increased to " .. CountTotalMorphs(player)+1 .. "." or ""
 
         player:SendBroadcastMessage("You have captured " .. creatureName .. "'s essence and learned how to morph your " .. familyName .. " into their form." .. skillMessage)
-    else
-		if player:GetName() == "Nickromancer" then
-			print("Creature is NOT valid demon!")
-		end
+		
+		if not morphIdCache[guid] then
+            morphIdCache[guid] = {}
+        end
+		table.insert(morphIdCache[guid], displayId)
 	end
 end
 
@@ -269,8 +267,7 @@ local function OnPlayerGossipHello(player, object)
     player:GossipSendMenu(1, object, 99)
 end
 
-local function OnItemGossipSelect(event, player, object, sender, intid, code)
-
+local function OnItemGossipSelect(event, player, object, sender, intid, code)	
     if intid == 999 then
         OnPlayerGossipHello(player, object)
         return
@@ -282,6 +279,7 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
 		player:GossipSendMenu(1, player, 99)
 	end
     if intid == 998 then
+		local guid = player:GetGUIDLow()
         local petGUID = player:GetPetGUID()
         if petGUID then
             local nearbyUnits = player:GetCreaturesInRange(100)
@@ -294,8 +292,22 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
             end
             if pet then
                 pet:DeMorph()
-                --player:SendBroadcastMessage("Current pet family is " .. pet:GetCreatureFamily())
-                -- CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = " .. player:GetGUIDLow() .. " AND form = " .. pet:GetCreatureFamily())
+                CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = " .. player:GetGUIDLow() .. " AND form = " .. pet:GetCreatureFamily())
+				if pet:GetCreatureFamily() == 15 then
+					morph15[guid] = nil
+				elseif pet:GetCreatureFamily() == 16 then
+					morph16[guid] = nil
+				elseif pet:GetCreatureFamily() == 17 then
+					morph17[guid] = nil
+				elseif pet:GetCreatureFamily() == 19 then
+					morph19[guid] = nil
+				elseif pet:GetCreatureFamily() == 23 then
+					morph23[guid] = nil
+				elseif pet:GetCreatureFamily() == 29 then
+					morph29[guid] = nil
+				elseif pet:GetCreatureFamily() == 30 then
+					morph30[guid] = nil
+				end
             else
                 player:SendBroadcastMessage("Your demon is too far away!")
 				OnPlayerGossipHello(player, player)
@@ -345,6 +357,7 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
 		else
 			-- This is the submenu, intid is the display ID
 			local guid = player:GetGUIDLow()
+			local name = player:GetName()
 			
 			playerMorphChoice[player:GetGUIDLow()] = intid
 			local petGUID = player:GetPetGUID()
@@ -364,25 +377,78 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
 					end
 				end
 			end
-			local morphNameResult = CharDBQuery("SELECT name FROM character_morphs WHERE guid = " .. guid .. " AND form = " .. chosenFamily .. " AND id = " .. intid)
-			local morphName = "Unknown Morph"
-			if morphNameResult then
-				morphName = morphNameResult:GetString(0)
-			end
-			CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = "..chosenFamily)
-			CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND form = "..chosenFamily.." AND id = "..intid)
-			player:SendBroadcastMessage("You have morphed your "..familyNames[chosenFamily].." into "..morphName..".")
 			
+			CharDBQueryAsync("SELECT name FROM character_morphs WHERE guid = " .. guid .. " AND form = " .. chosenFamily .. " AND id = " .. intid, function(morphNameResult)
+				local player = GetPlayerByName(name)
+				local morphName = "Unknown Morph"
+				if morphNameResult then
+					morphName = morphNameResult:GetString(0)
+				end
+				player:SendBroadcastMessage("You have morphed your "..familyNames[chosenFamily].." into "..morphName..".")
+			end)
+			
+			CharDBExecute("UPDATE character_morphs SET active = (form = " .. chosenFamily .. " AND id = " .. intid .. ") WHERE guid = " .. guid .. " AND form = " .. chosenFamily)
+			
+			if chosenFamily == 15 then
+				morph15[guid] = intid
+				morph16[guid] = nil
+				morph17[guid] = nil
+				morph19[guid] = nil
+				morph23[guid] = nil
+				morph29[guid] = nil
+				morph30[guid] = nil
+			elseif chosenFamily == 16 then
+				morph15[guid] = nil
+				morph16[guid] = intid
+				morph17[guid] = nil
+				morph19[guid] = nil
+				morph23[guid] = nil
+				morph29[guid] = nil
+				morph30[guid] = nil
+			elseif chosenFamily == 17 then
+				morph15[guid] = nil
+				morph16[guid] = nil
+				morph17[guid] = intid
+				morph19[guid] = nil
+				morph23[guid] = nil
+				morph29[guid] = nil
+				morph30[guid] = nil
+			elseif chosenFamily == 19 then
+				morph15[guid] = nil
+				morph16[guid] = nil
+				morph17[guid] = nil
+				morph19[guid] = intid
+				morph23[guid] = nil
+				morph29[guid] = nil
+				morph30[guid] = nil
+			elseif chosenFamily == 23 then
+				morph15[guid] = nil
+				morph16[guid] = nil
+				morph17[guid] = nil
+				morph19[guid] = nil
+				morph23[guid] = intid
+				morph29[guid] = nil
+				morph30[guid] = nil
+			elseif chosenFamily == 29 then
+				morph15[guid] = nil
+				morph16[guid] = nil
+				morph17[guid] = nil
+				morph19[guid] = nil
+				morph23[guid] = nil
+				morph29[guid] = intid
+				morph30[guid] = nil
+			elseif chosenFamily == 30 then
+				morph15[guid] = nil
+				morph16[guid] = nil
+				morph17[guid] = nil
+				morph19[guid] = nil
+				morph23[guid] = nil
+				morph29[guid] = nil
+				morph30[guid] = intid
+			end
 			OnPlayerGossipHello(player, player)
 		end
 	end
-end
-
-local function OnCommand(event, player, command)
-    if command:lower() == "demonmorph" then
-        OnPlayerGossipHello(player, player)
-        return false
-    end
 end
 
 local function OnPetAddedToWorld(event, player, pet)
@@ -392,18 +458,47 @@ local function OnPetAddedToWorld(event, player, pet)
 	if petName == "Infernal" then
 		summonedPetFamily = 30
 	end
-	--player:SendBroadcastMessage("Pet is family "..summonedPetFamily)
-	print("Player "..player:GetName().." summoned pet in family "..summonedPetFamily..".")
-	local queryResult = CharDBQuery("SELECT id FROM character_morphs WHERE guid = " .. guid .. " AND form = " .. summonedPetFamily .. " AND active = 1")
 	
-	if queryResult then
-		-- Extract the ID from the query result
-		local chosenMorph = queryResult:GetUInt32(0)
-		
-		-- Set the display ID of the pet
-		pet:SetDisplayId(chosenMorph)
-	else
-		pet:DeMorph()
+	if summonedPetFamily == 15 and morph15[guid] then
+		pet:SetDisplayId(morph15[guid])
+	elseif pet:GetCreatureFamily() == 16 and morph16[guid] then
+		pet:SetDisplayId(morph16[guid])
+	elseif pet:GetCreatureFamily() == 17 and morph17[guid] then
+		pet:SetDisplayId(morph17[guid])
+	elseif pet:GetCreatureFamily() == 19 and morph19[guid] then
+		pet:SetDisplayId(morph19[guid])
+	elseif pet:GetCreatureFamily() == 23 and morph23[guid] then
+		pet:SetDisplayId(morph23[guid])
+	elseif pet:GetCreatureFamily() == 29 and morph29[guid] then
+		pet:SetDisplayId(morph29[guid])
+	elseif pet:GetCreatureFamily() == 30 and morph30[guid] then
+		pet:SetDisplayId(morph30[guid])
+	elseif not logincheck[guid] then
+		logincheck[guid] = true
+		pet:RegisterEvent(function(eventId, delay, repeats, pet) -- Circumvents async db delay on login
+			if summonedPetFamily == 15 and morph15[guid] then
+				pet:SetDisplayId(morph15[guid])
+				pet:RemoveEventById(eventId)
+			elseif pet:GetCreatureFamily() == 16 and morph16[guid] then
+				pet:SetDisplayId(morph16[guid])
+				pet:RemoveEventById(eventId)
+			elseif pet:GetCreatureFamily() == 17 and morph17[guid] then
+				pet:SetDisplayId(morph17[guid])
+				pet:RemoveEventById(eventId)
+			elseif pet:GetCreatureFamily() == 19 and morph19[guid] then
+				pet:SetDisplayId(morph19[guid])
+				pet:RemoveEventById(eventId)
+			elseif pet:GetCreatureFamily() == 23 and morph23[guid] then
+				pet:SetDisplayId(morph23[guid])
+				pet:RemoveEventById(eventId)
+			elseif pet:GetCreatureFamily() == 29 and morph29[guid] then
+				pet:SetDisplayId(morph29[guid])
+				pet:RemoveEventById(eventId)
+			elseif pet:GetCreatureFamily() == 30 and morph30[guid] then
+				pet:SetDisplayId(morph30[guid])
+				pet:RemoveEventById(eventId)
+			end
+		end, 20, 4)
 	end
 end
 
@@ -441,22 +536,125 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
 		elseif not hasEnoughVT and not hasMorphItem then
             player:SendBroadcastMessage("You do not have enough "..currencyName..".")
         end
-		if hasMorphItem then
-		end
         player:GossipComplete()
     elseif intid == 3 then
         player:GossipComplete()
     end
 end
 
-RegisterCreatureGossipEvent(NPC_ID, 1, OnGossipHello)
-RegisterCreatureGossipEvent(NPC_ID, 2, OnGossipSelect)
+local function OnReloadEluna(event)
+    local players = GetPlayersInWorld()
+    for _, player in ipairs(players) do
+		if player:HasItem(ITEM_ID) then
+			local guid = player:GetGUIDLow()
+			local name = player:GetName()
+			
+			CharDBQueryAsync("SELECT id, form, active FROM character_morphs WHERE guid = " .. guid, function(result)
+				if result then
+					repeat
+						local morphId = result:GetUInt32(0)
+						local morphForm = result:GetUInt32(1)
+						local isActive = result:GetUInt32(2)
+						if not morphIdCache[guid] then
+							morphIdCache[guid] = {}
+						end
+						table.insert(morphIdCache[guid], morphId)
 
+						morphCount[guid] = (morphCount[guid] or 0) + 1
+						
+						if morphForm == 15 then
+							morph15[guid] = morphId
+						elseif morphForm == 16 then
+							morph16[guid] = morphId
+						elseif morphForm == 17 then
+							morph17[guid] = morphId
+						elseif morphForm == 19 then
+							morph19[guid] = morphId
+						elseif morphForm == 23 then
+							morph23[guid] = morphId
+						elseif morphForm == 29 then
+							morph29[guid] = morphId
+						elseif morphForm == 30 then
+							morph30[guid] = morphId
+						end
+
+					until not result:NextRow()
+
+					print("reload eluna morphs loaded")
+				else
+					print("reload eluna error loading morphs")
+				end
+			end)
+		end
+	end
+end
+		
+-- Cache player's morphs on login if they have the required item
+local function OnPlayerLogin(event, player)
+    if player:HasItem(ITEM_ID) then
+		local guid = player:GetGUIDLow()
+		local name = player:GetName()
+		
+        CharDBQueryAsync("SELECT id, form, active FROM character_morphs WHERE guid = " .. guid, function(result)
+			player = GetPlayerByName(name)
+			if result then
+				repeat
+					local morphId = result:GetUInt32(0)
+					local morphForm = result:GetUInt32(1)
+					local isActive = result:GetUInt32(2)
+					if not morphIdCache[guid] then
+						morphIdCache[guid] = {}
+					end
+					table.insert(morphIdCache[guid], morphId)
+
+					morphCount[guid] = (morphCount[guid] or 0) + 1
+					
+					if morphForm == 15 then
+						morph15[guid] = morphId
+					elseif morphForm == 16 then
+						morph16[guid] = morphId
+					elseif morphForm == 17 then
+						morph17[guid] = morphId
+					elseif morphForm == 19 then
+						morph19[guid] = morphId
+					elseif morphForm == 23 then
+						morph23[guid] = morphId
+					elseif morphForm == 29 then
+						morph29[guid] = morphId
+					elseif morphForm == 30 then
+						morph30[guid] = morphId
+					end
+
+				until not result:NextRow()
+			end
+		end)
+    end
+end
+
+local function OnPlayerLogout(event, player)
+    local guid = player:GetGUIDLow()
+    demonCache[guid] = nil
+    playerMorphChoice[guid] = nil
+    morphCount[guid] = nil
+	logincheck[guid] = nil
+	morph15[guid] = nil
+	morph16[guid] = nil
+	morph17[guid] = nil
+	morph19[guid] = nil
+	morph23[guid] = nil
+	morph29[guid] = nil
+	morph30[guid] = nil
+	morphIdCache[guid] = nil
+end
 
 CacheCreatures()
-RegisterItemGossipEvent(ITEM_ID, 1, OnItemGossipHello)
+RegisterPlayerEvent(3, OnPlayerLogin)
+RegisterPlayerEvent(4, OnPlayerLogout)
 RegisterPlayerEvent(7, OnKillCreature)
-RegisterPlayerEvent(42, OnCommand)
+RegisterServerEvent(33, OnReloadEluna)
 RegisterPlayerEvent(43, OnPetAddedToWorld)
+RegisterItemGossipEvent(ITEM_ID, 1, OnItemGossipHello)
 RegisterPlayerGossipEvent(99, 1, OnPlayerGossipHello)
 RegisterPlayerGossipEvent(99, 2, OnItemGossipSelect)
+RegisterCreatureGossipEvent(NPC_ID, 1, OnGossipHello)
+RegisterCreatureGossipEvent(NPC_ID, 2, OnGossipSelect)
