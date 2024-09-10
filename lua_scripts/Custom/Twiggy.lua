@@ -322,6 +322,17 @@ local function ShowCategoryContents(player, creature, category, page)
 end
 
 local function VIPmenu(player, creature)
+	if not VIPtime[player:GetGUIDLow()] then
+		name = player:GetName()
+		CharDBQueryAsync("SELECT VIPTIME FROM ACCOUNTS_VIP WHERE ACCOUNT = " .. player:GetAccountId() .. ";", function(result)
+			player = GetPlayerByName(name)
+			if result then
+				VIPtime[player:GetGUIDLow()] = result:GetUInt32(0)
+			else
+				VIPtime[player:GetGUIDLow()] = os.time()
+			end
+		end)
+	end
 	if VIPtime[player:GetGUIDLow()] > os.time() then
 		local vipTime = VIPtime[player:GetGUIDLow()]
 		local remainingTime = vipTime - os.time()
@@ -705,17 +716,6 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 end
 
 local function OnPlayerLogin(event, player)
-	if not VIPtime[player:GetGUIDLow()] then
-		name = player:GetName()
-		CharDBQueryAsync("SELECT VIPTIME FROM ACCOUNTS_VIP WHERE ACCOUNT = " .. player:GetAccountId() .. ";", function(result)
-			player = GetPlayerByName(name)
-			if result then
-				VIPtime[player:GetGUIDLow()] = result:GetUInt32(0)
-			else
-				VIPtime[player:GetGUIDLow()] = os.time()
-			end
-		end)
-	end
     if player:HasItem(32498) or player:HasSpell(40405) then
 		if player:HasItem(37430) then
 			player:RemoveItem(37430, 1)
