@@ -1,11 +1,5 @@
-CharDBQuery([[CREATE TABLE IF NOT EXISTS transferlog (
-    guid INT PRIMARY KEY,
-    newcharacter INT
-);]])
-CharDBQuery([[CREATE TABLE IF NOT EXISTS transferredspells (
-    guid INT PRIMARY KEY,
-    status INT
-);]])
+--CharDBQuery([[CREATE TABLE IF NOT EXISTS transferlog (guid INT PRIMARY KEY, newcharacter INT);]])
+--CharDBQuery([[CREATE TABLE IF NOT EXISTS transferredspells (guid INT PRIMARY KEY, status INT);]])
 
 
 ------------------------------------------------------------------------------------------------

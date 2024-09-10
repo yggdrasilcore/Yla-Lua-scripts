@@ -75,31 +75,25 @@ local function OnTicketClose(event, player, opcode, packet)
         end
 
         if #idsToCheck > 0 then
-            -- Construct the SQL query string
-            local queryString = "SELECT id, closedBy FROM gm_ticket WHERE id IN (" .. table.concat(idsToCheck, ", ") .. ") AND closedBy > 0"
-            
-            -- Execute the query
-            local queryResult = CharDBQuery(queryString)
-            if queryResult then
-                --print("Closed ticket found!")
-                repeat
-                    local id = queryResult:GetUInt32(0)
-                    local closedBy = queryResult:GetInt32(1)  -- Changed to GetInt32 for signed integer
-					if idClosed[id] then
-						idClosed[id] = nil
-						--print("ID: " .. id .. ", Closed by: " .. closedBy)
-						SendToDiscord("**Ticket with ID: " .. id .. " closed.** \\nClosed by: " .. closedBy)
-					end
-                until not queryResult:NextRow()
-            --else
-                --print("No closed tickets found.")
-            end
-        end
-        
-        -- Remove this event
+           CharDBQueryAsync("SELECT id, closedBy FROM gm_ticket WHERE id IN (" .. table.concat(idsToCheck, ", ") .. ") AND closedBy > 0", function(queryResult)
+			   if queryResult then
+					--print("Closed ticket found!")
+					repeat
+						local id = queryResult:GetUInt32(0)
+						local closedBy = queryResult:GetInt32(1)  -- Changed to GetInt32 for signed integer
+						if idClosed[id] then
+							idClosed[id] = nil
+							--print("ID: " .. id .. ", Closed by: " .. closedBy)
+							SendToDiscord("**Ticket with ID: " .. id .. " closed.** \\nClosed by: " .. closedBy)
+						end
+					until not queryResult:NextRow()
+				end
+			end)
+		end
         RemoveEventById(1)
-    end, 400, 1)
+    end, 1000, 1)
 end
 
 RegisterPacketEvent(0x206, 7, OnTicketOpen)
+RegisterPacketEvent(0x4F2, 7, OnTicketOpen)
 RegisterPacketEvent(0x218, 7, OnTicketClose)

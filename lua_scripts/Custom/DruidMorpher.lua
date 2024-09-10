@@ -45,7 +45,7 @@ local ITEMS_PER_PAGE = 13
 local function CacheCreatures()
 	local catCount, bearCount, birdCount, travelCount, owlCount, treeCount, aquaticCount = 0, 0, 0, 0, 0, 0, 0
 
-    catResults = WorldDBQueryAsync([[
+    WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (family = 2 
@@ -70,7 +70,7 @@ local function CacheCreatures()
 		end
 	end)
 
-    bearResults = WorldDBQueryAsync([[
+    WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (family = 4 
@@ -93,7 +93,7 @@ local function CacheCreatures()
 		end
 	end)
 
-    birdResults = WorldDBQueryAsync([[
+    WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (family IN (7, 26, 30, 33, 34, 37, 38) 
@@ -118,7 +118,7 @@ local function CacheCreatures()
 		end
 	end)
     
-    travelResults = WorldDBQueryAsync([[
+    WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (family IN (1, 11, 12, 39) 
@@ -159,7 +159,7 @@ local function CacheCreatures()
 		end
 	end)
     
-    owlResults = WorldDBQueryAsync([[
+    WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (name LIKE '%owlkin%' 
@@ -183,7 +183,7 @@ local function CacheCreatures()
 		end
 	end)
     
-    treeResults = WorldDBQueryAsync([[
+    WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (name LIKE '%root-walker%' 
@@ -218,7 +218,7 @@ local function CacheCreatures()
 		end
 	end)
     
-    aquaticResults = WorldDBQueryAsync([[
+    WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (name LIKE '%sewer beast%' 

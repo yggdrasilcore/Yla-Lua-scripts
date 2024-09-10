@@ -1,4 +1,14 @@
--- WorldDB queries to insert data if not exists
+-- WorldDB queries to insert data if not already done
+
+--local flags_value = 134250560
+
+--for _, item_id in ipairs(ItemsToSell) do
+--    local update_query1 = string.format("UPDATE `item_template` SET `flags` = %d WHERE `entry` = %d", flags_value, item_id)
+--    local update_query2 = string.format("UPDATE `item_template` SET `spellcharges_1` = 0 WHERE `entry` = %d", item_id)
+--    WorldDBExecute(update_query1)
+--    WorldDBExecute(update_query2)
+--end
+
 local NPC_ID = 600000
 local model_ID = 21113
 local VoteTokenItemID = 20880
@@ -14,17 +24,6 @@ local ItemsToSell = {
 
 local VotePointCost = 50
 local ItemsPerPage = 11
-
-local Q = WorldDBQuery(string.format("SELECT * FROM creature_template WHERE entry=%d", NPC_ID))
-
-local flags_value = 134250560
-
-for _, item_id in ipairs(ItemsToSell) do
-    local update_query1 = string.format("UPDATE `item_template` SET `flags` = %d WHERE `entry` = %d", flags_value, item_id)
-    local update_query2 = string.format("UPDATE `item_template` SET `spellcharges_1` = 0 WHERE `entry` = %d", item_id)
-    WorldDBExecute(update_query1)
-    WorldDBExecute(update_query2)
-end
 
 
 local function GenerateMenu(page, player, object)

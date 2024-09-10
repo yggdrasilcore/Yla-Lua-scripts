@@ -61,7 +61,7 @@ local function LoadVIPVendorCooldown(player) -- For mall stone
 end
 
 local function PopulateMorphCache()
-    local catResults = WorldDBQuery([[
+    WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (family = 2 
@@ -76,16 +76,17 @@ local function PopulateMorphCache()
           AND name NOT LIKE '%STABLED%'
           AND name NOT LIKE '%TAMED%'
           AND name NOT LIKE '%TOTEM%'
-    ]])
-    if catResults then
-        repeat
-            local entry, name = catResults:GetUInt32(0), catResults:GetString(1)
-            catCache[entry] = name
-            catCount = catCount + 1
-        until not catResults:NextRow()
-    end
+    ]], function(catResults)
+		if catResults then
+			repeat
+				local entry, name = catResults:GetUInt32(0), catResults:GetString(1)
+				catCache[entry] = name
+				catCount = catCount + 1
+			until not catResults:NextRow()
+		end
+	end)
 
-    local bearResults = WorldDBQuery([[
+    WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (family = 4 
@@ -98,16 +99,17 @@ local function PopulateMorphCache()
           AND name NOT LIKE '%STABLED%'
           AND name NOT LIKE '%TAMED%'
           AND name NOT LIKE '%TOTEM%'
-    ]])
-    if bearResults then
-        repeat
-            local entry, name = bearResults:GetUInt32(0), bearResults:GetString(1)
-            bearCache[entry] = name
-            bearCount = bearCount + 1
-        until not bearResults:NextRow()
-    end
+    ]], function(bearResults)
+		if bearResults then
+			repeat
+				local entry, name = bearResults:GetUInt32(0), bearResults:GetString(1)
+				bearCache[entry] = name
+				bearCount = bearCount + 1
+			until not bearResults:NextRow()
+		end
+	end)
 
-    local birdResults = WorldDBQuery([[
+    WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (family IN (7, 26, 30, 33, 34, 37, 38) 
@@ -122,16 +124,17 @@ local function PopulateMorphCache()
           AND name NOT LIKE '%STABLED%'
           AND name NOT LIKE '%TAMED%'
           AND name NOT LIKE '%TOTEM%'
-    ]])
-    if birdResults then
-        repeat
-            local entry, name = birdResults:GetUInt32(0), birdResults:GetString(1)
-            birdCache[entry] = name
-            birdCount = birdCount + 1
-        until not birdResults:NextRow()
-    end
+    ]], function(birdResults)
+		if birdResults then
+			repeat
+				local entry, name = birdResults:GetUInt32(0), birdResults:GetString(1)
+				birdCache[entry] = name
+				birdCount = birdCount + 1
+			until not birdResults:NextRow()
+		end
+	end)
     
-    local travelResults = WorldDBQuery([[
+    WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (family IN (1, 11, 12, 39) 
@@ -162,16 +165,17 @@ local function PopulateMorphCache()
           AND name NOT LIKE '%STABLED%'
           AND name NOT LIKE '%TAMED%'
           AND name NOT LIKE '%TOTEM%'
-    ]])
-    if travelResults then
-        repeat
-            local entry, name = travelResults:GetUInt32(0), travelResults:GetString(1)
-            travelCache[entry] = name
-            travelCount = travelCount + 1
-        until not travelResults:NextRow()
-    end
+    ]], function(travelResults)
+		if travelResults then
+			repeat
+				local entry, name = travelResults:GetUInt32(0), travelResults:GetString(1)
+				travelCache[entry] = name
+				travelCount = travelCount + 1
+			until not travelResults:NextRow()
+		end
+	end)
     
-    local owlResults = WorldDBQuery([[
+    WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (name LIKE '%owlkin%' 
@@ -185,16 +189,17 @@ local function PopulateMorphCache()
           AND name NOT LIKE '%STABLED%'
           AND name NOT LIKE '%TAMED%'
           AND name NOT LIKE '%TOTEM%'
-    ]])
-    if owlResults then
-        repeat
-            local entry, name = owlResults:GetUInt32(0), owlResults:GetString(1)
-            owlCache[entry] = name
-            owlCount = owlCount + 1
-        until not owlResults:NextRow()
-    end
+    ]], function(owlResults)
+		if owlResults then
+			repeat
+				local entry, name = owlResults:GetUInt32(0), owlResults:GetString(1)
+				owlCache[entry] = name
+				owlCount = owlCount + 1
+			until not owlResults:NextRow()
+		end
+	end)
     
-    local treeResults = WorldDBQuery([[
+    WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (name LIKE '%root-walker%' 
@@ -219,16 +224,17 @@ local function PopulateMorphCache()
           AND name NOT LIKE '%STABLED%'
           AND name NOT LIKE '%TAMED%'
           AND name NOT LIKE '%TOTEM%'
-    ]])
-    if treeResults then
-        repeat
-            local entry, name = treeResults:GetUInt32(0), treeResults:GetString(1)
-            treeCache[entry] = name
-            treeCount = treeCount + 1
-        until not treeResults:NextRow()
-    end
+    ]], function(treeResults)
+		if treeResults then
+			repeat
+				local entry, name = treeResults:GetUInt32(0), treeResults:GetString(1)
+				treeCache[entry] = name
+				treeCount = treeCount + 1
+			until not treeResults:NextRow()
+		end
+	end)
     
-    local aquaticResults = WorldDBQuery([[
+    WorldDBQueryAsync([[
        SELECT entry, name 
        FROM creature_template 
        WHERE (name LIKE '%sewer beast%' 
@@ -265,14 +271,15 @@ local function PopulateMorphCache()
           AND name NOT LIKE '%STABLED%'
           AND name NOT LIKE '%TAMED%'
           AND name NOT LIKE '%TOTEM%'
-    ]])
-    if aquaticResults then
-        repeat
-            local entry, name = aquaticResults:GetUInt32(0), aquaticResults:GetString(1)
-            aquaticCache[entry] = name
-            aquaticCount = aquaticCount + 1
-        until not aquaticResults:NextRow()
-    end
+    ]], function(aquaticResults)
+		if aquaticResults then
+			repeat
+				local entry, name = aquaticResults:GetUInt32(0), aquaticResults:GetString(1)
+				aquaticCache[entry] = name
+				aquaticCount = aquaticCount + 1
+			until not aquaticResults:NextRow()
+		end
+	end)
 end
 
 local function ShowCategoryContents(player, creature, category, page)
@@ -359,15 +366,6 @@ end
 local function OnGossipHello(event, player, creature)
 	if creature:GetOwnerGUID() == player:GetGUID() then
 		mainMenu(player, creature)
-		
-		if not VIPtime[player:GetGUIDLow()] then
-			local result = CharDBQuery("SELECT VIPTIME FROM ACCOUNTS_VIP WHERE ACCOUNT = " .. player:GetAccountId() .. ";")
-			if result then
-				VIPtime[player:GetGUIDLow()] = result:GetUInt32(0)
-			else
-				VIPtime[player:GetGUIDLow()] = os.time()
-			end
-		end
 	else
 		-- If it's someone else's companion, don't start gossip
 		if not tickleCount[player:GetGUIDLow()] then
@@ -502,10 +500,6 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 5)
         player:GossipSendMenu(12, creature, 60)
 	elseif intId == 500 then
-		if not cachePopulated then
-			PopulateMorphCache()
-			cachePopulated = true
-		end
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/ABILITY_Druid_CatForm:32:32:-22:0|tCat Forms: " .. catCount, 0, 501)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_racial_bearform:32:32:-22:0|tBear Forms: " .. bearCount, 0, 502)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/ABILITY_Druid_FlightForm:32:32:-22:0|tFlight Forms: " .. birdCount, 0, 503)
@@ -712,12 +706,15 @@ end
 
 local function OnPlayerLogin(event, player)
 	if not VIPtime[player:GetGUIDLow()] then
-		local result = CharDBQuery("SELECT VIPTIME FROM ACCOUNTS_VIP WHERE ACCOUNT = " .. player:GetAccountId() .. ";")
-		if result then
-			VIPtime[player:GetGUIDLow()] = result:GetUInt32(0)
-		else
-			VIPtime[player:GetGUIDLow()] = os.time()
-		end
+		name = player:GetName()
+		CharDBQueryAsync("SELECT VIPTIME FROM ACCOUNTS_VIP WHERE ACCOUNT = " .. player:GetAccountId() .. ";", function(result)
+			player = GetPlayerByName(name)
+			if result then
+				VIPtime[player:GetGUIDLow()] = result:GetUInt32(0)
+			else
+				VIPtime[player:GetGUIDLow()] = os.time()
+			end
+		end)
 	end
     if player:HasItem(32498) or player:HasSpell(40405) then
 		if player:HasItem(37430) then
@@ -730,6 +727,7 @@ local function OnPlayerLogin(event, player)
     end
 end
 
+PopulateMorphCache()
 RegisterPlayerEvent(3, OnPlayerLogin)
 RegisterCreatureGossipEvent(23198, 1, OnGossipHello)
 RegisterCreatureGossipEvent(23198, 2, OnGossipSelect)

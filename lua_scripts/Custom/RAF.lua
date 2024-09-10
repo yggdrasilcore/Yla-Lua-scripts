@@ -41,6 +41,7 @@ local requestsender = {}
 local requesttime = {}
 local summonerGraceTimer = {}
 local summonrequest = ""
+local playerProgress = {}
 
 -- Create the account_raf table if it doesn't exist
 AuthDBExecute([[
@@ -95,70 +96,73 @@ local function PlayerHasEnoughFreeSlots(player, requiredSlots)
 end
 
 local function ShowReferralInfoMenu(player, page)
+    player:GossipClearMenu()
+	
     page = page or 1
     local accountId = player:GetAccountId()
-    player:GossipClearMenu()
-    local query = AuthDBQuery(string.format([[
-            SELECT account_id, status, date, progress FROM account_raf WHERE referer_id = %d
-        ]], accountId))
-    
-    if query then
-        local entries = {}
-        repeat
-            local refereeAccountId = query:GetUInt32(0)
-            local status = query:GetUInt32(1)
-            local date = query:GetUInt32(2)
-            local progress = query:GetUInt32(3)
-            table.insert(entries, {refereeAccountId = refereeAccountId, status = status, date = date, progress = progress})
-        until not query:NextRow()
-        
-        local totalPages = math.ceil(#entries / ENTRIES_PER_PAGE)
-        local startIndex = (page - 1) * ENTRIES_PER_PAGE + 1
-        local endIndex = math.min(startIndex + ENTRIES_PER_PAGE - 1, #entries)
-        
-        for i = startIndex, endIndex do
-            local entry = entries[i]
-            local statusText = (entry.status == 2) and "In progress" or "Completed"
-            local currentTime = os.time()
-            local timeLeft = (entry.date + RAFDuration) - currentTime
-            local daysLeft = math.floor(timeLeft / (24 * 60 * 60))
-            local hoursLeft = math.floor((timeLeft % (24 * 60 * 60)) / 3600)
-            local timeLeftText
-            if daysLeft > 0 then
-                timeLeftText = string.format("%d days", daysLeft)
-            elseif hoursLeft > 0 then
-                timeLeftText = string.format("%d hours", hoursLeft)
-            else
-                timeLeftText = "less than 1 hour"
-            end
-            local progressText
-            if not entry.progress or (entry.progress == 0 and statusText ~= "Completed") then
-                progressText = 0
-            elseif statusText == "Completed" then
-                progressText = 100
-            else
-				progressText = string.format("%.2f", math.min(100, (entry.progress / RAFRewardReq * 100)))
-            end
-            player:GossipMenuAddItem(0, string.format("|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|tReferral ID: %d\n \nStatus: %s \nProgress: %d%% \nRAF active for: %s\n \n ", 
-                entry.refereeAccountId, statusText, progressText, timeLeftText), 1, 2)
-        end
-        
-        if totalPages > 1 then
-            if page > 1 then
-                player:GossipMenuAddItem(0, "|TInterface/ICONS/Ability_Spy:32:32:-22:0|tPrevious Page", 1, PAGINATION_INTID_START + page - 1)
-            end
-            if page < totalPages then
-                player:GossipMenuAddItem(0, "|TInterface/ICONS/Ability_Spy:32:32:-22:0|tNext Page", 1, PAGINATION_INTID_START + page + 1)
-            end
-            player:GossipMenuAddItem(0, string.format("|TInterface/ICONS/INV_Misc_Book_11:32:32:-22:0|tPage %d of %d", page, totalPages), 1, 2)
-        end
-        
-        player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
-    else
-        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:32:32:-22:0|tYou have no referrals.", 1, 2)
-        player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
-    end
-    player:GossipSendMenu(12, player, 1)
+	local name = player:GetName()
+	
+    AuthDBQueryAsync(string.format([[SELECT account_id, status, date, progress FROM account_raf WHERE referer_id = %d]], accountId), function(query)
+		player = GetPlayerByName(name)
+		if query then
+			local entries = {}
+			repeat
+				local refereeAccountId = query:GetUInt32(0)
+				local status = query:GetUInt32(1)
+				local date = query:GetUInt32(2)
+				local progress = query:GetUInt32(3)
+				table.insert(entries, {refereeAccountId = refereeAccountId, status = status, date = date, progress = progress})
+			until not query:NextRow()
+			
+			local totalPages = math.ceil(#entries / ENTRIES_PER_PAGE)
+			local startIndex = (page - 1) * ENTRIES_PER_PAGE + 1
+			local endIndex = math.min(startIndex + ENTRIES_PER_PAGE - 1, #entries)
+			
+			for i = startIndex, endIndex do
+				local entry = entries[i]
+				local statusText = (entry.status == 2) and "In progress" or "Completed"
+				local currentTime = os.time()
+				local timeLeft = (entry.date + RAFDuration) - currentTime
+				local daysLeft = math.floor(timeLeft / (24 * 60 * 60))
+				local hoursLeft = math.floor((timeLeft % (24 * 60 * 60)) / 3600)
+				local timeLeftText
+				if daysLeft > 0 then
+					timeLeftText = string.format("%d days", daysLeft)
+				elseif hoursLeft > 0 then
+					timeLeftText = string.format("%d hours", hoursLeft)
+				else
+					timeLeftText = "less than 1 hour"
+				end
+				local progressText
+				if not entry.progress or (entry.progress == 0 and statusText ~= "Completed") then
+					progressText = 0
+				elseif statusText == "Completed" then
+					progressText = 100
+				else
+					progressText = string.format("%.2f", math.min(100, (entry.progress / RAFRewardReq * 100)))
+				end
+				player:GossipMenuAddItem(0, string.format("|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|tReferral ID: %d\n \nStatus: %s \nProgress: %d%% \nRAF active for: %s\n \n ", 
+					entry.refereeAccountId, statusText, progressText, timeLeftText), 1, 2)
+			end
+			
+			if totalPages > 1 then
+				if page > 1 then
+					player:GossipMenuAddItem(0, "|TInterface/ICONS/Ability_Spy:32:32:-22:0|tPrevious Page", 1, PAGINATION_INTID_START + page - 1)
+				end
+				if page < totalPages then
+					player:GossipMenuAddItem(0, "|TInterface/ICONS/Ability_Spy:32:32:-22:0|tNext Page", 1, PAGINATION_INTID_START + page + 1)
+				end
+				player:GossipMenuAddItem(0, string.format("|TInterface/ICONS/INV_Misc_Book_11:32:32:-22:0|tPage %d of %d", page, totalPages), 1, 2)
+			end
+			
+			player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
+			player:GossipSendMenu(12, player, 1)
+		else
+			player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:32:32:-22:0|tYou have no referrals.", 1, 2)
+			player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
+			player:GossipSendMenu(12, player, 1)
+		end
+	end)
 end
 
 local function ShowSummonFriendsMenu(player, page)
@@ -183,111 +187,116 @@ local function ShowSummonFriendsMenu(player, page)
         player:GossipSendMenu(12, player, 1)
     else
 	    local MaxRAFDuration = os.time() - RAFDuration
-		
-		local query = AuthDBQuery(string.format([[
-			SELECT account_id, referer_id
-			FROM account_raf
-			WHERE (referer_id = %d AND date > %d) OR (account_id = %d AND date > %d)
-		]], accountId, MaxRAFDuration, accountId, MaxRAFDuration))
-		
         local friendsToSummon = {}
-        local playerList = GetPlayersInWorld()
-        
-        if query then
-            repeat
-                local friendAccountId = query:GetUInt32(0)
-                local referrerAccountId = query:GetUInt32(1)
-                for _, friend in ipairs(playerList) do
-                    if (friend:GetAccountId() == friendAccountId and friend:GetName() ~= playerName)
-                    or (friend:GetAccountId() == referrerAccountId and friend:GetName() ~= playerName) 
-                    then
-                        table.insert(friendsToSummon, {name = friend:GetName(), guid = friend:GetGUIDLow()})
-                    end
-                end
-            until not query:NextRow()
-        end
-
+		local name = player:GetName()
         local totalPages = math.ceil(#friendsToSummon / ENTRIES_PER_PAGE)
         local startIndex = (page - 1) * ENTRIES_PER_PAGE + 1
         local endIndex = math.min(startIndex + ENTRIES_PER_PAGE - 1, #friendsToSummon)
-
-        for i = startIndex, endIndex do
-            local friend = friendsToSummon[i]
-            eligibleSummon[player:GetName()] = friend.name
-            player:GossipMenuAddItem(0, string.format("|TInterface/ICONS/spell_unused2:48:48:-26:0|tSummon %s", friend.name), 1, (friend.guid + 1000))
-        end
-
-        if #friendsToSummon > 0 then
-            if totalPages > 1 then
-                if page > 1 then
-                    player:GossipMenuAddItem(0, "|TInterface/ICONS/Ability_Spy:48:48:-26:0|tPrevious Page", 1, SUMMON_PAGINATION_INTID_START + page - 1)
-                end
-                if page < totalPages then
-                    player:GossipMenuAddItem(0, "|TInterface/ICONS/Ability_Spy:48:48:-26:0|tNext Page", 1, SUMMON_PAGINATION_INTID_START + page + 1)
-                end
-                player:GossipMenuAddItem(0, string.format("|TInterface/ICONS/INV_Misc_Book_11:32:32:-22:0|tPage %d of %d", page, totalPages), 1, 2)
-            end
-            player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:48:48:-26:0|tBack", 1, 998)
-        else
-            player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:48:48:-26:0|tYou have no friends to summon.", 1, 7)
-            player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:48:48:-26:0|tBack", 1, 998)
-        end
-        player:GossipSendMenu(12, player, 1)
+		
+		AuthDBQueryAsync(string.format([[
+			SELECT account_id, referer_id
+			FROM account_raf
+			WHERE (referer_id = %d AND date > %d) OR (account_id = %d AND date > %d)
+		]], accountId, MaxRAFDuration, accountId, MaxRAFDuration), function(query)
+			player = GetPlayerByName(name)
+			if query then
+				repeat
+					local playerList = GetPlayersInWorld()
+					local friendAccountId = query:GetUInt32(0)
+					local referrerAccountId = query:GetUInt32(1)
+					for _, friend in ipairs(playerList) do
+						if (friend:GetAccountId() == friendAccountId and friend:GetName() ~= playerName)
+						or (friend:GetAccountId() == referrerAccountId and friend:GetName() ~= playerName) 
+						then
+							table.insert(friendsToSummon, {name = friend:GetName(), guid = friend:GetGUIDLow()})
+						end
+					end
+				until not query:NextRow()
+				if not query:NextRow() then
+					if #friendsToSummon > 0 then
+						for i = startIndex, endIndex do
+							local friend = friendsToSummon[i]
+							eligibleSummon[player:GetName()] = friend.name
+							player:GossipMenuAddItem(0, string.format("|TInterface/ICONS/spell_unused2:48:48:-26:0|tSummon %s", friend.name), 1, (friend.guid + 1000))
+						end
+						if totalPages > 1 then
+							if page > 1 then
+								player:GossipMenuAddItem(0, "|TInterface/ICONS/Ability_Spy:48:48:-26:0|tPrevious Page", 1, SUMMON_PAGINATION_INTID_START + page - 1)
+							end
+							if page < totalPages then
+								player:GossipMenuAddItem(0, "|TInterface/ICONS/Ability_Spy:48:48:-26:0|tNext Page", 1, SUMMON_PAGINATION_INTID_START + page + 1)
+							end
+							player:GossipMenuAddItem(0, string.format("|TInterface/ICONS/INV_Misc_Book_11:32:32:-22:0|tPage %d of %d", page, totalPages), 1, 2)
+						end
+						player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:48:48:-26:0|tBack", 1, 998)
+					else
+						player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:48:48:-26:0|tYou have no friends to summon.", 1, 7)
+						player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:48:48:-26:0|tBack", 1, 998)
+					end
+					player:GossipSendMenu(12, player, 1)
+				end
+			else
+				player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:48:48:-26:0|tYou have no friends to summon.", 1, 7)
+				player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:48:48:-26:0|tBack", 1, 998)
+				player:GossipSendMenu(12, player, 1)
+			end
+		end)
     end
 end
 
 local function ShowRefereeInfo(player)
-    local accountId = player:GetAccountId()
-    local query = AuthDBQuery(string.format([[
-        SELECT referer_id, status, date, progress FROM account_raf WHERE account_id = %d
-    ]], accountId))
-    
     player:GossipClearMenu()
-    
-    if query then
-		local refererAccountId = query:GetUInt32(0)
-		local status = query:GetUInt32(1)
-		local date = query:GetUInt32(2)
-		local progress = query:GetUInt32(3)
-		
-		local statusText = (status == 2) and "In progress" or "Completed"
-		local progressText
-		
-		if progress == 0 and statusText ~= "Completed" then
-			progressText = 0
-		elseif statusText == "Completed" then
-			progressText = 100
+    local accountId = player:GetAccountId()
+	local name = player:GetName()
+	
+   AuthDBQueryAsync(string.format([[
+        SELECT referer_id, status, date, progress FROM account_raf WHERE account_id = %d
+    ]], accountId), function(query)
+		player = GetPlayerByName(name)
+		if query then
+			local refererAccountId = query:GetUInt32(0)
+			local status = query:GetUInt32(1)
+			local date = query:GetUInt32(2)
+			local progress = query:GetUInt32(3)
+			
+			local statusText = (status == 2) and "In progress" or "Completed"
+			local progressText
+			
+			if progress == 0 and statusText ~= "Completed" then
+				progressText = 0
+			elseif statusText == "Completed" then
+				progressText = 100
+			else
+				progressText = (progress / RAFRewardReq * 100)
+			end
+			
+			if progressText > 100 then
+				progressText = 100
+			end
+			
+			local currentTime = os.time()
+			local timeLeft = (date + RAFDuration) - currentTime
+			local daysLeft = math.floor(timeLeft / (24 * 60 * 60))
+			local hoursLeft = math.floor((timeLeft % (24 * 60 * 60)) / 3600)
+			
+			local timeLeftText
+			if daysLeft > 0 then
+				timeLeftText = string.format("%d days", daysLeft)
+			elseif hoursLeft > 0 then
+				timeLeftText = string.format("%d hours", hoursLeft)
+			else
+				timeLeftText = "less than 1 hour"
+			end
+			
+			player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|tReferral status: \n \nYou're registered with the following referral information:\n \nReferer ID: ".. refererAccountId ..". \n \nStatus: " .. statusText .." \n \nProgress towards rewards: " .. progressText .."%.\n \nReferral program time left: " .. timeLeftText..".\n \n", 1, 3)
+			
+			player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
 		else
-			progressText = (progress / RAFRewardReq * 100)
+			player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:32:32:-22:0|t Referral status:\n \nYou have not been registered as a referred player.\n \n", 1, 3)
+			player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
 		end
-		
-		if progressText > 100 then
-			progressText = 100
-		end
-		
-		local currentTime = os.time()
-		local timeLeft = (date + RAFDuration) - currentTime
-		local daysLeft = math.floor(timeLeft / (24 * 60 * 60))
-		local hoursLeft = math.floor((timeLeft % (24 * 60 * 60)) / 3600)
-		
-		local timeLeftText
-		if daysLeft > 0 then
-			timeLeftText = string.format("%d days", daysLeft)
-		elseif hoursLeft > 0 then
-			timeLeftText = string.format("%d hours", hoursLeft)
-		else
-			timeLeftText = "less than 1 hour"
-		end
-		
-		player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|tReferral status: \n \nYou're registered with the following referral information:\n \nReferer ID: ".. refererAccountId ..". \n \nStatus: " .. statusText .." \n \nProgress towards rewards: " .. progressText .."%.\n \nReferral program time left: " .. timeLeftText..".\n \n", 1, 3)
-		
-		player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
-    else
-        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:32:32:-22:0|t Referral status:\n \nYou have not been registered as a referred player.\n \n", 1, 3)
-		player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
-    end
-    
-    player:GossipSendMenu(12, player, 1)
+		player:GossipSendMenu(12, player, 1)
+	end)
 end
 
 local function ShowRAFMenu(player)
@@ -304,95 +313,106 @@ end
 
 local function ClaimBonuses(player)
     player:GossipClearMenu()
-	local GUIDLow = player:GetGUIDLow()
-	local accountId = player:GetAccountId()
-	local ClaimStatus
-	local CompletionStatus
-	
-	if not ClaimStatus0[GUIDLow] then 
-		ClaimStatus0[GUIDLow] = "."
-		ClaimStatus1[GUIDLow] = "."
-		ClaimStatus2[GUIDLow] = "."
-		ClaimStatus3[GUIDLow] = "."
-		ClaimStatus4[GUIDLow] = "."
-		CompletionStatus0[GUIDLow] = "In progress"
-		CompletionStatus1[GUIDLow] = "In progress"
-		CompletionStatus2[GUIDLow] = "In progress"
-		CompletionStatus3[GUIDLow] = "In progress"
-		CompletionStatus4[GUIDLow] = "In progress"
-		
-		local claimquery = AuthDBQuery(string.format([[
-			SELECT claimed FROM account_raf_claimed WHERE account_id = %d
-		]], accountId))
-		
-		if claimquery then
-			-- Iterate over all the results
-			repeat
-				local claimed = claimquery:GetUInt32(0)
-				
-				-- Assign statuses based on the claimed value
-				if claimed == 1 then
-					ClaimStatus0[GUIDLow] = ", claimed."
-				elseif claimed == 5 then
-					ClaimStatus1[GUIDLow] = ", claimed."
-				elseif claimed == 10 then
-					ClaimStatus2[GUIDLow] = ", claimed."
-				elseif claimed == 15 then
-					ClaimStatus3[GUIDLow] = ", claimed."
-				elseif claimed == 25 then
-					ClaimStatus4[GUIDLow] = ", claimed."
-				end
-			until not claimquery:NextRow()
-		end
-				
-		local completionquery = AuthDBQuery(string.format([[
-			SELECT COUNT(*) FROM account_raf 
-			WHERE referer_id = %d AND status = 4
-		]], accountId))
-		
-		local completioncount = 0
-		if completionquery then
-			completioncount = completionquery:GetUInt32(0)
-		end
-		
-		if completioncount > 0 then
-			CompletionStatus0[GUIDLow] = "Completed"
-			if not (ClaimStatus0[GUIDLow] == ", claimed.") then
-				ClaimStatus0[GUIDLow] = ", claim now!" 
-			end
-		end
-		if completioncount > 4 then
-			CompletionStatus1[GUIDLow] = "Completed"
-			if not (ClaimStatus1[GUIDLow] == ", claimed.") then
-				ClaimStatus1[GUIDLow] = ", claim now!" 
-			end
-		end
-		if completioncount > 9 then
-			CompletionStatus2[GUIDLow] = "Completed"
-			if not (ClaimStatus2[GUIDLow] == ", claimed.") then
-				ClaimStatus2[GUIDLow] = ", claim now!" 
-			end
-		end
-		if completioncount > 14 then
-			CompletionStatus3[GUIDLow] = "Completed"
-			if not (ClaimStatus3[GUIDLow] == ", claimed.") then
-				ClaimStatus3[GUIDLow] = ", claim now!" 
-			end
-		end
-		if completioncount > 24 then
-			CompletionStatus4[GUIDLow] = "Completed"
-			if not (ClaimStatus4[GUIDLow] == ", claimed.") then
-				ClaimStatus4[GUIDLow] = ", claim now!" 
-			end
-		end
-	end
-	player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tFirst referral reward:\n \nStatus: "..CompletionStatus0[GUIDLow]..""..ClaimStatus0[GUIDLow].."\n \nContains: 5 Community Tokens\n \n ", 1, 40) -- This is tier 0
-    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_01:32:32:-22:0|tReward box 1:\n \nRequirement: ".. RewardTier1 .." referrals.\nStatus: "..CompletionStatus1[GUIDLow]..""..ClaimStatus1[GUIDLow].."\n \nContains:\n- Rotface and Festergut's Acidic Blood\n- Unobtainable Vanilla mounts\n- Fishing Chair\n- 60 Emblems of Frost\n \n ", 1, 41)
-    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_02:32:32:-22:0|tReward box 2:\n \nRequirement: ".. RewardTier2 .." referrals.\nStatus: "..CompletionStatus2[GUIDLow]..""..ClaimStatus2[GUIDLow].."\n \nContains:\n- X-53 Touring Rocket\n- Hard-to-get mounts\n- ToC trinkets and cloaks\n- 95 Emblems of Frost\n \n ", 1, 42)
-    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_03:32:32:-22:0|tReward box 3:\n \nRequirement: ".. RewardTier3 .." referrals.\nStatus: "..CompletionStatus3[GUIDLow]..""..ClaimStatus3[GUIDLow].."\n \nContains:\n- ICC 25 heroic weapons\n- ICC 25 normal trinkets\n- Ashes of Al'ar\n- 95 Emblems of Frost and 1 Sanctification Mark\n \n ", 1, 43)
-    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_04:32:32:-22:0|tReward box 4:\n \nRequirement: ".. RewardTier4 .." referrals.\nStatus: "..CompletionStatus4[GUIDLow]..""..ClaimStatus4[GUIDLow].."\n \nContains:\n- Sea Turtle mount\n- Unobtainable mounts\n- 50 Community Tokens\n \n ", 1, 44)
-    player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
-    player:GossipSendMenu(12, player, 1)
+    local GUIDLow = player:GetGUIDLow()
+    local accountId = player:GetAccountId()
+    local ClaimStatus
+    local CompletionStatus
+	local name = player:GetName()
+    
+    if not ClaimStatus0[GUIDLow] then 
+        ClaimStatus0[GUIDLow] = "."
+        ClaimStatus1[GUIDLow] = "."
+        ClaimStatus2[GUIDLow] = "."
+        ClaimStatus3[GUIDLow] = "."
+        ClaimStatus4[GUIDLow] = "."
+        CompletionStatus0[GUIDLow] = "In progress"
+        CompletionStatus1[GUIDLow] = "In progress"
+        CompletionStatus2[GUIDLow] = "In progress"
+        CompletionStatus3[GUIDLow] = "In progress"
+        CompletionStatus4[GUIDLow] = "In progress"
+        
+        AuthDBQueryAsync(string.format([[
+            SELECT claimed FROM account_raf_claimed WHERE account_id = %d
+        ]], accountId),
+        function(claimquery)
+            if claimquery then
+                repeat
+                    local claimed = claimquery:GetUInt32(0)
+                    
+                    if claimed == 1 then
+                        ClaimStatus0[GUIDLow] = ", claimed."
+                    elseif claimed == 5 then
+                        ClaimStatus1[GUIDLow] = ", claimed."
+                    elseif claimed == 10 then
+                        ClaimStatus2[GUIDLow] = ", claimed."
+                    elseif claimed == 15 then
+                        ClaimStatus3[GUIDLow] = ", claimed."
+                    elseif claimed == 25 then
+                        ClaimStatus4[GUIDLow] = ", claimed."
+                    end
+                until not claimquery:NextRow()
+            end
+            
+            AuthDBQueryAsync(string.format([[
+                SELECT COUNT(*) FROM account_raf 
+                WHERE referer_id = %d AND status = 4
+            ]], accountId),
+            function(completionquery)
+                local completioncount = 0
+                if completionquery then
+                    completioncount = completionquery:GetUInt32(0)
+                end
+                
+                if completioncount > 0 then
+                    CompletionStatus0[GUIDLow] = "Completed"
+                    if not (ClaimStatus0[GUIDLow] == ", claimed.") then
+                        ClaimStatus0[GUIDLow] = ", claim now!" 
+                    end
+                end
+                if completioncount > 4 then
+                    CompletionStatus1[GUIDLow] = "Completed"
+                    if not (ClaimStatus1[GUIDLow] == ", claimed.") then
+                        ClaimStatus1[GUIDLow] = ", claim now!" 
+                    end
+                end
+                if completioncount > 9 then
+                    CompletionStatus2[GUIDLow] = "Completed"
+                    if not (ClaimStatus2[GUIDLow] == ", claimed.") then
+                        ClaimStatus2[GUIDLow] = ", claim now!" 
+                    end
+                end
+                if completioncount > 14 then
+                    CompletionStatus3[GUIDLow] = "Completed"
+                    if not (ClaimStatus3[GUIDLow] == ", claimed.") then
+                        ClaimStatus3[GUIDLow] = ", claim now!" 
+                    end
+                end
+                if completioncount > 24 then
+                    CompletionStatus4[GUIDLow] = "Completed"
+                    if not (ClaimStatus4[GUIDLow] == ", claimed.") then
+                        ClaimStatus4[GUIDLow] = ", claim now!" 
+                    end
+                end
+                player = GetPlayerByName(name)
+                player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tFirst referral reward:\n \nStatus: "..CompletionStatus0[GUIDLow]..""..ClaimStatus0[GUIDLow].."\n \nContains: 5 Community Tokens\n \n ", 1, 40)
+                player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_01:32:32:-22:0|tReward box 1:\n \nRequirement: ".. RewardTier1 .." referrals.\nStatus: "..CompletionStatus1[GUIDLow]..""..ClaimStatus1[GUIDLow].."\n \nContains:\n- Rotface and Festergut's Acidic Blood\n- Unobtainable Vanilla mounts\n- Fishing Chair\n- 60 Emblems of Frost\n \n ", 1, 41)
+                player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_02:32:32:-22:0|tReward box 2:\n \nRequirement: ".. RewardTier2 .." referrals.\nStatus: "..CompletionStatus2[GUIDLow]..""..ClaimStatus2[GUIDLow].."\n \nContains:\n- X-53 Touring Rocket\n- Hard-to-get mounts\n- ToC trinkets and cloaks\n- 95 Emblems of Frost\n \n ", 1, 42)
+                player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_03:32:32:-22:0|tReward box 3:\n \nRequirement: ".. RewardTier3 .." referrals.\nStatus: "..CompletionStatus3[GUIDLow]..""..ClaimStatus3[GUIDLow].."\n \nContains:\n- ICC 25 heroic weapons\n- ICC 25 normal trinkets\n- Ashes of Al'ar\n- 95 Emblems of Frost and 1 Sanctification Mark\n \n ", 1, 43)
+                player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_04:32:32:-22:0|tReward box 4:\n \nRequirement: ".. RewardTier4 .." referrals.\nStatus: "..CompletionStatus4[GUIDLow]..""..ClaimStatus4[GUIDLow].."\n \nContains:\n- Sea Turtle mount\n- Unobtainable mounts\n- 50 Community Tokens\n \n ", 1, 44)
+                player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
+                player:GossipSendMenu(12, player, 1)
+            end)
+        end)
+    else
+        -- If the data is already cached, add gossip menu items immediately
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tFirst referral reward:\n \nStatus: "..CompletionStatus0[GUIDLow]..""..ClaimStatus0[GUIDLow].."\n \nContains: 5 Community Tokens\n \n ", 1, 40)
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_01:32:32:-22:0|tReward box 1:\n \nRequirement: ".. RewardTier1 .." referrals.\nStatus: "..CompletionStatus1[GUIDLow]..""..ClaimStatus1[GUIDLow].."\n \nContains:\n- Rotface and Festergut's Acidic Blood\n- Unobtainable Vanilla mounts\n- Fishing Chair\n- 60 Emblems of Frost\n \n ", 1, 41)
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_02:32:32:-22:0|tReward box 2:\n \nRequirement: ".. RewardTier2 .." referrals.\nStatus: "..CompletionStatus2[GUIDLow]..""..ClaimStatus2[GUIDLow].."\n \nContains:\n- X-53 Touring Rocket\n- Hard-to-get mounts\n- ToC trinkets and cloaks\n- 95 Emblems of Frost\n \n ", 1, 42)
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_03:32:32:-22:0|tReward box 3:\n \nRequirement: ".. RewardTier3 .." referrals.\nStatus: "..CompletionStatus3[GUIDLow]..""..ClaimStatus3[GUIDLow].."\n \nContains:\n- ICC 25 heroic weapons\n- ICC 25 normal trinkets\n- Ashes of Al'ar\n- 95 Emblems of Frost and 1 Sanctification Mark\n \n ", 1, 43)
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_04:32:32:-22:0|tReward box 4:\n \nRequirement: ".. RewardTier4 .." referrals.\nStatus: "..CompletionStatus4[GUIDLow]..""..ClaimStatus4[GUIDLow].."\n \nContains:\n- Sea Turtle mount\n- Unobtainable mounts\n- 50 Community Tokens\n \n ", 1, 44)
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
+        player:GossipSendMenu(12, player, 1)
+    end
 end
 
 local function Reward40(player)
@@ -931,59 +951,74 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         ShowRAFLink(player)
     elseif intid == 10 then
         local accountId = player:GetAccountId()
-        local query = AuthDBQuery(string.format([[
+		local name = player:GetName()
+		
+        AuthDBQueryAsync(string.format([[
             SELECT totaltime FROM account WHERE id = %d
-        ]], accountId))
-        local timeplayed = query:GetUInt32(0)
+        ]], accountId), function(timeplayedquery)
+			player = GetPlayerByName(name)
+			if timeplayedquery then
+				local timeplayed = timeplayedquery:GetUInt32(0)
 
-        if timeplayed < 3600 * RegisterRAFTimeLimit then
-			-- Ensure the code is a number
-			local referer_id = tonumber(code)
-			if not referer_id then
-				player:SendAreaTriggerMessage("Please enter a valid number for the referral ID.")
-				ShowRAFLink(player)
-				return
+				if timeplayed < 3600 * RegisterRAFTimeLimit then
+					local referer_id = tonumber(code)
+					if not referer_id then
+						player:SendAreaTriggerMessage("Please enter a valid number for the referral ID.")
+						ShowRAFLink(player)
+						return
+					end
+
+					-- Verify that the referer ID exists in the account table
+					AuthDBQueryAsync(string.format([[
+						SELECT id FROM account WHERE id = %d
+					]], referer_id), function(refererquerycheck)
+						if refererquerycheck then
+							player = GetPlayerByName(name)
+							local refererQuery = refererquerycheck:GetUInt32(0)
+							if not refererQuery then
+								player:SendAreaTriggerMessage("The entered referral ID does not exist. Please check and try again.")
+								ShowRAFLink(player)
+								return
+							end
+
+							if accountId == referer_id then
+								player:SendBroadcastMessage("You can't refer yourself!")
+								ShowRAFLink(player)
+								return
+							end
+
+							local currentTime = os.time()
+							local playerIP = player:GetPlayerIP()
+
+							AuthDBQueryAsync(string.format([[
+								SELECT last_ip FROM account WHERE id = %d
+							]], referer_id), function(lookforrefererIP)
+
+								if lookforrefererIP then
+									player = GetPlayerByName(name)
+									local refererIP = lookforrefererIP:GetString(0)
+
+									AuthDBExecute(string.format([[
+										INSERT INTO account_raf (account_id, referer_id, status, progress, date, IP, IP_referer)
+										VALUES (%d, %d, 2, 0, %d, '%s', '%s')
+										ON DUPLICATE KEY UPDATE referer_id = %d, status = 2, progress = 0, date = %d, IP = '%s', IP_referer = '%s'
+									]], accountId, referer_id, currentTime, playerIP, refererIP, referer_id, currentTime, playerIP, refererIP))
+
+									RAFreferee[accountId] = true
+									player:SendAreaTriggerMessage(string.format("Successfully linked to referrer with ID: %d. Remember to relog to use the summon function.", referer_id))
+									ShowRAFLink(player)
+								end
+							end)
+						end
+					end)
+				else 
+					local message = "|cFFFF0000You can't register or change your referral link if you have played for more than one hour.|r"
+					player:SendAreaTriggerMessage(message)
+					player:SendBroadcastMessage(message)
+					ShowRAFLink(player)
+				end
 			end
-
-			-- Verify that the referer ID exists in the account table
-			local refererQuery = AuthDBQuery(string.format([[
-				SELECT id FROM account WHERE id = %d
-			]], referer_id))
-			if not refererQuery then
-				player:SendAreaTriggerMessage("The entered referral ID does not exist. Please check and try again.")
-				ShowRAFLink(player)
-				return
-			end
-
-			if accountId == referer_id then
-				player:SendBroadcastMessage("You can't refer yourself!")
-				ShowRAFLink(player)
-				return
-			end
-
-			local currentTime = os.time()
-			local playerIP = player:GetPlayerIP()
-
-			local refererIPQuery = AuthDBQuery(string.format([[
-				SELECT last_ip FROM account WHERE id = %d
-			]], referer_id))
-
-			local refererIP = refererIPQuery:GetString(0)
-
-			AuthDBExecute(string.format([[
-				INSERT INTO account_raf (account_id, referer_id, status, progress, date, IP, IP_referer)
-				VALUES (%d, %d, 2, 0, %d, '%s', '%s')
-				ON DUPLICATE KEY UPDATE referer_id = %d, status = 2, progress = 0, date = %d, IP = '%s', IP_referer = '%s'
-			]], accountId, referer_id, currentTime, playerIP, refererIP, referer_id, currentTime, playerIP, refererIP))
-
-			RAFreferee[accountId] = true
-			player:SendAreaTriggerMessage(string.format("Successfully linked to referrer with ID: %d. Remember to relog to use the summon function.", referer_id))
-        else 
-			local message = "|cFFFF0000You can't register or change your referral link if you have played for more than one hour.|r"
-            player:SendAreaTriggerMessage(message)
-            player:SendBroadcastMessage(message)
-        end
-        ShowRAFLink(player)
+        end)
     elseif intid == 2 then
         ShowReferralInfoMenu(player)
     elseif intid == 3 then
@@ -1153,29 +1188,21 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
 			return false
 		end
 		
-		-- Check if both IDs are valid
-		local accountCheck = AuthDBQuery("SELECT 1 FROM account WHERE id = " .. accountId)
-		local refererCheck = AuthDBQuery("SELECT 1 FROM account WHERE id = " .. refererId)
-		
-		if not accountCheck or not refererCheck then
+		local accountCheck = AuthDBQuery("SELECT 1 FROM account WHERE id IN (" .. accountId .. ", " .. refererId .. ")") -- Async exempt
+
+		if not accountCheck or accountCheck:GetRowCount() < 2 then
 			player:SendBroadcastMessage("Error: One or both account IDs are invalid.")
 			return false
 		end
-		
-		-- Check if the account_id and referer_id are already linked
-		local linkCheck = AuthDBQuery(string.format("SELECT 1 FROM account_raf WHERE account_id = %s AND referer_id = %s", accountId, refererId))
-		
-		if linkCheck then
+				
+		local linkCheck = AuthDBQuery(string.format("SELECT 1 FROM account_raf WHERE (account_id = %s AND referer_id = %s) OR (account_id = %s AND referer_id = %s)", accountId, refererId, refererId, accountId)) -- Async exempt
+
+		if linkCheck and linkCheck:GetRowCount() > 0 then
 			player:SendBroadcastMessage("Error: These accounts are already linked in RAF.")
 			return false
 		end
 		
-		-- Insert the new RAF connection
-		local insertQuery = string.format(
-			"INSERT INTO account_raf (account_id, referer_id, status, progress, date) VALUES (%s, %s, 2, 0, %d)",
-			accountId, refererId, os.time())
-		
-		AuthDBExecute(insertQuery)
+		AuthDBExecute(string.format("INSERT INTO account_raf (account_id, referer_id, status, progress, date) VALUES (%s, %s, 2, 0, %d)", accountId, refererId, os.time()))
 		player:SendBroadcastMessage("RAF: Friend " .. accountId .. " successfully linked to referer " .. refererId .. ".")
 
 		return false
@@ -1232,6 +1259,7 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
 	if command:lower() == "referalinfo" or command:lower() == "rafinfo" then
 		local targetPlayer = player:GetSelection() -- Get the player's current target
 		local accountId
+		local name = player:GetName()
 
 		-- Check if the player has a target and the target is a player
 		if targetPlayer and targetPlayer:IsPlayer() then
@@ -1240,44 +1268,45 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
 			accountId = player:GetAccountId() -- Fallback to the player's account ID if no target or target is not a player
 		end
 
-		local query = AuthDBQuery(string.format([[
+		AuthDBQueryAsync(string.format([[
 			SELECT account_id, status, date FROM account_raf WHERE referer_id = %d
-		]], accountId))
+		]], accountId), function(query)
+			player = GetPlayerByName(name)
+			if query then
+				local count = 0
+				repeat
+					count = count + 1
+					local refereeAccountId = query:GetUInt32(0)
+					local status = query:GetUInt32(1)
+					local date = query:GetUInt32(2)
 
-		if query then
-			local count = 0
-			repeat
-				count = count + 1
-				local refereeAccountId = query:GetUInt32(0)
-				local status = query:GetUInt32(1)
-				local date = query:GetUInt32(2)
+					local statusText = (status == 2) and "In progress" or "Completed"
+					local currentTime = os.time()
+					local timeLeft = (date + RAFDuration) - currentTime
+					local daysLeft = math.floor(timeLeft / (24 * 60 * 60))
+					local hoursLeft = math.floor((timeLeft % (24 * 60 * 60)) / 3600)
 
-				local statusText = (status == 2) and "In progress" or "Completed"
-				local currentTime = os.time()
-				local timeLeft = (date + RAFDuration) - currentTime
-				local daysLeft = math.floor(timeLeft / (24 * 60 * 60))
-				local hoursLeft = math.floor((timeLeft % (24 * 60 * 60)) / 3600)
+					local timeLeftText
+					if daysLeft > 0 then
+						timeLeftText = string.format("%d days", daysLeft)
+					elseif hoursLeft > 0 then
+						timeLeftText = string.format("%d hours", hoursLeft)
+					else
+						timeLeftText = "less than 1 hour"
+					end
 
-				local timeLeftText
-				if daysLeft > 0 then
-					timeLeftText = string.format("%d days", daysLeft)
-				elseif hoursLeft > 0 then
-					timeLeftText = string.format("%d hours", hoursLeft)
-				else
-					timeLeftText = "less than 1 hour"
+					player:SendBroadcastMessage(string.format("Referral found with account ID %d, status: %s, RAF active for: %s",
+						refereeAccountId, statusText, timeLeftText))
+				until not query:NextRow()
+
+				if count == 0 then
+					player:SendBroadcastMessage("You have no referrals.")
 				end
-
-				player:SendBroadcastMessage(string.format("Referral found with account ID %d, status: %s, RAF active for: %s",
-					refereeAccountId, statusText, timeLeftText))
-			until not query:NextRow()
-
-			if count == 0 then
+			else
 				player:SendBroadcastMessage("You have no referrals.")
 			end
-		else
-			player:SendBroadcastMessage("You have no referrals.")
-		end
-		return false
+			return false
+		end)
 	end
 
     if (cmd == "rafreferee" and param) or (cmd == "rafrefer" and param) or (cmd == "refer" and param) then
@@ -1346,19 +1375,20 @@ local function CheckRefereeStatus(player)
     local MaxRAFDuration = os.time() - RAFDuration
     local playerIP = player:GetPlayerIP()
 
-    local query = AuthDBQuery(string.format([[
+    AuthDBQueryAsync(string.format([[
         SELECT 1 FROM account_raf
         WHERE account_id = %d AND status = 2 AND date > %d
-    ]], accountId, MaxRAFDuration))
+    ]], accountId, MaxRAFDuration), function(query)
 
-    if query then
-        AuthDBExecute(string.format([[
-            UPDATE account_raf SET IP = '%s' WHERE account_id = %d
-        ]], playerIP, accountId))
-        RAFreferee[accountId] = true
-    else
-        RAFreferee[accountId] = nil
-    end
+		if query then
+			AuthDBExecute(string.format([[
+				UPDATE account_raf SET IP = '%s' WHERE account_id = %d
+			]], playerIP, accountId))
+			RAFreferee[accountId] = true
+		else
+			RAFreferee[accountId] = nil
+		end
+	end)
 end
 
 local function ClearRefereeStatus(event, player)
@@ -1380,13 +1410,23 @@ local function ReloadEluna(event)
     end
 end
 
--- Update progress on creature kill and area change
 local function UpdateProgress(player)
     local accountId = player:GetAccountId()
     if RAFreferee[accountId] then
-        AuthDBExecute(string.format([[
-            UPDATE account_raf SET progress = progress + 1 WHERE account_id = %d
-        ]], accountId))
+        if not playerProgress[accountId] then
+            playerProgress[accountId] = 0
+            
+            player:RegisterEvent(function(eventId, delay, repeats, player)
+                if playerProgress[accountId] and playerProgress[accountId] > 0 then
+                    AuthDBExecute(string.format([[
+                        UPDATE account_raf SET progress = progress + %d WHERE account_id = %d
+                    ]], playerProgress[accountId], accountId))
+                    playerProgress[accountId] = nil
+                end
+            end, 900000, 1) -- Update RAF progress every 15 minutes
+        end
+        
+        playerProgress[accountId] = playerProgress[accountId] + 1
     end
 end
 
@@ -1414,89 +1454,90 @@ end
 
 local function CheckCompletedReferrals()
     for refereeAccountId, _ in pairs(RAFreferee) do
-        local query = AuthDBQuery(string.format([[
+        AuthDBQueryAsync(string.format([[
             SELECT progress, referer_id FROM account_raf WHERE account_id = %d AND status = 2
-        ]], refereeAccountId))
+        ]], refereeAccountId), function(query)
         
-        if query then
-            local progress = query:GetUInt32(0)
-            local refererId = query:GetUInt32(1)
-            
-            if progress >= RAFRewardReq then
-                AuthDBExecute(string.format([[
-                    UPDATE account_raf SET status = 3 WHERE account_id = %d
-                ]], refereeAccountId))
-                
-                local players = GetPlayersInWorld()
-                
-                -- Send message to the referred player (referee) if they're online
-                for _, player in ipairs(players) do
-                    if player:GetAccountId() == refereeAccountId then
-						message = "Twiggy: Congratulations, you've qualified for your referee reward! You have earned ".. TokenReward .." ".. TokenName.. " and a special reward, speak to me to claim it."
-						SendPurpleBroadcast(player, message)
-						player:AddItem(TokenID, TokenReward)
-                        RAFreferee[refereeAccountId] = nil
-                        break
-                    end
-                end
-                
-                -- Check referer's status 1 second after changing entry in DB, to allow for time to update
-				CreateLuaEvent(function()
-					local players = GetPlayersInWorld()
-					local query2 = AuthDBQuery(string.format([[
-						SELECT COUNT(*) as count FROM account_raf WHERE referer_id = %d AND status > 2
-					]], refererId))
+			if query then
+				local progress = query:GetUInt32(0)
+				local refererId = query:GetUInt32(1)
+				
+				if progress >= RAFRewardReq then
+					AuthDBExecute(string.format([[
+						UPDATE account_raf SET status = 3 WHERE account_id = %d
+					]], refereeAccountId))
 					
-					if query2 then
-						AuthDBExecute(string.format([[
-							UPDATE account_raf SET status = 4 WHERE account_id = %d
-						]], refereeAccountId))
-						local referralCount = query2:GetUInt32(0)
-						print("referral count is "..referralCount)
-						local message = ""
-						
-						if referralCount == 1 then
-							message = "Twiggy: Congratulations! Your first referral with ID ".. refereeAccountId .." has qualified for Refer a Friend rewards! Your first special reward is ".. TokenReward .." ".. TokenName.. ", speak with me to claim it."
-						elseif referralCount == RewardTier1 or referralCount == RewardTier2 or referralCount == RewardTier3 or referralCount == RewardTier4 then
-							message = "Twiggy: Your referee with ID ".. refereeAccountId .." has fulfilled the the requirements to earn you another special Refer a Friend reward of your choice! You have earned ".. TokenReward .." ".. TokenName.. " and a special reward, speak with me to claim it."
-						else
-							message = "Twiggy: Congratulations! Your referee with ID ".. refereeAccountId .." has qualified for Refer a Friend rewards! You have earned ".. TokenReward .." ".. TokenName.. ". Check in with me any time to see how your referrals are going."
-						end
-						
-						-- Send message to the referer if they're online
-						for _, player in ipairs(players) do
-							if player:GetAccountId() == refererId then
-								SendPurpleBroadcast(player, message)
-								refererOnline = true
-								break
-							end
-						end
-						if not refererOnline then
-							local charactersQuery = CharDBQuery(string.format([[
-								SELECT guid, name FROM characters WHERE account = %d
-							]], refererId))
-							if charactersQuery then
-								repeat
-									local charGUIDLow = charactersQuery:GetUInt32(0)
-									local charName = charactersQuery:GetString(1)
-									-- Create and send mail to each character
-									local subject = "Refer a Friend Reward"
-									if referralCount == 0 then
-										body = "Dear ".. charName .."! I bear happy news!\n\nYour first referral with ID ".. refereeAccountId .." has qualified for Refer a Friend rewards! You first special reward is ".. TokenReward .." ".. TokenName.. ", speak with me to claim it.\n\nYour personal branch of Yggdrasil,\nTwiggy"
-									elseif referralCount == RewardTier1 or referralCount == RewardTier2 or referralCount == RewardTier3 or referralCount == RewardTier4 then
-										body = "Dear ".. charName .."! I bear happy news!\n\nYour referee with ID ".. refereeAccountId .." has fulfilled the the requirements to earn you another special Refer a Friend reward of your choice! You have earned ".. TokenReward .." ".. TokenName.. " and a special reward, speak with me to claim it.\n\nYour personal branch of Yggdrasil,\nTwiggy"
-									else
-										body = "Dear ".. charName .."! I bear happy news!\n\nCongratulations! Your referee with ID ".. refereeAccountId .." has qualified for Refer a Friend rewards! You have earned ".. TokenReward .." ".. TokenName.. ". Check in with me any time to see how your referrals are going.\n\nYour personal branch of Yggdrasil,\nTwiggy"
-									end
-									-- Send mail to the character
-									SendMail(subject, body, charGUIDLow, 0, 61)
-								until not charactersQuery:NextRow()
-							end
+					local players = GetPlayersInWorld()
+					
+					-- Send message to the referred player (referee) if they're online
+					for _, player in ipairs(players) do
+						if player:GetAccountId() == refereeAccountId then
+							message = "Twiggy: Congratulations, you've qualified for your referee reward! You have earned ".. TokenReward .." ".. TokenName.. " and a special reward, speak to me to claim it."
+							SendPurpleBroadcast(player, message)
+							player:AddItem(TokenID, TokenReward)
+							RAFreferee[refereeAccountId] = nil
+							break
 						end
 					end
-				end, 1000, 1)  -- 1000 milliseconds = 1 second
-            end
-        end
+					
+					-- Check referer's status 1 second after changing entry in DB, to allow for time to update
+					CreateLuaEvent(function()
+						local players = GetPlayersInWorld()
+						AuthDBQueryAsync(string.format([[
+							SELECT COUNT(*) as count FROM account_raf WHERE referer_id = %d AND status > 2
+						]], refererId), function(query2)
+						
+							if query2 then
+								AuthDBExecute(string.format([[
+									UPDATE account_raf SET status = 4 WHERE account_id = %d
+								]], refereeAccountId))
+								local referralCount = query2:GetUInt32(0)
+								print("referral count is "..referralCount)
+								local message = ""
+								
+								if referralCount == 1 then
+									message = "Twiggy: Congratulations! Your first referral with ID ".. refereeAccountId .." has qualified for Refer a Friend rewards! Your first special reward is ".. TokenReward .." ".. TokenName.. ", speak with me to claim it."
+								elseif referralCount == RewardTier1 or referralCount == RewardTier2 or referralCount == RewardTier3 or referralCount == RewardTier4 then
+									message = "Twiggy: Your referee with ID ".. refereeAccountId .." has fulfilled the the requirements to earn you another special Refer a Friend reward of your choice! You have earned ".. TokenReward .." ".. TokenName.. " and a special reward, speak with me to claim it."
+								else
+									message = "Twiggy: Congratulations! Your referee with ID ".. refereeAccountId .." has qualified for Refer a Friend rewards! You have earned ".. TokenReward .." ".. TokenName.. ". Check in with me any time to see how your referrals are going."
+								end
+								
+								-- Send message to the referer if they're online
+								for _, player in ipairs(players) do
+									if player:GetAccountId() == refererId then
+										SendPurpleBroadcast(player, message)
+										refererOnline = true
+										break
+									end
+								end
+								if not refererOnline then
+									CharDBQueryAsync(string.format([[SELECT guid, name FROM characters WHERE account = %d]], refererId), function(charactersQuery)
+										if charactersQuery then
+											repeat
+												local charGUIDLow = charactersQuery:GetUInt32(0)
+												local charName = charactersQuery:GetString(1)
+												-- Create and send mail to each character
+												local subject = "Refer a Friend Reward"
+												if referralCount == 0 then
+													body = "Dear ".. charName .."! I bear happy news!\n\nYour first referral with ID ".. refereeAccountId .." has qualified for Refer a Friend rewards! You first special reward is ".. TokenReward .." ".. TokenName.. ", speak with me to claim it.\n\nYour personal branch of Yggdrasil,\nTwiggy"
+												elseif referralCount == RewardTier1 or referralCount == RewardTier2 or referralCount == RewardTier3 or referralCount == RewardTier4 then
+													body = "Dear ".. charName .."! I bear happy news!\n\nYour referee with ID ".. refereeAccountId .." has fulfilled the the requirements to earn you another special Refer a Friend reward of your choice! You have earned ".. TokenReward .." ".. TokenName.. " and a special reward, speak with me to claim it.\n\nYour personal branch of Yggdrasil,\nTwiggy"
+												else
+													body = "Dear ".. charName .."! I bear happy news!\n\nCongratulations! Your referee with ID ".. refereeAccountId .." has qualified for Refer a Friend rewards! You have earned ".. TokenReward .." ".. TokenName.. ". Check in with me any time to see how your referrals are going.\n\nYour personal branch of Yggdrasil,\nTwiggy"
+												end
+												-- Send mail to the character
+												SendMail(subject, body, charGUIDLow, 0, 61)
+											until not charactersQuery:NextRow()
+										end
+									end)
+								end
+							end
+						end)
+					end, 1000, 1)  -- 1000 milliseconds = 1 second
+				end
+			end
+		end)
     end
 end
 
