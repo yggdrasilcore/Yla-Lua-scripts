@@ -321,39 +321,40 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
     end
 	if intid > 997 or intid < 997 then
 		if familyNames[intid] then
-			-- This is the main menu, intid is the family ID
 			local guid = player:GetGUIDLow()
-			local results = CharDBQuery("SELECT name, id FROM character_morphs WHERE guid = "..guid.." AND form = "..intid)
+			local playername = player:GetName()
+			CharDBQueryAsync("SELECT name, id FROM character_morphs WHERE guid = "..guid.." AND form = "..intid, function(results)
 			chosenFamily = intid
+			player = GetPlayerByName(playername)
+			
+				if results then
+					player:GossipClearMenu()
+					
+					local nameCounts = {}
 
-			if results then
-				player:GossipClearMenu()
-				
-				-- Table to count occurrences of each name
-				local nameCounts = {}
-
-				repeat
-					local name = results:GetString(0)
-					local displayId = results:GetUInt32(1)
+					repeat
+						local name = results:GetString(0)
+						local displayId = results:GetUInt32(1)
+						
+						-- Increment the count for this name
+						nameCounts[name] = (nameCounts[name] or 0) + 1
+						local displayName = name
+						
+						-- Append count if there are duplicates
+						if nameCounts[name] > 1 then
+							displayName = name .. " " .. nameCounts[name] .. ""
+						end
+						
+						player:GossipMenuAddItem(0, displayName, 0, displayId)
+					until not results:NextRow()
 					
-					-- Increment the count for this name
-					nameCounts[name] = (nameCounts[name] or 0) + 1
-					local displayName = name
-					
-					-- Append count if there are duplicates
-					if nameCounts[name] > 1 then
-						displayName = name .. " " .. nameCounts[name] .. ""
-					end
-					
-					player:GossipMenuAddItem(0, displayName, 0, displayId)
-				until not results:NextRow()
-				
-				player:GossipMenuAddItem(4, "Go back", 0, 999)
-				player:GossipSendMenu(1, object, 99)  -- Use the same gossip event ID for the submenu
-			else
-				player:SendAreaTriggerMessage("You don't have any morphs for this demon!")
-				OnPlayerGossipHello(player, object)
-			end
+					player:GossipMenuAddItem(4, "Go back", 0, 999)
+					player:GossipSendMenu(1, player, 99)  -- Use the same gossip event ID for the submenu
+				else
+					player:SendAreaTriggerMessage("You don't have any morphs for this demon!")
+					OnPlayerGossipHello(player, player)
+				end
+			end)
 		else
 			-- This is the submenu, intid is the display ID
 			local guid = player:GetGUIDLow()
@@ -579,10 +580,6 @@ local function OnReloadEluna(event)
 						end
 
 					until not result:NextRow()
-
-					print("reload eluna morphs loaded")
-				else
-					print("reload eluna error loading morphs")
 				end
 			end)
 		end
