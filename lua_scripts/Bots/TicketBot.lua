@@ -14,53 +14,41 @@ local function SendToDiscord(message)
     end)
 end
 
--- Function to check new GM tickets
 local function OnTicketOpen()
 	print("Opcode 0x206 registered!")
     CreateLuaEvent(function()
-    local queryResult = CharDBQuery("SELECT id, name, description, closedBy, viewed, type FROM gm_ticket WHERE viewed = 0 AND type = 0")
+    CharDBQueryAsync("SELECT id, name, description, closedBy, viewed, type FROM gm_ticket WHERE viewed = 0 AND type = 0", function(queryResult)
 
-    if queryResult then
-        local ticketsToUpdate = {}
+		if queryResult then
+			local ticketsToUpdate = {}
 
-        repeat
-            local id = queryResult:GetUInt32(0)
-            local name = queryResult:GetString(1)
-            local description = queryResult:GetString(2)
-            local closedBy = queryResult:GetInt32(3)  -- Using GetInt32 for signed integer
-            local viewed = queryResult:GetUInt8(4)    -- Using GetUInt8 for unsigned tinyint
+			repeat
+				local id = queryResult:GetUInt32(0)
+				local name = queryResult:GetString(1)
+				local description = queryResult:GetString(2)
+				local closedBy = queryResult:GetInt32(3)
+				local viewed = queryResult:GetUInt8(4)
+				
+				if not idClosed[id] then
+					idClosed[id] = true
 
-            -- Detailed logging of retrieved ticket
-            --print(string.format("Retrieved ticket ID: %d, Name: %s, Description: %s, ClosedBy: %d", id, name, description, closedBy))
+					SendToDiscord(string.format("**New in-game GM Ticket! ID: %d.** \\nName: %s. \\nDescription: %s", 
+						id, name, description))
+					table.insert(ticketsToUpdate, id)
+				end
+			until not queryResult:NextRow()
 
-            -- If the ticket ID is not in the idClosed table, process it
-            if not idClosed[id] then
-                idClosed[id] = true
-
-                SendToDiscord(string.format("**New in-game GM Ticket! ID: %d.** \\nName: %s. \\nDescription: %s", 
-                    id, name, description))
-
-                -- Add the ID to the list of tickets to update
-                table.insert(ticketsToUpdate, id)
-            --else
-                --print("Duplicate ticket ID: " .. id .. " detected.")
-            end
-        until not queryResult:NextRow()
-
-        -- Update the viewed status of processed tickets
-        if #ticketsToUpdate > 0 then
-            for _, id in ipairs(ticketsToUpdate) do
-                print("Updating ticket ID: " .. id .. " to viewed.")
-                CharDBExecute("UPDATE gm_ticket SET viewed = 1 WHERE id = " .. id)
-            end
-        --else
-        --    print("No tickets to update.")
-        end
-    --else
-        --print("No new tickets found.")
-    end
+			-- Update the viewed status of processed tickets
+			if #ticketsToUpdate > 0 then
+				for _, id in ipairs(ticketsToUpdate) do
+					print("Updating ticket ID: " .. id .. " to viewed.")
+					CharDBExecute("UPDATE gm_ticket SET viewed = 1 WHERE id = " .. id)
+				end
+			end
+		end
+	end)
         RemoveEventById(1)
-    end, 200, 1)
+    end, 500, 1)
 end
 
 -- Function to handle ticket closing
@@ -91,7 +79,7 @@ local function OnTicketClose(event, player, opcode, packet)
 			end)
 		end
         RemoveEventById(1)
-    end, 1000, 1)
+    end, 5000, 1)
 end
 
 RegisterPacketEvent(0x206, 7, OnTicketOpen)
