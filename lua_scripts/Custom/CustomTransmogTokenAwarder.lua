@@ -4,7 +4,10 @@ local LEVEL_DIFFERENCE = 9
 local MAX_LEVEL = 80
 
 local function OnQuestComplete(event, player, quest)
-    if player:GetLevel() == MAX_LEVEL then
+    if player:GetLevel() == MAX_LEVEL 
+	and not (quest:GetId() == 3503)
+	and not (quest:GetId() == 3421)
+	then
         player:AddItem(TRANSMOG_TOKEN_ID, TRANSMOG_TOKEN_COUNT)
         player:SendBroadcastMessage("You have been awarded a Transmog Token for completing a quest!")
     end
