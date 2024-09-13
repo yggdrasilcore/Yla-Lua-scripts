@@ -834,7 +834,7 @@ local function Morpher(eventId, delay, repeats, player)
 					player:RegisterEvent(HideWeapon, InvisibleWeaponTimer, 2)
 				end
 			end
-		elseif player:HasAura(9634) then -- Bear
+		elseif player:HasAura(9634) or player:HasAura(5487) then -- Bear
 			if not morphSelection1[guid] then
 				local morphdb2 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 2") -- Load active morph status
 				if morphdb2 then 
