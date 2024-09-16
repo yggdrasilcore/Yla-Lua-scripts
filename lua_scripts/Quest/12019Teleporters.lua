@@ -4,7 +4,6 @@ local CHECK_RANGE = 1 -- Range to check for gameobjects and players
 local GAMEOBJECT_ID = 194026 -- The ID of the game object to look for
 local AREA_ID = 4128 -- The area ID where we need to check for players
 local questCompletedPlayers = {} -- Table to store players who completed the quest
-local LastRitesTeleEvent
 
 local function CheckPlayersAndTeleport(eventId, delay, repeats)
     for guid, data in pairs(questCompletedPlayers) do
@@ -36,14 +35,8 @@ local function OnQuestComplete(event, player, quest)
     if quest:GetId() == QUEST_ID then
         local guid = player:GetGUIDLow()
         questCompletedPlayers[guid] = { eventCount = 200 } -- Store the GUID with event count set to 200
-        print("[Quest]: Last Rites teleporter fix - Player "..player:GetName().." just completed quest. Activating teleporters!")
-		if not LastRitesTeleEvent or (LastRitesTeleEvent and not IsGameEventActive(LastRitesTeleEvent)) then
-			if not LastRitesTeleEvent then
-				LastRitesTeleEvent = CreateLuaEvent(CheckPlayersAndTeleport, CHECK_INTERVAL, 200)
-				return
-			end
-			RemoveEventById(LastRitesTeleEvent)
-		end		
+        print("[Quest]: Last Rites teleporter fix - Player with ID "..guid.." just completed quest. Activating teleporters!")
+        CreateLuaEvent(CheckPlayersAndTeleport, CHECK_INTERVAL, 200)
     end
 end
 
