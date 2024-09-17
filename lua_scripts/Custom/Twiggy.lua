@@ -359,7 +359,7 @@ local function VIPmenu(player, creature)
                 player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 1)
                 print("No VIPTIME found for account " .. player:GetAccountId())
             end
-            player:GossipSendMenu(12, creature, 60)
+            player:GossipSendMenu(12, player, 60)
 		end)
 	end
 	if VIPtime[player:GetGUIDLow()] > os.time() then
