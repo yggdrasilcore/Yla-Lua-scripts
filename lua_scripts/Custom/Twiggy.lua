@@ -331,6 +331,35 @@ local function VIPmenu(player, creature)
 			else
 				VIPtime[player:GetGUIDLow()] = os.time()
 			end
+            if VIPtime[player:GetGUIDLow()] > os.time() then
+                local vipTime = VIPtime[player:GetGUIDLow()]
+                local remainingTime = vipTime - os.time()
+
+                if remainingTime >= 86400 then
+                    timeMessage = string.format("%d days left", math.ceil(remainingTime / 86400))
+                elseif remainingTime >= 3600 then
+                    timeMessage = string.format("%d hours left", math.ceil(remainingTime / 3600))
+                elseif remainingTime >= 60 then
+                    timeMessage = string.format("%d minutes left", math.ceil(remainingTime / 60))
+                else
+                    timeMessage = "Less than a minute left"
+                end
+
+                print("VIPTIME for account " .. player:GetAccountId() .. " is: " .. timeMessage)
+                player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_holy_borrowedtime:32:32:-22:0|tVIP status: On (" .. timeMessage .. ")", 0, 2)
+                player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_blacksmithing:32:32:-22:0|tVIP repair", 0, 12)
+                player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_01:32:32:-22:0|tVIP bank", 0, 13)
+                player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_letter_01:32:32:-22:0|tVIP mail", 2, 14)
+                player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_bag_07:32:32:-22:0|tVIP vendor", 0, 17)
+                player:GossipMenuAddItem(4, "|TInterface/ICONS/Racial_dwarf_findtreasure:32:32:-22:0|tVIP auction house", 0, 18)
+                player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 1)
+            else 
+                player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_holy_borrowedtime:32:32:-22:0|tVIP status: Off. Activate VIP?", 0, 20)
+                player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tWhy should I get VIP?", 0, 19)
+                player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 1)
+                print("No VIPTIME found for account " .. player:GetAccountId())
+            end
+            player:GossipSendMenu(12, creature, 60)
 		end)
 	end
 	if VIPtime[player:GetGUIDLow()] > os.time() then
