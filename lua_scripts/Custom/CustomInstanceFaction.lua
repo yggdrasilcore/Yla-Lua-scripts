@@ -13,25 +13,62 @@ local function OnPlayerMapChange(event, player)
 	
 	then
 		if instanceId and instanceId > 0 then
-			if not cachedFaction[instanceId] then
-				for _, otherPlayer in pairs(GetPlayersInWorld()) do
-					if otherPlayer:GetInstanceId() == instanceId and player:GetGUIDLow() ~= otherPlayer:GetGUIDLow() then -- Builds cache if there is none, in the event of an ELUNA reload
-						cachedFaction[instanceId] = otherPlayer:GetFaction()
-						if player:GetFaction() ~= cachedFaction[instanceId] then
-							player:SetFaction(cachedFaction[instanceId])
-						end
-						break
-					end
-				end
-				
-				if not cachedFaction[instanceId] then
-					cachedFaction[instanceId] = player:GetFaction()
-				end
-			else
-				if player:GetFaction() ~= cachedFaction[instanceId] then
-					player:SetFaction(cachedFaction[instanceId])
-				end
-			end
+            if mapId == 631 then
+                player:RegisterEvent(function(eventId, delay, repeats, player)
+                    if player:GetNearestCreature(250, 37190) then -- Sets ICC to ally if ally NPCs present
+                        cachedFaction[instanceId] = 1
+                        player:SetFaction(cachedFaction[instanceId])
+                        print("Ally ICC detected!")
+                    elseif player:GetNearestCreature(250, 37189) then
+                        cachedFaction[instanceId] = 2
+                        player:SetFaction(cachedFaction[instanceId])
+                        print("Horde ICC detected!")
+                    else
+                        print("No ICC faction detected - checking preexisting players...")
+                        if not cachedFaction[instanceId] then
+                            for _, otherPlayer in pairs(GetPlayersInWorld()) do
+                                if otherPlayer:GetInstanceId() == instanceId and player:GetGUIDLow() ~= otherPlayer:GetGUIDLow() then -- Builds cache if there is none, in the event of an ELUNA reload
+                                    cachedFaction[instanceId] = otherPlayer:GetFaction()
+                                    if player:GetFaction() ~= cachedFaction[instanceId] then
+                                        player:SetFaction(cachedFaction[instanceId])
+                                    end
+                                    break
+                                end
+                            end
+                            
+                            if not cachedFaction[instanceId] then
+                                print("No preexisting players detected, setting ICC faction to current player's faction")
+                                cachedFaction[instanceId] = player:GetFaction()
+                            end
+                        else
+                            if player:GetFaction() ~= cachedFaction[instanceId] then
+                                player:SetFaction(cachedFaction[instanceId])
+                            end
+                        end
+                    end
+                    player:RemoveEventById(eventId)
+                end, 500, 1)
+            else
+                if not cachedFaction[instanceId] then
+                    for _, otherPlayer in pairs(GetPlayersInWorld()) do
+                        if otherPlayer:GetInstanceId() == instanceId and player:GetGUIDLow() ~= otherPlayer:GetGUIDLow() then -- Builds cache if there is none, in the event of an ELUNA reload
+                            cachedFaction[instanceId] = otherPlayer:GetFaction()
+                            if player:GetFaction() ~= cachedFaction[instanceId] then
+                                player:SetFaction(cachedFaction[instanceId])
+                            end
+                            break
+                        end
+                    end
+                    
+                    if not cachedFaction[instanceId] then
+                        cachedFaction[instanceId] = player:GetFaction()
+                    end
+                else
+                    if player:GetFaction() ~= cachedFaction[instanceId] then
+                        player:SetFaction(cachedFaction[instanceId])
+                    end
+                end
+            end
 		end
 
     else
