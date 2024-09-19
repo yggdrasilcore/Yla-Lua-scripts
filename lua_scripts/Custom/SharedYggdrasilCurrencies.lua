@@ -30,23 +30,21 @@ local function OnLogin(event, player)
     local accountId = player:GetAccountId()
 	local charguid = player:GetGUIDLow()
 	local charguids = {}
-	local accountCurrencies = {}
 	local itemcount
 	local playername = player:GetName()
     local pendingQueries = 0
-	
-    -- Initialize currency counts for this account
-    accountCurrencies[accountId] = {}
-    for _, currencyId in ipairs(currencies) do
-        accountCurrencies[accountId][currencyId] = 0
-		if player:GetItemCount(currencyId, true) then
-			itemcount = player:GetItemCount(currencyId, true)
-		else
-			itemcount = 0
-		end
-		
-		print(string.format("Character with Yggdrasil currencies logged in. Currency amount before account syncing: Account ID %d, Character GUID %d, Currency %d, Count %d", accountId, charguid, currencyId, itemcount))
-	end
+    local count20880 = 0
+    local count19322 = 0
+    
+    if player:HasItem(20880, 1, true) then
+        count20880 = player:GetItemCount(20880, true)
+    end
+    
+    if player:HasItem(19322, 1, true) then
+        count20880 = player:GetItemCount(20880, true)
+    end
+    
+    print("Character with Yggdrasil currencies logged in. Currency amount before account syncing: Account ID "..accountId..",, Character GUID "..charguid..", Currency 20880, Count "..count20880..". Currency 19322, Count "..count19322)
 
     -- Query to get character GUIDs for the account
     CharDBQueryAsync(string.format("SELECT guid FROM characters WHERE account = %d", accountId), function(query)
@@ -56,48 +54,59 @@ local function OnLogin(event, player)
                 local guid = query:GetUInt32(0)
                 table.insert(charguids[accountId], guid)
             until not query:NextRow()
-			
-			local totalQueries = #charguids[accountId] * #currencies
-            local completedQueries = 0
-			
+            
             -- Query and sum currency counts for all characters in the account, then reset to 0
-            for _, guid in ipairs(charguids[accountId]) do
-                for _, currencyId in ipairs(currencies) do
-                    CharDBQueryAsync(string.format("SELECT SUM(count) FROM item_instance WHERE owner_guid = %d AND itemEntry = %d AND count > 0", guid, currencyId), function(countQuery)
-                        if countQuery then
-                            local count = countQuery:GetUInt32(0) or 0
-                            accountCurrencies[accountId][currencyId] = accountCurrencies[accountId][currencyId] + count
-                            CharDBExecute(string.format("UPDATE item_instance SET count = 0 WHERE owner_guid = %d AND itemEntry = %d", guid, currencyId))
-                        end
-						
-						completedQueries = completedQueries + 1
+            CharDBQueryAsync(string.format([[
+                SELECT 
+                    SUM(CASE WHEN itemEntry = 20880 THEN count ELSE 0 END) as count_20880,
+                    SUM(CASE WHEN itemEntry = 19322 THEN count ELSE 0 END) as count_19322
+                FROM item_instance 
+                WHERE owner_guid IN (%s) AND itemEntry IN (20880, 19322) AND count > 0
+            ]], table.concat(charguids[accountId], ",")), function(countQuery)
+                if countQuery then
+                    count20880 = countQuery:GetUInt32(0) or 0
+                    count19322 = countQuery:GetUInt32(1) or 0
+                    
+                    if count20880 > 0 or count19322 > 0 then                       
+                        player = GetPlayerByName(playername)
                         
-                        if completedQueries == totalQueries then
-                            player = GetPlayerByName(playername)
-                            for _, currencyId in ipairs(currencies) do
-                                itemcount = player:GetItemCount(currencyId, true) or 0
-                                if itemcount > 0 then
-									print(string.format("Currencies after consolidating: Account ID %d, Character GUID %d, Currency %d, Count %d", accountId, charguid, currencyId, itemcount))
-								end
-								
-                                local count = accountCurrencies[accountId][currencyId]
-								
-								if count > 0 then
-									print(string.format("Account ID %d has %d of currency %d", accountId, count, currencyId))
-								end
-								
-                                player:RemoveItem(currencyId, player:GetItemCount(currencyId, true))
-                                player:AddItem(currencyId, count)
-                                CharDBExecute(string.format("UPDATE item_instance SET count = %d WHERE owner_guid = %d AND itemEntry = %d", count, charguid, currencyId))
-                                
-								if count > 0 then 
-									print(string.format("Currencies after updating inactive characters: Account ID %d, Character GUID %d, Currency %d, Count %d", accountId, charguid, currencyId, count))
-								end
-							end
+                        if count20880 > 0 or count19322 > 0 then
+                            local guidString = table.concat(charguids[accountId], ",")
+                            
+                            if count20880 > 0 and count19322 == 0 then
+                                CharDBExecute("UPDATE item_instance SET count = 0 WHERE owner_guid IN ("..guidString..") AND itemEntry = 20880")
+                            elseif count20880 == 0 and count19322 > 0 then
+                                CharDBExecute("UPDATE item_instance SET count = 0 WHERE owner_guid IN ("..guidString..") AND itemEntry = 19322")
+                            else
+                                CharDBExecute("UPDATE item_instance SET count = 0 WHERE owner_guid IN ("..guidString..") AND itemEntry IN (20880, 19322)")
+                            end
                         end
-                    end)
+                        
+                        if count20880 > 0 and count19322 == 0 then
+                            print("Currencies after consolidating: Account ID "..accountId..", Character GUID "..charguid..", Currency 20880, Count "..count20880)
+                            player:RemoveItem(20880, player:GetItemCount(20880, true))
+                            player:AddItem(20880, count20880)
+                            CharDBExecute("UPDATE item_instance SET count = "..count20880.." WHERE owner_guid = "..charguid.." AND itemEntry = 20880")
+                            print("Currencies after updating inactive characters: Account ID "..accountId..", Character GUID "..charguid..", Currency 20880, Count "..player:GetItemCount(20880, true))
+                        elseif count20880 == 0 and count19322 > 0 then
+                            print("Currencies after consolidating: Account ID "..accountId..", Character GUID "..charguid..", Currency 19322, Count "..count19322)
+                            player:RemoveItem(19322, player:GetItemCount(19322, true))
+                            player:AddItem(19322, count19322)
+                            CharDBExecute("UPDATE item_instance SET count = "..count19322.." WHERE owner_guid = "..charguid.." AND itemEntry = 19322")
+                            print("Currencies after updating inactive characters: Account ID "..accountId..", Character GUID "..charguid..", Currency 19322, Count "..player:GetItemCount(19322, true))
+                        else
+                            print("Currencies after consolidating: Account ID "..accountId..", Character GUID "..charguid..", Currency 20880, Count "..count20880..", Currency 19322, Count "..count19322)
+                            player:RemoveItem(19322, player:GetItemCount(19322, true))
+                            player:RemoveItem(20880, player:GetItemCount(20880, true))
+                            player:AddItem(19322, count19322)
+                            player:AddItem(20880, count20880)
+                            CharDBExecute("UPDATE item_instance SET count = "..count19322.." WHERE owner_guid = "..charguid.." AND itemEntry = 19322")
+                            CharDBExecute("UPDATE item_instance SET count = "..count20880.." WHERE owner_guid = "..charguid.." AND itemEntry = 20880")
+                            print("Currencies after updating inactive characters: Account ID "..accountId..", Character GUID "..charguid..", Currency 20880, Count "..player:GetItemCount(20880, true)..", Currency 19322, Count "..player:GetItemCount(19322, true))                        
+                        end
+                    end
                 end
-            end
+            end)
         end
     end)
 	
