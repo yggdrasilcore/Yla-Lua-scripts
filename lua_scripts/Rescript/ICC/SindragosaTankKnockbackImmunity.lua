@@ -47,7 +47,7 @@ local function CombatCheck(eventId, delay, repeats, player)
 end
 
 local function OnSindyCombat(event, player, enemy)
-	if enemy:GetEntry() == Sindragosa_ID then
+	if enemy and enemy:GetEntry() == Sindragosa_ID then
 		if not SindyEvent[player:GetName()] then
 			player:RegisterEvent(CombatCheck, COMBAT_START_EVENT_INTERVAL, 0)
 			SindyEvent[player:GetName()] = true

@@ -1,5 +1,5 @@
 local function OnEnterCombat(event, player, enemy)
-	if enemy:GetEntry() == 34133 then
+	if enemy and enemy:GetEntry() == 34133 then
 		
 		print("hodir combat trash ok!")
 

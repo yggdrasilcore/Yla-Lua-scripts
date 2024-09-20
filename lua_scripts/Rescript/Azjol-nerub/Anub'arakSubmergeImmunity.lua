@@ -37,8 +37,8 @@ local function CheckCreatureHP(eventId, delay, repeats, player)
 end
 
 local function AnubCombat(event, player, enemy)
-    local playerGuid = player:GetGUID()
-	if enemy:GetEntry() == ANUB_ID then
+	if enemy and enemy:GetEntry() == ANUB_ID then
+        local playerGuid = player:GetGUID()
 		if not playerTimers[playerGuid] then
 			playerTimers[playerGuid] = true
 			player:RegisterEvent(CheckCreatureHP, CHECK_INTERVAL, 0)

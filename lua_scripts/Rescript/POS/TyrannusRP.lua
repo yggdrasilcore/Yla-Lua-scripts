@@ -1,5 +1,5 @@
 local function POSCombat(event, player, enemy)
-	if enemy:GetEntry() == 36877 then -- Wrathbone skeletons in cave
+	if enemy and enemy:GetEntry() == 36877 then -- Wrathbone skeletons in cave
 		local Tyrannus = player:GetNearestCreature(150, 36658, 0, 1)
 		local Rimefang = player:GetNearestCreature(150, 36661)
 		
