@@ -1,5 +1,5 @@
-local EVENT_INTERVAL_MIN = 5 * 60 * 1000  -- 5 minutes in milliseconds
-local EVENT_INTERVAL_MAX = 15 * 60 * 1000 -- 15 minutes in milliseconds
+local EVENT_INTERVAL_MIN = 10 * 60 * 1000  -- 5 minutes in milliseconds
+local EVENT_INTERVAL_MAX = 20 * 60 * 1000 -- 15 minutes in milliseconds
 local SPAWN_NPC_ID = 32838
 local SPELL_ID_1 = 51347
 local SPELL_ID_2 = 61995
@@ -63,7 +63,7 @@ local function BonkTime(eventId, delay, repeats)
 				chosenPlayer = GetPlayerByName(targetplayer)
 				if chosenPlayer then
 					npc:EmoteState(11) -- laugh
-					npc:SetFaction(900)
+					npc:SetFaction(679)
 				end
 			end, 12500, 1)
 			
