@@ -26,13 +26,13 @@ function NPC_OnSpawn(event, creature)
     creature:SetSpeed(1,1.15)
     creature:SetReactState(0)
     creature:MoveTo(1, creature:GetX(), creature:GetY(), Z_COORD + math.random(-Z_VARIANCE, Z_VARIANCE))
-    print("[NPC]: Vile Spirit Fix - Spawned NPC and called move up!")
+    --print("[NPC]: Vile Spirit Fix - Spawned NPC and called move up!")
     
     creature:RegisterEvent(NPC_Wander, CLIMB_DURATION, 1)
 end
 
 function NPC_Wander(event, delay, pCall, creature)
-    print("[NPC]: Vile Spirit Fix - Wander initiated!")
+    --print("[NPC]: Vile Spirit Fix - Wander initiated!")
     
     creature:MoveRandom(WANDER_RADIUS)
     
@@ -48,12 +48,12 @@ function NPC_StartChasing(event, delay, pCall, creature)
 end
 
 function NPC_CheckExplode(event, delay, pCall, creature)
-    print("[NPC]: Vile Spirit Fix - Explosion check initiated!")
+    --print("[NPC]: Vile Spirit Fix - Explosion check initiated!")
     
     local nearestPlayerExplosion = creature:GetNearestPlayer(EXPLOSION_RADIUS)
     
     if nearestPlayerExplosion then
-        print("[NPC]: Vile Spirit Fix - Spirit in explosion range!")
+        --print("[NPC]: Vile Spirit Fix - Spirit in explosion range!")
         creature:CastSpell(nearestPlayerExplosion, SPELL_ID, true)
         creature:DespawnOrUnsummon()
         creature:RemoveEvents()
@@ -71,7 +71,7 @@ function NPC_CheckProximity(event, delay, pCall, creature)
             moveY = nearestPlayer:GetY()
             moveZ = nearestPlayer:GetZ()
             creature:MoveTo(2, moveX, moveY, moveZ)
-            print("[NPC]: Vile Spirit Fix - Chasing target!")
+            --print("[NPC]: Vile Spirit Fix - Chasing target!")
         end
     end
 end
