@@ -804,7 +804,7 @@ local function HideWeapon(eventId, delay, repeats, player)
 		if repetitionCount[guid] >= MAX_REPETITIONS then
 			player:RemoveEventById(eventId)
 			repetitionCount[guid] = nil
-			print("[Druid Morph Module]: Removed hide weapon event for player: " .. player:GetName())
+			--print("[Druid Morph Module]: Removed hide weapon event for player: " .. player:GetName())
 		end
     else
 		RemoveEventById(eventId)
@@ -816,7 +816,7 @@ local function Morpher(eventId, delay, repeats, player)
 		local guid = player:GetGUIDLow()
 		
 		if player:HasAura(71561) or player:HasAura(71484) or player:HasAura(71560) or player:HasAura(71556) or player:HasAura(71485) or player:HasAura(71492) then 
-			print("[Druid Morph Module]: DBW stopped morph for "..player:GetName())
+			--print("[Druid Morph Module]: DBW stopped morph for "..player:GetName())
 		
 		elseif player:HasAura(3025) then -- Cat
 			if not morphSelection1[guid] then
@@ -827,7 +827,7 @@ local function Morpher(eventId, delay, repeats, player)
 			end
 			if morphSelection1[guid] and morphSelection1[guid] > 0 then
 				player:SetDisplayId(morphSelection1[guid])
-				print("[Druid Morph Module]: Morpher - Setting cat form of "..player:GetName().." to display ID "..morphSelection1[guid])
+				--print("[Druid Morph Module]: Morpher - Setting cat form of "..player:GetName().." to display ID "..morphSelection1[guid])
 				if player:IsInCombat() then
 					player:RegisterEvent(HideWeapon, InvisibleWeaponTimer, 1)
 				elseif not player:IsInCombat() then
@@ -844,7 +844,7 @@ local function Morpher(eventId, delay, repeats, player)
 			if morphSelection2[guid] then
 				if morphSelection2[guid] > 0 then
 					player:SetDisplayId(morphSelection2[guid])
-					print("[Druid Morph Module]: Morpher - Setting bear form of "..player:GetName().." to display ID "..morphSelection2[guid])
+					--print("[Druid Morph Module]: Morpher - Setting bear form of "..player:GetName().." to display ID "..morphSelection2[guid])
 				end
 			end
 		elseif player:HasAura(783) then -- Travel
@@ -852,7 +852,7 @@ local function Morpher(eventId, delay, repeats, player)
 				local morphdb3 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 3") -- Load active morph status
 				if morphdb3 then 
 					morphSelection3[guid] = morphdb3:GetUInt32(0)
-					print("[Druid Morph Module]: Morpher - Setting travel form of "..player:GetName().." to display ID "..morphSelection3[guid])
+					--print("[Druid Morph Module]: Morpher - Setting travel form of "..player:GetName().." to display ID "..morphSelection3[guid])
 				end
 			end
 			if morphSelection3[guid] then
@@ -881,7 +881,7 @@ local function Morpher(eventId, delay, repeats, player)
 			if morphSelection4[guid] then
 				if morphSelection4[guid] > 0 then
 					player:SetDisplayId(morphSelection4[guid])
-					print("[Druid Morph Module]: Morpher - Setting flight form of "..player:GetName().." to display ID "..morphSelection4[guid])
+					--print("[Druid Morph Module]: Morpher - Setting flight form of "..player:GetName().." to display ID "..morphSelection4[guid])
 				end
 			end
 		elseif player:HasAura(33891) then -- Tree
@@ -894,7 +894,7 @@ local function Morpher(eventId, delay, repeats, player)
 			if morphSelection5[guid] then
 				if morphSelection5[guid] > 0 then
 					player:SetDisplayId(morphSelection5[guid])
-					print("[Druid Morph Module]: Morpher - Setting tree form of "..player:GetName().." to display ID "..morphSelection5[guid])
+					--print("[Druid Morph Module]: Morpher - Setting tree form of "..player:GetName().." to display ID "..morphSelection5[guid])
 				end
 			end
 		elseif player:HasAura(24858) then -- Boomkin
@@ -907,7 +907,7 @@ local function Morpher(eventId, delay, repeats, player)
 			if morphSelection6[guid] then
 				if morphSelection6[guid] > 0 then
 					player:SetDisplayId(morphSelection6[guid])
-					print("[Druid Morph Module]: Morpher - Setting boomkin form of "..player:GetName().." to display ID "..morphSelection6[guid])
+					--print("[Druid Morph Module]: Morpher - Setting boomkin form of "..player:GetName().." to display ID "..morphSelection6[guid])
 				end
 			end
 		elseif player:HasAura(1066) then -- Aquatic
@@ -920,7 +920,7 @@ local function Morpher(eventId, delay, repeats, player)
 			if morphSelection7[guid] then
 				if morphSelection7[guid] > 0 then
 					player:SetDisplayId(morphSelection7[guid])
-					print("[Druid Morph Module]: Morpher - Setting aquatic form of "..player:GetName().." to display ID "..morphSelection7[guid])
+					--print("[Druid Morph Module]: Morpher - Setting aquatic form of "..player:GetName().." to display ID "..morphSelection7[guid])
 				end
 			end
 		end
