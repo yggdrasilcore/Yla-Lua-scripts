@@ -45,55 +45,20 @@ local instanceData = {
   --  [600] = {name = "Drak'Tharon Keep", size = 5},
   --  [601] = {name = "Azjol-Nerub", size = 5},
   --  [602] = {name = "Halls of Lightning", size = 5},
-  --  [603] = {name = "Ulduar", size = 5},
+    [603] = {name = "Ulduar", size = 5},
   --  [604] = {name = "Gundrak", size = 5},
   --  [608] = {name = "Violet Hold", size = 5},
     [615] = {name = "The Obsidian Sanctum", size = 25},
     [616] = {name = "The Eye of Eternity", size = 25},
     [624] = {name = "Vault of Archavon", size = 25},
     [631] = {name = "Icecrown Citadel", size = 25},
- --   [632] = {name = "The Forge of Souls", size = 5},
+  --  [632] = {name = "The Forge of Souls", size = 5},
   --  [649] = {name = "Trial of the Crusader", size = 5},
     [650] = {name = "Trial of the Champion", size = 25},
   --  [658] = {name = "Pit of Saron", size = 5},
   --  [668] = {name = "Halls of Reflection", size = 5},
     [724] = {name = "The Ruby Sanctum", size = 25}
 }
-
-
-
-local Q = WorldDBQuery(string.format("SELECT * FROM creature_template WHERE entry=%d", NPC_ID))
-
-local createnpc = string.format([[
-    INSERT INTO `creature_template` (
-        `entry`, `difficulty_entry_1`, `difficulty_entry_2`, `difficulty_entry_3`, `KillCredit1`, `KillCredit2`, 
-        `name`, `subname`, `IconName`, `gossip_menu_id`, `minlevel`, `maxlevel`, `exp`, `faction`, `npcflag`, `speed_walk`, 
-        `speed_run`, `speed_swim`, `speed_flight`, `detection_range`, `scale`, `rank`, `dmgschool`, `DamageModifier`, 
-        `BaseAttackTime`, `RangeAttackTime`, `BaseVariance`, `RangeVariance`, `unit_class`, `unit_flags`, `unit_flags2`, 
-        `dynamicflags`, `family`, `trainer_type`, `trainer_spell`, `trainer_class`, `trainer_race`, `type`, `type_flags`, 
-        `lootid`, `pickpocketloot`, `skinloot`, `PetSpellDataId`, `VehicleId`, `mingold`, `maxgold`, `AIName`, `MovementType`, 
-        `HoverHeight`, `HealthModifier`, `ManaModifier`, `ArmorModifier`, `ExperienceModifier`, `RacialLeader`, `movementId`, 
-        `RegenHealth`, `mechanic_immune_mask`, `spell_school_immune_mask`, `flags_extra`, `ScriptName`, `VerifiedBuild`
-    ) VALUES (
-        %d, 0, 0, 0, 0, 0, 'Ethereal Eraser', 'Raid Resetter', '', 0, 80, 80, 0, 35, 1, 1, 1.14286, 1, 1, 20, 0.7, 3, 
-        0, 0, 0, 0, 1, 1, 1, 0, 2048, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, '', 1, 1, 1, 0, 0, 1, 0, 0, 0, 
-        0, 0, 0, '', 0
-    )
-]], NPC_ID)
-
-local createmodel = string.format([[INSERT INTO `creature_template_model` (`CreatureID`, `Idx`, `CreatureDisplayID`, `DisplayScale`, `Probability`, `VerifiedBuild`) VALUES (
-        %d, 0, %d, 0.25, 1, 0
-    )
-]], NPC_ID, model_ID)
-
-local updatemodel = string.format("UPDATE `creature_template_model` SET `CreatureDisplayID` = %d WHERE `CreatureID` = %d", model_ID, NPC_ID)
-
-
-if not Q then
-    WorldDBExecute(createnpc)
-    WorldDBExecute(createmodel)
-    WorldDBExecute(updatemodel)
-end
 
 local function GetSavedInstanceLockouts(player)
     local guid = player:GetGUIDLow()
