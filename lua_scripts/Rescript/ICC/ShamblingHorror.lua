@@ -8,14 +8,12 @@ local function RemoveImmunity(eventid, delay, repeats, creature)
     creature:RemoveAura(52165)
     creature:RemoveAura(29230)
 	creature:ClearUnitState(1)
-	print("[NPC]: Shambling Horror - Animation fix, immunity aura removed!")
 end
 
 local function OnNPCSpawn(event, creature)
 	creature:AddUnitState(1)
 	creature:AddAura(52165, creature)
 	creature:AddAura(29230, creature)
-	print("[NPC]: Shambling Horror - Animation fix, immunity aura added!")
     creature:PerformEmote(449) -- Crawl animation
 	creature:RegisterEvent(RemoveImmunity, 4200, 1)
 end
