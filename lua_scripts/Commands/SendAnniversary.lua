@@ -27,7 +27,7 @@ local function SendAnniversary(event, player, command)
     local receiverGUIDLow = targetPlayer:GetGUIDLow()
     local targetName = targetPlayer:GetName()
 
-    local subject = "Half Year Anniversary gift from staff"
+    local subject = "6 Month Anniversary Gift from Staff"
     local body = string.format([[Greetings, %s!
 
 This month, the server turns 6 months, and we would like to include you in the half-year anniversary. Thank you for all the hard work you are doing by being an active player and member of our community. You are an integral part of our journey and we hope that you will take part in our continued growth as well.
