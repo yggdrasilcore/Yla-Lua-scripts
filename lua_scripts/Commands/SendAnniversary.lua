@@ -9,8 +9,10 @@ local function SendAnniversary(event, player, command)
         return
     end
     
-    if not args[2] then
-        player:SendBroadcastMessage("Usage: .sendanniversary <playername>")
+    if not args[2] or (player:GetGMRank() < 3) then
+        if player:GetGMRank() > 2 then
+            player:SendBroadcastMessage("Usage: .sendanniversary <playername>")
+        end
         return false
     end
 
