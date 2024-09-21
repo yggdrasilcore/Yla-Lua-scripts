@@ -18,18 +18,19 @@ local function OnPlayerMapChange(event, player)
                     if player:GetNearestCreature(250, 37190) then -- Sets ICC to ally if ally NPCs present
                         cachedFaction[instanceId] = 1
                         player:SetFaction(cachedFaction[instanceId])
-                        print("Ally ICC detected!")
+                        print("ICC, instance ID "..instanceId..": Ally ICC detected!")
                     elseif player:GetNearestCreature(250, 37189) then
                         cachedFaction[instanceId] = 2
                         player:SetFaction(cachedFaction[instanceId])
-                        print("Horde ICC detected!")
+                        print("ICC, instance ID "..instanceId..": Horde ICC detected!")
                     else
-                        print("No ICC faction detected - checking preexisting players...")
+                        print("ICC, instance ID "..instanceId..": No ICC faction detected - checking preexisting players...")
                         if not cachedFaction[instanceId] then
                             for _, otherPlayer in pairs(GetPlayersInWorld()) do
                                 if otherPlayer:GetInstanceId() == instanceId and player:GetGUIDLow() ~= otherPlayer:GetGUIDLow() then -- Builds cache if there is none, in the event of an ELUNA reload
                                     cachedFaction[instanceId] = otherPlayer:GetFaction()
                                     if player:GetFaction() ~= cachedFaction[instanceId] then
+                                        print("ICC, instance ID "..instanceId..": Cached faction found, setting player faction to "..cachedFaction[instanceId])
                                         player:SetFaction(cachedFaction[instanceId])
                                     end
                                     break
@@ -37,7 +38,7 @@ local function OnPlayerMapChange(event, player)
                             end
                             
                             if not cachedFaction[instanceId] then
-                                print("No preexisting players detected, setting ICC faction to current player's faction")
+                                print("ICC, instance ID "..instanceId..": No preexisting players detected, setting ICC faction to current player's faction")
                                 cachedFaction[instanceId] = player:GetFaction()
                             end
                         else
