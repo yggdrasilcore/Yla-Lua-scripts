@@ -62,7 +62,7 @@ local function insertIntoDatabase(headline, content)
     local sanitized_content = sanitizeString(content)
 
     local query = string.format([[
-        INSERT INTO articles 
+        INSERT IGNORE INTO articles 
         (id, timestamp, author_id, comments, type, type_content, headline, content)
         VALUES 
         (%d, %d, 4, -1, 1, '%s', '%s', '%s');
