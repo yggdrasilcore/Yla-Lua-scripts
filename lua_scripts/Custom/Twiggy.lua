@@ -301,7 +301,21 @@ local function ShowCategoryContents(player, creature, category, page)
     for entry, name in pairs(cache) do
         itemCount = itemCount + 1
         if itemCount >= startIndex and itemCount <= endIndex then
-            player:GossipMenuAddItem(4, name, 0, 999)
+            if cache == catCache then
+                player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_catform:32:32:-22:0|t" .. name, 0, 999)
+            elseif cache == bearCache then
+                player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_racial_bearform:32:32:-22:0|t" .. name, 0, 999)
+            elseif cache == travelCache then
+                player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_travelform:32:32:-22:0|t" .. name, 0, 999)
+            elseif cache == flightCache then
+                player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_flightform:32:32:-22:0|t" .. name, 0, 999)
+            elseif cache == treeCache then
+                player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_treeoflife:32:32:-22:0|t" .. name, 0, 999)
+            elseif cache == owlCache then
+                player:GossipMenuAddItem(2, "|TInterface/ICONS/spell_nature_forceofnature:32:32:-22:0|t" .. name, 0, 999)
+            elseif cache == aquaticCache then
+                player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_aquaticform:32:32:-22:0|t" .. name, 0, 999)
+            end
         end
         if itemCount >= endIndex then
             break
@@ -309,10 +323,10 @@ local function ShowCategoryContents(player, creature, category, page)
     end
     -- Add pagination buttons
     if page > 1 then
-        player:GossipMenuAddItem(4, "Previous Page", 0, 997)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_map_01:32:32:-22:0|tPrevious Page", 0, 997)
     end
     if endIndex < totalItems then
-        player:GossipMenuAddItem(4, "Next Page", 0, 998)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_map_01:32:32:-22:0|tNext Page", 0, 998)
     end
     player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 500)
     player:GossipSendMenu(12, creature, 60)
