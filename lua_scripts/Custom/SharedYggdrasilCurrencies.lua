@@ -44,7 +44,7 @@ local function OnLogin(event, player)
         count20880 = player:GetItemCount(20880, true)
     end
     
-    print("Character with Yggdrasil currencies logged in. Currency amount before account syncing: Account ID "..accountId..",, Character GUID "..charguid..", Currency 20880, Count "..count20880..". Currency 19322, Count "..count19322)
+    print("Character with Yggdrasil currencies logged in. Currency amount before account syncing: Account ID "..accountId..", Character GUID "..charguid..", Currency 20880, Count "..count20880..". Currency 19322, Count "..count19322)
 
     -- Query to get character GUIDs for the account
     CharDBQueryAsync(string.format("SELECT guid FROM characters WHERE account = %d", accountId), function(query)
@@ -99,8 +99,12 @@ local function OnLogin(event, player)
                             print("Currencies after updating inactive characters: Account ID "..accountId..", Character GUID "..charguid..", Currency 20880, Count "..player:GetItemCount(20880, true)..", Currency 19322, Count "..player:GetItemCount(19322, true))                        
                         end
                     end
+                else
+                    print("No Yggdrasil currencies found in database for account ID "..accountId)
                 end
             end)
+        else
+            print("No characters found for account ID: " .. accountId)
         end
     end)
 	
