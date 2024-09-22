@@ -94,7 +94,7 @@ local function OnLogin(event, player)
                             player:AddItem(19322, count19322)
                             player:AddItem(20880, count20880)
                             if player then --Rapid dereferencing check
-                                CharDBExecute("UPDATE item_instance SET count = CASE WHEN itemEntry = 19322 THEN " .. count19322 .. " WHEN itemEntry = 20880 THEN " .. count20880 .. " ELSE count END WHERE owner_guid = " .. charguid .. " OR (owner_guid IN (" .. guidString .. ") AND itemEntry IN (19322, 20880))")
+                                CharDBExecute("UPDATE item_instance SET count = CASE WHEN owner_guid IN (" .. guidString .. ") AND itemEntry IN (19322, 20880) THEN 0 WHEN owner_guid = " .. charguid .. " AND itemEntry = 19322 THEN " .. count19322 .. " WHEN owner_guid = " .. charguid .. " AND itemEntry = 20880 THEN " .. count20880 .. " ELSE count END WHERE owner_guid = " .. charguid .. " OR owner_guid IN (" .. guidString .. ")")
                             end
                             print("Currencies after updating inactive characters: Account ID "..accountId..", Character GUID "..charguid..", Currency 20880, Count "..player:GetItemCount(20880, true)..", Currency 19322, Count "..player:GetItemCount(19322, true))                        
                         end
