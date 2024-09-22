@@ -466,18 +466,17 @@ local function OnKillCreature(event, player, creature)
 end
 
 local function ShowInitialGossipMenu(player)
-	player:GossipMenuAddItem(4, "How does morphing work?", 0, 10)
-    --player:GossipMenuAddItem(4, "What would you like to morph?", 0, 9)
-    player:GossipMenuAddItem(0, "Cat form", 0, 1)
-    player:GossipMenuAddItem(0, "Bear form", 0, 2)
-    player:GossipMenuAddItem(0, "Travel form", 0, 3)
-    player:GossipMenuAddItem(0, "Flight form", 0, 4)
-    player:GossipMenuAddItem(0, "Tree form", 0, 5)
-    player:GossipMenuAddItem(0, "Boomkin form", 0, 6)
-    player:GossipMenuAddItem(0, "Aquatic form", 0, 7)
-    player:GossipMenuAddItem(0, "Remove current morph", 0, 8)
-    player:GossipMenuAddItem(0, "Morph skill: "..CountTotalMorphs(player).."/"..MaxMorphSkill.."", 0, 9)
-    player:GossipSendMenu(1, player, 0)
+	player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_questionmark:32:32:-26:0|tHow does morphing work?", 0, 10)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/ability_druid_catform:32:32:-26:0|tCat form", 0, 1)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/ability_racial_bearform:32:32:-26:0|tBear form", 0, 2)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/ability_druid_travelform:32:32:-26:0|tTravel form", 0, 3)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/ability_druid_flightform:32:32:-26:0|tFlight form", 0, 4)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/ability_druid_treeoflife:32:32:-26:0|tTree form", 0, 5)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_nature_forceofnature:32:32:-26:0|tBoomkin form", 0, 6)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/ability_druid_aquaticform:32:32:-26:0|tAquatic form", 0, 7)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_nature_earthbind:32:32:-26:0|tRemove current morph", 0, 8)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/achievement_quests_completed_daily_08:32:32:-26:0|tMorph skill: "..CountTotalMorphs(player).."/"..MaxMorphSkill.."", 0, 9)
+    player:GossipSendMenu(12, player, 0)
 end
 
 local function ShowGossipPage(player, formId, page)
@@ -505,31 +504,44 @@ local function ShowGossipPage(player, formId, page)
             nameCount[name] = nameCount[name] + 1
             name = name .. " " .. nameCount[name]
         end
-
-        player:GossipMenuAddItem(2, name, 0, 100000 + creature.displayId)
+        if formId == 1 then
+            player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_catform:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
+        elseif formId == 2 then
+            player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_racial_bearform:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
+        elseif formId == 3 then
+            player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_travelform:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
+        elseif formId == 4 then
+            player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_flightform:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
+        elseif formId == 5 then
+            player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_treeoflife:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
+        elseif formId == 6 then
+            player:GossipMenuAddItem(2, "|TInterface/ICONS/spell_nature_forceofnature:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
+        elseif formId == 7 then
+            player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_aquaticform:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
+        end
     end
     
     if page > 1 then
-        player:GossipMenuAddItem(4, "Previous Page", 0, 200000 + page - 1)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_map_01:32:32:-26:0|tHow does morphing work?Previous Page", 0, 200000 + page - 1)
     end
     
     if endIndex < #creatureCache[guid][formId] then
-        player:GossipMenuAddItem(4, "Next Page", 0, 200000 + page + 1)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_map_01:32:32:-26:0|tHow does morphing work?Next Page", 0, 200000 + page + 1)
     end
     
-    player:GossipMenuAddItem(4, "Back to main menu", 0, 2000000)
-    player:GossipSendMenu(1, player, 0)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack to main menu", 0, 2000000)
+    player:GossipSendMenu(12, player, 0)
 end
 
 local function OnGossipSelect(event, player, object, sender, intid, code, menu_id)
-    --print("[Druid Morph Module]: OnGossipSelect called with intid:", intid) -- Debug print
+    --print("[Druid Morph Module]: OnGossipSelect called with intid:", intid) -- Debug --print
 	
 	if player:IsPvPFlagged() then player:SendAreaTriggerMessage("You can't use druid morphs while flagged for PvP.") return false end
 
     if intid == 10 then
-		player:GossipMenuAddItem(0, "Morphing is an ancient Darnassian magic that permits druids to transmogrify their shapeshifts into the shapes of creatures they have released the spirit from. Killing a valid creature lets you morph your shapeshift of the same type into the newly acquired form. Every unique form claimed increases your morphing skill by 1. To claim the form of elite creatures, you need to have a morphing skill of at least "..MorphReqElite..", and to claim the form of rare creatures, you need a skill of "..MorphReqRare..".", 0, 10)
-		player:GossipMenuAddItem(0, "Go back", 0, 9)
-		player:GossipSendMenu(1, player, 0)
+		player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_questionmark:32:32:-26:0|tHow does morphing work?\n \nMorphing is an ancient Darnassian magic that permits druids to transmogrify their shapeshifts into the shapes of creatures they have released the spirit from.\n \nKilling a valid creature lets you morph your shapeshift of the same type into the newly acquired form. Every unique form claimed increases your morphing skill by 1.\n \nTo claim the form of elite creatures, you need to have a morphing skill of at least "..MorphReqElite..", and to claim the form of rare creatures, you need a skill of "..MorphReqRare..".\n \n", 0, 10)
+		player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tGo back", 0, 9)
+		player:GossipSendMenu(12, player, 0)
 	elseif intid == 8 then
 		ShowInitialGossipMenu(player)
         local guid = player:GetGUIDLow()
@@ -701,7 +713,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
 end
 
 local function OnGossipHello(event, player, object)
-    --print("[Druid Morph Module]: OnGossipHello called") -- Debug print
+    --print("[Druid Morph Module]: OnGossipHello called") -- Debug --print
     if player:GetClass() == 11 then -- Check if player is a druid
 		if player:IsPvPFlagged() then player:SendAreaTriggerMessage("You can't use druid morphs while flagged for PvP.") return false end
         player:GossipComplete()
