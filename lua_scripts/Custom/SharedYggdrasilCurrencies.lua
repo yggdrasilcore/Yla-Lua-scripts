@@ -69,30 +69,23 @@ local function OnLogin(event, player)
                     
                     if count20880 > 0 or count19322 > 0 then                       
                         player = GetPlayerByName(playername)
-                        
-                        if count20880 > 0 or count19322 > 0 then
-                            local guidString = table.concat(charguids[accountId], ",")
-                            
-                            if count20880 > 0 and count19322 == 0 then
-                                CharDBExecute("UPDATE item_instance SET count = 0 WHERE owner_guid IN ("..guidString..") AND itemEntry = 20880")
-                            elseif count20880 == 0 and count19322 > 0 then
-                                CharDBExecute("UPDATE item_instance SET count = 0 WHERE owner_guid IN ("..guidString..") AND itemEntry = 19322")
-                            else
-                                CharDBExecute("UPDATE item_instance SET count = 0 WHERE owner_guid IN ("..guidString..") AND itemEntry IN (20880, 19322)")
-                            end
-                        end
+                        local guidString = table.concat(charguids[accountId], ",")
                         
                         if count20880 > 0 and count19322 == 0 then
                             print("Currencies after consolidating: Account ID "..accountId..", Character GUID "..charguid..", Currency 20880, Count "..count20880)
                             player:RemoveItem(20880, player:GetItemCount(20880, true))
                             player:AddItem(20880, count20880)
-                            CharDBExecute("UPDATE item_instance SET count = "..count20880.." WHERE owner_guid = "..charguid.." AND itemEntry = 20880")
+                            if player then -- Rapid dereferencing check
+                                CharDBExecute("UPDATE item_instance SET count = CASE WHEN owner_guid IN (" .. guidString .. ") AND itemEntry = 20880 THEN 0 WHEN owner_guid = " .. charguid .. " AND itemEntry = 20880 THEN " .. count20880 .. " ELSE count END WHERE itemEntry = 20880")
+                            end
                             print("Currencies after updating inactive characters: Account ID "..accountId..", Character GUID "..charguid..", Currency 20880, Count "..player:GetItemCount(20880, true))
                         elseif count20880 == 0 and count19322 > 0 then
                             print("Currencies after consolidating: Account ID "..accountId..", Character GUID "..charguid..", Currency 19322, Count "..count19322)
                             player:RemoveItem(19322, player:GetItemCount(19322, true))
                             player:AddItem(19322, count19322)
-                            CharDBExecute("UPDATE item_instance SET count = "..count19322.." WHERE owner_guid = "..charguid.." AND itemEntry = 19322")
+                            if player then -- Rapid dereferencing check
+                                CharDBExecute("UPDATE item_instance SET count = CASE WHEN owner_guid IN (" .. guidString .. ") AND itemEntry = 19322 THEN 0 WHEN owner_guid = " .. charguid .. " AND itemEntry = 19322 THEN " .. count19322 .. " ELSE count END WHERE itemEntry = 19322")
+                            end
                             print("Currencies after updating inactive characters: Account ID "..accountId..", Character GUID "..charguid..", Currency 19322, Count "..player:GetItemCount(19322, true))
                         else
                             print("Currencies after consolidating: Account ID "..accountId..", Character GUID "..charguid..", Currency 20880, Count "..count20880..", Currency 19322, Count "..count19322)
@@ -100,8 +93,9 @@ local function OnLogin(event, player)
                             player:RemoveItem(20880, player:GetItemCount(20880, true))
                             player:AddItem(19322, count19322)
                             player:AddItem(20880, count20880)
-                            CharDBExecute("UPDATE item_instance SET count = "..count19322.." WHERE owner_guid = "..charguid.." AND itemEntry = 19322")
-                            CharDBExecute("UPDATE item_instance SET count = "..count20880.." WHERE owner_guid = "..charguid.." AND itemEntry = 20880")
+                            if player then --Rapid dereferencing check
+                                CharDBExecute("UPDATE item_instance SET count = CASE WHEN itemEntry = 19322 THEN " .. count19322 .. " WHEN itemEntry = 20880 THEN " .. count20880 .. " ELSE count END WHERE owner_guid = " .. charguid .. " OR (owner_guid IN (" .. guidString .. ") AND itemEntry IN (19322, 20880))")
+                            end
                             print("Currencies after updating inactive characters: Account ID "..accountId..", Character GUID "..charguid..", Currency 20880, Count "..player:GetItemCount(20880, true)..", Currency 19322, Count "..player:GetItemCount(19322, true))                        
                         end
                     end
