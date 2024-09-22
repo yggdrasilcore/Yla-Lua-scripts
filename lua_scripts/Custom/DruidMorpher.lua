@@ -467,15 +467,15 @@ end
 
 local function ShowInitialGossipMenu(player)
 	player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_questionmark:32:32:-26:0|tHow does morphing work?", 0, 10)
-    player:GossipMenuAddItem(0, "|TInterface/ICONS/ability_druid_catform:32:32:-26:0|tCat form", 0, 1)
-    player:GossipMenuAddItem(0, "|TInterface/ICONS/ability_racial_bearform:32:32:-26:0|tBear form", 0, 2)
-    player:GossipMenuAddItem(0, "|TInterface/ICONS/ability_druid_travelform:32:32:-26:0|tTravel form", 0, 3)
-    player:GossipMenuAddItem(0, "|TInterface/ICONS/ability_druid_flightform:32:32:-26:0|tFlight form", 0, 4)
-    player:GossipMenuAddItem(0, "|TInterface/ICONS/ability_druid_treeoflife:32:32:-26:0|tTree form", 0, 5)
-    player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_nature_forceofnature:32:32:-26:0|tBoomkin form", 0, 6)
-    player:GossipMenuAddItem(0, "|TInterface/ICONS/ability_druid_aquaticform:32:32:-26:0|tAquatic form", 0, 7)
-    player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_nature_earthbind:32:32:-26:0|tRemove current morph", 0, 8)
-    player:GossipMenuAddItem(0, "|TInterface/ICONS/achievement_quests_completed_daily_08:32:32:-26:0|tMorph skill: "..CountTotalMorphs(player).."/"..MaxMorphSkill.."", 0, 9)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_catform:32:32:-26:0|tCat form", 0, 1)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_racial_bearform:32:32:-26:0|tBear form", 0, 2)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_travelform:32:32:-26:0|tTravel form", 0, 3)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_flightform:32:32:-26:0|tFlight form", 0, 4)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_treeoflife:32:32:-26:0|tTree form", 0, 5)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_nature_forceofnature:32:32:-26:0|tBoomkin form", 0, 6)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_aquaticform:32:32:-26:0|tAquatic form", 0, 7)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_nature_earthbind:32:32:-26:0|tRemove current morph", 0, 8)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/achievement_quests_completed_daily_08:32:32:-26:0|tMorph skill: "..CountTotalMorphs(player).."/"..MaxMorphSkill.."", 0, 9)
     player:GossipSendMenu(12, player, 0)
 end
 
@@ -505,19 +505,19 @@ local function ShowGossipPage(player, formId, page)
             name = name .. " " .. nameCount[name]
         end
         if formId == 1 then
-            player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_catform:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
+            player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_catform:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
         elseif formId == 2 then
-            player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_racial_bearform:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
+            player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_racial_bearform:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
         elseif formId == 3 then
-            player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_travelform:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
+            player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_travelform:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
         elseif formId == 4 then
-            player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_flightform:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
+            player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_flightform:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
         elseif formId == 5 then
-            player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_treeoflife:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
+            player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_treeoflife:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
         elseif formId == 6 then
-            player:GossipMenuAddItem(2, "|TInterface/ICONS/spell_nature_forceofnature:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
+            player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_nature_forceofnature:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
         elseif formId == 7 then
-            player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_aquaticform:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
+            player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_aquaticform:32:32:-26:0|t" .. name, 0, 100000 + creature.displayId)
         end
     end
     
@@ -539,8 +539,8 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
 	if player:IsPvPFlagged() then player:SendAreaTriggerMessage("You can't use druid morphs while flagged for PvP.") return false end
 
     if intid == 10 then
-		player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_questionmark:32:32:-26:0|tHow does morphing work?\n \nMorphing is an ancient Darnassian magic that permits druids to transmogrify their shapeshifts into the shapes of creatures they have released the spirit from.\n \nKilling a valid creature lets you morph your shapeshift of the same type into the newly acquired form. Every unique form claimed increases your morphing skill by 1.\n \nTo claim the form of elite creatures, you need to have a morphing skill of at least "..MorphReqElite..", and to claim the form of rare creatures, you need a skill of "..MorphReqRare..".\n \n", 0, 10)
-		player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tGo back", 0, 9)
+		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_questionmark:32:32:-26:0|tHow does morphing work?\n \nMorphing is an ancient Darnassian magic that permits druids to transmogrify their shapeshifts into the shapes of creatures they have released the spirit from.\n \nKilling a valid creature lets you morph your shapeshift of the same type into the newly acquired form. Every unique form claimed increases your morphing skill by 1.\n \nTo claim the form of elite creatures, you need to have a morphing skill of at least "..MorphReqElite..", and to claim the form of rare creatures, you need a skill of "..MorphReqRare..".\n \nFor a full list of creatures whose forms you can claim unless an identical form has already been claimed, consult your Twiggy and ask him about Yggdrasil's features.\n ", 0, 10)
+		player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tGo back", 0, 9)
 		player:GossipSendMenu(12, player, 0)
 	elseif intid == 8 then
 		ShowInitialGossipMenu(player)
