@@ -6,6 +6,7 @@ local cachedFaction = {}
 local function OnPlayerMapChange(event, player)
     local instanceId = player:GetInstanceId()
     local mapId = player:GetMapId()
+    print("ICC faction script Debug - player changed map!")
 	
 	if mapId == 631 or mapId == 658 
 	or mapId == 632 or mapId == 668
@@ -73,7 +74,22 @@ local function OnPlayerMapChange(event, player)
 		end
 
     else
-        player:SetFactionForRace(player:GetRace())
+        if player and not (
+        (player:GetRace() == 1 and player:GetFaction() == 1) or -- Human
+        (player:GetRace() == 2 and player:GetFaction() == 2) or -- Orc
+        (player:GetRace() == 3 and player:GetFaction() == 3) or -- Dwarf
+        (player:GetRace() == 4 and player:GetFaction() == 4) or -- Night Elf
+        (player:GetRace() == 5 and player:GetFaction() == 5) or -- Undead
+        (player:GetRace() == 6 and player:GetFaction() == 6) or -- Tauren
+        (player:GetRace() == 7 and player:GetFaction() == 115) or -- Gnome
+        (player:GetRace() == 8 and player:GetFaction() == 116) or -- Troll
+        (player:GetRace() == 10 and player:GetFaction() == 1610) or -- Blood elf
+        (player:GetRace() == 11 and player:GetFaction() == 1629)) -- Draenei
+        then
+            print("Faction discrepancy detected, resetting player "..player:GetName().."! Current faction: "..player:GetFaction())
+            player:SetFactionForRace(player:GetRace())
+            print("Faction discrepancy detected, resetting player "..player:GetName().."! New faction: "..player:GetFaction())
+        end
     end
 end
 
