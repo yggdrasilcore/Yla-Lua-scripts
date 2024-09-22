@@ -522,11 +522,11 @@ local function ShowGossipPage(player, formId, page)
     end
     
     if page > 1 then
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_map_01:32:32:-26:0|tHow does morphing work?Previous Page", 0, 200000 + page - 1)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_map_01:32:32:-26:0|tPrevious Page", 0, 200000 + page - 1)
     end
     
     if endIndex < #creatureCache[guid][formId] then
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_map_01:32:32:-26:0|tHow does morphing work?Next Page", 0, 200000 + page + 1)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_map_01:32:32:-26:0|tNext Page", 0, 200000 + page + 1)
     end
     
     player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack to main menu", 0, 2000000)
