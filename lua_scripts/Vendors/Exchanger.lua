@@ -1,5 +1,7 @@
-local GOSSIP_MENU_ID = 1000
 local NPC_ID = 190000
+
+local VOTE_TOKEN_NAME = "Vote Tokens"
+local TRANSMOG_TOKEN_NAME = "Transmog Tokens"
 
 local VOTE_TOKEN = 20880
 local EMBLEM_OF_FROST = 49426
@@ -7,61 +9,61 @@ local EMBLEM_OF_TRIUMPH = 47241
 local TRANSMOG_TOKEN = 37742
 
 local function OnGossipHello(event, player, creature)
-    print("OnGossipHello called")
-    player:GossipMenuAddItem(0, "What currency would you like to buy?", GOSSIP_MENU_ID, 1)
-    player:GossipMenuAddItem(1, "Emblem of Frost (5 Vote Token per)", GOSSIP_MENU_ID, 101)
-    player:GossipMenuAddItem(1, "Emblem of Triumph (1 Vote Token per)", GOSSIP_MENU_ID, 102)
-    player:GossipMenuAddItem(1, "Transmog Token (10 Vote Token per)", GOSSIP_MENU_ID, 103)
-    player:GossipSendMenu(GOSSIP_MENU_ID, creature)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-26:0|tWhat would you like to exchange?\n \n ", 0, 1)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_bijou_gold:32:32:-26:0|tExchange Vote Tokens:", 0, 1)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_frostemblem_01:32:32:-26:0|tEmblem of Frost (5 per)", 0, 101)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_holy_summonchampion:32:32:-26:0|tEmblem of Triumph (1 per)", 0, 102)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_coin_07:32:32:-26:0|tTransmog Token (1 per)\n \n ", 0, 104)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_coin_07:32:32:-26:0|tExchange Transmog Tokens:", 0, 1)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_holy_summonchampion:32:32:-26:0|tEmblem of Triumph (15 per)\n \n", 0, 103)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-26:0|tNevermind", 0, 99)
+    player:GossipSendMenu(12, creature, 60)
 end
 
-local function BuyCurrency(player, itemId, cost, amount, currencyName)
-    print("BuyCurrency called:", itemId, cost, amount, currencyName)
+local function BuyCurrency(player, itemId, cost, amount, currencyName, costCurrency)
+    print("BuyCurrency called:", itemId, cost, amount, currencyName, costCurrency)
     local totalCost = cost * amount
-    if player:HasItem(VOTE_TOKEN, totalCost) then
-        player:RemoveItem(VOTE_TOKEN, totalCost)
+    if player:HasItem(costCurrency, totalCost) then
+        player:RemoveItem(costCurrency, totalCost)
         player:AddItem(itemId, amount)
-        player:SendBroadcastMessage(string.format("You've purchased %d %s for %d Vote Tokens.", amount, currencyName, totalCost))
+        player:SendBroadcastMessage(string.format("You've purchased %d %s for %d %s.", amount, currencyName, totalCost, GetItemLink(costCurrency)))
     else
-        player:SendBroadcastMessage("You don't have enough Vote Tokens.")
+        player:SendBroadcastMessage("You don't have enough "..GetItemLink(costCurrency)..".")
     end
     player:GossipComplete()
 end
 
-local function ShowAmountMenu(player, creature, currencyId, cost, currencyName)
-    print("ShowAmountMenu called for currency ID:", currencyId, "Cost:", cost)
-    player:GossipMenuAddItem(0, string.format("How many %s do you want to buy?", currencyName), GOSSIP_MENU_ID, 200)
-    player:GossipMenuAddItem(1, string.format("Buy 1 for %d Vote Tokens", cost * 1), GOSSIP_MENU_ID, 201)
-    player:GossipMenuAddItem(1, string.format("Buy 5 for %d Vote Tokens", cost * 5), GOSSIP_MENU_ID, 202)
-    player:GossipMenuAddItem(1, string.format("Buy 10 for %d Vote Tokens", cost * 10), GOSSIP_MENU_ID, 203)
-    player:GossipMenuAddItem(1, string.format("Buy 25 for %d Vote Tokens", cost * 25), GOSSIP_MENU_ID, 204)
-    player:GossipMenuAddItem(1, string.format("Buy 50 for %d Vote Tokens", cost * 50), GOSSIP_MENU_ID, 205)
-    player:GossipMenuAddItem(1, "Enter custom amount", GOSSIP_MENU_ID, 206, true)
-    player:GossipMenuAddItem(4, "Back", GOSSIP_MENU_ID, 99)
-    player:GossipSendMenu(GOSSIP_MENU_ID, creature)
+local function ShowAmountMenu(player, creature, currencyId, cost, currencyName, costCurrency)
+    player:GossipMenuAddItem(4, string.format("|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-26:0|tChoose amount:\n \n How many %s \n can I offer you today?\n ", currencyName), 0, 200)
+    player:GossipMenuAddItem(4, string.format("|TInterface/ICONS/inv_misc_coin_05:32:32:-26:0|tBuy 1 for %d %s", cost * 1, GetItemLink(costCurrency)), 0, 201)
+    player:GossipMenuAddItem(4, string.format("|TInterface/ICONS/inv_misc_coin_06:32:32:-26:0|tBuy 5 for %d %s", cost * 5, GetItemLink(costCurrency)), 0, 202)
+    player:GossipMenuAddItem(4, string.format("|TInterface/ICONS/inv_misc_coin_03:32:32:-26:0|tBuy 10 for %d %s", cost * 10, GetItemLink(costCurrency)), 0, 203)
+    player:GossipMenuAddItem(4, string.format("|TInterface/ICONS/inv_misc_coin_04:32:32:-26:0|tBuy 25 for %d %s", cost * 25, GetItemLink(costCurrency)), 0, 204)
+    player:GossipMenuAddItem(4, string.format("|TInterface/ICONS/inv_misc_coin_01:32:32:-26:0|tBuy 50 for %d %s", cost * 50, GetItemLink(costCurrency)), 0, 205)
+    player:GossipMenuAddItem(4, string.format("|TInterface/ICONS/inv_misc_coin_02:32:32:-26:0|tBuy 100 for %d %s", cost * 100, GetItemLink(costCurrency)), 0, 206)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_coin_17:32:32:-26:0|tEnter custom amount", 0, 207, true)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-26:0|tBack", 0, 99)
+    player:GossipSendMenu(12, creature, 60)
     
     -- Store the currency info in the player's temporary storage
     player:SetData("SelectedCurrencyId", currencyId)
     player:SetData("SelectedCurrencyCost", cost)
     player:SetData("SelectedCurrencyName", currencyName)
+    player:SetData("SelectedCostCurrency", costCurrency)
 end
 
 local function OnGossipSelect(event, player, creature, sender, intid, code)
-    if sender ~= GOSSIP_MENU_ID then return end
-
-    print("OnGossipSelect called with intid:", intid)
-
+    if sender ~= 0 then return end
     if intid == 1 then
-        player:GossipComplete()
+        OnGossipHello(event, player, creature)
     elseif intid == 101 then
-        print("Showing amount menu for Emblem of Frost")
-        ShowAmountMenu(player, creature, EMBLEM_OF_FROST, 5, "Emblem of Frost")
+        ShowAmountMenu(player, creature, EMBLEM_OF_FROST, 5, "Emblem of Frost", VOTE_TOKEN)
     elseif intid == 102 then
-        print("Showing amount menu for Emblem of Triumph")
-        ShowAmountMenu(player, creature, EMBLEM_OF_TRIUMPH, 1, "Emblem of Triumph")
+        ShowAmountMenu(player, creature, EMBLEM_OF_TRIUMPH, 1, "Emblem of Triumph", VOTE_TOKEN)
     elseif intid == 103 then
-        print("Showing amount menu for Transmog Token")
-        ShowAmountMenu(player, creature, TRANSMOG_TOKEN, 10, "Transmog Token")
+        ShowAmountMenu(player, creature, EMBLEM_OF_TRIUMPH, 15, "Emblem of Triumph", TRANSMOG_TOKEN)
+    elseif intid == 104 then
+        ShowAmountMenu(player, creature, TRANSMOG_TOKEN, 1, "Transmog Token", VOTE_TOKEN)
     elseif intid == 99 then
         OnGossipHello(event, player, creature)
     elseif intid >= 200 and intid <= 206 then
@@ -71,7 +73,8 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
         elseif intid == 203 then amount = 10
         elseif intid == 204 then amount = 25
         elseif intid == 205 then amount = 50
-        elseif intid == 206 then
+        elseif intid == 206 then amount = 100
+        elseif intid == 207 then
             amount = tonumber(code)
             if not amount or amount <= 0 then
                 player:SendBroadcastMessage("Invalid amount. Please enter a positive number.")
@@ -90,11 +93,12 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
         local currencyId = player:GetData("SelectedCurrencyId")
         local cost = player:GetData("SelectedCurrencyCost")
         local currencyName = player:GetData("SelectedCurrencyName")
+        local costCurrency = player:GetData("SelectedCostCurrency")
 
         local totalCost = cost * amount
-        local confirmMessage = string.format("Are you sure you want to purchase %d %s for %d Vote Tokens?", amount, currencyName, totalCost)
-        player:GossipMenuAddItem(1, confirmMessage, GOSSIP_MENU_ID, 300, false, confirmMessage)
-        player:GossipSendMenu(GOSSIP_MENU_ID, creature)
+        local confirmMessage = string.format("Are you sure you want to purchase %d %s for %d %s?", amount, currencyName, totalCost, GetItemLink(costCurrency))
+        player:GossipMenuAddItem(1, confirmMessage, 0, 300, false, confirmMessage)
+        player:GossipSendMenu(12, creature, 60)
         
         -- Store the purchase info in the player's temporary storage
         player:SetData("BuyAmount", amount)
@@ -103,6 +107,7 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
         local currencyId = player:GetData("SelectedCurrencyId")
         local cost = player:GetData("SelectedCurrencyCost")
         local currencyName = player:GetData("SelectedCurrencyName")
+        local costCurrency = player:GetData("SelectedCostCurrency")
 
         if not amount or not currencyId or not cost or not currencyName then
             player:SendBroadcastMessage("An error occurred. Please try again.")
@@ -110,7 +115,7 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
             return
         end
 
-        BuyCurrency(player, currencyId, cost, amount, currencyName)
+        BuyCurrency(player, currencyId, cost, amount, currencyName, costCurrency)
     else
         player:SendBroadcastMessage("Invalid option selected.")
         player:GossipComplete()
