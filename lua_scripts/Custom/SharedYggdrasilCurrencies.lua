@@ -73,34 +73,48 @@ local function OnLogin(event, player)
                         
                         if count20880 > 0 and count19322 == 0 then
                             print("Currencies after consolidating: Account ID "..accountId..", Character GUID "..charguid..", Currency 20880, Count "..count20880)
-                            player:RemoveItem(20880, player:GetItemCount(20880, true))
-                            player:AddItem(20880, count20880)
+                            if player:GetItemCount(20880, true) > count20880 then
+                                player:RemoveItem(20880, (player:GetItemCount(20880, true)-count20880))
+                            elseif  player:GetItemCount(20880, true) < count20880 then
+                                player:AddItem(20880, (count20880-player:GetItemCount(20880, true)))
+                            end
                             if player then -- Rapid dereferencing check
                                 CharDBExecute("UPDATE item_instance SET count = CASE WHEN owner_guid IN (" .. guidString .. ") AND itemEntry = 20880 THEN 0 WHEN owner_guid = " .. charguid .. " AND itemEntry = 20880 THEN " .. count20880 .. " ELSE count END WHERE itemEntry = 20880")
                             end
                             print("Currencies after updating inactive characters: Account ID "..accountId..", Character GUID "..charguid..", Currency 20880, Count "..player:GetItemCount(20880, true))
                         elseif count20880 == 0 and count19322 > 0 then
                             print("Currencies after consolidating: Account ID "..accountId..", Character GUID "..charguid..", Currency 19322, Count "..count19322)
-                            player:RemoveItem(19322, player:GetItemCount(19322, true))
-                            player:AddItem(19322, count19322)
+                            if player:GetItemCount(19322, true) > count19322 then
+                                player:RemoveItem(19322, (player:GetItemCount(19322, true)-count19322))
+                            elseif  player:GetItemCount(19322, true) < count19322 then
+                                player:AddItem(19322, (count19322-player:GetItemCount(19322, true)))
+                            end
                             if player then -- Rapid dereferencing check
                                 CharDBExecute("UPDATE item_instance SET count = CASE WHEN owner_guid IN (" .. guidString .. ") AND itemEntry = 19322 THEN 0 WHEN owner_guid = " .. charguid .. " AND itemEntry = 19322 THEN " .. count19322 .. " ELSE count END WHERE itemEntry = 19322")
                             end
                             print("Currencies after updating inactive characters: Account ID "..accountId..", Character GUID "..charguid..", Currency 19322, Count "..player:GetItemCount(19322, true))
                         else
                             print("Currencies after consolidating: Account ID "..accountId..", Character GUID "..charguid..", Currency 20880, Count "..count20880..", Currency 19322, Count "..count19322)
-                            player:RemoveItem(19322, player:GetItemCount(19322, true))
-                            player:RemoveItem(20880, player:GetItemCount(20880, true))
-                            player:AddItem(19322, count19322)
-                            player:AddItem(20880, count20880)
+                           if player:GetItemCount(19322, true) > count19322 then
+                                player:RemoveItem(19322, (player:GetItemCount(19322, true)-count19322))
+                            elseif  player:GetItemCount(19322, true) < count19322 then
+                                player:AddItem(19322, (count19322-player:GetItemCount(19322, true)))
+                            end
+                            if player:GetItemCount(20880, true) > count20880 then
+                                player:RemoveItem(20880, (player:GetItemCount(20880, true)-count20880))
+                            elseif  player:GetItemCount(20880, true) < count20880 then
+                                player:AddItem(20880, (count20880-player:GetItemCount(20880, true)))
+                            end
                             if player then --Rapid dereferencing check
                                 CharDBExecute("UPDATE item_instance SET count = CASE WHEN owner_guid IN (" .. guidString .. ") AND itemEntry IN (19322, 20880) THEN 0 WHEN owner_guid = " .. charguid .. " AND itemEntry = 19322 THEN " .. count19322 .. " WHEN owner_guid = " .. charguid .. " AND itemEntry = 20880 THEN " .. count20880 .. " ELSE count END WHERE owner_guid = " .. charguid .. " OR owner_guid IN (" .. guidString .. ")")
                             end
                             print("Currencies after updating inactive characters: Account ID "..accountId..", Character GUID "..charguid..", Currency 20880, Count "..player:GetItemCount(20880, true)..", Currency 19322, Count "..player:GetItemCount(19322, true))                        
                         end
+                    else
+                        print("No Yggdrasil currencies found in database for account ID "..accountId)
                     end
                 else
-                    print("No Yggdrasil currencies found in database for account ID "..accountId)
+                    print("Database query for  "..accountId.."'s Yggdrasil currencies failed.")
                 end
             end)
         else
