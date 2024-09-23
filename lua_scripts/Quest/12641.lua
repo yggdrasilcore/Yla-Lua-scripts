@@ -7,8 +7,6 @@ local function AcherusEyeFix(event, packet, player)
     local castCount = packet:ReadUByte()  -- Read the cast count (uint8)
     local spellId = packet:ReadULong()  -- Read the spell ID (uint32)
     local castFlags = packet:ReadUByte()  -- Read the cast flags (uint8)
-
-    print("Spell ID: " .. spellId)
     
     if spellId == 52694 then
         player:RemoveAura(51852)
