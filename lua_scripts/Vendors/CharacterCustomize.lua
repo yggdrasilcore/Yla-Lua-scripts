@@ -1,5 +1,5 @@
-local communityTokenItemId 	= 19322 -- ID for Community Tokens
-local voteTokenItemId		= 20880 -- ID for Vote Tokens
+local communityTokenItemId 	= 17829 -- ID for Community Tokens
+local voteTokenItemId		= 377420 -- ID for Vote Tokens
 local priceRename			= 5
 local priceCustomize		= 5
 local priceChangeFaction	= 10
@@ -43,56 +43,51 @@ local function updateAtLoginCache(player, bitmask)
 end
 
 local function OnGossipHello(event, player, creature)
-    player:GossipMenuAddItem(0, "Information about Character Services", 0, 99, false)
-    player:GossipMenuAddItem(1, "Rename Character", 0, 1, false)
-    player:GossipMenuAddItem(1, "Customize Character", 0, 2, false)
-    player:GossipMenuAddItem(1, "Change Faction", 0, 3, false)
-    player:GossipMenuAddItem(1, "Change Race", 0, 4, false)
-    player:GossipSendMenu(1, creature)
+    player:GossipClearMenu()
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tAbout Character Services", 0, 99, false)
+    player:GossipMenuAddItem(1, "|TInterface/ICONS/inv_scroll_11:32:32:-22:0|tRename Character", 0, 1, false)
+    player:GossipMenuAddItem(1, "|TInterface/ICONS/inv_throwingknife_02:32:32:-22:0|tCustomize Character", 0, 2, false)
+    player:GossipMenuAddItem(1, "|TInterface/ICONS/achievement_pvp_a_h:32:32:-22:0|tChange Faction", 0, 3, false)
+    player:GossipMenuAddItem(1, "|TInterface/ICONS/achievement_character_orc_male:32:32:-22:0|tChange Race", 0, 4, false)
+    player:GossipSendMenu(12, creature, 61)
 end
 
 local function OnGossipSelect(event, player, creature, sender, intid, code)
     if intid == 1 then -- Rename
         player:GossipClearMenu()
-        player:GossipMenuAddItem(0, "How do you want to pay to rename your character?", 0, 1, false)
-        player:GossipMenuAddItem(1, "Pay with "..priceRename.." Community Tokens", 0, 11, false, "Are you sure you want to pay "..priceRename.." Community Tokens to rename your character?")
-        player:GossipMenuAddItem(1, "Pay with "..priceRename * VoteTokenCoeff.." Vote Tokens", 0, 12, false, "Are you sure you want to pay "..priceRename * VoteTokenCoeff.." Vote Tokens to rename your character?")
-        player:GossipMenuAddItem(4, "Back", 0, 98, false)
-        player:GossipSendMenu(1, creature)
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tChoose payment method", 0, 1, false)
+        player:GossipMenuAddItem(1, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tPay with "..priceRename.." Community Tokens", 0, 11, false, "Are you sure you want to pay "..priceRename.." Community Tokens to rename your character?")
+        player:GossipMenuAddItem(1, "|TInterface/ICONS/Inv_bijou_gold:32:32:-22:0|tPay with "..priceRename * VoteTokenCoeff.." Vote Tokens", 0, 12, false, "Are you sure you want to pay "..priceRename * VoteTokenCoeff.." Vote Tokens to rename your character?")
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 98, false)
+        player:GossipSendMenu(12, creature, 61)
     elseif intid == 2 then -- Customize
         player:GossipClearMenu()
-        player:GossipMenuAddItem(0, "How do you want to pay to customize your character?", 0, 2, false)
-        player:GossipMenuAddItem(1, "Pay with "..priceCustomize.." Community Tokens", 0, 21, false, "Are you sure you want to pay "..priceCustomize.." Community Tokens to customize your character?")
-        player:GossipMenuAddItem(1, "Pay with "..priceCustomize * VoteTokenCoeff.." Vote Tokens", 0, 22, false, "Are you sure you want to pay "..priceCustomize * VoteTokenCoeff.." Vote Tokens to customize your character?")
-        player:GossipMenuAddItem(4, "Back", 0, 98, false)
-        player:GossipSendMenu(1, creature)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tChoose payment method", 0, 2, false)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tPay with "..priceCustomize.." Community Tokens", 0, 21, false, "Are you sure you want to pay "..priceCustomize.." Community Tokens to customize your character?")
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_bijou_gold:32:32:-22:0|tPay with "..priceCustomize * VoteTokenCoeff.." Vote Tokens", 0, 22, false, "Are you sure you want to pay "..priceCustomize * VoteTokenCoeff.." Vote Tokens to customize your character?")
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 98, false)
+        player:GossipSendMenu(12, creature, 61)
     elseif intid == 3 then -- Change Faction
         player:GossipClearMenu()
-        player:GossipMenuAddItem(0, "How do you want to pay to change your faction?", 0, 3, false)
-        player:GossipMenuAddItem(1, "Pay with "..priceChangeFaction.." Community Tokens", 0, 31, false, "Are you sure you want to pay "..priceRename.." Community Tokens to change your faction?")
-        player:GossipMenuAddItem(1, "Pay with "..priceChangeFaction * VoteTokenCoeff.." Vote Tokens", 0, 32, false, "Are you sure you want to pay "..priceChangeFaction * VoteTokenCoeff.." Vote Tokens to change your faction?")
-        player:GossipMenuAddItem(4, "Back", 0, 98, false)
-        player:GossipSendMenu(1, creature)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tChoose payment method", 0, 3, false)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tPay with "..priceChangeFaction.." Community Tokens", 0, 31, false, "Are you sure you want to pay "..priceRename.." Community Tokens to change your faction?")
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_bijou_gold:32:32:-22:0|tPay with "..priceChangeFaction * VoteTokenCoeff.." Vote Tokens", 0, 32, false, "Are you sure you want to pay "..priceChangeFaction * VoteTokenCoeff.." Vote Tokens to change your faction?")
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 98, false)
+        player:GossipSendMenu(12, creature, 61)
     elseif intid == 4 then -- Change Race
         player:GossipClearMenu()
-        player:GossipMenuAddItem(0, "How do you want to pay to change your race?", 0, 4, false)
-        player:GossipMenuAddItem(1, "Pay with "..priceChangeRace.." Community Tokens", 0, 41, false, "Are you sure you want to pay "..priceChangeRace.." Community Tokens to change your race?")
-        player:GossipMenuAddItem(1, "Pay with "..priceChangeRace * VoteTokenCoeff.." Vote Tokens", 0, 42, false, "Are you sure you want to pay "..priceChangeRace * VoteTokenCoeff.." Vote Tokens to change your race?")
-        player:GossipMenuAddItem(4, "Back", 0, 98, false)
-        player:GossipSendMenu(1, creature)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tChoose payment method", 0, 4, false)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tPay with "..priceChangeRace.." Community Tokens", 0, 41, false, "Are you sure you want to pay "..priceChangeRace.." Community Tokens to change your race?")
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_bijou_gold:32:32:-22:0|tPay with "..priceChangeRace * VoteTokenCoeff.." Vote Tokens", 0, 42, false, "Are you sure you want to pay "..priceChangeRace * VoteTokenCoeff.." Vote Tokens to change your race?")
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 98, false)
+        player:GossipSendMenu(12, creature, 61)
     elseif intid == 98 then -- Reload gossip menu
-        player:GossipClearMenu()
-        player:GossipMenuAddItem(0, "Information about Character Services", 0, 98, false)
-        player:GossipMenuAddItem(1, "Rename Character", 0, 1, false)
-        player:GossipMenuAddItem(1, "Customize Character", 0, 2, false)
-        player:GossipMenuAddItem(1, "Change Faction", 0, 3, false)
-        player:GossipMenuAddItem(1, "Change Race", 0, 4, false)
-        player:GossipSendMenu(1, creature)
+        OnGossipHello(event, player, creature)
     elseif intid == 99 then -- Information
-        player:GossipClearMenu()
-        player:GossipMenuAddItem(0, "Through pulling the strings of the Twisting Nether, I, the Ethereal Rebalancer, possess the power to change all aspects of your character. I charge Community Tokens or Vote Tokens for my services, which you may acquire through donating or voting for the server. My services are non-refundable.", 0, 98, false)
-        player:GossipMenuAddItem(4, "Go back", 0, 98, false)
-        player:GossipSendMenu(1, creature)
+        player:GossipClearMenu()        
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tAbout Character Services\n \nThrough pulling the strings of the Twisting Nether, I, the Ethereal Customizer, possess the power to change all aspects of your character. \n \nI charge Community Tokens or Vote Tokens for my services, which you may acquire through donating or voting for the server.\n \nMy services are non-refundable.\n ", 0, 99, false)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tGo back", 0, 98, false)
+        player:GossipSendMenu(12, creature, 61)
     elseif intid == 11 or intid == 21 or intid == 31 or intid == 41 then -- Pay with Community Tokens
         local communityTokenCost = 5
 		if intid == 11 then

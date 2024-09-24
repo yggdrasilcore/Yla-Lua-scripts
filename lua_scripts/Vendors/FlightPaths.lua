@@ -1,6 +1,7 @@
 local logoutTimer = 1000
 local voteTokenItemId = 20880 -- ID for Vote Tokens
 local voteTokenCost = 50 -- Cost in Vote Tokens
+local voteTokenName = "Vote Tokens"
 
 local playersToUpdate = {}
 
@@ -235,15 +236,23 @@ local function taxioutland()
 end
 
 local function OnGossipHello(event, player, creature)
-    player:GossipMenuAddItem(0, "Flight path sets cost 50 Vote Tokens each", 0, 0, false)
-    player:GossipMenuAddItem(3, "Kalimdor flight paths", 0, 1, false, "Are you sure you want to pay 50 Vote Tokens for all Kalimdor flight paths? This process will log you out as the flight paths load.")
-    player:GossipMenuAddItem(3, "Eastern Kingdoms flight paths", 0, 2, false, "Are you sure you want to pay 50 Vote Tokens for all Eastern Kingdoms flight paths? This process will log you out as the flight paths load.")
-    player:GossipMenuAddItem(3, "Outland flight paths", 0, 3, false, "Are you sure you want to pay 50 Vote Tokens for all Outland flight paths? This process will log you out as the flight paths load.")
-    player:GossipSendMenu(1, creature)
+    player:GossipClearMenu()
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tAbout flight paths vendor", 0, 4, false)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/achievement_zone_kalimdor_01:32:32:-22:0|tKalimdor flight paths", 0, 1, false, "Are you sure you want to pay 50 Vote Tokens for all Kalimdor flight paths? This process will log you out as the flight paths load.")
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/achievement_zone_easternkingdoms_01:32:32:-22:0|tEastern Kingdoms flight paths", 0, 2, false, "Are you sure you want to pay 50 Vote Tokens for all Eastern Kingdoms flight paths? This process will log you out as the flight paths load.")
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/achievement_zone_outland_01:32:32:-22:0|tOutland flight paths", 0, 3, false, "Are you sure you want to pay 50 Vote Tokens for all Outland flight paths? This process will log you out as the flight paths load.")
+    player:GossipSendMenu(12, creature, 62)
 end
 
 local function OnGossipSelect(event, player, creature, sender, intid, code)
-    if intid == 1 then -- Kalimdor
+    if intid == 4 then -- Kalimdor
+        player:GossipClearMenu()
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tAbout flight paths vendor\n \nI have travelled between the warmer continents for decades now, and after a life full of travels, I'm ready to offer my teachings of the world to you, "..player:GetName().."\n \nI can offer to teach you all flight paths of Outlands, Eastern Kingdoms and Kalimdor for "..voteTokenCost.." "..voteTokenName..".\n \nMy services are non-refundable.\n \n", 0, 4, false)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 5, false)
+        player:GossipSendMenu(12, creature, 62)
+    elseif intid == 5 then -- Kalimdor
+        OnGossipHello(event, player, creature)
+    elseif intid == 1 then -- Kalimdor
         if player:HasItem(voteTokenItemId,voteTokenCost) then
 			player:RemoveItem(voteTokenItemId, voteTokenCost)
             local playerGuid = player:GetGUIDLow()

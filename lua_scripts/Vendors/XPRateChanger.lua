@@ -15,6 +15,7 @@ local rates = {
     [10] = { 10,       0,    20880,       5},
 }
 local Cache = {}
+
 local function LoadCache()
     local result = CharDBQuery("SELECT guid, rate FROM character_rate_xp")
     if result then
@@ -22,13 +23,14 @@ local function LoadCache()
             Cache[result:GetUInt32(0)] = result:GetUInt8(1)
         until not result:NextRow()
     end
-end LoadCache()
+end 
+
 local function OnGossipHello(event, player, object)
     player:GossipClearMenu()
     
     local currentRate = Cache[player:GetGUIDLow()] or 1
     if player:GetLevel() < 80 then
-		object:SendUnitWhisper("Your experience rate is: x"..currentRate, 0, player)
+		player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/spell_fire_burningspeed:28:28:-15:0|tYour experience rate is: x"..currentRate, 0, 999)
     end
     for k, v in ipairs(rates) do
         local cost = ""
@@ -39,12 +41,15 @@ local function OnGossipHello(event, player, object)
 			player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/Achievement_Quests_Completed_08:28:28:-15:0|tRates x"..v[1].." "..cost, 0, v[1], false, "Are you sure you want to change your experience rate to: x"..v[1], v[2]*10000)
 		end
     end
-    player:GossipSendMenu(1, object)
-end RegisterCreatureGossipEvent(npc, 1, OnGossipHello)
+    player:GossipSendMenu(12, object)
+end 
 
 local function OnGossipSelect(event, player, object, sender, intid, code, menu_id)
     
     local currentRate = Cache[player:GetGUIDLow()] or 1
+    if intid == 999 then
+        OnGossipHello(event, player, object)
+    end
     
     -- Free to go to a lower XP tier
     if currentRate > intid then
@@ -65,7 +70,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         player:RemoveItem(rates[intid][3], rates[intid][4])
     end
     
-    player:ModifyMoney(-rates[intid][2]*10000)
+    --player:ModifyMoney(-rates[intid][2]*10000) -- Why is this here? There's no gold cost
     Cache[player:GetGUIDLow()] = intid
     CharDBExecute("REPLACE INTO character_rate_xp (guid, rate) VALUES ('"..player:GetGUIDLow().."', '"..intid.."')")
     object:SendUnitWhisper("Congratulations, you changed your experience rate to: x"..intid, 0, player)
@@ -78,4 +83,8 @@ local function OnGiveXP(event, player, amount, victim)
         amount = amount * Cache[player:GetGUIDLow()]
         return amount
     end
-end RegisterPlayerEvent(12, OnGiveXP)
+end 
+
+LoadCache() -- Loads cache on script load (server startup/reload ELUNA)
+RegisterPlayerEvent(12, OnGiveXP)
+RegisterCreatureGossipEvent(npc, 1, OnGossipHello)
