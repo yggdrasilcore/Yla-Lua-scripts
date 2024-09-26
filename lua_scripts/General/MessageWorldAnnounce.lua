@@ -1,10 +1,10 @@
-local message1 = "|cff00ccff Welcome to Yggdrasil! Please join our Discord server to stay updated. https://discord.gg/PCcCWFBdTQ"
-local message2 = "|cff00ccff RAF and Community Tokens, which can be used for VIP, are now live! Visit our Discord server's announcements to learn more."
-local message3 = "|cff00ccff Please type \"/join world\" if you'd like to partake in the world chat."
-local message4 = "|cff00ccff Vote Tokens and Community Tokens have been moved to your key ring and are now account shared."
-local message5 = "|cff00ccff RAF and Community Tokens, which can be used for VIP, are now live! Visit our Discord server's announcements to learn more."
-local message6 = "|cff00ccff Please type \"/join world\" if you'd like to partake in the world chat."
-local message7 = "|cff00ccff Vote Tokens and Community Tokens have been moved to your key ring and are now account shared."
+local message1 = "|cff00ccff Happy 6 month Yggdrasil anniversary! To mark this occasion, we offer full account transfers and communtiy activities. Visit Discord to learn more."
+local message2 = "|cff00ccff Welcome to Yggdrasil! Please join our Discord server to stay updated. https://discord.gg/PCcCWFBdTQ"
+local message3 = "|cff00ccff Vote Tokens and Community Tokens have been moved to your key ring and are now account shared."
+local message4 = "|cff00ccff Happy 6 month Yggdrasil anniversary! To mark this occasion, we offer full account transfers and communtiy activities. Visit Discord to learn more."
+local message5 = "|cff00ccff Please type \"/join world\" if you'd like to partake in the world chat."
+local message6 = "|cff00ccff Happy 6 month Yggdrasil anniversary! To mark this occasion, we offer full account transfers and communtiy activities. Visit Discord to learn more."
+local message7 = "|cff00ccff RAF and Community Tokens, which can be used for VIP, are now live! Visit our Discord server's announcements to learn more."
 local interval = 400000 -- 10 minutes in milliseconds (change this to desired interval)
 
 local messages = {message1, message2, message3, message4, message5, message6, message7}
