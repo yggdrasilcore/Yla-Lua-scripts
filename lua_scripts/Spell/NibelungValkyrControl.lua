@@ -1,3 +1,5 @@
+-- Makes Nibelung Valkyrs controllable by permanent pet classes (frost mage with glyph, warlock) as they were in retail
+-- Written by mostly nick :) for Yggdrasil WoW
 local ValkyrAttack = {}
 local ValkyrFollow = {}
 
