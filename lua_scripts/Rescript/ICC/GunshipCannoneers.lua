@@ -3,6 +3,7 @@ local CREATURE_ID_2 = 36982
 local SPELL_ID = 69679
 local RANGE_CHECK = 300
 local MIN_DISTANCE = 60
+local MAX_DISTANCE = 180
 local lastcheck = 0
 
 local function OnSpawn(event, creature)
@@ -36,7 +37,7 @@ local function OnSpawn(event, creature)
                         local players = cannoneer:GetPlayersInRange(RANGE_CHECK)
                         for _, player in pairs(players) do
                             print("Gunship Cannoneer Debug - players found: "..#players)
-                            if cannoneer:GetDistance(player) > MIN_DISTANCE then
+                            if cannoneer:GetDistance(player) > MIN_DISTANCE and cannoneer:GetDistance(player) < MAX_DISTANCE then
                                 cannoneer:CastSpell(player, SPELL_ID)
                                 print("Gunship Cannoneer Debug - player is in right area, shooting!")
                             else

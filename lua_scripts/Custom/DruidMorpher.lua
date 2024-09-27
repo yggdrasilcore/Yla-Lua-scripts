@@ -1121,7 +1121,7 @@ end
 
 local function OnCombat(event, player, enemy)
 	if player:GetClass() == 11 and player:HasItem(17890) then
-		if enemy:IsPvPFlagged() then
+		if enemy and enemy:IsPvPFlagged() then
 			player:DeMorph()
 			if player:HasAura(768) then -- Cat
 				player:AddAura(768, player)
