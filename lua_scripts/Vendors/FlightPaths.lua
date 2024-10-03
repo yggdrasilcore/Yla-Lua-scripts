@@ -247,7 +247,7 @@ end
 local function OnGossipSelect(event, player, creature, sender, intid, code)
     if intid == 4 then -- Kalimdor
         player:GossipClearMenu()
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tAbout flight paths vendor\n \nI have travelled between the warmer continents for decades now, and after a life full of travels, I'm ready to offer my teachings of the world to you, "..player:GetName().."\n \nI can offer to teach you all flight paths of Outlands, Eastern Kingdoms and Kalimdor for "..voteTokenCost.." "..voteTokenName..".\n \nMy services are non-refundable.\n \n", 0, 4, false)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tAbout flight paths vendor\n \nI have travelled between the warmer continents for decades now, and after a life full of travels, I'm ready to offer my teachings of the world to you, "..player:GetName().."\n \nI can offer to teach you all flight paths of Outlands, Eastern Kingdoms and Kalimdor for "..voteTokenCost.." "..voteTokenName..".\n \nMy services are non-refundable.\n \n ", 0, 4, false)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 5, false)
         player:GossipSendMenu(12, creature, 62)
     elseif intid == 5 then -- Kalimdor
