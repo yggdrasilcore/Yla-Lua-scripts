@@ -9,7 +9,7 @@ local function OnGossipHello(event, player, object)
 		player:GossipMenuAddItem(0, "I hear you're interested in the secrets of Kaldorei shapeshift morphing...", 0, 1)
 		player:GossipSendMenu(1, object)
 	else
-		player:SendBroadcastMessage("I only cater to druids.")
+		player:SendBroadcastMessage("I only cater to Druids.")
 	end
 end
 

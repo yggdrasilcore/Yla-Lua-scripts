@@ -31,7 +31,7 @@ function Beastmaster.OnHello(event, player, unit)
         player:GossipMenuAddItem(0, "Do you want to buy a hunter pet for 100 gold?", 0, 1)
         player:GossipSendMenu(1, unit)
     else
-        player:SendBroadcastMessage("I only cater to beastmasters.")
+        player:SendBroadcastMessage("I only cater to Beastmasters.")
         player:GossipComplete()
     end
 end
