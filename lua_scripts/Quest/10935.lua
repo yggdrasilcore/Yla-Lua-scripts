@@ -60,10 +60,16 @@ local function Spawn22507(event, creature)
                         creature:MoveStop()
                         creature:MoveClear()
                         creature:NearTeleport(creature:GetX(), creature:GetY(), 101.59, creature:GetO())
+                        if creature:HasAura(39283) then
+                            creature:RemoveAura(39283)
+                        end
 						--print("Landing Jules")  
 					end, 300, 1)
 					creature:RegisterEvent(function(eventId, delay, repeats, creature)
 						creature:SetRooted()
+                        if creature:HasAura(39283) then
+                            creature:RemoveAura(39283)
+                        end
                         --print("Rooting Jules!")
 					end, 320, 1)
 					creature:RegisterEvent(function(eventId, delay, repeats, creature)
@@ -73,7 +79,7 @@ local function Spawn22507(event, creature)
                         --print("Despawning Jules!")
 					end, 40000, 1)
 				end
-			end, 144*1000, 1)
+			end, 147*1000, 1)
 		end
 		
 	elseif count22507 == 1 then
