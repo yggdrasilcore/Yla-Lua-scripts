@@ -46555,7 +46555,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
                     player:SendBroadcastMessage("|TInterface/ICONS/inv_misc_bag_19:31:31:-24:0|tNot enough bag space!\n \n You don't have enough bag space to buy " .. GetItemLink(itemId) .. ". \n \n")
                 end
             else
-                player:SendBroadcastMessage("|TInterface/ICONS/inv_misc_coin_05:31:31:-24:0|tNot enough funds! \n \nYou don't have enough " .. CURRENCY_NAME .. " to buy " .. GetItemLink(itemId) .. ". (Cost: " .. itemCost .. " " .. CURRENCY_NAME .. ")\n \n ")
+                player:SendBroadcastMessage("|TInterface/ICONS/inv_misc_coin_05:31:31:-24:0|tNot enough funds! \n \nYou don't have enough " .. CURRENCY_NAME .. "\nto buy " .. GetItemLink(itemId) .. ". (Cost: " .. itemCost .. " " .. CURRENCY_NAME .. ")\n \n ")
             end
 		end
 		
@@ -46592,7 +46592,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
 				player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_bag_19:31:31:-24:0|tNot enough bag space!\n \nYou don't have enough bag space to buy " .. itemLink .. ". \n \n ", 0, 0)
 			end
 		else
-			player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_coin_05:31:31:-24:0|tNot enough funds!\n \nYou don't have enough "..CURRENCY_NAME.."to buy " .. itemLink .. " (Cost: " .. itemCost .. " "..CURRENCY_NAME..")\n \n ", 0, 0)
+            player:SendBroadcastMessage("|TInterface/ICONS/inv_misc_coin_05:31:31:-24:0|tNot enough funds! \n \nYou don't have enough " .. CURRENCY_NAME .. "\nto buy " .. GetItemLink(itemId) .. ". (Cost: " .. itemCost .. " " .. CURRENCY_NAME .. ")\n \n ")
 		end
 		
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/trade_engineering:31:31:-24:0|tGo back", 0, 0)
