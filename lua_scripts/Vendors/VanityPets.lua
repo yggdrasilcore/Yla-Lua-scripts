@@ -12,6 +12,8 @@
 local NPC_ID = 600000
 local model_ID = 21113
 local VoteTokenItemID = 20880
+local price = 50
+local CurrencyName = "Vote Tokens"
 
 local ItemsToSell = {
     13582, 13583, 13584, 25535, 33816, 48527, 20371, 20651, 22114,
@@ -25,29 +27,37 @@ local ItemsToSell = {
 local VotePointCost = 50
 local ItemsPerPage = 11
 
+local icons = {}
+
+WorldDBQueryAsync(string.format([[SELECT Entry, Icon FROM icons WHERE Entry IN (%s)]], table.concat(ItemsToSell, ",")), function(query)
+    if query then
+        repeat
+            local entry = query:GetUInt32(0)
+            local icon = query:GetString(1)
+            icons[entry] = icon
+        until not query:NextRow()
+    end
+end)
 
 local function GenerateMenu(page, player, object)
     local startIndex = ((page - 1) * ItemsPerPage) + 1
     local endIndex = math.min(startIndex + ItemsPerPage - 1, #ItemsToSell)
 
+    player:GossipMenuAddItem(1, "|TInterface/ICONS/Inv_bijou_gold:32:32:-22:0|tCompanions cost "..price.." "..CurrencyName.." ea.", 0, 12)
     for i = startIndex, endIndex do
         local itemId = ItemsToSell[i]
         local itemLink = GetItemLink(itemId)
         if itemLink then
-            if player:HasItem(itemId) then
-                player:GossipMenuAddItem(1, itemLink .. " (Already owned)", 0, itemId)
-            else
-                player:GossipMenuAddItem(1, "" .. itemLink .. " " .. VotePointCost .. " vote tokens", 0, itemId)
-            end
+            player:GossipMenuAddItem(1, "|TInterface/ICONS/"..icons[itemId]..":32:32:-22:0|t" .. itemLink .. "", 0, itemId)
         end
     end
 
     if page > 1 then
-        player:GossipMenuAddItem(4, "Previous page", 1, page - 1)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_spy:31:31:-24:0|tPrevious page", 1, page - 1)
     end
 
     if endIndex < #ItemsToSell then
-        player:GossipMenuAddItem(4, "Next page", 1, page + 1)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_spy:31:31:-24:0|tNext page", 1, page + 1)
     end
 
     player:GossipSendMenu(1, object)
@@ -58,6 +68,9 @@ local function OnGossipHello(event, player, object)
 end
 
 local function OnGossipSelect(event, player, object, sender, intid, code, menu_id)
+    if intid == 12 then
+        OnGossipHello(event, player, object)
+    end
     if sender == 0 then
         local itemId = intid
         local itemLink = GetItemLink(itemId)
@@ -75,8 +88,8 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         end
         
         -- Add confirmation dialogue
-        player:GossipMenuAddItem(0, "Are you sure you want to buy " .. itemLink .. " for " .. VotePointCost .. " vote tokens?", 2, itemId)
-        player:GossipMenuAddItem(0, "No, I've changed my mind.", 1, 1)  -- Return to first page
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/"..icons[itemId]..":32:32:-22:0|tConfirm purchase\n \n Are you sure you want to buy " .. itemLink .. " for " .. VotePointCost .. " "..CurrencyName.."?\n \n ", 2, itemId)
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/ability_spy:31:31:-24:0|tNo, I've changed my mind.", 1, 1)  -- Return to first page
         player:GossipSendMenu(1, object)
     elseif sender == 1 then
         GenerateMenu(intid, player, object)
