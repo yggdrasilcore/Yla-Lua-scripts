@@ -43433,7 +43433,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
         end, 100, 1)
         
     elseif slotid == PRESETS + 1 then
-        player:GossipMenuAddItem(7, "|TInterface/ICONS/INV_Misc_Book_11:31:31:-24:0|tHow do sets work?\n \nBy saving your transmogrification sets, you can easily store transmogs you have already paid for and reapply infintely them for a one-time fee upon saving the set. Simply save your sets and apply them by visiting a transmogrifier at any time.\n \n ", PRESETS+1, 0)
+        player:GossipMenuAddItem(7, "|TInterface/ICONS/INV_Misc_Book_11:31:31:-24:0|tHow do sets work?\n \nBy saving your transmogrification sets, you can easily store transmogs you have already paid for and reapply them infinitely for a one-time fee upon saving the set. Simply save your sets and apply them by visiting a transmogrifier at any time to use this service.\n \n ", PRESETS+1, 0)
         player:GossipMenuAddItem(7, LocText(6, player), EQUIPMENT_SLOT_END + 1, 0)
         player:GossipSendMenu(12, creature, menu_id)
     
@@ -43582,7 +43582,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
                     setDataString
                 ))
                 
-                player:SendBroadcastMessage("Transmog set '" .. name .. "' saved successfully with preset ID " .. presetID .. "!")  
+                player:SendBroadcastMessage("Transmog set '" .. name .. "' saved successfully!")  
             end
         )
         
