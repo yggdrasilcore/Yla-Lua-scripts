@@ -46632,7 +46632,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
 				player:SendAreaTriggerMessage("Your bags are full!")
 			end
 		else
-			player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_coin_05:31:31:-24:0|tYou don't have enough "..CURRENCY_NAME.." to buy " .. itemLink .. " (Cost: " .. itemCost .. " "..CURRENCY_NAME..")", 0, 0)
+            player:SendBroadcastMessage("|TInterface/ICONS/inv_misc_coin_05:31:31:-24:0|tNot enough funds! \n \nYou don't have enough " .. CURRENCY_NAME .. "\nto buy " .. GetItemLink(itemId) .. ". (Cost: " .. itemCost .. " " .. CURRENCY_NAME .. ")\n \n ")
 		end
 		
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/trade_engineering:31:31:-24:0|tGo back", 0, 0)
