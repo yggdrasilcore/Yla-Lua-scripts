@@ -43013,7 +43013,7 @@ end
 
 CacheDisplayIDs()
 
-local NPC_Entry = 190093
+local NPC_Entry = 190009
 
 local RequireGold = 1
 local GoldModifier = 1.0
