@@ -76,6 +76,6 @@ local function OnLogin(event, player)
     end
 end
 
-RegisterPacketEvent(0x246, 5, OnPacketReceive)
+--RegisterPacketEvent(0x246, 5, OnPacketReceive) --Disable unnecessary funtionality
 RegisterPlayerEvent(3, OnLogin)
 RegisterPlayerEvent(42, SendAnniversary)
