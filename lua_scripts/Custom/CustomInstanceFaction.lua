@@ -6,7 +6,6 @@ local cachedFaction = {}
 local function OnPlayerMapChange(event, player)
     local instanceId = player:GetInstanceId()
     local mapId = player:GetMapId()
-    print("ICC faction script Debug - player changed map!")
 	
 	if mapId == 631 or mapId == 658 
 	or mapId == 632 or mapId == 668
