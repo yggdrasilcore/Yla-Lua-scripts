@@ -7,7 +7,6 @@ local function DeleteAllItemsInBag(player)
             player:RemoveItem(item:GetEntry(), item:GetCount())
         end
     end
-    player:SendBroadcastMessage("All items in your bag have been deleted.")
 end
 
 local function CompleteAndRewardQuest(player, questID)
@@ -17,28 +16,31 @@ local function CompleteAndRewardQuest(player, questID)
     player:CompleteQuest(questID)
     player:RewardQuest(questID)
     DeleteAllItemsInBag(player)
-    player:SendBroadcastMessage("Quest with ID: " .. questID .. " has been added to your quest log, completed, and marked as rewarded.")
 end
 
 local function QuestAutoComplete(event, player, msg, Type, lang)
     local gmRank = player:GetGMRank()
     if gmRank >= 3 then
-		name = player:GetName()
+		local name = player:GetName()
         local lowerMsg = msg:lower()
         if string.sub(lowerMsg, 1, #MSG_QC) == MSG_QC then
             local questID = tonumber(string.sub(lowerMsg, #MSG_QC + 1))
             if questID then
                 WorldDBQueryAsync("SELECT * FROM quest_template WHERE ID = " .. questID, function(result)
 					player = GetPlayerByName(name)
+                    if not player then
+                        print("Quest Complete Command error, player has gotten dereferenced!")
+                        return
+                    end
                     if result then
                         local target = player:GetSelection()
-                        if target and target:ToPlayer() then
-                            CompleteAndRewardQuest(target:ToPlayer(), questID)
+                        if target and target:IsPlayer() then
+                            CompleteAndRewardQuest(target, questID)
                         else
                             CompleteAndRewardQuest(player, questID)
                         end
                     else
-                        player:Say("Non-existent quest ID: " .. questID, 0)
+                        player:SendBroadcastMessage("Non-existent quest ID: " .. questID)
                     end
                 end)
             else
