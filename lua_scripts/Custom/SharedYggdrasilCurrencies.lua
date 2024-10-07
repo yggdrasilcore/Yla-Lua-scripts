@@ -71,8 +71,12 @@ local function OnLogin(event, player)
                         print("count 20880: "..count20880)
                         print("count 19322: "..count19322)
                         if count20880 > 0 or count19322 > 0 then                       
-                            player = GetPlayerByName(playername)
+                            local player = GetPlayerByName(playername)
                             local guidString = table.concat(charguids[accountId], ",")
+                            
+                            if not player then
+                                return
+                            end
                             
                             if count20880 > 0 and count19322 == 0 then
                                 print("Currencies after consolidating: Account ID "..accountId..", Character GUID "..charguid..", Currency 20880, Count "..count20880)
@@ -108,7 +112,6 @@ local function OnLogin(event, player)
                                         AND itemEntry = 19322;
                                     ]])
                                     player:SaveToDB()
-                                    
                                     RemoveEventById(eventId)
                                 end
                                 print("Currencies after updating inactive characters: Account ID "..accountId..", Character GUID "..charguid..", Currency 19322, Count "..player:GetItemCount(19322, true))
@@ -131,13 +134,14 @@ local function OnLogin(event, player)
                                         AND owner_guid != ]]..charguid..[[
                                         AND itemEntry IN (19322, 20880);
                                     ]])
+                                    player:SaveToDB()
                                     RemoveEventById(eventId)
                                 end
                                 print("Currencies after updating inactive characters: Account ID "..accountId..", Character GUID "..charguid..", Currency 20880, Count "..player:GetItemCount(20880, true)..", Currency 19322, Count "..player:GetItemCount(19322, true))                        
                             end
                         else
                             print("No Yggdrasil currencies found in database for account ID "..accountId)
-                            if player then -- Not sure if we need to check for dereferencing here
+                            if player then
                                 RemoveEventById(eventId)
                             end
                         end
@@ -149,7 +153,7 @@ local function OnLogin(event, player)
                 print("No characters found for account ID: " .. accountId)
             end
         end)
-	end, 1000, 3)
+	end, 1000, 15)
      
     local playerGUID = player:GetGUID()
     local communitymessage = false
