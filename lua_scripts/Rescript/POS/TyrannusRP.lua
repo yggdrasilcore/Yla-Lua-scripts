@@ -7,7 +7,7 @@ local function POSCombat(event, player, enemy)
 			Tyrannus:CastSpell(Rimefang, 46598, true)
 		end
 	end
-	if enemy and enemy:GetEntry() == 36658 then -- Tyrannus
+	if enemy and (enemy:GetEntry() == 36658) then -- Tyrannus
 	
 		player:RegisterEvent(function(eventId, delay, repeats, player)
 					
