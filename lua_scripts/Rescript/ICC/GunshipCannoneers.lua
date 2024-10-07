@@ -22,10 +22,10 @@ local function OnSpawn(event, creature)
         
         creature:RegisterEvent(function(eventId, delay, repeats, creature)
             local cannoneers = creature:GetCreaturesInRange(RANGE_CHECK, CREATURE_ID_1)
-            print("Gunship Cannoneer Debug - checking for ally cannoneers...")
+            print("Gunship Cannoneer Debug - Checking for ally cannoneers...")
             
             if #cannoneers == 0 then
-                print("Gunship Cannoneer Debug - checking for horde cannoneers...")
+                print("Gunship Cannoneer Debug - No ally cannoneers found, checking for horde cannoneers...")
                 cannoneers = creature:GetCreaturesInRange(RANGE_CHECK, CREATURE_ID_2)
             end
             
@@ -36,10 +36,10 @@ local function OnSpawn(event, creature)
                     cannoneer:RegisterEvent(function(eventId, delay, calls, cannoneer)
                         local players = cannoneer:GetPlayersInRange(RANGE_CHECK)
                         for _, player in pairs(players) do
-                            print("Gunship Cannoneer Debug - players found: "..#players)
-                            if cannoneer:GetDistance(player) > MIN_DISTANCE and cannoneer:GetDistance(player) < MAX_DISTANCE then
+                            if cannoneer:GetDistance(player) > MIN_DISTANCE and cannoneer:GetDistance(player) < MAX_DISTANCE and not player:HasAura(70510) then
                                 cannoneer:CastSpell(player, SPELL_ID)
                                 print("Gunship Cannoneer Debug - player is in right area, shooting!")
+                                break
                             else
                                 print("Gunship Cannoneer Debug - no players in cannoneer range area")
                             end
