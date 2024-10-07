@@ -59,31 +59,32 @@ local function AutoCompleteQuests(player, quests)
 end
 
 local function DeathKnightSkipStarterZone(event, player, message, Type, lang)
-    if message:lower() ~= "#ti3j5kfo0s" then
-        return
-    end
+    if message:lower() == "#ti3j5kfo0s" or message:lower() == "#skipdk" then
 
-    if player:GetClass() ~= CLASS_DEATHKNIGHT then
-        player:SendBroadcastMessage("This command is only available for Death Knights.")
-        return
-    end
+        if player:GetClass() ~= CLASS_DEATHKNIGHT then
+            player:SendBroadcastMessage("This command is only available for Death Knights.")
+            return
+        end
 
-    -- Add Hearthstone
-    player:AddItem(ITEM_HEARTHSTONE)
-    
-    -- Complete quests
-    AutoCompleteQuests(player, SHARED_QUESTS)
-    AutoCompleteQuests(player, RACE_QUESTS[player:GetRace()])
-	
-	--Set correct level
-	if player:GetLevel() < 58 then
-		player:SetLevel(58)
-	end
-    
-    -- Teleport to Dalaran
-    player:Teleport(571, 5849.55, 637, 647.52, 2.38338, TELE_TO_GM_MODE)
-    
-    player:SendBroadcastMessage("You have skipped the Death Knight starter zone and been teleported to Dalaran.")
+        -- Add Hearthstone
+        player:AddItem(ITEM_HEARTHSTONE)
+        
+        -- Complete quests
+        AutoCompleteQuests(player, SHARED_QUESTS)
+        AutoCompleteQuests(player, RACE_QUESTS[player:GetRace()])
+        
+        --Set correct level
+        if player:GetLevel() < 58 then
+            player:SetLevel(58)
+        end
+        
+        -- Teleport to Dalaran
+        player:Teleport(571, 5849.55, 637, 647.52, 2.38338, TELE_TO_GM_MODE)
+        
+        player:SendBroadcastMessage("You have skipped the Death Knight starter zone and been teleported to Dalaran.")
+        
+        return false
+    end
 end
 
 RegisterPlayerEvent(18, DeathKnightSkipStarterZone) -- PLAYER_EVENT_ON_CHAT
