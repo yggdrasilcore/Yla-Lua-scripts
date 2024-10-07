@@ -1,7 +1,7 @@
 local CLTime = {}
 
 local function IsBoss(creature)
-    return (creature:IsWorldBoss() and creature:IsInCombat()) or (creature:IsDungeonBoss() and creature:IsInCombat())
+    return (creature:IsDungeonBoss() and creature:IsInCombat())
 end
 
 local function ClearCombat(event, player, command)
