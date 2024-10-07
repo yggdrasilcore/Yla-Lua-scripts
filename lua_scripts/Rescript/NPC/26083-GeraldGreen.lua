@@ -10,15 +10,17 @@ local function OnPlayerEnterArea(event, player, newZone, newArea)
     if newArea == AREA then
 	--print("[NPC]: Gerald Green - Player entered area!")
         local creature = player:GetNearestCreature(200,NPC_ID)  -- Adjust range as needed
-		creature:SetHomePosition(HOME_X,HOME_Y,HOME_Z,HOME_O)
-		local currentX, currentY, currentZ = creature:GetX(), creature:GetY(), creature:GetZ()
-		local distance = creature:GetDistance(HOME_X, HOME_Y, HOME_Z)
-    
-		if distance > MAX_DISTANCE then
-			print("[NPC]: Gerald Green - Player present and NPC is too far from home. Returning to original position.")
-			creature:MoveHome()
-		--else
-			--print("Player present and NPC is within allowed range.")
+		if creature then
+            creature:SetHomePosition(HOME_X,HOME_Y,HOME_Z,HOME_O)
+            local currentX, currentY, currentZ = creature:GetX(), creature:GetY(), creature:GetZ()
+            local distance = creature:GetDistance(HOME_X, HOME_Y, HOME_Z)
+        
+            if distance > MAX_DISTANCE then
+                print("[NPC]: Gerald Green - Player present and NPC is too far from home. Returning to original position.")
+                creature:MoveHome()
+            --else
+                --print("Player present and NPC is within allowed range.")
+            end
 		end
 	end
 end
