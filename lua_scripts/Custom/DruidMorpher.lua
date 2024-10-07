@@ -1148,7 +1148,7 @@ local function OnCombat(event, player, enemy)
 				player:AddAura(1066, player)
 			end
 		end
-		if not enemy:IsPvPFlagged() and player:HasAura(3025) then
+		if (not enemy or (enemy and not enemy:IsPvPFlagged())) and player:HasAura(3025) then
 			--print("Cat combat detected! Hiding weapon...")
 			local guid = player:GetGUIDLow()
 			player:RegisterEvent(HideWeapon, InvisibleWeaponTimer, 1) -- 0 repetitions = infinite
