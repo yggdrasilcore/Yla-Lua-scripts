@@ -5,16 +5,26 @@ local SPELL_FRENZY = 28747
 local HORRORS = {}
 
 local function RemoveImmunity(eventid, delay, repeats, creature)
+    local OBJECT_END = 0x0006
+    local UNIT_FIELD_FLAGS = OBJECT_END + 0x0035
+    creature:RemoveFlag(UNIT_FIELD_FLAGS, 0x00000002)
     creature:RemoveAura(52165)
-    creature:RemoveAura(29230)
 	creature:ClearUnitState(1)
+	print("[NPC]: Shambling Horror - Animation fix, immunity aura removed!")
+end
+
+local function Crawl(eventid, delay, repeats, creature)
+    creature:PerformEmote(449) -- Crawl animation
 end
 
 local function OnNPCSpawn(event, creature)
 	creature:AddUnitState(1)
 	creature:AddAura(52165, creature)
-	creature:AddAura(29230, creature)
-    creature:PerformEmote(449) -- Crawl animation
+    local OBJECT_END = 0x0006
+    local UNIT_FIELD_FLAGS = OBJECT_END + 0x0035
+    creature:SetFlag(UNIT_FIELD_FLAGS, 0x00000002)
+	print("[NPC]: Shambling Horror - Animation fix, immunity aura added!")
+	creature:RegisterEvent(Crawl, 20, 1)
 	creature:RegisterEvent(RemoveImmunity, 4200, 1)
 end
 
