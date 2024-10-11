@@ -1,20 +1,15 @@
---CharDBQuery([[CREATE TABLE IF NOT EXISTS transferlog (guid INT PRIMARY KEY, newcharacter INT);]])
---CharDBQuery([[CREATE TABLE IF NOT EXISTS transferredspells (guid INT PRIMARY KEY, status INT);]])
-
-
 ------------------------------------------------------------------------------------------------
 -- AUTO LEARN SKILLS MOD
 ------------------------------------------------------------------------------------------------
 local EnableModule = true
-local AnnounceModule = false -- Announce module on player login ?
 
-local MaxLevel = false      -- Set to true to enable max level skills instantly when login
 local MaxPlayerLevel = 80   -- Max player level change to your liking.
+local GM_RANK_REQ = 3
 
 local AutoDualSpec = false   -- Auto learn Dual Specialization
-local AutoRiding = false     -- Auto learn Riding
+local AutoRiding = true     -- Auto learn Riding
 
-local NorthrendFlyLevel = 81 -- Which level to learn Cold Weather Flying
+local NorthrendFlyLevel = 77 -- Which level to learn Cold Weather Flying
 --
 -- (68 = When alt characters can learn from Tome of Cold Weather Flight)
 -- (77 = Level to learn it from trainer, for first character)
@@ -32,16 +27,13 @@ local NorthrendFlyLevel = 81 -- Which level to learn Cold Weather Flying
     Function: When the player levels up, automatically learn the skills of the corresponding level
     Completely remade by kebabstorm
     Code edits and update missin spells by clotic
+    Conditionals for GM rank added by mostly nick :)
 ]]
 if (not EnableModule) then
     return
 end
 
 local FILE_NAME = string.match(debug.getinfo(1, "S").source, "[^/\\]*.lua$")
-
-local PLAYER_EVENT_ON_LEVEL_CHANGE = 3
-local PLAYER_EVENT_ON_LEARN_TALENTS = 39
-local PLAYER_EVENT_ON_FIRST_LOGIN = 30
 
 local CLASS_WARRIOR = 1
 local CLASS_PALADIN = 2
@@ -914,228 +906,96 @@ local TALENTSKILL = {
 }
 
 local RIDING = {
-    [10] = { 33388 },                -- Apprentince Riding (75)
-    [20] = { 33391, 34090 },         -- Journeyman Riding (150)
+    -- [10] = { 33388 },                -- Apprentince Riding (75)
+    -- [20] = { 33391, 34090 },         -- Journeyman Riding (150)
     -- [40] = { 34090 },                -- Expert Riding (225)
     [NorthrendFlyLevel] = { 54197 }, -- Cold Weather Flying
-    [70] = { 34091 }                 -- Artisan Riding (300)
+    -- [70] = { 34091 }                 -- Artisan Riding (300)
 }
+local function onLevelChange(event, player, oldLevel)
+	if player:GetGMRank() >= GM_RANK_REQ then
+		local class = player:GetClass()
+		local level = player:GetLevel()
+		local team = player:GetTeam()
+		local classSkills = SKILL[class]
+		local teamSkills = TEAMSKILL[team][class]
+		local talentSkills = TALENTSKILL[class]
 
-
-local function onPlayerLogin(event, player)
-    --player:Say("Player logged in: " .. player:GetName(), 0)
-    local guid = player:GetGUIDLow()
-
-    local query = CharDBQuery("SELECT COUNT(*) FROM transferlog WHERE guid = " .. guid)
-
-    if query then
-        local count = query:GetUInt32(0)  -- Correct index for COUNT(*), usually 0
-
-        --player:Say("Transfer log count for player " .. player:GetName() .. ": " .. count, 0)
-
-        if count == 0 then
-            --player:Say("Player does not have a transfer log entry.", 0)
-
-            local query2 = CharDBQuery("SELECT 1 FROM transferredspells WHERE guid = " .. guid)
-
-            if not query2 then
-                CharDBExecute("INSERT INTO transferredspells (guid, status) VALUES (" .. guid .. ", 1)")
-                --player:Say("Registered auto-learned spells.", 0)  -- Debug message
-
-                local class = player:GetClass()
-                local level = player:GetLevel()
-                local team = player:GetTeam()
-                local classSkills = SKILL[class]
-                local teamSkills = TEAMSKILL[team][class]
-                local talentSkills = TALENTSKILL[class]
-
-                if classSkills then
-                    for i = 1, level do
-                        local levelSkills = classSkills[i] or {}
-                        for _, skillId in ipairs(levelSkills) do
-                            if not player:HasSpell(skillId) then
-                                player:LearnSpell(skillId)
-                                --player:Say("Learned class skill: " .. skillId, 0)  -- Debug message
-                            end
-                        end
-                    end
-                end
-
-                if teamSkills then
-                    for i = 1, level do
-                        local levelSkills = teamSkills[i] or {}
-                        for _, skillId in ipairs(levelSkills) do
-                            player:LearnSpell(skillId)
-                            --player:Say("Learned team skill: " .. skillId, 0)  -- Debug message
-                        end
-                    end
-                end
-
-                if talentSkills then
-                    for spellId, t in pairs(talentSkills) do
-                        if player:HasSpell(spellId) then
-                            for i = 1, level do
-                                local levelSkills = t[i] or {}
-                                for _, skillId in ipairs(levelSkills) do
-                                    player:LearnSpell(skillId)
-                                    --player:Say("Learned talent skill: " .. skillId, 0)  -- Debug message
-                                end
-                            end
-                        end
-                    end
-                end
-
-                if AutoRiding then
-                    for i = 1, level do
-                        local levelSkills = RIDING[i] or {}
-                        for _, skillId in ipairs(levelSkills) do
-                            if not player:HasSpell(skillId) then
-                                player:LearnSpell(skillId)
-                                --player:Say("Learned riding skill: " .. skillId, 0)  -- Debug message
-                            else
-                                break
-                            end
-                        end
-                    end
-                end
-
-                if AutoDualSpec then
-                    if level >= 40 then
-                        player:CastSpell(player, 63680, true) -- Teach Learn Talent Specialization Switches (63680)
-                        player:CastSpell(player, 63624, true) -- Learn a Second Talent Specialization (63624)
-                        --player:Say("Learned dual specialization", 0)  -- Debug message
-                    end
-                end
-            else
-                --player:Say("Spells have already been transferred for this player.", 0)
-            end
-        end
-    else
-        --player:Say("Player does not have a transfer log entry. Proceeding to learn skills.", 0)
-
-        local class = player:GetClass()
-        local level = player:GetLevel()
-        local team = player:GetTeam()
-        local classSkills = SKILL[class]
-        local teamSkills = TEAMSKILL[team][class]
-        local talentSkills = TALENTSKILL[class]
-
-        if classSkills then
-            for i = 1, level do
-                local levelSkills = classSkills[i] or {}
-                for _, skillId in ipairs(levelSkills) do
-                    if not player:HasSpell(skillId) then
-                        player:LearnSpell(skillId)
-                        --player:Say("Learned class skill: " .. skillId, 0)  -- Debug message
-                    end
-                end
-            end
-        end
-
-        if teamSkills then
-            for i = 1, level do
-                local levelSkills = teamSkills[i] or {}
-                for _, skillId in ipairs(levelSkills) do
-                    player:LearnSpell(skillId)
-                    --player:Say("Learned team skill: " .. skillId, 0)  -- Debug message
-                end
-            end
-        end
-
-        if talentSkills then
-            for spellId, t in pairs(talentSkills) do
-                if player:HasSpell(spellId) then
-                    for i = 1, level do
-                        local levelSkills = t[i] or {}
-                        for _, skillId in ipairs(levelSkills) do
-                            player:LearnSpell(skillId)
-                            --player:Say("Learned talent skill: " .. skillId, 0)  -- Debug message
-                        end
-                    end
-                end
-            end
-        end
-
-        if AutoRiding then
-            for i = 1, level do
-                local levelSkills = RIDING[i] or {}
-                for _, skillId in ipairs(levelSkills) do
-                    if not player:HasSpell(skillId) then
-                        player:LearnSpell(skillId)
-                        --player:Say("Learned riding skill: " .. skillId, 0)  -- Debug message
-                    else
-                        break
-                    end
-                end
-            end
-        end
-
-        if AutoDualSpec then
-            if level >= 40 then
-                player:CastSpell(player, 63680, true) -- Teach Learn Talent Specialization Switches (63680)
-                player:CastSpell(player, 63624, true) -- Learn a Second Talent Specialization (63624)
-                --player:Say("Learned dual specialization", 0)  -- Debug message
-            end
-        end
-    end
+		if classSkills then
+			for i = oldLevel + 1, level do
+				local levelSkills = classSkills[i] or {}
+				for _, skillId in ipairs(levelSkills) do
+					if not player:HasSpell(skillId) then -- If the player doesn't already know the skill try to reduce the amount of queries in console
+						player:LearnSpell(skillId)
+					end
+				end
+			end
+		end
+		if teamSkills then
+			for i = oldLevel + 1, level do
+				local levelSkills = teamSkills[i] or {}
+				for _, skillId in ipairs(levelSkills) do
+					player:LearnSpell(skillId)
+				end
+			end
+		end
+		if talentSkills then
+			for spellId, t in pairs(talentSkills) do
+				if player:HasSpell(spellId) then
+					for i = oldLevel + 1, level do
+						local levelSkills = t[i] or {}
+						for _, skillId in ipairs(levelSkills) do
+							player:LearnSpell(skillId)
+						end
+					end
+				end
+			end
+		end
+		if AutoRiding then
+			for i = oldLevel + 1, level do
+				local levelSkills = RIDING[i] or {}
+				for _, skillId in ipairs(levelSkills) do
+					if not player:HasSpell(skillId) then -- If the player doesn't already know the skill try to reduce the amount of queries in console
+						player:LearnSpell(skillId)
+					else
+						break
+					end
+				end
+			end
+		end
+		if AutoDualSpec then
+			if level >= 40 and oldLevel < 40 then
+				player:CastSpell(player, 63680, true) -- Teach Learn Talent Specialization Switches (63680)
+				player:CastSpell(player, 63624, true) -- Learn a Second Talent Specialization (63624)
+			end
+		end
+	end
 end
-
-local function onLearnTalent(event, player, talentId, talentRank, spellId)
-    local class = player:GetClass()
-    local level = player:GetLevel()
-    local talentSkills = TALENTSKILL[class]
-
-    if talentSkills then
-        for requiredLevel, skillIds in pairs(talentSkills) do
-            if level >= requiredLevel then
-                for _, skillId in ipairs(skillIds) do
-                    player:LearnSpell(skillId)
-                    --player:Say("Learned talent skill on learn talent: " .. skillId, 0)  -- Debug message
-                end
-            end
-        end
-    else
-        --player:Say("First login entry already exists.", 0)  -- Debug message
-    end
-end
-
-local function onLearnTalent(event, player, talentId, talentRank, spellId)
-    local class = player:GetClass()
-    local level = player:GetLevel()
-    local talentSkills = TALENTSKILL[class]
-
-    if talentSkills then
-        for requiredLevel, skillIds in pairs(talentSkills) do
-            if level >= requiredLevel then
-                for _, skillId in ipairs(skillIds) do
-                    player:LearnSpell(skillId)
-                    --player:Say("Learned talent skill on learn talent: " .. skillId, 0)  -- Debug message
-                end
-            end
-        end
-    else
-        --player:Say("First login entry already exists.", 0)  -- Debug message
-    end
-end
-
 
 local function onFirstLogin(event, player)
-    local guid = player:GetGUIDLow()
-
-    -- Check if the player already has an entry in the transferlog
-    local query = CharDBQuery("SELECT 1 FROM transferlog WHERE guid = " .. guid)
-
-    if not query then
-        -- Insert the player's GUID into the transferlog table
-        CharDBExecute("INSERT INTO transferlog (guid, newcharacter) VALUES (" .. guid .. ", 1)")
-        --player:Say("First login entry created.", 0)  -- Debug message
-    else
-        --player:Say("First login entry already exists.", 0)  -- Debug message
+    if player:GetLevel() > 55 then
+        local oldLevel = 1
+        onLevelChange(event, player, oldLevel)
     end
 end
 
-RegisterPlayerEvent(30, onFirstLogin)        -- PLAYER_EVENT_ON_FIRST_LOGIN = 30
-RegisterPlayerEvent(39, onLearnTalent)       -- PLAYER_EVENT_ON_LEARN_TALENTS = 39
-RegisterPlayerEvent(3, onPlayerLogin)        -- PLAYER_EVENT_ON_LOGIN = 3
+local function onLearnTalent(event, player, talentId, talentRank, spellId)
+	if player:GetGMRank() >= GM_RANK_REQ then
+		local class = player:GetClass()
+		local level = player:GetLevel()
+		local talentSkills = TALENTSKILL[class]
+		if talentSkills then
+			for requiredLevel, skillIds in pairs(talentSkills) do
+				if level >= requiredLevel then
+					for _, skillId in ipairs(skillIds) do
+						player:LearnSpell(skillId)
+					end
+				end
+			end
+		end
+	end
+end
 
-print("Auto skills script loaded!") --for console debugging
+RegisterPlayerEvent(13, onLevelChange)
+RegisterPlayerEvent(30, onFirstLogin)
+RegisterPlayerEvent(39, onLearnTalent)

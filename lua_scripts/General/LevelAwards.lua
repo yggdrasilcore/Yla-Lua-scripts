@@ -12,7 +12,7 @@ function OnLevelUp(event, player, oldLevel)
         elseif team == 1 then
             player:LearnSpell(578)  --horde mount
         end
-        player:SendBroadcastMessage("Congratulations on reaching level 10! You have learned how to ride and received a mount.")
+        player:SendBroadcastMessage("Congratulations on reaching level 10! You have learned how to ride and summon a mount.")
     elseif newLevel >= 20 and oldLevel < 20 then
         player:ModifyMoney(250000) -- 25g
         player:SendBroadcastMessage("Congratulations on reaching level 20! You have earned 25 gold.")

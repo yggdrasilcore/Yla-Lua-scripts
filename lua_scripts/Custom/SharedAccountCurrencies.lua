@@ -5,16 +5,14 @@
 -- Adapted to Yggdrasil WoW by mostly nick :)
 -- ----------------------------------------------------------------------------------------------
 local ENABLE_ACCOUNTWIDE_CURRENCY = true 
-local ANNOUNCE_ON_LOGIN = false 
-local ANNOUNCEMENT = "This server is running the |cFF00B0E8AccountWide Currency |rlua script."
 -- -- -------------------------------------------------------------------------------------------
 -- -- END CONFIG
 -- -- -------------------------------------------------------------------------------------------
 
 local currencyItemIDs = {
     37742,  -- Transmog Token 
-    --20880,  -- Vote Token 
-    --19322,  -- Community Token 
+    20880,  -- Vote Token 
+    19322,  -- Community Token 
 }
 
 if not ENABLE_ACCOUNTWIDE_CURRENCY then return end
@@ -58,13 +56,8 @@ end
 local function AccountWideCurrency(event, player)
     local accountId = player:GetAccountId()
 
-    if event == 3 then
-		
-        if ANNOUNCE_ON_LOGIN then
-            player:SendBroadcastMessage(ANNOUNCEMENT)
-        end
+    if event == 3 then        
         InitializeAccountCurrencyOnEmptyTable(accountId)
-
         player:RegisterEvent(function(_, _, _, player)
             SyncCurrencyOnLogin(player, accountId)
         end, 1000, 1) -- Delay of 1000 milliseconds (1 second) to ensure that the InitializeAccountCurrencyOnEmptyTable() function finishes populating the empty table
