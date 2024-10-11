@@ -27,7 +27,7 @@ local function UpdateAccountCurrency(accountId, currencyId, newCount)
 end
 
 local function InitializeAccountCurrencyOnEmptyTable(accountId)
-    local checkQuery = CharDBQuery("SELECT 1 FROM accountwide_currency WHERE account = " .. accountId .. " LIMIT 1")
+    local checkQuery = CharDBQuery("SELECT 1 FROM accountwide_currency WHERE accountId = " .. accountId .. " LIMIT 1")
 
     if not checkQuery then
         for _, currencyId in ipairs(currencyItemIDs) do
