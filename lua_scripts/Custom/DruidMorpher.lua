@@ -199,6 +199,7 @@ local function CacheCreatures()
           OR name LIKE '%Crazed Ancient%' 
           OR name LIKE '%Crystalline Keeper%' 
           OR name LIKE '%Irontree%' 
+          OR name LIKE '%Deeprot%' 
           OR name LIKE '%tender%')
           AND type = 4
           AND name NOT LIKE '%(%'
