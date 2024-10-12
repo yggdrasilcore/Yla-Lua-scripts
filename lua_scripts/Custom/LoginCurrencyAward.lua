@@ -30,7 +30,7 @@ local function OnLogin(event, player)
 				local itemCount = dpValue
 				CreateLuaEvent(function() 
 					SendBroadcastWithCheck(playerGUID, "You have been awarded " .. itemCount .. " Community Tokens. Thank you for supporting our community!", 19322, itemCount)
-				end, 3000, 1)
+				end, 10000, 1)
 				communitymessage = true
 			end
 		end
@@ -43,7 +43,7 @@ local function OnLogin(event, player)
 				local itemCount = vpValue
 				CreateLuaEvent(function() 
 					SendBroadcastWithCheck(playerGUID, "You have been awarded " .. itemCount .. " Vote Tokens, which can be redeemed for XP boosts, transmogs, and vanity items. Thank you for your vote!", 20880, itemCount)
-				end, 3000, 1)
+				end, 10000, 1)
 				votemessage = true
 			end
 		end
