@@ -48,11 +48,9 @@ local function CheckSvalnaFlag(eventId, delay, repeats, creature)
 end
 
 local function OnEnterCombat(event, player, enemy)
-    if not enemy then print("Area combat trigger detected!") return end
-    print("Svalna CB start")
+    if not enemy then return end
     
     local npcId = enemy:GetEntry()
-    print(npcId)
     
     -- Check if NPC is one of the specified IDs
     if npcId == 38229 or npcId == 38125 or npcId == 37133 or npcId == 38133 or npcId == 37134 or npcId == 37132 or npcId == 37098 or npcId == 37126 then
