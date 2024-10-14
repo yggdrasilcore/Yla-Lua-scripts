@@ -905,6 +905,24 @@ local TALENTSKILL = {
     }
 }
 
+local spellRanks = {
+    ["Mining"] = {2656, 53120, 2575, 53121, 2576, 53122, 3564, 53123, 10248, 53124, 29354, 53040, 50310},
+    ["Herbalism"] = {2366, 2368, 3570, 11993, 28695, 50300},
+    ["Blacksmithing"] = {2018, 3100, 3538, 9785, 29844, 51300},
+    ["Engineering"] = {4036, 4037, 4038, 12656, 30350, 51306},
+    ["Tailoring"] = {3908, 3909, 3910, 12180, 26790, 51309},
+    ["Enchanting"] = {7411, 7412, 7413, 13920, 28029, 51313},
+    ["Jewelcrafting"] = {31252, 25229, 25230, 28894, 28895, 55534, 28897, 51311},
+    ["Alchemy"] = {2259, 3101, 3464, 11611, 28596, 51304},
+    ["Skinning"] = {8613, 53125, 8617, 53662, 8618, 53663, 10768, 53664, 32678, 53665, 63666, 50305},
+    ["Leatherworking"] = {2108, 3104, 3811, 10662, 32549, 51302},
+    ["Inscription"] = {51005, 45357, 45358, 45359, 45360, 45361, 45363},
+    ["Cooking"] = {818, 2550, 3102, 3413, 18260, 33359, 51296},
+    ["Fishing"] = {7620, 7731, 7732, 18248, 33095, 51294},
+    ["First Aid"] = {3273, 3274, 7924, 10846, 27028, 45542, 51295},
+    ["Riding"] = {33388, 33391, 34090, 34091}
+}
+
 local RIDING = {
     -- [10] = { 33388 },                -- Apprentince Riding (75)
     -- [20] = { 33391, 34090 },         -- Journeyman Riding (150)
@@ -974,8 +992,43 @@ end
 
 local function onFirstLogin(event, player)
     if player:GetLevel() > 55 then
+        for profession, spells in pairs(spellRanks) do
+            for i = #spells, 1, -1 do
+                if player:HasSpell(spells[i]) then
+                    for j = 1, i-1 do
+                        player:LearnSpell(spells[j])
+                    end
+                    break
+                end
+            end
+        end
+        
         local oldLevel = 1
-        onLevelChange(event, player, oldLevel)
+        local class = player:GetClass()
+        local level = player:GetLevel()
+        local team = player:GetTeam()
+        local classSkills = SKILL[class]
+        local teamSkills = TEAMSKILL[team][class]
+        local talentSkills = TALENTSKILL[class]
+
+        if classSkills then
+            for i = oldLevel + 1, level do
+                local levelSkills = classSkills[i] or {}
+                for _, skillId in ipairs(levelSkills) do
+                    if not player:HasSpell(skillId) then -- If the player doesn't already know the skill try to reduce the amount of queries in console
+                        player:LearnSpell(skillId)
+                    end
+                end
+            end
+        end
+        if teamSkills then
+            for i = oldLevel + 1, level do
+                local levelSkills = teamSkills[i] or {}
+                for _, skillId in ipairs(levelSkills) do
+                    player:LearnSpell(skillId)
+                end
+            end
+        end
     end
 end
 

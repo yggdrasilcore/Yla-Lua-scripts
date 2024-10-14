@@ -30,18 +30,25 @@ local function OnFirstLogin(event, player)
                 local player = GetPlayerByGUID(guid)
                 if not player then return end
                 
+                local achis = {}
                 local equipItems = {}
                 local inventoryItems = {}
                 local mailItems = {}
                 
                 for _, item in ipairs(itemCache[guid]) do
-                    if item.type > 10 then
+                    if item.type == 50 then
+                        table.insert(achis, item) 
+                    elseif item.type > 10 then
                         table.insert(equipItems, item) 
                     elseif item.type == 2 or item.itemid == 6948 then -- Add hearthstone directly to bag, not mail
                         table.insert(inventoryItems, item) 
                     elseif not (item.itemid == 6948) then
                         table.insert(mailItems, item) 
                     end
+                end
+
+                for _, achi in ipairs(achis) do
+                    player:SetKnownTitle(achi)
                 end
                 
                 for _, item in ipairs(equipItems) do
