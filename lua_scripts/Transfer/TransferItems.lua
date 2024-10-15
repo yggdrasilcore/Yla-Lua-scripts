@@ -1,9 +1,9 @@
-local function OnFirstLogin(event, player)
+local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 in column at_login
     if player:GetLevel() > 55 then
         local guid = player:GetGUIDLow()
         local name = player:GetName()
         
-        CreateLuaEvent(function()
+        CreateLuaEvent(function() -- Ensure we get the player loaded into server cache so we can actually play it
             RunCommand(".cache refresh "..name)
         end, 1000, 1)
         
@@ -11,7 +11,7 @@ local function OnFirstLogin(event, player)
         
         itemCache[guid] = {}
         
-        CharDBQueryAsync("SELECT itemid, count, type FROM character_login_transfer WHERE guid = " .. guid, function(result)
+        CharDBQueryAsync("SELECT itemid, count, type FROM character_login_transfer WHERE guid = " .. guid, function(result) -- Get queued items to add to character
             if result then
                 repeat
                     local itemid = result:GetUInt32(0)
@@ -38,7 +38,7 @@ local function OnFirstLogin(event, player)
                 for _, item in ipairs(itemCache[guid]) do
                     if item.type == 50 then
                         table.insert(achis, item) 
-                    elseif item.type > 10 then
+                    elseif item.type < 50 and item.type > 10 then
                         table.insert(equipItems, item) 
                     elseif item.type == 2 or item.itemid == 6948 then -- Add hearthstone directly to bag, not mail
                         table.insert(inventoryItems, item) 
