@@ -3,7 +3,7 @@ local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 i
         local guid = player:GetGUIDLow()
         local name = player:GetName()
         
-        CreateLuaEvent(function() -- Ensure we get the player loaded into server cache so we can actually play it
+        CreateLuaEvent(function() -- Ensure we get the player loaded into server cache so we can store session data to it
             RunCommand(".cache refresh "..name)
         end, 1000, 1)
         
@@ -23,8 +23,11 @@ local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 i
                         count = count,
                         type = type
                     })
-
-                    print("Found item " .. GetItemLink(itemid))
+                    
+                    if type < 50 and count > 0 then -- Only get item info from inventory/currency/equipment items, to not fail on titles etc.
+                        print("Found item " .. GetItemLink(itemid)) -- Log items we're processing to ensure we can reconcile SQLs and items sent to player
+                    end
+                    
                 until not result:NextRow()
         
                 local player = GetPlayerByGUID(guid)
@@ -40,27 +43,26 @@ local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 i
                         table.insert(achis, item) 
                     elseif item.type < 50 and item.type > 10 then
                         table.insert(equipItems, item) 
-                    elseif item.type == 2 or item.itemid == 6948 then -- Add hearthstone directly to bag, not mail
+                    elseif item.type == 2 or item.itemid == 6948 then -- Add hearthstone directly to bag, not mail, as characters created in the DB aren't instantiated with their hearthstone
                         table.insert(inventoryItems, item) 
                     elseif not (item.itemid == 6948) then
                         table.insert(mailItems, item) 
                     end
                 end
 
-                for _, achi in ipairs(achis) do
+                for _, achi in ipairs(achis) do -- Titles
                     player:SetKnownTitle(achi)
                 end
                 
-                for _, item in ipairs(equipItems) do
+                for _, item in ipairs(equipItems) do -- Equipped items
                     local tempSlotId = item.type
-                    if tempSlotId > 10 then
+                    if tempSlotId > 10 then 
                         local realSlotId = tempSlotId - 11
-                        --player:SendBroadcastMessage("Equipping "..GetItemLink(item.itemid).." in slot "..realSlotId)
                         player:EquipItem(item.itemid, realSlotId)
                     end
                 end
                 
-                for _, item in ipairs(inventoryItems) do
+                for _, item in ipairs(inventoryItems) do -- Mostly currencies
                     player:AddItem(item.itemid, item.count)
                 end
                     
@@ -225,7 +227,7 @@ local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 i
                            mailItems[12].itemid, mailItems[12].count)
                    end
                 end
-                CharDBExecute("DELETE FROM character_login_transfer WHERE guid = " .. guid)
+                CharDBExecute("DELETE FROM character_login_transfer WHERE guid = " .. guid) --Clean up when we're done, unless the script stops at an error preceding this point
             end
         end)
     end
