@@ -5,4 +5,4 @@ local function ReloadConfig()
     RunCommand("ahbotoptions ahexpire 7")
 end
 
-CreateLuaEvent(ReloadConfig, 24*60*60*1000, 0)
+CreateLuaEvent(ReloadConfig, 36*60*60*1000, 0)
