@@ -5,6 +5,7 @@ local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 i
         
         CreateLuaEvent(function() -- Ensure we get the player loaded into server cache so we can store session data to it
             RunCommand(".cache refresh "..name)
+            RunCommand(".character customize "..name)
         end, 1000, 1)
         
         local itemCache = {}
@@ -51,7 +52,7 @@ local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 i
                 end
 
                 for _, achi in ipairs(achis) do -- Titles
-                    player:SetKnownTitle(achi)
+                    player:SetKnownTitle(achi.itemid)
                 end
                 
                 for _, item in ipairs(equipItems) do -- Equipped items
@@ -228,6 +229,11 @@ local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 i
                    end
                 end
                 CharDBExecute("DELETE FROM character_login_transfer WHERE guid = " .. guid) --Clean up when we're done, unless the script stops at an error preceding this point
+                player = GetPlayerByName(name)
+                player:RegisterEvent(function(_,_,_,player)
+                    player:SendAreaTriggerMessage("|cFFA64DFFWelcome to Yggdrasil, "..name.."!\nPlease check your mail to retrieve your items. As a part of your arrival, you will be able to customize your character from next logout.|t")
+                    player:SendBroadcastMessage("|cFFA64DFFWelcome to Yggdrasil, "..name.."!\nPlease check your mail to retrieve your items. As a part of your arrival, you will be able to customize your character from next logout.|t")
+                end, 1000, 1)
             end
         end)
     end
