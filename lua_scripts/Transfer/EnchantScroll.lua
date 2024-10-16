@@ -210,6 +210,7 @@ local function EnchanterSelect(event, player, item, sender, intid, code)
                 local equipment = player:GetEquippedItemBySlot(ID)
                 if equipment then
                     if player:GetItemCount(requiredItemID) >= requiredItemCount then
+                        player:GossipComplete()
                         player:RemoveItem(requiredItemID, requiredItemCount)
                         player:SendBroadcastMessage("You have used 1 Enchanting Scroll.")
                         if v[3] then
@@ -249,7 +250,6 @@ local function EnchanterSelect(event, player, item, sender, intid, code)
                 else
                     player:SendAreaTriggerMessage("You have no item to enchant in the selected slot!")
                 end
-                EnchanterSelect(event, player, item, sender, pVar[player:GetName()], nil)
                 return
             end
         end
