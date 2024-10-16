@@ -156,6 +156,10 @@ local T = {
 local pVar = {};
 
 local function Enchanter(event, player, item)
+    if player:GetLevel() < 80 then
+        player:SendBroadcastMessage("You need to be level 80 to use this item.")
+        return false
+    end
     pVar[player:GetName()] = nil
     for _, v in ipairs(T["Menu"]) do
         player:GossipMenuAddItem(3, v[1].."|R", 0, v[2])
@@ -261,6 +265,7 @@ local query = [[
     SET spellid_1 = 47292,
         description = 'Use this scroll to choose a new enchant for your transferred items. Consumed on use.',
         bonding = 1,
+        RequiredLevel = 80,
         maxcount = 99,
         stackable = 99,
         quality = 6,
@@ -268,4 +273,4 @@ local query = [[
     WHERE entry = 4427;
 ]]
 
-WorldDBQuery(query)
+--WorldDBQuery(query) -- Commented out completed worlddbquery to reduce load
