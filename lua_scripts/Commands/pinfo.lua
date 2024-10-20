@@ -85,13 +85,15 @@ local function OnPinfo(event, player, command)
             "FROM characters WHERE name = '" .. targetName .. "'",
             function(result)
                 if not result then
-                    player:SendBroadcastMessage("Invalid player name.")
+                    local currentPlayer = GetPlayerByName(name)
+                    if currentPlayer then currentPlayer:SendBroadcastMessage("Invalid player name.") end
                     return
                 end
 
                 local charRow = result:GetRow()
                 if not charRow or not charRow["guid"] or not charRow["account"] or not charRow["gender"] or not charRow["level"] or not charRow["money"] or not charRow["race"] or not charRow["class"] or not charRow["zone"] or not charRow["playedtime"] or not charRow["logout_time"] or not charRow["creation_date"] or not charRow["playerFlags"] then
-                    player:SendBroadcastMessage("Invalid player data in database! Contact a dev for aid.")
+                    local currentPlayer = GetPlayerByName(name)
+                    if currentPlayer then currentPlayer:SendBroadcastMessage("Invalid player data in database! Contact a dev for aid.") end
                     return
                 end
                 local days = math.floor( charRow["playedtime"]  / 86400)
@@ -109,13 +111,15 @@ local function OnPinfo(event, player, command)
                     "FROM account WHERE id = " .. charRow["account"],
                     function(authResult)
                         if not authResult then
-                            player:SendBroadcastMessage("Account not found.")
+                            local currentPlayer = GetPlayerByName(name)
+                            if currentPlayer then currentPlayer:SendBroadcastMessage("Account not found.") end
                             return
                         end
 
                         local authRow = authResult:GetRow()
                         if not authRow or not authRow["username"] or not authRow["email"] or not authRow["last_ip"] or not authRow["last_login"] or not authRow["failed_logins"] or not authRow["locked"] then
-                            player:SendBroadcastMessage("Invalid player data in database! Contact a dev for aid.")
+                            local currentPlayer = GetPlayerByName(name)
+                            if currentPlayer then currentPlayer:SendBroadcastMessage("Invalid player data in database! Contact a dev for aid.") end
                             return
                         end
                         
@@ -183,8 +187,8 @@ local function OnPinfo(event, player, command)
                                                     end
 
                                                     local row = mailResult:GetRow()
-                                                    local checked_0_count = row["checked_0_count"]
-                                                    local checked_1_count = row["checked_1_count"]
+                                                    local checked_0_count = row["checked_0_count"] or 0
+                                                    local checked_1_count = row["checked_1_count"] or 0
 
                                                     message = message .. "Mails: " .. checked_0_count .. " read / " .. checked_1_count .. " total"
 
