@@ -12,97 +12,29 @@ local BUFFIDS = {
     75596, 75617, 75618, 76153
 }
 
-local playersToCheck = {}
-local buffToCheck = {}
-local flightcheckeventid
-
-local function IsBuffId(spellId)
-    for _, id in ipairs(BUFFIDS) do
-        if id == spellId then
-            return true
-        end
+local function OnTimer(event, packet, player)
+    if not player then
+        return
     end
-    return false
-end
+    
+    local opcode = packet:GetOpcode()
+    local guid = player:GetGUIDLow()
 
-local function CheckUnderwater(eventId, delay, repeats)
-	local checkcount = 0
-	
-    for playerName, _ in pairs(playersToCheck) do
-		local player = GetPlayerByName(playerName)
-		buffId = buffToCheck[playerName]
-		
-		if not player or (player and not player:HasAura(buffId)) then
-			playersToCheck[playerName] = nil
-			buffToCheck[playerName] = nil
-		else
-			checkcount = checkcount + 1
-			
-			if player:IsUnderWater() then
-				if player:HasAura(buffId) then
-					player:RemoveAura(buffId)
-					
-					playersToCheck[playerName] = nil
-					buffToCheck[playerName] = nil
-					
-					print("[Flight]: Removed flight " .. buffId .. " from player " .. player:GetName().." as they were underwater.")
-				end
-			end
-			
-		end
-	end
-	
-	if checkcount == 0 then
-		RemoveEventById(eventId)
-		flightcheckeventid = nil
-	end
-end
+    local timer = packet:ReadULong()      -- Read Timer as unsigned 32-bit
+    local value = packet:ReadULong()      -- Read Value as unsigned 32-bit
+    local maxValue = packet:ReadULong()   -- Read MaxValue as unsigned 32-bit
+    local scale = packet:ReadLong()       -- Read Scale as signed 32-bit
+    local paused = packet:ReadByte() > 0  -- Read Paused (bool), assuming 0 is false
+    local spellID = packet:ReadULong()    -- Read SpellID as unsigned 32-bit
 
-local function StartCheckingPlayer(player, buffId)
-    local playerName = player:GetName()
-    if not playersToCheck[playerName] then
-        playersToCheck[playerName] = true
-		buffToCheck[playerName] = buffId
-		if not flightcheckeventid then
-			flightcheckeventid = CreateLuaEvent(CheckUnderwater, 1500, 0)
-		end
-    end
-end
-
-local function OnSpellCast(event, player, spell, skipCheck)
-    local buffId = spell:GetEntry()
-    if IsBuffId(buffId) then
-        StartCheckingPlayer(player, buffId)
-    end
-end
-
-local function OnLogin(event, player)
-    for _, buffId in ipairs(BUFFIDS) do
-        if player:HasAura(buffId) then
-            StartCheckingPlayer(player, buffId)
+    if timer == 1 and scale == -1 then -- Timer 1 is swimming, scale -1 means "start breath timer"
+        for _, id in ipairs(BUFFIDS) do
+            if player:HasAura(id) then
+                player:RemoveAura(id)
+            end
         end
     end
 end
 
-local function OnItemUse(event, player, item, targets)
-    local itemId = item:GetEntry()
-	local playerName = player:GetName()
-	if not playersToCheck[playerName] then
-		if player:HasSpell(34091) or player:HasSpell(34093) then
-			if player:HasAura(40120) then
-				StartCheckingPlayer(player, 40120)
-			end
-		elseif player:HasSpell(34090) or player:HasSpell(34092) then
-			if player:HasAura(33943) then
-				StartCheckingPlayer(player, 33943)
-			end
-		end
-	end
-end
-
-RegisterPlayerEvent(3, OnLogin)  -- PLAYER_EVENT_ON_LOGIN
-RegisterPlayerEvent(5, OnSpellCast)  -- PLAYER_EVENT_ON_CAST_SPELL
-RegisterItemEvent(208800, 2, OnItemUse)  -- ITEM_EVENT_ON_USE
-RegisterItemEvent(39163, 2, OnItemUse)  -- ITEM_EVENT_ON_USE
-RegisterItemEvent(28326, 2, OnItemUse)  -- ITEM_EVENT_ON_USE
-RegisterItemEvent(20739, 2, OnItemUse)  -- ITEM_EVENT_ON_USE
+RegisterPacketEvent(0x1D9, 7, OnTimer)
+					
