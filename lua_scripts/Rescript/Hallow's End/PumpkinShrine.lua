@@ -28,4 +28,4 @@ end
 
 RegisterGameObjectGossipEvent(186267, 2, PumpkinGossip)
 
-WorldDBExecute("UPDATE gameobject_template SET ScriptName = '' WHERE entry = 186267")
+--WorldDBExecute("UPDATE gameobject_template SET ScriptName = '' WHERE entry = 186267")
