@@ -75,6 +75,17 @@ local function LazerSpawn(event, creature)
     end
 end
 
+local function killKologarn(event, player, killed)
+    if killed:GetEntry() == 32930 then
+        killed:DespawnOrUnsummon()
+        
+        local bridge = player:SpawnCreature(34297, 1797.15, -24.4027, 448.741, 3.1935, 8)
+        
+        bridge:AddAura(74490, bridge)
+    end
+end
+RegisterPlayerEvent(7, killKologarn) -- Registers the permanent bridge event
+
 -- Register the event for lazer NPCs
 RegisterCreatureEvent(33802, 5, LazerSpawn)
 RegisterCreatureEvent(33632, 5, LazerSpawn)
