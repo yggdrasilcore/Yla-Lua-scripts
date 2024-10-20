@@ -9,11 +9,10 @@ local function antiPublishing(event, player, msg)
     -- Convert message to lowercase for case insensitive matching
     msg = string.lower(msg)
 
-    -- Check if the message contains "discord.com"
-    if string.find(msg, "discord%.com") then
+    if string.find(msg, "discord") then
         return true  -- Allow the message since it contains "discord.com"
     end
-    -- Check if the message contains "discord.com"
+    
     if string.find(msg, "yggdrasilwow%.com") then
         return true  -- Allow the message since it contains "discord.com"
     end
