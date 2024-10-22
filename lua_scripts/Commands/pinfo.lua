@@ -73,12 +73,11 @@ local function OnPinfo(event, player, command)
         end
 
         targetName = CapitalizeName(targetName)
-        
         local targetPlayer = GetPlayerByName(targetName)
-        
         local zone
-        
-        if targetPlayer then zone = targetPlayer:GetZoneId() end
+        if targetPlayer then 
+            zone = targetPlayer:GetZoneId()
+        end
         
         CharDBQueryAsync(
             "SELECT guid, account, gender, level, money, race, class, zone, totaltime as playedtime, logout_time, creation_date, playerFlags " ..
@@ -91,20 +90,29 @@ local function OnPinfo(event, player, command)
                 end
 
                 local charRow = result:GetRow()
-                if not charRow or not charRow["guid"] or not charRow["account"] or not charRow["gender"] or not charRow["level"] or not charRow["money"] or not charRow["race"] or not charRow["class"] or not charRow["zone"] or not charRow["playedtime"] or not charRow["logout_time"] or not charRow["creation_date"] or not charRow["playerFlags"] then
+                
+                if not charRow or not charRow["guid"] or not charRow["account"] or not charRow["gender"] or 
+                   not charRow["level"] or not charRow["money"] or not charRow["race"] or not charRow["class"] or 
+                   not charRow["zone"] or not charRow["playedtime"] or not charRow["logout_time"] or 
+                   not charRow["creation_date"] or not charRow["playerFlags"] then
                     local currentPlayer = GetPlayerByName(name)
                     if currentPlayer then currentPlayer:SendBroadcastMessage("Invalid player data in database! Contact a dev for aid.") end
                     return
                 end
-                local days = math.floor( charRow["playedtime"]  / 86400)
-                local hours = math.floor(( charRow["playedtime"]  % 86400) / 3600)
-                local minutes = math.floor(( charRow["playedtime"]  % 3600) / 60)
-                local seconds = charRow["playedtime"]  % 60
+
+                local days = math.floor(charRow["playedtime"] / 86400)
+                local hours = math.floor((charRow["playedtime"] % 86400) / 3600)
+                local minutes = math.floor((charRow["playedtime"] % 3600) / 60)
+                local seconds = charRow["playedtime"] % 60
 
                 local playedTimeFormatted = string.format("%d days, %d hours, %d minutes, %d seconds", days, hours, minutes, seconds)
 
                 local alive
-                if targetPlayer then alive = "Yes" else alive = (bitwise_and(tonumber(charRow["playerFlags"]), 16) == 16) and "Yes" or "No" end
+                if targetPlayer then 
+                    alive = "Yes" 
+                else 
+                    alive = (bitwise_and(tonumber(charRow["playerFlags"]), 16) == 16) and "Yes" or "No" 
+                end
 
                 AuthDBQueryAsync(
                     "SELECT username, email, last_ip, last_login, failed_logins, locked " ..
@@ -117,7 +125,10 @@ local function OnPinfo(event, player, command)
                         end
 
                         local authRow = authResult:GetRow()
-                        if not authRow or not authRow["username"] or not authRow["email"] or not authRow["last_ip"] or not authRow["last_login"] or not authRow["failed_logins"] or not authRow["locked"] then
+
+                        if not authRow or not authRow["username"] or not authRow["email"] or 
+                           not authRow["last_ip"] or not authRow["last_login"] or 
+                           not authRow["failed_logins"] or not authRow["locked"] then
                             local currentPlayer = GetPlayerByName(name)
                             if currentPlayer then currentPlayer:SendBroadcastMessage("Invalid player data in database! Contact a dev for aid.") end
                             return
@@ -127,9 +138,14 @@ local function OnPinfo(event, player, command)
                         if targetPlayer then status = "Online" else status = "Offline" end
 
                         local zoneName
-                        if zone then zoneName = GetAreaName(zone) else zoneName = tonumber(charRow["zone"]) > 4987 and "Unknown" or GetAreaName(charRow["zone"]) end
+                        if zone then 
+                            zoneName = GetAreaName(zone)
+                        else 
+                            zoneName = tonumber(charRow["zone"]) > 4987 and "Unknown" or GetAreaName(charRow["zone"])
+                        end
                         
                         local logoutTime = UnixToDateTime(charRow["logout_time"])
+
                         local message = "Player found. GUID: " .. charRow["guid"] .. ". Account: " .. charRow["account"] .. ", " .. authRow["username"] .. ".\n" ..
                                         "Email: " .. authRow["email"] .. ". IP: " .. authRow["last_ip"] .. "\n" ..
                                         "Details: Level " .. charRow["level"] .. " " .. GetGenderName(tonumber(charRow["gender"])) .. ", " .. GetRaceName(tonumber(charRow["race"])) .. " " .. GetClassName(tonumber(charRow["class"])) .. ".\n" ..
@@ -139,68 +155,70 @@ local function OnPinfo(event, player, command)
                                         "Played time: " .. playedTimeFormatted .. ".\n" ..
                                         "Money: " .. string.format("%.2f", tonumber(charRow["money"]) / 10000) .. " gold.\n"
 
-                        -- Query guild_member table
                         CharDBQueryAsync("SELECT guildid, `rank` FROM guild_member WHERE guid = " .. charRow["guid"],
                             function(guildMemberResult)
+                                local guildid
+                                local rank
                                 if not guildMemberResult or not guildMemberResult:GetRow() then
+                                    guldid = 1
                                     message = message .. "Guild: No guild.\n"
-                                    return
+                                else
+                                    local guildMemberRow = guildMemberResult:GetRow()
+                                    local guildid = guildMemberRow["guildid"]
+                                    rank = guildMemberRow["rank"]
                                 end
-
-                                local guildMemberRow = guildMemberResult:GetRow()
-                                local guildid = guildMemberRow["guildid"]
-                                local rank = guildMemberRow["rank"]
-
-                                -- Query guild table
+                                if not guildid then guildid = 1 rank = 1 end
+                                
                                 CharDBQueryAsync(
                                     "SELECT name FROM guild WHERE guildid = " .. tonumber(guildid),
                                     function(guildResult)
+                                        local guildName
                                         if not guildResult or not guildResult:GetRow() then
-                                            return
+                                            guildName = "None"
+                                        else
+                                            local guildRow = guildResult:GetRow()
+                                            guildName = guildRow["name"]
                                         end
-
-                                        local guildRow = guildResult:GetRow()
-                                        local guildName = guildRow["name"]
-
-                                        -- Query guild_rank table
+                                        if not guildName then rankName = "None" end
+                                        
                                         CharDBQueryAsync(
                                             "SELECT rname FROM guild_rank WHERE guildid = " .. tonumber(guildid) .. " AND rid = " .. tonumber(rank),
                                             function(guildRankResult)
+                                                local rankName = "None"
                                                 if not guildRankResult or not guildRankResult:GetRow() then
-                                                    return
+                                                else
+                                                    local guildRankRow = guildRankResult:GetRow()
+                                                    rankName = guildRankRow["rname"]
                                                 end
-
-                                                local guildRankRow = guildRankResult:GetRow()
-                                                local rankName = guildRankRow["rname"]
-
+                                                if not rankName then rankName = "None" end
                                                 message = message .. "Guild: " .. guildName .. ", Rank: " .. rankName .. "\n"
                                                 
-                                            CharDBQueryAsync(
-                                                "SELECT " ..
-                                                "SUM(CASE WHEN checked = 0 THEN 1 ELSE 0 END) AS checked_0_count, " ..
-                                                "SUM(CASE WHEN checked = 1 THEN 1 ELSE 0 END) AS checked_1_count " ..
-                                                "FROM mail WHERE receiver = " .. charRow["guid"],
-                                                function(mailResult)
-                                                    if not mailResult or not mailResult:GetRow() then
-                                                        message = message .. "Mails: None\n"
-                                                        return
-                                                    end
+                                                CharDBQueryAsync(
+                                                    "SELECT " ..
+                                                    "SUM(CASE WHEN checked = 0 THEN 1 ELSE 0 END) AS checked_0_count, " ..
+                                                    "SUM(CASE WHEN checked = 1 THEN 1 ELSE 0 END) AS checked_1_count " ..
+                                                    "FROM mail WHERE receiver = " .. charRow["guid"],
+                                                    function(mailResult)
+                                                        if not mailResult or not mailResult:GetRow() then
+                                                            message = message .. "Mails: None\n"
+                                                            return
+                                                        end
 
-                                                    local row = mailResult:GetRow()
-                                                    local checked_0_count = row["checked_0_count"] or 0
-                                                    local checked_1_count = (row["checked_1_count"] + row["checked_0_count"]) or 0
+                                                        local row = mailResult:GetRow()
+                                                        local checked_0_count = row["checked_0_count"] or 0
+                                                        local checked_1_count = (row["checked_1_count"] + row["checked_0_count"]) or 0
 
-                                                    message = message .. "Mails: " .. checked_0_count .. " read / " .. checked_1_count .. " total"
+                                                        message = message .. "Mails: " .. checked_0_count .. " read / " .. checked_1_count .. " total"
 
-                                                    local currentPlayer = GetPlayerByName(name)
-                                                    if currentPlayer then
-                                                        currentPlayer:SendBroadcastMessage(message)
-                                                        if authRow["locked"] and authRow["locked"] > 0 then
-                                                            currentPlayer:SendBroadcastMessage("Locked: Yes")
+                                                        local currentPlayer = GetPlayerByName(name)
+                                                        if currentPlayer then
+                                                            currentPlayer:SendBroadcastMessage(message)
+                                                            if authRow["locked"] and authRow["locked"] > 0 then
+                                                                currentPlayer:SendBroadcastMessage("Locked: Yes")
+                                                            end
                                                         end
                                                     end
-                                                end
-                                            )
+                                                )
                                             end
                                         )
                                     end
