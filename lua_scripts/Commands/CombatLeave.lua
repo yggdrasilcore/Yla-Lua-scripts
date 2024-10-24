@@ -50,9 +50,12 @@ local function TimedCBCheck(eventid, delay, repeats, player)
 end
 
 local function EnterCombat(event, player, enemy)
-    if enemy and enemy:GetRank() > 1 then
-        player:SetData("isInBossFight", true)
-        player:RegisterEvent(TimedCBCheck, 30000, 0)
+    if enemy then
+        creature = enemy:ToCreature()
+        if creature and creature:GetRank() > 1 then
+            player:SetData("isInBossFight", true)
+            player:RegisterEvent(TimedCBCheck, 30000, 0)
+        end
     end
 end
         
