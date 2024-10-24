@@ -206,7 +206,8 @@ local function OnPinfo(event, player, command)
 
                                                         local row = mailResult:GetRow()
                                                         local checked_0_count = row["checked_0_count"] or 0
-                                                        local checked_1_count = (row["checked_1_count"] + row["checked_0_count"]) or 0
+                                                        local checked_1_count = row["checked_1_count"] or 0
+                                                        local checked_1_count = checked_1_count + checked_0_count
 
                                                         message = message .. "Mails: " .. checked_0_count .. " read / " .. checked_1_count .. " total"
 
