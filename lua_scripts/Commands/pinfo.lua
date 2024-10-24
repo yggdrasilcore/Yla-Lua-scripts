@@ -160,14 +160,14 @@ local function OnPinfo(event, player, command)
                                 local guildid
                                 local rank
                                 if not guildMemberResult or not guildMemberResult:GetRow() then
-                                    guldid = 1
+                                    guldid = 0
                                     message = message .. "Guild: No guild.\n"
                                 else
                                     local guildMemberRow = guildMemberResult:GetRow()
                                     local guildid = guildMemberRow["guildid"]
                                     rank = guildMemberRow["rank"]
                                 end
-                                if not guildid then guildid = 1 rank = 1 end
+                                if not guildid then guildid = 0 rank = 0 end
                                 
                                 CharDBQueryAsync(
                                     "SELECT name FROM guild WHERE guildid = " .. tonumber(guildid),
