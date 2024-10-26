@@ -15,13 +15,16 @@ RegisterPacketEvent(0x38D, 5, function(event, packet, player)
     local packetLength = tonumber(tostring(packet:GetSize())) -- unsigned long longs can't be printed directly, nor can they be converted to numbers, so we're doing a double conversion
     print("Packet Length: " .. packetLength)
     
-    if packetLength == 59 or packetLength == 75 then -- Apparently packet length seems to be 59 when monsters get off lifts and 58 when players get off lifts. 75 is monsters jump off/fall off lift
+    if packetLength == 59 or packetLength == 60 or packetLength == 75 or packetLength == 76 then -- Apparently packet length seems to be 59 when monsters get off lifts and 58 when players get off lifts. 75 is monsters jump off/fall off lift
         local guid = packet:ReadGUID()
         local movementInfo = {}
 
         movementInfo.flags = packet:ReadULong() -- This is definitely not read correctly
         movementInfo.time = packet:ReadULong() -- Nor is this
         movementInfo.notsurewhat = packet:ReadByte() -- No idea what this field is even supposed to be, just reading placeholders to find position
+        if packetLength == 60 or packetLength == 76 then 
+            movementInfo.notsurewhat2 = packet:ReadByte() -- No idea what this field is even supposed to be, just reading placeholders to find position
+        end
         movementInfo.pos = {
             x = packet:ReadFloat(),
             y = packet:ReadFloat(),
