@@ -16,11 +16,11 @@ local function OnPlayerMapChange(event, player)
             if mapId == 631 then
                 player:RegisterEvent(function(eventId, delay, repeats, player)
                     if player:GetNearestCreature(250, 37190) then -- Sets ICC to ally if ally NPCs present
-                        cachedFaction[instanceId] = 1665
+                        cachedFaction[instanceId] = 1802
                         player:SetFaction(cachedFaction[instanceId])
                         print("ICC, instance ID "..instanceId..": Ally ICC detected!")
                     elseif player:GetNearestCreature(250, 37189) then
-                        cachedFaction[instanceId] = 1665
+                        cachedFaction[instanceId] = 1801
                         player:SetFaction(cachedFaction[instanceId])
                         print("ICC, instance ID "..instanceId..": Horde ICC detected!")
                     else
