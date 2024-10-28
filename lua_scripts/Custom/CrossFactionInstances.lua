@@ -17,17 +17,17 @@ local function OnPlayerMapChange(event, player)
                 player:RegisterEvent(function(eventId, delay, repeats, player)
                     if player and player:GetNearestCreature(250, 37190) then -- Sets ICC to ally if ally NPCs present
                         cachedFaction[instanceId] = 1802
-                        player:SetFaction(4)
+                        player:SetFaction(35)
                         player:RegisterEvent(function(eventId, delay, repeats, player)
-                            if player then player:SetFaction(cachedFaction[instanceId]) end
-                        end, 100, 1)
+                            if player then player:SetFaction(35) player:SetFaction(cachedFaction[instanceId]) end
+                        end, 2000, 3)
                         print("ICC, instance ID "..instanceId..": Ally ICC detected!")
                     elseif player:GetNearestCreature(250, 37189) then
                         cachedFaction[instanceId] = 1801
-                        player:SetFaction(4)
+                        player:SetFaction(35)
                         player:RegisterEvent(function(eventId, delay, repeats, player)
-                            if player then player:SetFaction(cachedFaction[instanceId]) end
-                        end, 100, 1)
+                            if player then player:SetFaction(35) player:SetFaction(cachedFaction[instanceId]) end
+                        end, 2000, 3)
                         print("ICC, instance ID "..instanceId..": Horde ICC detected!")
                     else
                         print("ICC, instance ID "..instanceId..": No ICC faction detected - checking preexisting players...")
@@ -38,8 +38,8 @@ local function OnPlayerMapChange(event, player)
                                     if player:GetFaction() ~= cachedFaction[instanceId] then
                                         print("ICC, instance ID "..instanceId..": Cached faction found, setting player faction to "..cachedFaction[instanceId])
                                         player:RegisterEvent(function(eventId, delay, repeats, player)
-                                            if player then player:SetFaction(cachedFaction[instanceId]) end
-                                        end, 100, 1)
+                                            if player then player:SetFaction(35) player:SetFaction(cachedFaction[instanceId]) end
+                                        end, 2000, 3)
                                     end
                                     break
                                 end
@@ -62,8 +62,8 @@ local function OnPlayerMapChange(event, player)
                         else
                             if player:GetFaction() ~= cachedFaction[instanceId] then
                                 player:RegisterEvent(function(eventId, delay, repeats, player)
-                                    if player then player:SetFaction(cachedFaction[instanceId]) end
-                                end, 100, 1)
+                                    if player then player:SetFaction(35) player:SetFaction(cachedFaction[instanceId]) end
+                                end, 2000, 3)
                             end
                         end
                     end
@@ -75,7 +75,7 @@ local function OnPlayerMapChange(event, player)
                         if otherPlayer:GetInstanceId() == instanceId and player:GetGUIDLow() ~= otherPlayer:GetGUIDLow() then -- Builds cache if there is none, in the event of an ELUNA reload
                             cachedFaction[instanceId] = otherPlayer:GetFaction()
                             if player:GetFaction() ~= cachedFaction[instanceId] then
-                                if player then player:SetFaction(cachedFaction[instanceId]) end
+                                if player then player:SetFaction(35) player:SetFaction(cachedFaction[instanceId]) end
                             end
                             break
                         end
@@ -97,8 +97,8 @@ local function OnPlayerMapChange(event, player)
                 else
                     if player:GetFaction() ~= cachedFaction[instanceId] then
                         player:RegisterEvent(function(eventId, delay, repeats, player)
-                            if player then player:SetFaction(cachedFaction[instanceId]) end
-                        end, 100, 1)
+                            if player then player:SetFaction(35) player:SetFaction(cachedFaction[instanceId]) end
+                        end, 2000, 3)
                     end
                 end
             end
