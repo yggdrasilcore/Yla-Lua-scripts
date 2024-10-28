@@ -32,8 +32,8 @@ local function OnPlayerMapChange(event, player)
                         for _, playersInInstances in pairs(GetPlayersInWorld()) do
                             if playersInInstances:GetInstanceId() == instanceId then
                                 print("ICC, instance ID "..instanceId..": Cached faction found, setting player faction to "..cachedFaction[instanceId])
-                                player:SetFaction(35)
-                                player:SetFaction(cachedFaction[instanceId])
+                                playersInInstances:SetFaction(35)
+                                playersInInstances:SetFaction(cachedFaction[instanceId])
                             end
                         end
                     end
