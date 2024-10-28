@@ -22,11 +22,7 @@ local function OnKillCreature(event, player, killed)
         
         local shouldReward = playerLevel == MAX_LEVEL and 
                              (killed:IsWorldBoss() or math.abs(playerLevel - bossLevel) <= LEVEL_DIFFERENCE)
-        
-        if shouldReward then
-            player:AddItem(TRANSMOG_TOKEN_ID, TRANSMOG_TOKEN_COUNT)
-            player:SendBroadcastMessage("You have been awarded a Transmog Token for killing a boss!")
-        end
+       
         
         if player:IsInGroup() then
             for _, member in ipairs(player:GetGroup():GetMembers()) do
@@ -41,6 +37,9 @@ local function OnKillCreature(event, player, killed)
                     end
                 end
             end
+        elseif shouldReward then
+            player:AddItem(TRANSMOG_TOKEN_ID, TRANSMOG_TOKEN_COUNT)
+            player:SendBroadcastMessage("You have been awarded a Transmog Token for killing a boss!")
         end
     end
 end
