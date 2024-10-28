@@ -48,7 +48,7 @@ local function OnPlayerMapChange(event, player)
                             if not cachedFaction[instanceId] then
                                 print("ICC, instance ID "..instanceId..": No preexisting players detected, setting ICC faction to current player's faction")
                                 if player and 
-                                (player:GetRace() == 1 and player:GetFaction() == 1) or -- Human
+                                ((player:GetRace() == 1 and player:GetFaction() == 1) or -- Human
                                 (player:GetRace() == 3 and player:GetFaction() == 3) or -- Dwarf
                                 (player:GetRace() == 4 and player:GetFaction() == 4) or -- Night Elf
                                 (player:GetRace() == 7 and player:GetFaction() == 115) or -- Gnome
@@ -83,7 +83,7 @@ local function OnPlayerMapChange(event, player)
                     if not cachedFaction[instanceId] then
                         print("ICC, instance ID "..instanceId..": No preexisting players detected, setting ICC faction to current player's faction")
                         if player and 
-                        (player:GetRace() == 1 and player:GetFaction() == 1) or -- Human
+                        ((player:GetRace() == 1 and player:GetFaction() == 1) or -- Human
                         (player:GetRace() == 3 and player:GetFaction() == 3) or -- Dwarf
                         (player:GetRace() == 4 and player:GetFaction() == 4) or -- Night Elf
                         (player:GetRace() == 7 and player:GetFaction() == 115) or -- Gnome
