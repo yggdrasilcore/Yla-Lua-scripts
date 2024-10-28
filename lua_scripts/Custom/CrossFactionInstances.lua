@@ -18,14 +18,14 @@ local function OnPlayerMapChange(event, player)
                     if player and player:GetNearestCreature(250, 37190) then -- Sets ICC to ally if ally NPCs present
                         cachedFaction[instanceId] = 1802
                         player:SetFaction(4)
-                        player:RegisterEvent(function(eventId, delay, repeats, creature)
+                        player:RegisterEvent(function(eventId, delay, repeats, player)
                             if player then player:SetFaction(cachedFaction[instanceId]) end
                         end, 100, 1)
                         print("ICC, instance ID "..instanceId..": Ally ICC detected!")
                     elseif player:GetNearestCreature(250, 37189) then
                         cachedFaction[instanceId] = 1801
                         player:SetFaction(4)
-                        player:RegisterEvent(function(eventId, delay, repeats, creature)
+                        player:RegisterEvent(function(eventId, delay, repeats, player)
                             if player then player:SetFaction(cachedFaction[instanceId]) end
                         end, 100, 1)
                         print("ICC, instance ID "..instanceId..": Horde ICC detected!")
@@ -37,7 +37,7 @@ local function OnPlayerMapChange(event, player)
                                     cachedFaction[instanceId] = otherPlayer:GetFaction()
                                     if player:GetFaction() ~= cachedFaction[instanceId] then
                                         print("ICC, instance ID "..instanceId..": Cached faction found, setting player faction to "..cachedFaction[instanceId])
-                                        player:RegisterEvent(function(eventId, delay, repeats, creature)
+                                        player:RegisterEvent(function(eventId, delay, repeats, player)
                                             if player then player:SetFaction(cachedFaction[instanceId]) end
                                         end, 100, 1)
                                     end
@@ -61,7 +61,7 @@ local function OnPlayerMapChange(event, player)
                             end
                         else
                             if player:GetFaction() ~= cachedFaction[instanceId] then
-                                player:RegisterEvent(function(eventId, delay, repeats, creature)
+                                player:RegisterEvent(function(eventId, delay, repeats, player)
                                     if player then player:SetFaction(cachedFaction[instanceId]) end
                                 end, 100, 1)
                             end
@@ -96,7 +96,7 @@ local function OnPlayerMapChange(event, player)
                     end
                 else
                     if player:GetFaction() ~= cachedFaction[instanceId] then
-                        player:RegisterEvent(function(eventId, delay, repeats, creature)
+                        player:RegisterEvent(function(eventId, delay, repeats, player)
                             if player then player:SetFaction(cachedFaction[instanceId]) end
                         end, 100, 1)
                     end
