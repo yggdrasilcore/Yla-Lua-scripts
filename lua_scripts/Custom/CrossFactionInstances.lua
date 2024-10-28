@@ -10,120 +10,20 @@ local function OnPlayerMapChange(event, player)
 	if mapId == 631 or mapId == 658 
 	or mapId == 632 or mapId == 668
 	or mapId == 649 or mapId == 650
-	
 	then
 		if instanceId and instanceId > 0 then
             if mapId == 631 then
-                player:RegisterEvent(function(eventId, delay, repeats, player)
-                    if player and player:GetNearestCreature(250, 37190) then -- Sets ICC to ally if ally NPCs present
-                        cachedFaction[instanceId] = 1802
-                        player:SetFaction(35)
-                        player:RegisterEvent(function(eventId, delay, repeats, player)
-                            if player then player:SetFaction(35) end
-                        end, 2000, 4)
-                        player:RegisterEvent(function(eventId, delay, repeats, player)
-                            if player then player:SetFaction(cachedFaction[instanceId]) end
-                        end, 2100, 4)
-                        print("ICC, instance ID "..instanceId..": Ally ICC detected!")
-                    elseif player:GetNearestCreature(250, 37189) then
-                        cachedFaction[instanceId] = 1801
-                        player:SetFaction(35)
-                        player:RegisterEvent(function(eventId, delay, repeats, player)
-                            if player then player:SetFaction(35) end
-                        end, 2000, 4)
-                        player:RegisterEvent(function(eventId, delay, repeats, player)
-                            if player then player:SetFaction(cachedFaction[instanceId]) end
-                        end, 2100, 4)
-                        print("ICC, instance ID "..instanceId..": Horde ICC detected!")
-                    else
-                        print("ICC, instance ID "..instanceId..": No ICC faction detected - checking preexisting players...")
-                        if not cachedFaction[instanceId] then
-                            for _, otherPlayer in pairs(GetPlayersInWorld()) do
-                                if otherPlayer:GetInstanceId() == instanceId and player:GetGUIDLow() ~= otherPlayer:GetGUIDLow() then -- Builds cache if there is none, in the event of an ELUNA reload
-                                    cachedFaction[instanceId] = otherPlayer:GetFaction()
-                                    if player:GetFaction() ~= cachedFaction[instanceId] then
-                                        print("ICC, instance ID "..instanceId..": Cached faction found, setting player faction to "..cachedFaction[instanceId])
-                                        player:RegisterEvent(function(eventId, delay, repeats, player)
-                                            if player then player:SetFaction(35) end
-                                        end, 2000, 4)
-                                        player:RegisterEvent(function(eventId, delay, repeats, player)
-                                            if player then player:SetFaction(cachedFaction[instanceId]) end
-                                        end, 2100, 4)
-                                    end
-                                    break
-                                end
-                            end
-                            
-                            if not cachedFaction[instanceId] then
-                                print("ICC, instance ID "..instanceId..": No preexisting players detected, setting ICC faction to current player's faction")
-                                if player and 
-                                ((player:GetRace() == 1 and player:GetFaction() == 1) or -- Human
-                                (player:GetRace() == 3 and player:GetFaction() == 3) or -- Dwarf
-                                (player:GetRace() == 4 and player:GetFaction() == 4) or -- Night Elf
-                                (player:GetRace() == 7 and player:GetFaction() == 115) or -- Gnome
-                                (player:GetRace() == 11 and player:GetFaction() == 1629)) -- Draenei
-                                then
-                                    cachedFaction[instanceId] = 1802
-                                else
-                                    cachedFaction[instanceId] = 1801
-                                end
-                            end
-                        else
-                            if player:GetFaction() ~= cachedFaction[instanceId] then
-                                player:RegisterEvent(function(eventId, delay, repeats, player)
-                                    if player then player:SetFaction(35) end
-                                end, 2000, 4)
-                                player:RegisterEvent(function(eventId, delay, repeats, player)
-                                    if player then player:SetFaction(cachedFaction[instanceId]) end
-                                end, 2100, 4)
-                            end
-                        end
-                    end
-                    player:RemoveEventById(eventId)
-                end, 500, 1)
-            else
                 if not cachedFaction[instanceId] then
-                    for _, otherPlayer in pairs(GetPlayersInWorld()) do
-                        if otherPlayer:GetInstanceId() == instanceId and player:GetGUIDLow() ~= otherPlayer:GetGUIDLow() then -- Builds cache if there is none, in the event of an ELUNA reload
-                            cachedFaction[instanceId] = otherPlayer:GetFaction()
-                            if player:GetFaction() ~= cachedFaction[instanceId] then
-                                player:RegisterEvent(function(eventId, delay, repeats, player)
-                                    if player then player:SetFaction(35) end
-                                end, 2000, 4)
-                                player:RegisterEvent(function(eventId, delay, repeats, player)
-                                    if player then player:SetFaction(cachedFaction[instanceId]) end
-                                end, 2100, 4)
-                            end
-                            break
-                        end
-                    end
-                    if not cachedFaction[instanceId] then
-                        print("ICC, instance ID "..instanceId..": No preexisting players detected, setting ICC faction to current player's faction")
-                        if player and 
-                        ((player:GetRace() == 1 and player:GetFaction() == 1) or -- Human
-                        (player:GetRace() == 3 and player:GetFaction() == 3) or -- Dwarf
-                        (player:GetRace() == 4 and player:GetFaction() == 4) or -- Night Elf
-                        (player:GetRace() == 7 and player:GetFaction() == 115) or -- Gnome
-                        (player:GetRace() == 11 and player:GetFaction() == 1629)) -- Draenei
-                        then
-                            cachedFaction[instanceId] = 1802
-                        else
-                            cachedFaction[instanceId] = 1801
-                        end
-                    end
-                else
-                    if player:GetFaction() ~= cachedFaction[instanceId] then
-                        player:RegisterEvent(function(eventId, delay, repeats, player)
-                            if player then player:SetFaction(35) end
-                        end, 2000, 4)
-                        player:RegisterEvent(function(eventId, delay, repeats, player)
-                            if player then player:SetFaction(cachedFaction[instanceId]) end
-                        end, 2100, 4)
+                    if player:HasAura(73822) then -- horde icc
+                        player:SetFaction(1801) -- horde faction adjustment
+                        cachedFaction[instanceId] = 1801
+                    elseif player:HasAura(73828) then -- ally icc
+                        player:SetFaction(1802) -- ally  faction adjustment
+                        cachedFaction[instanceId] = 1802
                     end
                 end
             end
-		end
-
+        end
     else
         if player and not (
         (player:GetRace() == 1 and player:GetFaction() == 1) or -- Human
