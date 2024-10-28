@@ -10,6 +10,7 @@ local function OnPlayerMapChange(event, player)
 	if mapId == 631 or mapId == 658 
 	or mapId == 632 or mapId == 668
 	or mapId == 649 or mapId == 650
+	
 	then
 		if instanceId and instanceId > 0 then
             if mapId == 631 then
@@ -17,9 +18,19 @@ local function OnPlayerMapChange(event, player)
                     if player:HasAura(73822) then -- horde icc
                         player:SetFaction(1801) -- horde faction adjustment
                         cachedFaction[instanceId] = 1801
+                        print("ICC, instance ID "..instanceId..": Horde ICC detected! Setting player faction to "..cachedFaction[instanceId])
                     elseif player:HasAura(73828) then -- ally icc
                         player:SetFaction(1802) -- ally  faction adjustment
                         cachedFaction[instanceId] = 1802
+                        print("ICC, instance ID "..instanceId..": Ally ICC detected! Setting player faction to "..cachedFaction[instanceId])
+                    end
+                else
+                    for _, playersInInstances in pairs(GetPlayersInWorld()) do
+                        if playersInInstances:GetInstanceId() == instanceId then
+                            print("ICC, instance ID "..instanceId..": Cached faction found, setting player faction to "..cachedFaction[instanceId])
+                            player:SetFaction(35)
+                            player:SetFaction(cachedFaction[instanceId])
+                        end
                     end
                 end
             end
