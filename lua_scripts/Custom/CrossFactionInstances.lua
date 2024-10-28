@@ -20,20 +20,20 @@ local function OnPlayerMapChange(event, player)
                         player:SetFaction(35)
                         player:RegisterEvent(function(eventId, delay, repeats, player)
                             if player then player:SetFaction(35) end
-                        end, 2000, 1)
+                        end, 2000, 4)
                         player:RegisterEvent(function(eventId, delay, repeats, player)
                             if player then player:SetFaction(cachedFaction[instanceId]) end
-                        end, 2100, 1)
+                        end, 2100, 4)
                         print("ICC, instance ID "..instanceId..": Ally ICC detected!")
                     elseif player:GetNearestCreature(250, 37189) then
                         cachedFaction[instanceId] = 1801
                         player:SetFaction(35)
                         player:RegisterEvent(function(eventId, delay, repeats, player)
                             if player then player:SetFaction(35) end
-                        end, 2000, 1)
+                        end, 2000, 4)
                         player:RegisterEvent(function(eventId, delay, repeats, player)
                             if player then player:SetFaction(cachedFaction[instanceId]) end
-                        end, 2100, 1)
+                        end, 2100, 4)
                         print("ICC, instance ID "..instanceId..": Horde ICC detected!")
                     else
                         print("ICC, instance ID "..instanceId..": No ICC faction detected - checking preexisting players...")
@@ -45,10 +45,10 @@ local function OnPlayerMapChange(event, player)
                                         print("ICC, instance ID "..instanceId..": Cached faction found, setting player faction to "..cachedFaction[instanceId])
                                         player:RegisterEvent(function(eventId, delay, repeats, player)
                                             if player then player:SetFaction(35) end
-                                        end, 2000, 1)
+                                        end, 2000, 4)
                                         player:RegisterEvent(function(eventId, delay, repeats, player)
                                             if player then player:SetFaction(cachedFaction[instanceId]) end
-                                        end, 2100, 1)
+                                        end, 2100, 4)
                                     end
                                     break
                                 end
@@ -72,10 +72,10 @@ local function OnPlayerMapChange(event, player)
                             if player:GetFaction() ~= cachedFaction[instanceId] then
                                 player:RegisterEvent(function(eventId, delay, repeats, player)
                                     if player then player:SetFaction(35) end
-                                end, 2000, 1)
+                                end, 2000, 4)
                                 player:RegisterEvent(function(eventId, delay, repeats, player)
                                     if player then player:SetFaction(cachedFaction[instanceId]) end
-                                end, 2100, 1)
+                                end, 2100, 4)
                             end
                         end
                     end
@@ -89,10 +89,10 @@ local function OnPlayerMapChange(event, player)
                             if player:GetFaction() ~= cachedFaction[instanceId] then
                                 player:RegisterEvent(function(eventId, delay, repeats, player)
                                     if player then player:SetFaction(35) end
-                                end, 2000, 1)
+                                end, 2000, 4)
                                 player:RegisterEvent(function(eventId, delay, repeats, player)
                                     if player then player:SetFaction(cachedFaction[instanceId]) end
-                                end, 2100, 1)
+                                end, 2100, 4)
                             end
                             break
                         end
@@ -115,10 +115,10 @@ local function OnPlayerMapChange(event, player)
                     if player:GetFaction() ~= cachedFaction[instanceId] then
                         player:RegisterEvent(function(eventId, delay, repeats, player)
                             if player then player:SetFaction(35) end
-                        end, 2000, 1)
+                        end, 2000, 4)
                         player:RegisterEvent(function(eventId, delay, repeats, player)
                             if player then player:SetFaction(cachedFaction[instanceId]) end
-                        end, 2100, 1)
+                        end, 2100, 4)
                     end
                 end
             end
