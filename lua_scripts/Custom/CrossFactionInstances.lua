@@ -14,25 +14,30 @@ local function OnPlayerMapChange(event, player)
 	then
 		if instanceId and instanceId > 0 then
             if mapId == 631 then
-                if not cachedFaction[instanceId] then
-                    if player:HasAura(73822) then -- horde icc
-                        player:SetFaction(1801) -- horde faction adjustment
-                        cachedFaction[instanceId] = 1801
-                        print("ICC, instance ID "..instanceId..": Horde ICC detected! Setting player faction to "..cachedFaction[instanceId])
-                    elseif player:HasAura(73828) then -- ally icc
-                        player:SetFaction(1802) -- ally  faction adjustment
-                        cachedFaction[instanceId] = 1802
-                        print("ICC, instance ID "..instanceId..": Ally ICC detected! Setting player faction to "..cachedFaction[instanceId])
-                    end
-                else
-                    for _, playersInInstances in pairs(GetPlayersInWorld()) do
-                        if playersInInstances:GetInstanceId() == instanceId then
-                            print("ICC, instance ID "..instanceId..": Cached faction found, setting player faction to "..cachedFaction[instanceId])
-                            player:SetFaction(35)
-                            player:SetFaction(cachedFaction[instanceId])
+                print("ICC, faction adjustment script triggered!")
+                player:RegisterEvent(function(eventId, delay, repeats, player)
+                    if not cachedFaction[instanceId] then    
+                        print("ICC, player "..player:GetName().." just entered! No faction cached for instance ID "..instanceId)
+                        if player:HasAura(73822) then -- horde icc
+                            player:SetFaction(1801) -- horde faction adjustment
+                            cachedFaction[instanceId] = 1801
+                            print("ICC, instance ID "..instanceId..": Horde ICC detected! Setting player faction to "..cachedFaction[instanceId])
+                        elseif player:HasAura(73828) then -- ally icc
+                            player:SetFaction(1802) -- ally  faction adjustment
+                            cachedFaction[instanceId] = 1802
+                            print("ICC, instance ID "..instanceId..": Ally ICC detected! Setting player faction to "..cachedFaction[instanceId])
+                        end
+                    else
+                        print("ICC, player "..player:GetName().." just entered! Faction cached for instance ID "..instanceId..": "..cachedFaction[instanceId])
+                        for _, playersInInstances in pairs(GetPlayersInWorld()) do
+                            if playersInInstances:GetInstanceId() == instanceId then
+                                print("ICC, instance ID "..instanceId..": Cached faction found, setting player faction to "..cachedFaction[instanceId])
+                                player:SetFaction(35)
+                                player:SetFaction(cachedFaction[instanceId])
+                            end
                         end
                     end
-                end
+                end, 500, 1)
             end
         end
     else
