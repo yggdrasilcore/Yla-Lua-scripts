@@ -1,9 +1,9 @@
 -- Welcome to Yggdrasil's RAF system, by mostly nick :)
 
 -- START VARS
-local RAFDuration 			= 45 * 24 * 60 * 60 -- RAF validity duration (45 * 24 * 60 * 60 = 45 days)
+local RAFDuration 			= 60 * 24 * 60 * 60 -- RAF validity duration (60 * 24 * 60 * 60 = 60 days)
 local ProgressCheckTimer 	= 5 				-- How often (in minutes) to check if RAF requirements are fulfilled, in minutes
-local RAFRewardReq			= 10000				-- How many counts of "activity" to require to achieve RAF rewards (skill points earned, achievements earned, quests completed, area changes, creatures in level ranged killed, etc.)
+local RAFRewardReq			= 7500				-- How many counts of "activity" to require to achieve RAF rewards (skill points earned, achievements earned, quests completed, area changes, creatures in level ranged killed, etc.)
 local RewardTier1			= 5					-- How many referrals required to reach certain reward tiers
 local RewardTier2			= 10
 local RewardTier3			= 15
@@ -122,17 +122,21 @@ local function ShowReferralInfoMenu(player, page)
 				local entry = entries[i]
 				local statusText = (entry.status == 2) and "In progress" or "Completed"
 				local currentTime = os.time()
-				local timeLeft = (entry.date + RAFDuration) - currentTime
-				local daysLeft = math.floor(timeLeft / (24 * 60 * 60))
-				local hoursLeft = math.floor((timeLeft % (24 * 60 * 60)) / 3600)
-				local timeLeftText
-				if daysLeft > 0 then
-					timeLeftText = string.format("%d days", daysLeft)
-				elseif hoursLeft > 0 then
-					timeLeftText = string.format("%d hours", hoursLeft)
-				else
-					timeLeftText = "less than 1 hour"
-				end
+                local timeLeft = (entry.date + RAFDuration) - currentTime
+                if timeLeft <= 0 then
+                    timeLeftText = "Expired"
+                else
+                    local daysLeft = math.floor(timeLeft / (24 * 60 * 60))
+                    local hoursLeft = math.floor((timeLeft % (24 * 60 * 60)) / 3600)
+                    
+                    if daysLeft > 0 then
+                        timeLeftText = string.format("%d days", daysLeft)
+                    elseif hoursLeft > 0 then
+                        timeLeftText = string.format("%d hours", hoursLeft)
+                    else
+                        timeLeftText = "less than 1 hour"
+                    end
+                end
 				local progressText
 				if not entry.progress or (entry.progress == 0 and statusText ~= "Completed") then
 					progressText = 0
@@ -143,6 +147,12 @@ local function ShowReferralInfoMenu(player, page)
 				end
 				player:GossipMenuAddItem(0, string.format("|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|tReferral ID: %d\n \nStatus: %s \nProgress: %d%% \nRAF active for: %s\n \n ", 
 					entry.refereeAccountId, statusText, progressText, timeLeftText), 1, 2)
+                    
+                print("Date from DB:", entry.date)
+                print("RAFDuration:", RAFDuration)
+                print("Expiration date:", entry.date + RAFDuration)
+                print("Current time:", currentTime)
+                print("Time left:", (entry.date + RAFDuration) - currentTime)
 			end
 			
 			if totalPages > 1 then
@@ -253,48 +263,53 @@ local function ShowRefereeInfo(player)
         SELECT referer_id, status, date, progress FROM account_raf WHERE account_id = %d
     ]], accountId), function(query)
 		player = GetPlayerByName(name)
-		if query then
-			local refererAccountId = query:GetUInt32(0)
-			local status = query:GetUInt32(1)
-			local date = query:GetUInt32(2)
-			local progress = query:GetUInt32(3)
-			
-			local statusText = (status == 2) and "In progress" or "Completed"
-			local progressText
-			
-			if progress == 0 and statusText ~= "Completed" then
-				progressText = 0
-			elseif statusText == "Completed" then
-				progressText = 100
-			else
-				progressText = (progress / RAFRewardReq * 100)
-			end
-			
-			if progressText > 100 then
-				progressText = 100
-			end
-			
-			local currentTime = os.time()
-			local timeLeft = (date + RAFDuration) - currentTime
-			local daysLeft = math.floor(timeLeft / (24 * 60 * 60))
-			local hoursLeft = math.floor((timeLeft % (24 * 60 * 60)) / 3600)
-			
-			local timeLeftText
-			if daysLeft > 0 then
-				timeLeftText = string.format("%d days", daysLeft)
-			elseif hoursLeft > 0 then
-				timeLeftText = string.format("%d hours", hoursLeft)
-			else
-				timeLeftText = "less than 1 hour"
-			end
-			
-			player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|tReferral status: \n \nYou're registered with the following referral information:\n \nReferer ID: ".. refererAccountId ..". \n \nStatus: " .. statusText .." \n \nProgress towards rewards: " .. progressText .."%.\n \nReferral program time left: " .. timeLeftText..".\n \n", 1, 3)
-			
-			player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
-		else
-			player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:32:32:-22:0|t Referral status:\n \nYou have not been registered as a referred player.\n \n", 1, 3)
-			player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
-		end
+        if query then
+            local refererAccountId = query:GetUInt32(0)
+            local status = query:GetUInt32(1)
+            local date = query:GetUInt32(2)
+            local progress = query:GetUInt32(3)
+            
+            local statusText = (status == 2) and "In progress" or "Completed"
+            local progressText
+            
+            if progress == 0 and statusText ~= "Completed" then
+                progressText = 0
+            elseif statusText == "Completed" then
+                progressText = 100
+            else
+                progressText = (progress / RAFRewardReq * 100)
+            end
+            
+            if progressText > 100 then
+                progressText = 100
+            end
+            
+            local currentTime = os.time()
+            local timeLeft = (date + RAFDuration) - currentTime
+            local timeLeftText
+            
+            if timeLeft <= 0 then
+                timeLeftText = "Expired"
+            else
+                local daysLeft = math.floor(timeLeft / (24 * 60 * 60))
+                local hoursLeft = math.floor((timeLeft % (24 * 60 * 60)) / 3600)
+                
+                if daysLeft > 0 then
+                    timeLeftText = string.format("%d days", daysLeft)
+                elseif hoursLeft > 0 then
+                    timeLeftText = string.format("%d hours", hoursLeft)
+                else
+                    timeLeftText = "less than 1 hour"
+                end
+            end
+            
+            player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|tReferral status: \n \nYou're registered with the following referral information:\n \nReferer ID: ".. refererAccountId ..". \n \nStatus: " .. statusText .." \n \nProgress towards rewards: " .. progressText .."%.\n \nReferral program time left: " .. timeLeftText..".\n \n", 1, 3)
+            
+            player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
+        else
+            player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:32:32:-22:0|t Referral status:\n \nYou have not been registered as a referred player.\n \n", 1, 3)
+            player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
+        end
 		player:GossipSendMenu(12, player, 1)
 	end)
 end
@@ -1438,6 +1453,26 @@ local function OnAchievementComplete(event, player, achievementId)
     UpdateProgress(player)
 end
 
+local function OnEquip(event, player, item, bag, slot)
+    UpdateProgress(player)
+end
+
+local function EnterCombat(event, player, enemy)
+    UpdateProgress(player)
+end
+
+local function LeaveCombat(event, player)
+    UpdateProgress(player)
+end
+
+local function OnXP(event, player, amount, victim, source)
+    UpdateProgress(player)
+end
+
+local function OnRep(event, player, factionId, standing, incremental)
+    UpdateProgress(player)
+end
+
 local function OnCreatureKill(event, killer, killed)
 	if killed:GetLevel() + 8 >= killer:GetLevel() then
 		UpdateProgress(killer)
@@ -1545,11 +1580,16 @@ CreateLuaEvent(CheckCompletedReferrals, ProgressCheckTimer * 60 * 1000, 0)
 RegisterPlayerEvent(3, OnPlayerLogin)
 RegisterPlayerEvent(4, ClearRefereeStatus)
 RegisterPlayerEvent(7, OnCreatureKill)
+RegisterPlayerEvent(12, OnXP)
+RegisterPlayerEvent(15, OnRep)
 RegisterPlayerEvent(25, OnSave)
 RegisterPlayerEvent(27, OnAreaTrigger)
-RegisterServerEvent(33, ReloadEluna)
+RegisterPlayerEvent(29, OnEquip)
+RegisterPlayerEvent(33, EnterCombat)
+RegisterPlayerEvent(34, LeaveCombat)
 RegisterPlayerEvent(42, RAFCommands)
 RegisterPlayerEvent(45, OnAchievementComplete)
 RegisterPlayerEvent(54, OnCompleteQuest)
+RegisterServerEvent(33, ReloadEluna)
 
 RegisterPlayerGossipEvent(1, 2, OnGossipSelect) -- Register gossip selection event
