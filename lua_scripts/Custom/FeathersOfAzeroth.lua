@@ -624,7 +624,6 @@ end
 
 local function OnMoveSetFly(event, packet, player)
     if player then
-        print(player:GetGossipTextId(player))
         if player:GetGossipTextId(player) == 12 then
             player:GossipComplete()
         end
