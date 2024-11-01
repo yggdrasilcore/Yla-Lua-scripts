@@ -147,12 +147,6 @@ local function ShowReferralInfoMenu(player, page)
 				end
 				player:GossipMenuAddItem(0, string.format("|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|tReferral ID: %d\n \nStatus: %s \nProgress: %d%% \nRAF active for: %s\n \n ", 
 					entry.refereeAccountId, statusText, progressText, timeLeftText), 1, 2)
-                    
-                print("Date from DB:", entry.date)
-                print("RAFDuration:", RAFDuration)
-                print("Expiration date:", entry.date + RAFDuration)
-                print("Current time:", currentTime)
-                print("Time left:", (entry.date + RAFDuration) - currentTime)
 			end
 			
 			if totalPages > 1 then
