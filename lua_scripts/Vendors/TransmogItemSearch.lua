@@ -46121,7 +46121,7 @@ local itemIconCache = {
 
 local NPC_ID = 190089
 local CURRENCY_ID = 37742
-local CURRENCY_NAME = "Transmog Token"
+local CURRENCY_NAME = "Activity Token"
 local ItemCache = {} 
 local itemsPerPage = 10
 local currentSearchTerm = " " 

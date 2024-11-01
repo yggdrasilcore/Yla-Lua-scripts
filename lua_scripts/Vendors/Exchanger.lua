@@ -1,7 +1,7 @@
 local NPC_ID = 190000
 
 local VOTE_TOKEN_NAME = "Vote Tokens"
-local TRANSMOG_TOKEN_NAME = "Transmog Tokens"
+local TRANSMOG_TOKEN_NAME = "Activity Tokens"
 
 local VOTE_TOKEN = 20880
 local EMBLEM_OF_FROST = 49426
@@ -13,8 +13,8 @@ local function OnGossipHello(event, player, creature)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_bijou_gold:32:32:-26:0|tExchange Vote Tokens:", 0, 1)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_frostemblem_01:32:32:-26:0|tEmblem of Frost (5 per)", 0, 101)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_holy_summonchampion:32:32:-26:0|tEmblem of Triumph (1 per)", 0, 102)
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_coin_07:32:32:-26:0|tTransmog Token (1 per)\n \n ", 0, 104)
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_coin_07:32:32:-26:0|tExchange Transmog Tokens:", 0, 1)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_coin_07:32:32:-26:0|tActivity Token (1 per)\n \n ", 0, 104)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_coin_07:32:32:-26:0|tExchange Activity Tokens:", 0, 1)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_holy_summonchampion:32:32:-26:0|tEmblem of Triumph (15 per)\n \n", 0, 103)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-26:0|tNevermind", 0, 99)
     player:GossipSendMenu(12, creature, 60)
@@ -34,13 +34,19 @@ local function BuyCurrency(player, itemId, cost, amount, currencyName, costCurre
 end
 
 local function ShowAmountMenu(player, creature, currencyId, cost, currencyName, costCurrency)
+    local paymentCurrency
+    if costCurrency == 20880 then
+        paymentCurrency = VOTE_TOKEN_NAME
+    else
+        paymentCurrency = TRANSMOG_TOKEN_NAME
+    end
     player:GossipMenuAddItem(4, string.format("|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-26:0|tChoose amount:\n \n How many %s \n can I offer you today?\n ", currencyName), 0, 200)
-    player:GossipMenuAddItem(4, string.format("|TInterface/ICONS/inv_misc_coin_05:32:32:-26:0|tBuy 1 for %d %s", cost * 1, GetItemLink(costCurrency)), 0, 201)
-    player:GossipMenuAddItem(4, string.format("|TInterface/ICONS/inv_misc_coin_06:32:32:-26:0|tBuy 5 for %d %s", cost * 5, GetItemLink(costCurrency)), 0, 202)
-    player:GossipMenuAddItem(4, string.format("|TInterface/ICONS/inv_misc_coin_03:32:32:-26:0|tBuy 10 for %d %s", cost * 10, GetItemLink(costCurrency)), 0, 203)
-    player:GossipMenuAddItem(4, string.format("|TInterface/ICONS/inv_misc_coin_04:32:32:-26:0|tBuy 25 for %d %s", cost * 25, GetItemLink(costCurrency)), 0, 204)
-    player:GossipMenuAddItem(4, string.format("|TInterface/ICONS/inv_misc_coin_01:32:32:-26:0|tBuy 50 for %d %s", cost * 50, GetItemLink(costCurrency)), 0, 205)
-    player:GossipMenuAddItem(4, string.format("|TInterface/ICONS/inv_misc_coin_02:32:32:-26:0|tBuy 100 for %d %s", cost * 100, GetItemLink(costCurrency)), 0, 206)
+    player:GossipMenuAddItem(4, string.format("|TInterface/ICONS/inv_misc_coin_05:32:32:-26:0|tBuy 1 for %d %s", cost * 1, paymentCurrency), 0, 201)
+    player:GossipMenuAddItem(4, string.format("|TInterface/ICONS/inv_misc_coin_06:32:32:-26:0|tBuy 5 for %d %s", cost * 5, paymentCurrency), 0, 202)
+    player:GossipMenuAddItem(4, string.format("|TInterface/ICONS/inv_misc_coin_03:32:32:-26:0|tBuy 10 for %d %s", cost * 10, paymentCurrency), 0, 203)
+    player:GossipMenuAddItem(4, string.format("|TInterface/ICONS/inv_misc_coin_04:32:32:-26:0|tBuy 25 for %d %s", cost * 25, paymentCurrency), 0, 204)
+    player:GossipMenuAddItem(4, string.format("|TInterface/ICONS/inv_misc_coin_01:32:32:-26:0|tBuy 50 for %d %s", cost * 50, paymentCurrency), 0, 205)
+    player:GossipMenuAddItem(4, string.format("|TInterface/ICONS/inv_misc_coin_02:32:32:-26:0|tBuy 100 for %d %s", cost * 100, paymentCurrency), 0, 206)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_coin_17:32:32:-26:0|tEnter custom amount", 0, 207, true)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-26:0|tBack", 0, 99)
     player:GossipSendMenu(12, creature, 60)
@@ -63,7 +69,7 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
     elseif intid == 103 then
         ShowAmountMenu(player, creature, EMBLEM_OF_TRIUMPH, 15, "Emblem of Triumph", TRANSMOG_TOKEN)
     elseif intid == 104 then
-        ShowAmountMenu(player, creature, TRANSMOG_TOKEN, 1, "Transmog Token", VOTE_TOKEN)
+        ShowAmountMenu(player, creature, TRANSMOG_TOKEN, 1, "Activity Token", VOTE_TOKEN)
     elseif intid == 99 then
         OnGossipHello(event, player, creature)
     elseif intid >= 200 and intid <= 206 then

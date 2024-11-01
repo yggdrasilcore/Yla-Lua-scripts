@@ -11,7 +11,7 @@ local ORIENTATION = 5.461457
 -- VIP vars
 local vendorID = 26300
 local vendorCD = 15 * 60 -- 15 minutes in seconds
-local VIPVendorDuration = 1 * 60 * 1000 -- VIP vendor lasts for 1 minute
+local VIPVendorDuration = 3 * 60 * 1000 -- VIP vendor lasts for 1 minute
 local timeMessage = 0
 local VIPtime = {}
 -- End VIP vars
@@ -387,7 +387,10 @@ local function mainMenu(player, creature)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tVIP options", 0, 2)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|tRAF menu", 0, 6)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_Coin_16:32:32:-22:0|tSee my currencies", 0, 3)
-	player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_gem_diamond_07:32:32:-22:0|tExplore Yggdrasil's features", 0, 5)
+    if player:HasItem(20739) then
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_feather_13:32:32:-22:0|tManage Feathers of Azeroth", 0, 7)
+	end
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_gem_diamond_07:32:32:-22:0|tExplore Yggdrasil's features", 0, 5)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_arcane_teleportdarnassus:32:32:-22:0|tLet's go to the Mall!", 0, 4)
     player:GossipSendMenu(12, creature, 60)
 end
@@ -459,6 +462,8 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 	intIdChoice[player:GetGUIDLow()] = intId
     if intId == 1 then
 		mainMenu(player, creature)
+	elseif intId == 7 then
+		player:RunCommand("choosestandardfeathers")
 	elseif intId == 6 then
 		player:RunCommand("rafmenu")
 	elseif intId == 5 then
@@ -488,10 +493,9 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
         player:GossipSendMenu(12, creature, 60)
 	elseif intId == 54 then
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/achievement_zone_easternkingdoms_01:32:32:-22:0|tAzeroth flight features:\n ", 0, 54)
-		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_feather_13:32:32:-22:0|tThe Feathers of Azeroth: \n \nTo fly in Kalimdor and Eastern Kingdoms, you must buy the Feathers of Azeroth from the bird breeder at the Mall for 50 gold, given that you are already able to fly. This item lets you shapeshift into flight form regardless of your class.\n ", 0, 54)
-		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_flower_02:32:32:-22:0|tGathering: \n \nThe Feathers of Azeroth permit gathering in the old world as if you were a druid; a gatherer's dream!\n ", 0, 54)
-		player:GossipMenuAddItem(4, "|TInterface/ICONS/Spell_magic_featherfall:32:32:-22:0|tIntegrated parachute: \n \nLike an engineer's rocket boots, the Feathers have a slight failure rate. Worry not, the integrated parachute will keep you safe. \n ", 0, 54)
-		player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_flightform:32:32:-22:0|tSafety net: \n \nWhen falling at altitudes of 3 yards or move above the ground of an obstacle, the Feathers will automatically catch you. \n ", 0, 54)
+		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_feather_13:32:32:-22:0|tThe Feathers of Azeroth: \n \nTo fly in Kalimdor and Eastern Kingdoms, you must buy the Feathers of Azeroth from the bird breeder at the Mall for 50 gold, given that you are already able to fly.\n ", 0, 54)
+		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_flower_02:32:32:-22:0|tUse any mount: \n \nThe Feathers a mount of your choice in the Feathers of Azeroth, permitting their flight in old world areas.\n ", 0, 54)
+		player:GossipMenuAddItem(4, "|TInterface/ICONS/Spell_magic_featherfall:32:32:-22:0|tSupports shapeshifts: \n \nAll flying mounts and shapeshifts that can fly in all of Outland and Northrend, including Druid shapeshifts, can be wrapped in the Feathers of Azeroth. \n ", 0, 54)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 5)
         player:GossipSendMenu(12, creature, 60)
 	elseif intId == 56 then
@@ -503,7 +507,7 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 	elseif intId == 53 then
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_coin_02:32:32:-22:0|tEconomy services:\n ", 0, 53)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_bag_07:32:32:-22:0|tAuction house features: \n \nCross faction: Both factions can trade on the same auction house.\n \nAuction house bot: Pbtwelve, our beloved auction house bot, works tirelessly to keep the supply high.\n \nReduced auction cut: The auction house charges an 80% reduced cut on posting auctions.\n ", 0, 53)
-		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_frostemblem_01:32:32:-22:0|tTertiary currency exchanger: \n \nAt the Mall, the Exchanger offers currency exchange services for Vote Tokens and can trade them for Emblems of Triumph (1:1), Emblems of Frost (5:1), or Transmog Tokens (10:1).\n ", 0, 53)
+		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_frostemblem_01:32:32:-22:0|tTertiary currency exchanger: \n \nAt the Mall, the Exchanger offers currency exchange services for Vote Tokens and can trade them for Emblems of Triumph (1:1), Emblems of Frost (5:1), or Activity Tokens (15:1).\n ", 0, 53)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 5)
         player:GossipSendMenu(12, creature, 60)
 	elseif intId == 52 then
@@ -524,8 +528,8 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 	elseif intId == 50 then
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_travelform:32:32:-22:0|tDruid shapeshifts: \n \nThrough harnessing the powers of ancient Kaldorei magic, druids can learn the form of many unique beasts to apply them onto their own beastial forms. Note: Some creatures share the same creature model. Each model can only be claimed once.\n \nClick here for a full list of applicable creatures. \n ", 0, 500)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_helmet_89:32:32:-22:0|tTransmogrifyer: \n \nYggdrasil sports a transmogrifyer from the Cataclysm era, where you can apply the look of one item onto others by having both items in your bags and paying a transmogrifyer to apply the new look. Transmogrifyers are at the mall and all capital cities' enchanting trainers.\n ", 0, 50)
-		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_bag_07_red:32:32:-22:0|tTransmog Item Vendor: \n \nThis mall vendor can search for almost any item in the world under item level 200 and sell it to you for Transmog Tokens.\n ", 0, 50)
-		player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tTransmog Tokens: \n \nBy completing quests while at level 80 and killing raid/dungeon bosses while the player is at level 80 and the boss is level 71 or higher, you earn Transmog Tokens. These can be used to buy items at the Transmog Item Vendor.\n ", 0, 50)
+		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_bag_07_red:32:32:-22:0|tTransmog Item Vendor: \n \nThis mall vendor can search for almost any item in the world under item level 200 and sell it to you for Activity Tokens.\n ", 0, 50)
+		player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tActivity Tokens: \n \nBy completing quests while at level 80 and killing raid/dungeon bosses while the player is at level 80 and the boss is level 71 or higher, you earn Activity Tokens. These can be used to buy items at the Transmog Item Vendor.\n ", 0, 50)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 5)
         player:GossipSendMenu(12, creature, 60)
 	elseif intId == 500 then
@@ -572,7 +576,7 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
 	elseif intId == 2 then
 		VIPmenu(player, creature)
 	elseif intId == 19 then
-		player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tWhy should I get VIP?\n \nAs VIP, you get access to free repairs, banking, mailing, an auction house, and a vendor to sell your accumulated items anywhere you are!\n ",  0, 19)
+		player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tWhy should I get VIP?\n \nAs VIP, you get access to free repairs, banking, mailing, the auction house, and a vendor to sell your accumulated items anywhere you are!\n ",  0, 19)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 2)
         player:GossipSendMenu(12, creature, 60)
 	elseif intId == 20 then
@@ -619,13 +623,13 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
     elseif intId == 3 then
         player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tWhat can I use my currencies for?", 0, 30)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tCommunity Tokens: "..player:GetItemCount(19322), 0, 3)
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tTransmog Tokens: "..player:GetItemCount(37742), 0, 3)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tActivity Tokens: "..player:GetItemCount(37742), 0, 3)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_bijou_gold:32:32:-22:0|tVote Tokens: "..player:GetItemCount(20880), 0, 3)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 1)
         player:GossipSendMenu(12, creature, 60)
 	elseif intId == 30 then
         player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tCommunity Token: \n \nEarned through helping build the Yggdrasil community, these tokens can be traded for vanity pets, mounts, account services and more at the mall, or VIP services with Twiggy.", 0, 30)
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tTransmog Token: \n \nThis currency can be spent at the transmog item vendor to buy items under item level 200 that you can then later wear as gear or transmog onto your higher item level gear. It is earned by completing end-game quests or slaying bosses above level 71 while at level 80", 0, 30)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tActivity Token: \n \nThis currency can be spent at the transmog item vendor to buy items under item level 200 that you can then later wear as gear or transmog onto your higher item level gear. It is earned by completing end-game quests or slaying bosses above level 71 while at level 80", 0, 30)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_bijou_gold:32:32:-22:0|tVote Token: \n \nEarned through voting for the server, these tokens can be predominantly exchanged for vanity items at the mall, or traded down to Emblems of Frost or Emblems of Triumph at the Mall's exchanger.", 0, 30)	
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 3)
         player:GossipSendMenu(12, creature, 60)

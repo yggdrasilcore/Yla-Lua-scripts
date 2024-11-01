@@ -10,7 +10,7 @@ local ENABLE_ACCOUNTWIDE_CURRENCY = true
 -- -- -------------------------------------------------------------------------------------------
 
 local currencyItemIDs = {
-    37742,  -- Transmog Token 
+    37742,  -- Activity Token 
     20880,  -- Vote Token 
     19322,  -- Community Token 
 }
