@@ -534,8 +534,29 @@ local function OnUseItem(event, player, item, target)
     return false
 end
 
-local function OnEnterInstance(event, player)
-    if player:GetInstanceId() > 0 or player:InBattleground() or player:GetMapId() == 573 then
+local function OnNewMap(event, player)
+    print("new map ok")
+    local mapId = player:GetMapId()
+    local zoneId = newZone
+	local areaId = newArea
+    if 
+    (
+    mapId == KALIMDOR or mapId == EASTERN_KINGDOMS or
+    zoneId == SILVERMOON or zoneId == ISLEOFQD or zoneId == EVERSONG or zoneId == GHOSTLANDS or zoneId == STORMWIND or
+    zoneId == ORGRIMMAR or zoneId == UNDERCITY or areaId == RUINSOFLORDAERON or areaId == SHININGSTRAND or 
+    zoneId == SWHARBOR
+    ) 
+    and not player:HasItem(20739)
+    then
+        player:RegisterEvent(function(eventId, delay, repeats, player)
+            for _, id in ipairs(BUFFIDS) do
+                if player:HasAura(id) then
+                    player:RemoveAura(id)
+                    print("mount removed due to no FoA")
+                end
+            end
+        end, 100, 1) -- Check for mount 100 ms after entering new map
+    elseif player:GetInstanceId() > 0 or player:InBattleground() or player:GetMapId() == 573 then
         player:RegisterEvent(function(eventId, delay, repeats, player)
             if player then 
                 for _, id in ipairs(BUFFIDS) do
@@ -544,7 +565,7 @@ local function OnEnterInstance(event, player)
                     end
                 end
             end
-        end, 100, 1) -- Check for mount 100 ms after entering instnace
+        end, 100, 1) -- Check for mount 100 ms after entering instance
     end
 end 
 
@@ -651,7 +672,7 @@ WorldDBExecute("UPDATE item_template SET description = 'This item has the abilit
 CharDBExecute("CREATE TABLE IF NOT EXISTS character_flight (guid INT UNSIGNED NOT NULL, standardmount INT UNSIGNED, X FLOAT, Y FLOAT, Z FLOAT, O FLOAT, var1 INT UNSIGNED, var2 INT UNSIGNED, var3 INT UNSIGNED, PRIMARY KEY (guid))")
 RegisterPlayerEvent(3, LoadStandardMount)
 RegisterPlayerEvent(27, OnChangeZone)
-RegisterPlayerEvent(28, OnEnterInstance)
+RegisterPlayerEvent(28, OnNewMap)
 RegisterPlayerEvent(42, OnCommand)
 RegisterItemEvent(ITEM_ENTRY, 2, OnUseItem)
 RegisterPlayerGossipEvent(182746573, 2, OnGossipSelect)
