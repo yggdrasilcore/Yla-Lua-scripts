@@ -18,7 +18,7 @@ local function OnPlayerMapChange(event, player)
                 if not cachedFaction[instanceId] then    
                     print("Player "..player:GetName().." just entered map ID "..mapId.."! No faction cached for instance ID "..instanceId)
                     
-                    if (mapId == 631 or player:HasAura(73822))
+                    if (mapId == 631 and player:HasAura(73822))
                     or (mapId == 632 and player:GetNearestCreature(1000, 37596))
                     or (mapId == 658 and player:GetNearestCreature(1000, 36990))
                     or (mapId == 668 and player:GetNearestCreature(1000, 37223))
@@ -26,9 +26,7 @@ local function OnPlayerMapChange(event, player)
                         player:SetFaction(1801) -- horde faction adjustment
                         cachedFaction[instanceId] = 1801
                         print("ICC, instance ID "..instanceId..": Horde instance detected! Setting player faction to "..cachedFaction[instanceId])
-                    end
-                    
-                    if (mapId == 631 or player:HasAura(73828))
+                    elseif (mapId == 631 and player:HasAura(73828))
                     or (mapId == 632 and player:GetNearestCreature(1000, 37597))
                     or (mapId == 658 and player:GetNearestCreature(1000, 36993))
                     or (mapId == 668 and player:GetNearestCreature(1000, 37221))
