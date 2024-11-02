@@ -9,7 +9,7 @@ local function OnQuestComplete(event, player, quest)
 	and not (quest:GetId() == 3421)
 	then
         player:AddItem(TRANSMOG_TOKEN_ID, TRANSMOG_TOKEN_COUNT)
-        player:SendBroadcastMessage("You have been awarded a Activity Token for completing a quest!")
+        player:SendBroadcastMessage("You have been awarded an Activity Token for completing a quest!")
     end
 end
 
@@ -33,13 +33,13 @@ local function OnKillCreature(event, player, killed)
                     
                     if shouldRewardMember then
                         member:AddItem(TRANSMOG_TOKEN_ID, TRANSMOG_TOKEN_COUNT)
-                        member:SendBroadcastMessage("You have been awarded a Activity Token for killing a boss!")
+                        member:SendBroadcastMessage("You have been awarded an Activity Token for killing a boss!")
                     end
                 end
             end
         elseif shouldReward then
             player:AddItem(TRANSMOG_TOKEN_ID, TRANSMOG_TOKEN_COUNT)
-            player:SendBroadcastMessage("You have been awarded a Activity Token for killing a boss!")
+            player:SendBroadcastMessage("You have been awarded an Activity Token for killing a boss!")
         end
     end
 end
