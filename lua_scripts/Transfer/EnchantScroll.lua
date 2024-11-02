@@ -211,8 +211,6 @@ local function EnchanterSelect(event, player, item, sender, intid, code)
                 if equipment then
                     if player:GetItemCount(requiredItemID) >= requiredItemCount then
                         player:GossipComplete()
-                        player:RemoveItem(requiredItemID, requiredItemCount)
-                        player:SendBroadcastMessage("You have used 1 Enchanting Scroll.")
                         if v[3] then
                             local WType = equipment:GetSubClass()
                             if pVar[player:GetName()] == 151 then
