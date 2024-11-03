@@ -60,7 +60,7 @@ local T = {
 
     [7] = { -- Boots
         {"|TInterface/PaperDoll/UI-PaperDoll-Slot-Feet:31:31:-24:0|tEnchant Boots\n \n ", 7},
-        {"|TInterface/ICONS/inv_enchant_formulagood_01:31:31:-24:0|tGreater Assault\n \nStats: +50 attack power\n \n ", 1597, false},
+        {"|TInterface/ICONS/inv_enchant_formulagood_01:31:31:-24:0|tGreater Assault\n \nStats: +32 attack power\n \n ", 1597, false},
         {"|TInterface/ICONS/inv_enchant_formulagood_01:31:31:-24:0|tTuskars Vitality\n \nStats: +15 stamina, minor speed increase\n \n ", 3232, false},
         {"|TInterface/ICONS/inv_misc_note_01:31:31:-24:0|tSuperior Agility\n \nStats: +15 agility\n \n ", 983, false},
         {"|TInterface/ICONS/trade_engraving:31:31:-24:0|tGreater Spirit\n \nStats: +18 spirit\n \n ", 1147, false},
@@ -85,7 +85,7 @@ local T = {
         {"|TInterface/ICONS/trade_engraving:31:31:-24:0|tGreater Blasting\n \nStats: +16 crit rating\n \n ", 3249, false},
         {"|TInterface/ICONS/inv_enchant_formulagood_01:31:31:-24:0|tArmsman\n \nStats: +2% threat, +10 parry rating\n \n ", 3253, false},
         {"|TInterface/ICONS/trade_engraving:31:31:-24:0|tCrusher\n \nStats: +44 attack power\n \n ", 1603, false},
-        {"|TInterface/ICONS/inv_enchant_formulasuperior_01:31:31:-24:0|tAgility\n \nStats: +15 agility", 3222, false},
+        {"|TInterface/ICONS/inv_enchant_formulasuperior_01:31:31:-24:0|tAgility\n \nStats: +15 agility\n \n ", 3222, false},
         {"|TInterface/ICONS/spell_holy_greaterheal:31:31:-24:0|tPrecision\n \nStats: +20 hit rating\n \n ", 3234, false},
         {"|TInterface/ICONS/trade_engraving:31:31:-24:0|tExpertise\n \nStats: +15 expertise rating\n \n ", 3231, false},
         {"|TInterface/ICONS/trade_engraving:31:31:-24:0|tExceptional Spellpower\n \nStats: +28 spell power\n \n ", 3246, false};

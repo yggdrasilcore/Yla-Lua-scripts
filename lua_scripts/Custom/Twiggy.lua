@@ -628,9 +628,9 @@ local function OnGossipSelect(event, player, creature, sender, intId, code)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 1)
         player:GossipSendMenu(12, creature, 60)
 	elseif intId == 30 then
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tCommunity Token: \n \nEarned through helping build the Yggdrasil community, these tokens can be traded for vanity pets, mounts, account services and more at the mall, or VIP services with Twiggy.", 0, 30)
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tActivity Token: \n \nThis currency can be spent at the transmog item vendor to buy items under item level 200 that you can then later wear as gear or transmog onto your higher item level gear. It is earned by completing end-game quests or slaying bosses above level 71 while at level 80", 0, 30)
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_bijou_gold:32:32:-22:0|tVote Token: \n \nEarned through voting for the server, these tokens can be predominantly exchanged for vanity items at the mall, or traded down to Emblems of Frost or Emblems of Triumph at the Mall's exchanger.", 0, 30)	
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tCommunity Token: \n \nEarned through helping build the Yggdrasil community, these tokens can be traded for vanity pets, mounts, account services and more at the mall, or VIP services with Twiggy.\n ", 0, 30)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tActivity Token: \n \nThis currency can be spent at the transmog item vendor to buy items under item level 200 that you can then later wear as gear or transmog onto your higher item level gear. It is earned by completing end-game quests or slaying bosses above level 71 while at level 80.\n ", 0, 30)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_bijou_gold:32:32:-22:0|tVote Token: \n \nEarned through voting for the server, these tokens can be predominantly exchanged for vanity items at the mall, or traded down to Emblems of Frost or Emblems of Triumph at the Mall's exchanger.\n ", 0, 30)	
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 3)
         player:GossipSendMenu(12, creature, 60)
     elseif intId == 4 then
