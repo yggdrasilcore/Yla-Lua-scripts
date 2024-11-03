@@ -9,40 +9,60 @@ local function OnPlayerMapChange(event, player)
 	
 	if mapId == 631 or mapId == 658 
 	or mapId == 632 or mapId == 668
-	--or mapId == 649 or mapId == 650 -- TOC and TOGC; not supported under current implementation
+    -- The Frozen Halls maps
 	
 	then
 		if instanceId and instanceId > 0 then
-            print("Faction adjustment script triggered!")
             player:RegisterEvent(function(eventId, delay, repeats, player)
                 if not cachedFaction[instanceId] then    
-                    print("Player "..player:GetName().." just entered map ID "..mapId.."! No faction cached for instance ID "..instanceId)
-                    
-                    if (mapId == 631 and player:HasAura(73822))
+                    if (mapId == 631 and (player:GetNearestCreature(1000, 39372) or player:GetNearestCreature(20000, 37187)))
                     or (mapId == 632 and player:GetNearestCreature(1000, 37596))
                     or (mapId == 658 and player:GetNearestCreature(1000, 36990))
                     or (mapId == 668 and player:GetNearestCreature(1000, 37223))
-                    then -- ally instance. 73822 is horde icc buff. maps 632, 658, and 668 are Sylvanas Windrunner
-                        player:SetFaction(1801) -- horde faction adjustment
+                    or (mapId == 631 and player:HasAura(73822))
+                    then -- horde instance. 39372 hellscream at entrance. maps 632, 658, and 668 are Sylvanas Windrunner
                         cachedFaction[instanceId] = 1801
-                        print("ICC, instance ID "..instanceId..": Horde instance detected! Setting player faction to "..cachedFaction[instanceId])
-                    elseif (mapId == 631 and player:HasAura(73828))
+                        print("ICC, instance ID "..instanceId..": Horde instance detected! Setting player faction to horde.")
+                        if (player:GetRace() == 1 or player:GetRace() == 3
+                        or player:GetRace() == 4 or player:GetRace() == 7
+                        or player:GetRace() == 11) then
+                            player:SetFaction(1801) -- horde faction adjustment
+                        end
+                    elseif (mapId == 631 and (player:GetNearestCreature(1000, 39372) or player:GetNearestCreature(20000, 37200)))
                     or (mapId == 632 and player:GetNearestCreature(1000, 37597))
                     or (mapId == 658 and player:GetNearestCreature(1000, 36993))
                     or (mapId == 668 and player:GetNearestCreature(1000, 37221))
-                    then -- ally instance. 73828 is ally icc buff. maps 632, 658, and 668 are Lady Jaina Proudmoore
-                        player:SetFaction(1802) -- ally  faction adjustment
+                    or (mapId == 631 and player:HasAura(73828))
+                    then -- ally instance. 39371 is wrynn at entrance. maps 632, 658, and 668 are Lady Jaina Proudmoore
                         cachedFaction[instanceId] = 1802
-                        print("ICC, instance ID "..instanceId..": Ally instance detected! Setting player faction to "..cachedFaction[instanceId])
+                        print("ICC, instance ID "..instanceId..": Ally instance detected! Setting player faction to alliance.")
+                        if not (player:GetRace() == 1 or player:GetRace() == 3
+                        or player:GetRace() == 4 or player:GetRace() == 7
+                        or player:GetRace() == 11) then
+                            player:SetFaction(1802) -- ally  faction adjustment
+                        end
                     end
-                    
                 else
-                    print("ICC, player "..player:GetName().." just entered map ID "..mapId.."! Faction cached for instance ID "..instanceId..": "..cachedFaction[instanceId])
+                    print("Frozen Halls Faction Adjustment - player "..player:GetName().." just entered map ID "..mapId.."! Faction cached for instance ID "..instanceId..": "..cachedFaction[instanceId])
                     for _, playersInInstances in pairs(GetPlayersInWorld()) do
                         if playersInInstances:GetInstanceId() == instanceId then
-                            print("ICC, instance ID "..instanceId..": Cached faction found, setting player faction to "..cachedFaction[instanceId])
-                            playersInInstances:SetFaction(35)
-                            playersInInstances:SetFaction(cachedFaction[instanceId])
+                            print("ICC, instance ID "..instanceId..": Cached faction found, setting player faction to alliance.")
+                            print("player "..player:GetName().." race: "..player:GetRace())
+                            if cachedFaction[instanceId] == 1801
+                            and (player:GetRace() == 1 or player:GetRace() == 3
+                            or player:GetRace() == 4 or player:GetRace() == 7
+                            or player:GetRace() == 11)
+                            then -- Horde faction adjustment
+                                playersInInstances:SetFaction(35)
+                                playersInInstances:SetFaction(1801)
+                            elseif cachedFaction[instanceId] == 1802
+                            and not (player:GetRace() == 1 or player:GetRace() == 3
+                            or player:GetRace() == 4 or player:GetRace() == 7
+                            or player:GetRace() == 11)
+                            then
+                                playersInInstances:SetFaction(35)
+                                playersInInstances:SetFaction(1802)
+                            end
                         end
                     end
                 end
@@ -67,5 +87,55 @@ local function OnPlayerMapChange(event, player)
         end
     end
 end
+
+function CacheCurrentInstances()
+    local validMaps = {631, 632, 658, 668}
+    local allianceFactions = {1, 3, 4, 115, 1629, 1802}
+    
+    local function isValidMap(mapId)
+        for _, validMap in pairs(validMaps) do
+            if mapId == validMap then
+                return true
+            end
+        end
+        return false
+    end
+    
+    local function isAllianceFaction(factionId)
+        for _, allianceFaction in pairs(allianceFactions) do
+            if factionId == allianceFaction then
+                return true
+            end
+        end
+        return false
+    end
+    
+    for _, player in pairs(GetPlayersInWorld()) do
+        local instanceId = player:GetInstanceId()
+        local mapId = player:GetMapId()
+        
+        if instanceId > 0 and isValidMap(mapId) then
+            if not cachedFaction[instanceId] then
+                for _, instancePlayer in pairs(GetPlayersInWorld()) do
+                    if instancePlayer:GetInstanceId() == instanceId then
+                        local faction = instancePlayer:GetFaction()
+                        
+                        if isAllianceFaction(faction) then
+                            cachedFaction[instanceId] = 1802 -- Alliance
+                            print("Instance ID "..instanceId..": Cached as Alliance (1802)")
+                            break
+                        else
+                            cachedFaction[instanceId] = 1801 -- Horde
+                            print("Instance ID "..instanceId..": Cached as Horde (1801)")
+                            break
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+CacheCurrentInstances()
 
 RegisterPlayerEvent(28, OnPlayerMapChange)
