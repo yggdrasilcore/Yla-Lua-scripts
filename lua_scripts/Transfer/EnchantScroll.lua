@@ -168,6 +168,13 @@ local function Enchanter(event, player, item)
     return false
 end
 
+local function consume(eventid, delay, repeats, player)
+    player:GossipComplete()
+    player:RemoveItem(requiredItemID, requiredItemCount)
+    player:SendBroadcastMessage("You have used 1 Enchanting Scroll.")
+    print("Player "..player:GetName().." just used an Endless Enchant scroll.")
+end
+
 local function EnchanterSelect(event, player, item, sender, intid, code)
     if (intid < 500) then
         local ID = intid
@@ -215,15 +222,21 @@ local function EnchanterSelect(event, player, item, sender, intid, code)
                             local WType = equipment:GetSubClass()
                             if pVar[player:GetName()] == 151 then
                                 if(WType == 1 or WType == 5 or WType == 6 or WType == 8 or WType == 10) then
+                                    player:GossipComplete()
                                     equipment:ClearEnchantment(0,0)
                                     equipment:SetEnchantment(intid - 900, 0, 0)
+                                    player:CastSpell(player, 36937)
+                                    player:RegisterEvent(consume, 200, 1)
                                 else
                                     player:SendAreaTriggerMessage("You do not have a Two-Handed Weapon equipped!")
                                 end    
                             elseif pVar[player:GetName()] == 161 then
                                 if(WType == 6) then
+                                    player:GossipComplete()
                                     equipment:ClearEnchantment(0,0)
                                     equipment:SetEnchantment(intid - 900, 0, 0)
+                                    player:CastSpell(player, 36937)
+                                    player:RegisterEvent(consume, 200, 1)
                                 else
                                     player:SendAreaTriggerMessage("You do not have a Shield equipped!")
                                 end
@@ -231,15 +244,19 @@ local function EnchanterSelect(event, player, item, sender, intid, code)
                         else
                             local offHand = player:GetEquippedItemBySlot(16)
                             if ID == 16 and offHand and offHand:GetSubClass() ~= 0 then
+                                player:GossipComplete()
                                 equipment:ClearEnchantment(0,0)
                                 equipment:SetEnchantment(intid - 900, 0, 0)
                                 player:CastSpell(player, 36937)
+                                player:RegisterEvent(consume, 200, 1)
                             elseif ID == 16 then
                                 player:SendAreaTriggerMessage("You do not have an Off Hand Weapon equipped!")
                             else
+                                player:GossipComplete()
                                 equipment:ClearEnchantment(0,0)
                                 equipment:SetEnchantment(intid - 900, 0, 0)
                                 player:CastSpell(player, 36937)
+                                player:RegisterEvent(consume, 200, 1)
                             end
                         end
                     else
