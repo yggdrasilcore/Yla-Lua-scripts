@@ -1,4 +1,4 @@
-local function AcherusEyeFix(event, packet, player)
+local function controllednpcspellcast(event, packet, player)
     if not player then
         return
     end
@@ -7,10 +7,13 @@ local function AcherusEyeFix(event, packet, player)
     local castCount = packet:ReadUByte()  -- Read the cast count (uint8)
     local spellId = packet:ReadULong()  -- Read the spell ID (uint32)
     local castFlags = packet:ReadUByte()  -- Read the cast flags (uint8)
-    
+
     if spellId == 52694 then
         player:RemoveAura(51852)
     end
+    if spellId == 56704 then
+        player:AddAura(56704, player)
+    end
 end
 
-RegisterPacketEvent(0x1F0, 5, AcherusEyeFix)
+RegisterPacketEvent(0x1F0, 5, controllednpcspellcast)
