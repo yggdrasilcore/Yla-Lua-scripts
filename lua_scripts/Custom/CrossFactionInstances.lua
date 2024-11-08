@@ -23,9 +23,9 @@ local function OnPlayerMapChange(event, player)
                     then -- horde instance. 39372 hellscream at entrance. maps 632, 658, and 668 are Sylvanas Windrunner
                         cachedFaction[instanceId] = 1801
                         print("ICC, instance ID "..instanceId..": Horde instance detected! Setting player faction to horde.")
-                        if (player:GetRace() == 2 or player:GetRace() == 5
-                        or player:GetRace() == 6 or player:GetRace() == 8
-                        or player:GetRace() == 10) then
+                        if (player:GetRace() == 1 or player:GetRace() == 3
+                        or player:GetRace() == 4 or player:GetRace() == 7
+                        or player:GetRace() == 11) then
                             player:SetFaction(1801) -- horde faction adjustment
                         end
                     elseif (mapId == 631 and (player:GetNearestCreature(1000, 39372) or player:GetNearestCreature(20000, 37200)))
@@ -36,9 +36,9 @@ local function OnPlayerMapChange(event, player)
                     then -- ally instance. 39371 is wrynn at entrance. maps 632, 658, and 668 are Lady Jaina Proudmoore
                         cachedFaction[instanceId] = 1802
                         print("ICC, instance ID "..instanceId..": Ally instance detected! Setting player faction to alliance.")
-                        if not (player:GetRace() == 1 or player:GetRace() == 3
-                        or player:GetRace() == 4 or player:GetRace() == 7
-                        or player:GetRace() == 11) then
+                        if (player:GetRace() == 2 or player:GetRace() == 5
+                        or player:GetRace() == 6 or player:GetRace() == 8
+                        or player:GetRace() == 10) then
                             player:SetFaction(1802) -- ally  faction adjustment
                         end
                     end
@@ -46,19 +46,19 @@ local function OnPlayerMapChange(event, player)
                     print("Frozen Halls Faction Adjustment - player "..player:GetName().." just entered map ID "..mapId.."! Faction cached for instance ID "..instanceId..": "..cachedFaction[instanceId])
                     for _, playersInInstances in pairs(GetPlayersInWorld()) do
                         if playersInInstances:GetInstanceId() == instanceId then
-                            print("ICC, instance ID "..instanceId..": Cached faction found, setting player faction to alliance.")
-                            print("player "..player:GetName().." race: "..player:GetRace())
+                            print("ICC, instance ID "..instanceId..": Cached faction found, setting playersInInstances faction to alliance.")
+                            print("playersInInstances "..playersInInstances:GetName().." race: "..playersInInstances:GetRace())
                             if cachedFaction[instanceId] == 1801
-                            and (player:GetRace() == 2 or player:GetRace() == 5
-                            or player:GetRace() == 6 or player:GetRace() == 8
-                            or player:GetRace() == 10)
+                            and (playersInInstances:GetRace() == 1 or playersInInstances:GetRace() == 3
+                            or playersInInstances:GetRace() == 4 or playersInInstances:GetRace() == 7
+                            or playersInInstances:GetRace() == 11)
                             then -- Horde faction adjustment
                                 playersInInstances:SetFaction(35)
                                 playersInInstances:SetFaction(1801)
                             elseif cachedFaction[instanceId] == 1802
-                            and not (player:GetRace() == 1 or player:GetRace() == 3
-                            or player:GetRace() == 4 or player:GetRace() == 7
-                            or player:GetRace() == 11)
+                            and (playersInInstances:GetRace() == 2 or playersInInstances:GetRace() == 5
+                            or playersInInstances:GetRace() == 6 or playersInInstances:GetRace() == 8
+                            or playersInInstances:GetRace() == 10)
                             then
                                 playersInInstances:SetFaction(35)
                                 playersInInstances:SetFaction(1802)
