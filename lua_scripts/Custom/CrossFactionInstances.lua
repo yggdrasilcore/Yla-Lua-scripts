@@ -23,9 +23,9 @@ local function OnPlayerMapChange(event, player)
                     then -- horde instance. 39372 hellscream at entrance. maps 632, 658, and 668 are Sylvanas Windrunner
                         cachedFaction[instanceId] = 1801
                         print("ICC, instance ID "..instanceId..": Horde instance detected! Setting player faction to horde.")
-                        if (player:GetRace() == 1 or player:GetRace() == 3
-                        or player:GetRace() == 4 or player:GetRace() == 7
-                        or player:GetRace() == 11) then
+                        if (player:GetRace() == 2 or player:GetRace() == 5
+                        or player:GetRace() == 6 or player:GetRace() == 8
+                        or player:GetRace() == 10) then
                             player:SetFaction(1801) -- horde faction adjustment
                         end
                     elseif (mapId == 631 and (player:GetNearestCreature(1000, 39372) or player:GetNearestCreature(20000, 37200)))
@@ -49,9 +49,9 @@ local function OnPlayerMapChange(event, player)
                             print("ICC, instance ID "..instanceId..": Cached faction found, setting player faction to alliance.")
                             print("player "..player:GetName().." race: "..player:GetRace())
                             if cachedFaction[instanceId] == 1801
-                            and (player:GetRace() == 1 or player:GetRace() == 3
-                            or player:GetRace() == 4 or player:GetRace() == 7
-                            or player:GetRace() == 11)
+                            and (player:GetRace() == 2 or player:GetRace() == 5
+                            or player:GetRace() == 6 or player:GetRace() == 8
+                            or player:GetRace() == 10)
                             then -- Horde faction adjustment
                                 playersInInstances:SetFaction(35)
                                 playersInInstances:SetFaction(1801)
