@@ -55,6 +55,7 @@ local function CacheCreatures()
           AND type = 1))
           AND name NOT LIKE '%(%'
           AND name NOT LIKE '%"%'
+          AND name NOT LIKE '%[%'
           AND name NOT LIKE '%UNUSED%'
           AND name NOT LIKE '%TEST%'
           AND name NOT LIKE '%STABLED%'
@@ -78,6 +79,7 @@ local function CacheCreatures()
           OR name LIKE '%grizzly cub%')
           AND name NOT LIKE '%(%'
           AND name NOT LIKE '%"%'
+          AND name NOT LIKE '%[%'
           AND name NOT LIKE '%UNUSED%'
           AND name NOT LIKE '%TEST%'
           AND name NOT LIKE '%STABLED%'
@@ -103,6 +105,7 @@ local function CacheCreatures()
           AND type = 1))
           AND name NOT LIKE '%(%'
           AND name NOT LIKE '%"%'
+          AND name NOT LIKE '%[%'
           AND name NOT LIKE '%UNUSED%'
           AND name NOT LIKE '%TEST%'
           AND name NOT LIKE '%STABLED%'
@@ -147,6 +150,7 @@ local function CacheCreatures()
           AND type = 1))
           AND name NOT LIKE '%(%'
           AND name NOT LIKE '%"%'
+          AND name NOT LIKE '%[%'
           AND name NOT LIKE '%UNUSED%'
           AND name NOT LIKE '%TEST%'
           AND name NOT LIKE '%STABLED%'
@@ -171,6 +175,7 @@ local function CacheCreatures()
           OR name LIKE '%moonkin%')
           AND name NOT LIKE '%(%'
           AND name NOT LIKE '%"%'
+          AND name NOT LIKE '%[%'
           AND name NOT LIKE '%UNUSED%'
           AND name NOT LIKE '%TEST%'
           AND name NOT LIKE '%STABLED%'
@@ -207,6 +212,7 @@ local function CacheCreatures()
           AND type = 4
           AND name NOT LIKE '%(%'
           AND name NOT LIKE '%"%'
+          AND name NOT LIKE '%[%'
           AND name NOT LIKE '%UNUSED%'
           AND name NOT LIKE '%TEST%'
           AND name NOT LIKE '%STABLED%'
@@ -254,6 +260,7 @@ local function CacheCreatures()
           AND type = 1
           AND name NOT LIKE '%(%'
           AND name NOT LIKE '%"%'
+          AND name NOT LIKE '%[%'
           AND name NOT LIKE '%UNUSED%'
           AND name NOT LIKE '%TEST%'
           AND name NOT LIKE '%STABLED%'
@@ -1137,7 +1144,7 @@ local function OnCombat(event, player, enemy)
 				end
 			elseif player:HasAura(783) then -- Travel
 				player:AddAura(783, player)
-				player:SetSpeed(1.4)
+				player:SetSpeed(1, 1.4)
 			elseif player:HasAura(40120) or player:HasAura(33943) then  -- Bird
 				if player:HasAura(40120) then
 					player:AddAura(40120, player)

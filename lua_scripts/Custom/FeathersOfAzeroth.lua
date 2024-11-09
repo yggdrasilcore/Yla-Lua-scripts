@@ -384,10 +384,26 @@ local function ShowManageStandardMount(event, player)
     player:GossipSendMenu(12, player, 182746573)
 end
 
+local function ShowManageStandardMountCmd(event, player)
+    player:GossipClearMenu()
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tWhat is standard mount?", 0, 300001)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_nature_swiftness:32:32:-22:0|tChoose standard mount", 0, 400000)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_enggizmos_27:32:32:-22:0|tRemove standard mount", 0, 500001)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_map_01:32:32:-22:0|tClose", 0, 2)
+    player:GossipSendMenu(12, player, 182746573)
+end
+
 local function ShowInfoPage(event, player)
     player:GossipClearMenu()
     player:GossipMenuAddItem(0, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tWhat is standard mount?\n \nStandard mount allows you to set a preferred mount that will be automatically cast when using the Feathers of Azeroth.\n \nYou can change or remove your standard mount at any time by talking to your Twiggy.\n \n ", 0, 300000)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_map_01:32:32:-22:0|tBack", 0, 600000)
+    player:GossipSendMenu(12, player, 182746573)
+end
+
+local function ShowInfoPageCmd(event, player)
+    player:GossipClearMenu()
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tWhat is standard mount?\n \nStandard mount allows you to set a preferred mount that will be automatically cast when using the Feathers of Azeroth.\n \nYou can change or remove your standard mount at any time by talking to your Twiggy.\n \n ", 0, 300001)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_map_01:32:32:-22:0|tBack", 0, 600001)
     player:GossipSendMenu(12, player, 182746573)
 end
 
@@ -408,7 +424,7 @@ local function ShowMountMenu(event, player, item, target, page, isStandardMount)
     -- Create gossip menu
     player:GossipClearMenu()
     if isStandardMount then
-        player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_nature_swiftness:32:32:-22:0|tChoosing standard mount", 0, 0)
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_nature_swiftness:32:32:-22:0|tChoosing standard mount", 0, 400000)
     else
         player:GossipMenuAddItem(0, "|TInterface/ICONS/trade_engineering:32:32:-22:0|tManage standard mount", 0, 700000)
     end
@@ -456,22 +472,28 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         local currentPage = intid - 200000
         ShowMountMenu(event, player, nil, nil, currentPage - 1)
     elseif intid == 300000 then
-        -- What is standard mount?
         ShowInfoPage(event, player)
+    elseif intid == 300001 then
+        ShowInfoPageCmd(event, player)
     elseif intid == 400000 then
         -- Choose standard mount
         ShowMountMenu(event, player, nil, nil, 1, true)
     elseif intid == 500000 then
-        -- Remove standard mount
         standardmount[player:GetGUIDLow()] = nil
         player:SendBroadcastMessage("Standard mount removed.")
         ShowManageStandardMount(event, player)
+    elseif intid == 500001 then
+        standardmount[player:GetGUIDLow()] = nil
+        player:SendBroadcastMessage("Standard mount removed.")
+        ShowManageStandardMountCmd(event, player)
     elseif intid == 600000 then
-        -- Back button from info page
         ShowManageStandardMount(event, player)
+    elseif intid == 600001 then
+        ShowManageStandardMountCmd(event, player)
     elseif intid == 700000 then
-        -- Manage standard mount button
         ShowManageStandardMount(event, player)
+    elseif intid == 700001 then
+        ShowManageStandardMountCmd(event, player)
     elseif intid >= 800000 then
         -- Mount selected as standard
         local mountId = intid - 800000
@@ -535,7 +557,6 @@ local function OnUseItem(event, player, item, target)
 end
 
 local function OnNewMap(event, player)
-    print("new map ok")
     local mapId = player:GetMapId()
     local zoneId = newZone
 	local areaId = newArea
@@ -552,7 +573,6 @@ local function OnNewMap(event, player)
             for _, id in ipairs(BUFFIDS) do
                 if player:HasAura(id) then
                     player:RemoveAura(id)
-                    print("mount removed due to no FoA")
                 end
             end
         end, 100, 1) -- Check for mount 100 ms after entering new map
@@ -662,7 +682,7 @@ end
 
 local function OnCommand(event, player, command)
     if command == "choosestandardfeathers" then
-        ShowManageStandardMount(event, player)
+        ShowManageStandardMountCmd(event, player)
         return false
     end
 end
