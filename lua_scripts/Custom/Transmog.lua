@@ -46162,7 +46162,7 @@ local currentSearchTerm = " "
 ---------------------------------------------------------------------------------
 
 
-local NPC_Entry = 190093
+local NPC_Entry = 190009
 
 local PrepareDBTable = false -- Set to true if enabling module for the first time
 

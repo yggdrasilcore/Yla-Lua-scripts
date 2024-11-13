@@ -41,13 +41,15 @@ local customFamilyNames = {
     ["Baelmon"] = 29,
     ["Shocktrooper"] = 29,
     ["Dreadwarden"] = 29,
-    ["Terrormaster"] = 29, --Doomguard
-    ["Terrorfiend"] = 29, --Doomguard
-    ["Dreadbringer"] = 29, --Doomguard
-    ["Illidari Fearbringer"] = 29, --Doomguard
-    ["Terrordar"] = 29, --Doomguard
-    ["Soldier of Terror"] = 29,
-    ["Terrorguard"] = 29,
+    ["Jaraxxus"] = 29,
+    ["jaeden"] = 29,
+    ["Terrormaster"] = 29, --This looks like a Doomguard but no one uses that so let's put it as Felguard mog
+    ["Terrorfiend"] = 29, --This looks like a Doomguard but no one uses that so let's put it as Felguard mog
+    ["Dreadbringer"] = 29, --This looks like a Doomguard but no one uses that so let's put it as Felguard mog
+    ["Illidari Fearbringer"] = 29, --This looks like a Doomguard but no one uses that so let's put it as Felguard mog
+    ["Terrordar"] = 29, --This looks like a Doomguard but no one uses that so let's put it as Felguard mog
+    ["Soldier of Terror"] = 29, --This looks like a Doomguard but no one uses that so let's put it as Felguard mog
+    ["Terrorguard"] = 29, --This looks like a Doomguard but no one uses that so let's put it as Felguard mog
     ["Lothros"] = 29,
     ["Demos"] = 29,
     ["Hellion"] = 29,
@@ -148,8 +150,6 @@ local function CacheCreatures()
 			until not demonResults:NextRow()
 		end
 	end)
-
-    print("[Warlock Demon Morph Module]: Demon forms cached: "..demonCount)
 end
 
 local function CountTotalMorphs(player)
@@ -173,6 +173,15 @@ local function OnKillCreature(event, player, creature)
     local entry = creature:GetEntry()
     local displayId = creature:GetDisplayId()
     local creatureName = creature:GetName()
+    
+    if displayId == 7949 -- Disallowed display IDs (identical to standard Felhunter). Consider making this a table to feed all non-unique display models
+    or displayId == 6172
+    or displayId == 6173
+    or displayId == 1913
+    or displayId == 7126
+    then
+        return
+    end
 
     local matchedFamily = nil
 

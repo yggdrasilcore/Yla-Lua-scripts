@@ -36,7 +36,7 @@ local function ReloadAuctions()
 end
 
 local function AdjustAuctions()
-		CharDBQueryAsync("SELECT id, itemguid, buyoutprice, startbid FROM auctionhouse WHERE itemowner = 699 AND buyoutprice > 1000000", function(auctions)
+    CharDBQueryAsync("SELECT id, itemguid, buyoutprice, startbid FROM auctionhouse WHERE itemowner IN (699, 1390) AND buyoutprice > 1000000", function(auctions)
 		if not auctions then
 			return
 		end
@@ -81,7 +81,7 @@ end
 
 local function OnAuctionAdd(event, auctionId, owner, item, expireTime, buyout, startBid, currentBid, bidderGUIDLow)
 	print("test all auctions added!")
-	if owner:GetGUIDLow() == 699 then
+	if owner:GetAccountId() == 189 then
 		print("AH bot auction added!")
 		CreateLuaEvent(AdjustAuctions, 10, 1)
 	end

@@ -433,7 +433,10 @@ local function mainMenu(player, creature)
     if player:HasItem(20739) then
         player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_feather_13:32:32:-22:0|tManage Feathers of Azeroth", 0, 7)
 	end
-    if (player:GetClass() == 6 and player:GetLevel() >= dkLimit) or (player:GetClass() ~= 6 and player:GetLevel() >= minLevel) then
+    if (player:GetClass() == 6 and player:GetLevel() >= dkLimit)
+    or (player:GetClass() ~= 6 and player:GetLevel() >= minLevel)
+    and (player:GetQuestStatus(30000) == 6)
+    then
         player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_holy_prayerofshadowprotection:32:32:-22:0|tManage Shadows", 0, 8)
 	end
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_gem_diamond_07:32:32:-22:0|tExplore Yggdrasil's features", 0, 5)
@@ -1407,14 +1410,43 @@ function Teleport(_, _, player)
     lastTeleTime[guid] = os.time() + 1
 end
 
+-- Create a table of all valid commands
+local function buildCommandList()
+    local commands = {}
+    for _, category in pairs(commandCategories) do
+        for _, cmd in ipairs(category.commands) do
+            commands[cmd.cmd] = true
+        end
+    end
+    return commands
+end
+
+local validCommands = buildCommandList()
+
 local function OnWhisper(event, player, msg, Type, lang, receiver)
     local receiverName = receiver:GetName()
     local playerName = player:GetName()
-
+    
     if activeBots[playerName] then
         for _, botName in ipairs(activeBots[playerName]) do
-            if receiverName == botName and string.match(msg, "summon") then
-                return false
+            if receiverName == botName then
+                if string.match(msg, "summon") then
+                    return false
+                end
+                
+                -- Check if message starts with any valid command
+                local isValidCommand = false
+                for cmd, _ in pairs(validCommands) do
+                    if string.match(msg:lower(), "^" .. cmd:lower()) then
+                        isValidCommand = true
+                        break
+                    end
+                end
+                
+                if not isValidCommand then
+                    local bot = GetPlayerByName(botName)
+                    bot:SendUnitWhisper("I don't understand what you mean! Please check Twiggy for commands I can react to.", 0, player)
+                end
             end
         end
     end
@@ -1451,13 +1483,6 @@ local function OnBotCommand(event, player, command)
         return false
     end
     return true
-end
-
-local function OnLevelUp(event, player, oldLevel)
-    if (player:GetClass() == 6 and oldLevel == dkLimit - 1) or (player:GetClass() ~= 6 and oldLevel == lvlimit - 1) then
-        SendMail("How to control your shadow", "Greetings, "..player:GetName().."!\n \nIt is with pleasure that I, or rather, you, contact you (myself?). I see things have become quite complex already, so I (you?) will try to be swift about this. It turns out that some of your (our) fragments have gotten caught in the twisting nether, giving you (me? us?) the power to summon shadows of ourself.\n \nTo get started, check in with Twiggy.\n \nTake good care of us!\n \nBest regards,\nYourself.", player:GetGUIDLow(), player:GetGUIDLow())
-        player:SendBroadcastMessage("You have learned how to control your own shadow! Please visit a mailbox and talk to Twiggy to learn more.")
-    end
 end
 
 local function OnPlayerMapEnter(event, map, player)
@@ -2093,7 +2118,6 @@ RegisterCreatureGossipEvent(23198, 2, TwiggyGossipSelect)
 SetActiveBots()
 RegisterPlayerEvent(3, Login)
 RegisterPlayerEvent(4, Logout)
-RegisterPlayerEvent(13, OnLevelUp)
 RegisterPlayerEvent(19, OnWhisper)
 RegisterPlayerEvent(20, OnGroup)
 RegisterServerEvent(21, OnPlayerMapEnter)

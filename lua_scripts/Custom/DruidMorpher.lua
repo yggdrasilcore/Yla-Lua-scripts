@@ -155,6 +155,7 @@ local function CacheCreatures()
           AND name NOT LIKE '%TEST%'
           AND name NOT LIKE '%STABLED%'
           AND name NOT LIKE '%TAMED%'
+          AND name NOT LIKE '%REMA%'
           AND name NOT LIKE '%TOTEM%'
     ]], function(travelResults)
 		if travelResults then
@@ -346,14 +347,18 @@ local function OnKillCreature(event, player, creature)
     local displayId = creature:GetDisplayId()
     local creatureName = creature:GetName()
 	
-	if creature:GetEntry() == 32485 or creature:GetEntry() == 27483 or creature:GetEntry() == 6584 or creature:GetEntry() == 6498 or creature:GetEntry() == 6500 then
+	if creature:GetEntry() == 32485 or creature:GetEntry() == 27483 or creature:GetEntry() == 6584 or creature:GetEntry() == 6498 or creature:GetEntry() == 6500 then  -- Devilsaur corrections
 		entry = 33505
 		displayId = 28647
 		creatureName = "Devilsaur"
-	elseif creature:GetEntry() == 20931 or creature:GetEntry() == 6499 then
+	elseif creature:GetEntry() == 20931 or creature:GetEntry() == 6499 then -- Devilsaur corrections
 		entry = 40404
 		displayId = 31831
 		creatureName = "Ironhide Devilsaur"
+	elseif creature:GetEntry() == 32517 then
+		entry = 33510
+		displayId = 28649
+		creatureName = "Loque'nahak"
 	else 
 		creatureName = creatureName
 		displayId = displayId
