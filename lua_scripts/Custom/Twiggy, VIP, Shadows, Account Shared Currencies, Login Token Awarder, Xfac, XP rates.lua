@@ -1232,32 +1232,32 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
             end
         end
         
-    if botsAvailable[accountId] then
-        local found = false
-        for index, charInfo in ipairs(botsAvailable[accountId]) do
-            if charInfo.name ~= player:GetName() then
-                local className = GetClassName(charInfo.class)
-                local raceName = GetRaceName(charInfo.race)
-                
-                local raceIcon = GetRaceIconPath(charInfo.race, charInfo.gender)
-                local classIcon = GetClassIconPath(charInfo.class)
-                
-                if charInfo.name and not groupNames[charInfo.name] then
-                    if charInfo.level > 9 and math.abs(player:GetLevel() - charInfo.level) <= 10 then
-                        player:GossipMenuAddItem(4, "|TInterface/ICONS/" .. raceIcon .. ":40:40:-24:0|t |TInterface/ICONS/" .. classIcon .. ":40:40:-24:0|t |TInterface/ICONS/achievement_level_" .. (math.floor(charInfo.level / 10) * 10) .. ":40:40:-24:0|t \n \n \n \nName:  " .. charInfo.name .. "\n \nLevel:  " .. charInfo.level .. "\n \nRace:  " .. raceName .. "\n \nClass:  " .. className .. "\n ", 0, 100 + index)
-                        found = true
-                    elseif math.abs(player:GetLevel() - charInfo.level) <= 10 then
-                        player:GossipMenuAddItem(4, "|TInterface/ICONS/" .. raceIcon .. ":40:40:-24:0|t |TInterface/ICONS/" .. classIcon .. ":40:40:-24:0|t |TInterface/ICONS/inv_misc_desecrated_clothchest:40:40:-24:0|t\n \n \n \nName:  " .. charInfo.name .. "\n \nLevel:  " .. charInfo.level .. "\n \nRace:  " .. raceName .. "\n \nClass:  " .. className .. "\n ", 0, 100 + index)
-                        found = true
+        if botsAvailable[accountId] then
+            local found = false
+            for index, charInfo in ipairs(botsAvailable[accountId]) do
+                if charInfo.name ~= player:GetName() then
+                    local className = GetClassName(charInfo.class)
+                    local raceName = GetRaceName(charInfo.race)
+                    
+                    local raceIcon = GetRaceIconPath(charInfo.race, charInfo.gender)
+                    local classIcon = GetClassIconPath(charInfo.class)
+                    
+                    if charInfo.name and not groupNames[charInfo.name] then
+                        if charInfo.level >= minLevel and charInfo.level > 9 and math.abs(player:GetLevel() - charInfo.level) <= 10 then
+                            player:GossipMenuAddItem(4, "|TInterface/ICONS/" .. raceIcon .. ":40:40:-24:0|t |TInterface/ICONS/" .. classIcon .. ":40:40:-24:0|t |TInterface/ICONS/achievement_level_" .. (math.floor(charInfo.level / 10) * 10) .. ":40:40:-24:0|t \n \n \n \nName:  " .. charInfo.name .. "\n \nLevel:  " .. charInfo.level .. "\n \nRace:  " .. raceName .. "\n \nClass:  " .. className .. "\n ", 0, 100 + index)
+                            found = true
+                        elseif charInfo.level >= minLevel and math.abs(player:GetLevel() - charInfo.level) <= 10 then
+                            player:GossipMenuAddItem(4, "|TInterface/ICONS/" .. raceIcon .. ":40:40:-24:0|t |TInterface/ICONS/" .. classIcon .. ":40:40:-24:0|t |TInterface/ICONS/inv_misc_desecrated_clothchest:40:40:-24:0|t\n \n \n \nName:  " .. charInfo.name .. "\n \nLevel:  " .. charInfo.level .. "\n \nRace:  " .. raceName .. "\n \nClass:  " .. className .. "\n ", 0, 100 + index)
+                            found = true
+                        end
                     end
                 end
             end
+            if not found then
+                player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_rogue_shadowstep:40:40:-24:0|tNo available shadows \n \nThere are no shadows available in the range you can mind control. Your shadows must be within ten levels of you and at least level 15.\n \n", 0, 200)
+            end
         end
-        if not found then
-            player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_rogue_shadowstep:40:40:-24:0|tNo available shadows \n \nThere are no shadows available in the range you can mind control. Your shadows must be within ten levels of you.\n \n", 0, 200)
-        end
-    end
-            
+                
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:40:40:-24:0|tBack", 0, 999)
         
         player:GossipSendMenu(12, player, 200)

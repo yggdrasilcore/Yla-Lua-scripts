@@ -300,7 +300,7 @@ function AddLostAura(event, shadow, target)
 end
 
 local function OnLogout(event, player)
-    if player:HasItem(ITEM_ENTRY, 1) then
+    if player:HasItem(ITEM_ENTRY, 1) and (player:GetQuestStatus(30000) == 6) then
         player:RemoveItem(ITEM_ENTRY, 1)
         player:RemoveQuest(QUEST_ID)
     end
@@ -309,7 +309,7 @@ end
 local function OnLevelUp(event, player, oldLevel)
     if (player:GetClass() == 6 and oldLevel == dkLimit - 1) or
     (player:GetClass() ~= 6 and oldLevel == minLevel - 1)
-    and not (player:GetQuestStatus(30000) == 6)
+    and not (player:GetQuestStatus(QUEST_ID) == 6)
     then
         player:AddItem(39163, 1)
         player:SendBroadcastMessage("You hear mysterious whispers echo in the horizon... An unknown item from the void appears!")
@@ -317,7 +317,10 @@ local function OnLevelUp(event, player, oldLevel)
 end
 
 local function OnLogin(event, player)
-    if not (player:GetQuestStatus(30000) == 6) and not player:HasItem(QUEST_ITEM) then
+    if player:HasQuest(QUEST_ID) and not player:HasItem(ITEM_ENTRY, 1) then
+        player:AddItem(ITEM_ENTRY, 1)
+    end
+    if not player:HasQuest(QUEST_ID) and not (player:GetQuestStatus(QUEST_ID) == 6) and not player:HasItem(QUEST_ITEM) then
         if player:HasItem(ITEM_ENTRY, 1) then
             player:RemoveItem(ITEM_ENTRY, 1)
         end
@@ -329,7 +332,7 @@ local function OnLogin(event, player)
 end
 
 local function OnQuestAbandon(event, player, questId)
-    if questId == 30000 then
+    if questId == QUEST_ID then
         player:AddItem(QUEST_ITEM, 1)
     end
 end
