@@ -1339,17 +1339,19 @@ end
 
 local function Login(event, player)
     local guidlow = player:GetGUIDLow()
-    CharDBExecute("REPLACE INTO character_cooldowns (guid, item_id, cooldown_end) VALUES (" .. guidlow .. ", 0, " .. os.time() .. ")"); -- LAzy persistent storage solution. Could probably just use characters table directly. Initially wnated cache-persistent value attached to world but not possible in standard AC ELUNA
+    CharDBExecute("REPLACE INTO character_cooldowns (guid, item_id, cooldown_end) VALUES (" .. guidlow .. ", 0, " .. os.time() .. ")"); -- Lazy persistent storage solution. Could probably just use characters table directly. Initially wanted cache-persistent value attached to world but not possible in standard AC ELUNA
 end
 
 function CheckActiveBots(eventid, delay, repeats, uninvitedPlayer)
     local uninvitedPlayerName = uninvitedPlayer:GetName()
     if isPlayerBot[uninvitedPlayerName] then
-        print("Bot uninvited: " ..uninvitedPlayerName.. ". Leader: " ..isPlayerBot[uninvitedPlayerName])
         player = GetPlayerByName(isPlayerBot[uninvitedPlayerName])
-        player:RegisterEvent(function(_, _, _, player)
-            player:RunCommand(".playerbots bot remove " .. uninvitedPlayerName)
-        end, 100, 1)
+        if player then
+            player:RegisterEvent(function(_, _, _, player)
+                player:RunCommand(".playerbots bot remove " .. uninvitedPlayerName)
+                print("Bot uninvited: " ..uninvitedPlayerName.. ". Leader: " ..isPlayerBot[uninvitedPlayerName])
+            end, 100, 1)
+        end
         logoutEvent[uninvitedPlayerName] = nil
     end
 end
@@ -1358,23 +1360,29 @@ function UninviteGroupGUID(event, packet, player)
     local guid = packet:ReadGUID()
     local reason = packet:ReadString()
     local uninvitedPlayer = GetPlayerByGUID(guid)
-    if not logoutEvent[uninvitedPlayer:GetName()] then
-        logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
+    if uninvitedPlayer then
+        if not logoutEvent[uninvitedPlayer:GetName()] then
+            logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
+        end
     end
 end
 
 function UninviteGroup(event, packet, player)
     local uninvitedPlayerName = packet:ReadString()
     local uninvitedPlayer = GetPlayerByName(uninvitedPlayerName)
-    if not logoutEvent[uninvitedPlayer:GetName()] then
-        logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
+    if uninvitedPlayer then
+        if not logoutEvent[uninvitedPlayer:GetName()] then
+            logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
+        end
     end
 end
 
 local function LeaveGroup(event, group, guid, method, kicker, reason)
     local uninvitedPlayer = GetPlayerByGUID(guid)
-    if not logoutEvent[uninvitedPlayer:GetName()] then
-        logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
+    if uninvitedPlayer then
+        if not logoutEvent[uninvitedPlayer:GetName()] then
+            logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
+        end
     end
 end
 
@@ -1382,7 +1390,7 @@ function Teleport(_, _, player)
     local name = player:GetName()
     local guid = player:GetGUIDLow()
     if not player:IsInGroup() then
-        return
+        return -- Should probably add a sanity check here to disconnect bots not in your party in case party affiliation fails somehow
     end
     if not botCount[name] or botCount[name] == 0 then
         return
