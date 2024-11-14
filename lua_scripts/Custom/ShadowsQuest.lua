@@ -112,6 +112,7 @@ RegisterPlayerEvent(27, function(event, player, newArea, oldArea)
         player:RegisterEvent(function(eventId, delay, repeats, player)
             if player:GetAreaId() == AREA_ID and (player:HasItem(ITEM_ENTRY) or player:HasItem(QUEST_ITEM)) then
                 player:RemoveItem(ITEM_ENTRY, 1)
+                player:RemoveItem(QUEST_ITEM, 1)
                 player:RemoveQuest(QUEST_ID)
                 player:AddItem(QUEST_ITEM, 1)
                 if locationChar == player:GetGUIDLow() then
