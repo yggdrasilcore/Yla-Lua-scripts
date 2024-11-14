@@ -88,8 +88,8 @@ local dkLimit = 70 -- Prevents DKs from zapping toons into the scarlet enclave a
 -- Item use event
 RegisterItemEvent(ITEM_ENTRY, 2, function(event, player, item, target)
     if shadowsEvent > os.time() then
-        player:SendAreaTriggerMessage("You can't save your players right now! Try again in a few minutes.")
-        player:SendBroadcastMessage("You can't save your players right now! Try again in a few minutes.")
+        player:SendAreaTriggerMessage("You can't save your shadows right now! Try again in a few minutes.")
+        player:SendBroadcastMessage("You can't save your shadows right now! Try again in a few minutes.")
         return
     end
     
