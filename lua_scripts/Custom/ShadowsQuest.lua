@@ -318,6 +318,9 @@ local function OnLevelUp(event, player, oldLevel)
 end
 
 local function OnLogin(event, player)
+    if player:GetLevel() < minLevel then
+        return
+    end
     if player:HasQuest(QUEST_ID) and not player:HasItem(ITEM_ENTRY, 1) then
         player:AddItem(ITEM_ENTRY, 1)
     end
