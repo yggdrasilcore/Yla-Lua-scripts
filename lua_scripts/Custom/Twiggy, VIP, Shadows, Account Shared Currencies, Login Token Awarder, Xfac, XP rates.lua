@@ -8,6 +8,7 @@ local dkLimit           = 70 -- Prevents DKs from zapping toons into the scarlet
 local maxBotCount       = 2
 local maxVIPCount       = 4
 
+local addCmdTimer = {}
 local logoutEvent       =   {}
 local isPlayerBot       =   {}
 local botsAvailable     =   {}
@@ -1208,6 +1209,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
         if activeBots[name] and activeBots[name][selectedIndex] then
            local selectedBot = activeBots[name][selectedIndex]
            player:RunCommand(".playerbots bot remove " .. selectedBot)
+           print("Removing bot "..selectedBot.." from gossip menu")
            player:GossipComplete()
         end
     elseif intid == 10 then  -- "Add bot" option
@@ -1272,6 +1274,12 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
         end
         if botCount[name] < maxBotCount then
             local selectedIndex = intid - 100
+            
+            if addCmdTimer[guid] and not (os.time() - addCmdTimer[guid] > 1) then
+                player:SendAreaTriggerMessage("You can't add shadows that fast!")
+                Hello(player)
+                return
+            end
             
             if botsAvailable[accountId] and botsAvailable[accountId][selectedIndex] then
                 local selectedChar = botsAvailable[accountId][selectedIndex]
@@ -1340,11 +1348,13 @@ end
 function CheckActiveBots(eventid, delay, repeats, uninvitedPlayer)
     local uninvitedPlayerName = uninvitedPlayer:GetName()
     if isPlayerBot[uninvitedPlayerName] then
-        player = GetPlayerByName(isPlayerBot[uninvitedPlayerName])
-        if player then
+        local player = GetPlayerByName(isPlayerBot[uninvitedPlayerName])
+        local bot = GetPlayerByName(uninvitedPlayerName)
+        if player and bot then
             player:RegisterEvent(function(_, _, _, player)
                 player:RunCommand(".playerbots bot remove " .. uninvitedPlayerName)
-                print("Bot uninvited: " ..uninvitedPlayerName.. ". Leader: " ..isPlayerBot[uninvitedPlayerName])
+                print("Bot removed: " ..uninvitedPlayerName.. ".")
+                print("Leader: " ..player:GetName())
             end, 100, 1)
         end
         logoutEvent[uninvitedPlayerName] = nil
@@ -1381,11 +1391,30 @@ local function LeaveGroup(event, group, guid, method, kicker, reason)
     end
 end
 
-function Teleport(_, _, player)
+local function DisbandGroup(event, group)
+    for _, member in ipairs (group:GetMembers()) do
+        if isPlayerBot[member:GetName()] then
+            local botName = member:GetName()
+            local player = GetPlayerByName(isPlayerBot[botName])
+            if player and not logoutEvent[botName] then
+                logoutEvent[botName] = player:RegisterEvent(function(_, _, _, player)
+                    player:RunCommand(".playerbots bot remove " .. botName)
+                    print("Removing "..botName.." from disbanded group")
+                    logoutEvent[botName] = nil
+                end, 100, 1)
+            end
+        end
+    end
+end
+
+function Teleport(player, sameMap)
     local name = player:GetName()
     local guid = player:GetGUIDLow()
     if not player:IsInGroup() then
         return -- Should probably add a sanity check here to disconnect bots not in your party in case party affiliation fails somehow
+    end
+    if player:IsDead() then
+        return
     end
     if not botCount[name] or botCount[name] == 0 then
         return
@@ -1393,27 +1422,40 @@ function Teleport(_, _, player)
     if lastTeleTime[guid] and os.time() <= lastTeleTime[guid] then
         return
     end
-    if botCount[name] and botCount[name] > 0 then
-        for i, botName in ipairs(activeBots[name]) do
-            local bot = GetPlayerByName(botName)
-            if bot and not bot:IsInCombat() then 
-                bot:RegisterEvent(function(eventId, delay, repeats, bot) 
-                    local player = GetPlayerByName(name)
-                    if player and not player:IsInCombat() then
-                        isInLos = bot:IsWithinLoS(player)
-                        if not isInLos and (((bot:GetZ() < player:GetZ() - 20) or (bot:GetZ() > player:GetZ() + 20)) or not ((bot:GetMapId() == player:GetMapId()))) then
-                            print("Teleporting bot "..botName)
-                            bot:Teleport(player:GetMapId(), player:GetX() + math.random(-1, 1), player:GetY() + math.random(-1, 1), player:GetZ(), player:GetO() + math.random(-6, 6))
-                        end
-                    end
-                end, 1000, 1)
+    if player:GetMapId() == 0 or player:GetMapId() == 1 -- Kalimdor, Eastern Kingdoms
+    or player:GetMapId() == 530 or player:GetMapId() == 571 -- Outlands, Northrend
+    or player:InArena() or player:InBattleground()
+    then
+        return
+    end
+    for i, botName in ipairs(activeBots[name]) do
+        local bot = GetPlayerByName(botName)
+        if bot and not bot:IsInCombat() and not player:IsInCombat() then
+            if bot:GetMapId() ~= player:GetMapId() and sameMap == true then
+                return
+            end
+            isInLos = bot:IsWithinLoS(player)
+            if not isInLos and (((bot:GetZ() < player:GetZ() - 20) or (bot:GetZ() > player:GetZ() + 20)) or not ((bot:GetMapId() == player:GetMapId()))) then
+                bot:Teleport(player:GetMapId(), player:GetX() + math.random(-1, 1), player:GetY() + math.random(-1, 1), player:GetZ(), player:GetO() + math.random(-6, 6))
             end
         end
     end
     lastTeleTime[guid] = os.time() + 1
 end
 
--- Create a table of all valid commands
+local function PacketTeleDelay(_, _, player)
+    player:RegisterEvent(function(_, _, _, player)
+        Teleport(player, _)
+    end, 1000, 1)
+end
+
+local function PacketMoveDelay(_, _, player)
+    local sameMap = true
+    player:RegisterEvent(function(_, _, _, player)
+        Teleport(player, sameMap)
+    end, 1000, 1)
+end
+
 local function buildCommandList()
     local commands = {}
     for _, category in pairs(commandCategories) do
@@ -1477,7 +1519,10 @@ local function OnBotCommand(event, player, command)
     end
     if string.find(command, "^playerb") then
         local guid = player:GetGUIDLow()
-        if (string.find(command, "^playerbots bot add ") and (botSummonTime[guid] and (os.time() - botSummonTime[guid] < 5))) then
+        if (string.find(command, "^playerbots bot add ") and (not addCmdTimer[guid] or (os.time() - addCmdTimer[guid] > 1))
+        and (botSummonTime[guid] and (os.time() - botSummonTime[guid] < 5)))
+        then
+            addCmdTimer[guid] = os.time()
             return true
         end
         if string.find(command, "^playerbots bot remove ") then
@@ -1485,14 +1530,13 @@ local function OnBotCommand(event, player, command)
         end
         return false
     end
-    return true
 end
 
 local function OnPlayerMapEnter(event, map, player)
     if player:HasAura(50345) then
         player:RemoveAura(50345)
     end
-    Teleport(_, _, player)
+    Teleport(player)
 end
 
 local function OnDisallowedZones(event, player, newZone, newArea)
@@ -1519,6 +1563,7 @@ local function OnDisallowedZones(event, player, newZone, newArea)
                             player:RunCommand(".playerbots bot remove " .. botName)
                             table.remove(activeBots[name], i)
                             botCount[name] = botCount[name] - 1
+                            print("Logging out bot in disallowed zone")
                         end
                     end
                     player:SendAreaTriggerMessage("You cannot use shadows in "..GetAreaName(player:GetAreaId())..".")
@@ -2128,9 +2173,13 @@ RegisterPlayerEvent(27, OnDisallowedZones)
 RegisterPlayerEvent(42, OnBotCommand)
 RegisterPlayerGossipEvent(200, 2, ShadowsGossipSelect)
 RegisterGroupEvent(3, LeaveGroup)
+RegisterGroupEvent(5, DisbandGroup)
 RegisterPacketEvent(0x075, 5, UninviteGroup)
 RegisterPacketEvent(0x076, 5, UninviteGroupGUID)
-RegisterPacketEvent(0x0C7, 5, Teleport)
+RegisterPacketEvent(0x0C7, 5, PacketTeleDelay)
+RegisterPacketEvent(0x0C9, 5, PacketMoveDelay)
+RegisterPacketEvent(0x0CA, 5, PacketMoveDelay)
+RegisterPacketEvent(0x0CB, 5, PacketMoveDelay)
 
 ------------------------------------------------------------------------------------------------
 -- End shadows event registrations
