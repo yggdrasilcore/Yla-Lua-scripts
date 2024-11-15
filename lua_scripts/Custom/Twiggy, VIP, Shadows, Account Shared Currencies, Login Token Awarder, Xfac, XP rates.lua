@@ -735,12 +735,7 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
 		end
 		
 		if mailboxtime[guid] <= currentTime then
-			local mailbox = player:SummonGameObject(191605, player:GetX(), player:GetY()+2, player:GetZ(), player:GetO())
-		
-			mailbox:RegisterEvent(function(eventid, delay, repeats, mailbox)
-				mailbox:Despawn()
-			end, 5 * 60 * 1000, 1) -- 5 minutes
-			
+			player:CastSpell(player, 54710, true)
 			mailboxtime[guid] = currentTime + 900
 		else
 			local remainingTime = mailboxtime[guid] - currentTime
