@@ -973,6 +973,7 @@ local commandCategories = {
            {cmd = "s", name = "Sell Inventory", desc = "By whispering 's' to a shadow, a shadow can vendor specific items. Specify further with grey, vendor, item link, and more."},
            {cmd = "u", name = "Use Inventory", desc = "Whisper 'u' to a shadow to make it use any available item specified in the message. If no item specified, your shadow will say which items can be used."},
            {cmd = "destroy", name = "Destroy Inventory", desc = "By whispering 'destroy' to a shadow, you can select items to destroy from its inventory."},
+           {cmd = "rep", name = "Reputation", desc = "By whispering 'rep' or 'reputation' to a shadow, the shadow will tell you its current reputation standing of the faction of whichever NPC you are currently targetting."},
            {cmd = "trade", name = "Trade", desc = "You may trade your shadows to distribute loot, free up inventory, pass mats around, etc. Simply trade them to get started. They will whisper you their inventory. To select items to trade, whisper them which item from their inventory you want traded. \n \nNote: Shadows cannot trade you soulbound items even if they have a valid trade timer."},
        }
    },
@@ -1484,7 +1485,6 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
                     return false
                 end
                 
-                -- Check if message starts with any valid command
                 local isValidCommand = false
                 for cmd, _ in pairs(validCommands) do
                     if string.match(msg:lower(), "^" .. cmd:lower()) then
