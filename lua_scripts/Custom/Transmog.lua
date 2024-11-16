@@ -47028,9 +47028,6 @@ if PrepareDBTable then
     CharDBQuery("DELETE FROM custom_transmogrification WHERE NOT EXISTS (SELECT 1 FROM item_instance WHERE item_instance.guid = custom_transmogrification.GUID)")
 end
 
-
-
-
 ---------------------------------------------------------------------------------
 -- Transmog item vendor script start
 ---------------------------------------------------------------------------------
