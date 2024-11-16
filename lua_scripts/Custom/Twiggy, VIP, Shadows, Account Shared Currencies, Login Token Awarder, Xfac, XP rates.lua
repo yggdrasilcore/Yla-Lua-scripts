@@ -1003,6 +1003,35 @@ local function Hello(player)
     if not botCount[name] or botCount[name] < 0 then
         botCount[name] = 0
     end
+        
+    if not botsAvailable[accountId] then
+        print("Querying for bots available for "..player:GetName())
+        botsAvailable[accountId] = {}
+        CharDBQueryAsync("SELECT name, race, class, gender, level FROM characters WHERE account = " .. accountId, function(query)
+            if query then
+                repeat
+                    local name = query:GetString(0)
+                    local race = query:GetUInt8(1)
+                    local class = query:GetUInt8(2)
+                    local gender = query:GetUInt8(3)
+                    local level = query:GetUInt8(4)
+                    
+                    table.insert(botsAvailable[accountId], {
+                        name = name,
+                        race = race,
+                        class = class,
+                        gender = gender,
+                        level = level
+                    })
+                    
+                until not query:NextRow()
+
+                table.sort(botsAvailable[accountId], function(a, b)
+                    return a.level > b.level
+                end)
+            end
+        end)
+    end
 
     if VIPtime[player:GetGUIDLow()] > os.time() then -- Increased bot limit for VIP
         maxBotCount = maxVIPCount
@@ -1190,75 +1219,48 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
         local group = player:GetGroup()
         local groupMembers = {}
         local groupNames = {}
-        local playerLevel = player:GetLevel()
-        botsAvailable[accountId] = {}
-        CharDBQueryAsync("SELECT name, race, class, gender, level FROM characters WHERE account = " .. accountId .. 
-                         " AND level BETWEEN " .. (playerLevel - 10) .. " AND " .. (playerLevel + 10), function(query)
-            if query then
-                botsAvailable[accountId] = {}
-                repeat
-                    local name = query:GetString(0)
-                    local race = query:GetUInt8(1)
-                    local class = query:GetUInt8(2)
-                    local gender = query:GetUInt8(3)
-                    local level = query:GetUInt8(4)
-                    
-                    table.insert(botsAvailable[accountId], {
-                        name = name,
-                        race = race,
-                        class = class,
-                        gender = gender,
-                        level = level
-                    })
-                    
-                until not query:NextRow()
-                table.sort(botsAvailable[accountId], function(a, b)
-                    return a.level > b.level
-                end)
-            end
-            local player = GetPlayerByName(name)
-            player:GossipClearMenu()
-            player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAvailable shadows:\n \n ", 0, 10)
-            if group then
-                groupMembers = group:GetMembers()
-                for _, member in pairs(groupMembers) do
-                    if member then
-                        groupNames[member:GetName()] = true
-                    end
+        
+        player:GossipClearMenu()
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAvailable shadows:\n \n ", 0, 10)
+        
+        if group then
+            groupMembers = group:GetMembers()
+            for _, member in pairs(groupMembers) do
+                if member then
+                    groupNames[member:GetName()] = true
                 end
             end
-            
-            if botsAvailable[accountId] then
-                local found = false
-                for index, charInfo in ipairs(botsAvailable[accountId]) do
-                    if charInfo.name ~= player:GetName() then
-                        local className = GetClassName(charInfo.class)
-                        local raceName = GetRaceName(charInfo.race)
-                        
-                        local raceIcon = GetRaceIconPath(charInfo.race, charInfo.gender)
-                        local classIcon = GetClassIconPath(charInfo.class)
-                        
-                        if charInfo.name and not groupNames[charInfo.name] then
-                            if charInfo.level >= minLevel and charInfo.level > 9 and math.abs(player:GetLevel() - charInfo.level) <= 10 then
-                                player:GossipMenuAddItem(4, "|TInterface/ICONS/" .. raceIcon .. ":40:40:-24:0|t |TInterface/ICONS/" .. classIcon .. ":40:40:-24:0|t |TInterface/ICONS/achievement_level_" .. (math.floor(charInfo.level / 10) * 10) .. ":40:40:-24:0|t \n \n \n \nName:  " .. charInfo.name .. "\n \nLevel:  " .. charInfo.level .. "\n \nRace:  " .. raceName .. "\n \nClass:  " .. className .. "\n ", 0, 100 + index)
-                                found = true
-                            elseif charInfo.level >= minLevel and math.abs(player:GetLevel() - charInfo.level) <= 10 then
-                                player:GossipMenuAddItem(4, "|TInterface/ICONS/" .. raceIcon .. ":40:40:-24:0|t |TInterface/ICONS/" .. classIcon .. ":40:40:-24:0|t |TInterface/ICONS/inv_misc_desecrated_clothchest:40:40:-24:0|t\n \n \n \nName:  " .. charInfo.name .. "\n \nLevel:  " .. charInfo.level .. "\n \nRace:  " .. raceName .. "\n \nClass:  " .. className .. "\n ", 0, 100 + index)
-                                found = true
-                            end
+        end
+        
+        if botsAvailable[accountId] then
+            local found = false
+            for index, charInfo in ipairs(botsAvailable[accountId]) do
+                if charInfo.name ~= player:GetName() then
+                    local className = GetClassName(charInfo.class)
+                    local raceName = GetRaceName(charInfo.race)
+                    
+                    local raceIcon = GetRaceIconPath(charInfo.race, charInfo.gender)
+                    local classIcon = GetClassIconPath(charInfo.class)
+                    
+                    if charInfo.name and not groupNames[charInfo.name] then
+                        if charInfo.level >= minLevel and charInfo.level > 9 and math.abs(player:GetLevel() - charInfo.level) <= 10 then
+                            player:GossipMenuAddItem(4, "|TInterface/ICONS/" .. raceIcon .. ":40:40:-24:0|t |TInterface/ICONS/" .. classIcon .. ":40:40:-24:0|t |TInterface/ICONS/achievement_level_" .. (math.floor(charInfo.level / 10) * 10) .. ":40:40:-24:0|t \n \n \n \nName:  " .. charInfo.name .. "\n \nLevel:  " .. charInfo.level .. "\n \nRace:  " .. raceName .. "\n \nClass:  " .. className .. "\n ", 0, 100 + index)
+                            found = true
+                        elseif charInfo.level >= minLevel and math.abs(player:GetLevel() - charInfo.level) <= 10 then
+                            player:GossipMenuAddItem(4, "|TInterface/ICONS/" .. raceIcon .. ":40:40:-24:0|t |TInterface/ICONS/" .. classIcon .. ":40:40:-24:0|t |TInterface/ICONS/inv_misc_desecrated_clothchest:40:40:-24:0|t\n \n \n \nName:  " .. charInfo.name .. "\n \nLevel:  " .. charInfo.level .. "\n \nRace:  " .. raceName .. "\n \nClass:  " .. className .. "\n ", 0, 100 + index)
+                            found = true
                         end
                     end
                 end
-                if not found then
-                    player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_rogue_shadowstep:40:40:-24:0|tNo available shadows \n \nThere are no shadows available in the range you can mind control. Your shadows must be within ten levels of you and at least level 15.\n \n", 0, 200)
-                end
             end
-                    
-            player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:40:40:-24:0|tBack", 0, 999)
-            
-            player:GossipSendMenu(12, player, 200)
-        end)
-    
+            if not found then
+                player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_rogue_shadowstep:40:40:-24:0|tNo available shadows \n \nThere are no shadows available in the range you can mind control. Your shadows must be within ten levels of you and at least level 15.\n \n", 0, 200)
+            end
+        end
+                
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:40:40:-24:0|tBack", 0, 999)
+        
+        player:GossipSendMenu(12, player, 200)
     elseif intid >= 100 and intid < 199 then  -- Bot selection
         player:GossipClearMenu()
         for _, zone in pairs(disallowedZones) do
@@ -1316,6 +1318,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
 end
 
 local function Logout(event, player)
+    local accountId = player:GetAccountId()
     local guidlow = player:GetGUIDLow()
     local name = player:GetName()
     
@@ -1335,7 +1338,7 @@ local function Logout(event, player)
     end
 
     isPlayerBot[player:GetName()] = nil
-    botsAvailable[guidlow]  = nil
+    botsAvailable[accountId]  = nil
     activeBots[name]        = nil
     botCount[name]          = nil
     botMasters[guidlow]     = nil
