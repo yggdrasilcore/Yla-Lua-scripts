@@ -953,7 +953,7 @@ local commandCategories = {
            {cmd = "quests", name = "View Quests", desc = "Your shadows will display available quests. Say 'quests' in group chat or whisper to instruct shadow."},
            {cmd = "stats", name = "View Stats", desc = "Your shadows will display current stats. Say 'stats' in group chat or whisper to instruct shadow."},
            {cmd = "add all loot", name = "Loot All", desc = "Your shadows will loot all items from defeated enemies. Say 'add all loot' in group chat or whisper to instruct shadow."},
-           {cmd = "reset", name = "Reset", desc = "Say 'reset' in group chat or whispers to a shadow to reset its current settings."},
+           {cmd = "reset botAI", name = "Reset botAI", desc = "Say 'reset botAI' (case sensitive) in group chat or whispers to a shadow to reset its current settings."},
         }
    },
    spell = {
