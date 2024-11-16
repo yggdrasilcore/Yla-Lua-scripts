@@ -1424,8 +1424,9 @@ function Teleport(player, sameMap)
     if lastTeleTime[guid] and os.time() <= lastTeleTime[guid] then
         return
     end
-    if player:GetMapId() == 0 or player:GetMapId() == 1 -- Kalimdor, Eastern Kingdoms
+    if (player:GetMapId() == 0 or player:GetMapId() == 1 -- Kalimdor, Eastern Kingdoms
     or player:GetMapId() == 530 or player:GetMapId() == 571 -- Outlands, Northrend
+    and (sampeMap and sameMap == "openWorld"))
     or player:InArena() or player:InBattleground()
     then
         return
@@ -1439,6 +1440,7 @@ function Teleport(player, sameMap)
             isInLos = bot:IsWithinLoS(player)
             if not isInLos and (((bot:GetZ() < player:GetZ() - 20) or (bot:GetZ() > player:GetZ() + 20)) or not ((bot:GetMapId() == player:GetMapId()))) then
                 bot:Teleport(player:GetMapId(), player:GetX() + math.random(-1, 1), player:GetY() + math.random(-1, 1), player:GetZ(), player:GetO() + math.random(-6, 6))
+                print("Teleporting bot "..botName.." to "..name)
             end
         end
     end
@@ -1446,8 +1448,9 @@ function Teleport(player, sameMap)
 end
 
 local function PacketTeleDelay(_, _, player)
+    local sameMap = "openWorld"
     player:RegisterEvent(function(_, _, _, player)
-        Teleport(player, _)
+        Teleport(player, sameMap)
     end, 1000, 1)
 end
 
