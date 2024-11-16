@@ -1539,10 +1539,11 @@ local function OnBotCommand(event, player, command)
 end
 
 local function OnPlayerMapEnter(event, map, player)
+    local sameMap = "openWorld"
     if player:HasAura(50345) then
         player:RemoveAura(50345)
     end
-    Teleport(player)
+    Teleport(player, sameMap)
 end
 
 local function OnDisallowedZones(event, player, newZone, newArea)
