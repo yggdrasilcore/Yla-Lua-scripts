@@ -5,8 +5,6 @@ local BOT_TELE_VISUAL   = 64446
 local BotSummonCD       = 30 * 60 -- 30 minutes
 local minLevel          = 15
 local dkLimit           = 70 -- Prevents DKs from zapping toons into the scarlet enclave area
-local maxBotCount       = 2
-local maxVIPCount       = 4
 
 local addCmdTimer = {}
 local logoutEvent       =   {}
@@ -996,6 +994,8 @@ local function Hello(player)
     local accountId = player:GetAccountId()
     local guidlow = player:GetGUIDLow()
     local name = player:GetName()
+    local maxBotCount       = 2
+    local maxVIPCount       = 4
     
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_gizmo_02:40:40:-24:0|tHow to use shadows", 0, 2)
     
@@ -1031,7 +1031,7 @@ local function Hello(player)
             end
         end)
     end
-    
+
     if VIPtime[player:GetGUIDLow()] > os.time() then -- Increased bot limit for VIP
         maxBotCount = maxVIPCount
     end
@@ -1051,6 +1051,8 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
     local accountId = player:GetAccountId()
     local guid = player:GetGUIDLow()
     local name = player:GetName()
+    local maxBotCount       = 2
+    local maxVIPCount       = 4
     
     if VIPtime[player:GetGUIDLow()] > os.time() then -- Increased bot limit for VIP
         maxBotCount = maxVIPCount
