@@ -1426,17 +1426,17 @@ function Teleport(player, sameMap)
     if lastTeleTime[guid] and os.time() <= lastTeleTime[guid] then
         return
     end
-    if (player:GetMapId() == 0 or player:GetMapId() == 1 -- Kalimdor, Eastern Kingdoms
-    or player:GetMapId() == 530 or player:GetMapId() == 571 -- Outlands, Northrend
-    and (sampeMap and sameMap == "openWorld"))
-    or player:InArena() or player:InBattleground()
+    if ((player:GetMapId() == 0 or player:GetMapId() == 1 -- Kalimdor, Eastern Kingdoms
+    or player:GetMapId() == 530 or player:GetMapId() == 571) -- Outlands, Northrend
+    and (sameMap == "yes"))
+    or (player:InArena() or player:InBattleground()) -- PVP exclusions from teleport
     then
         return
     end
     for i, botName in ipairs(activeBots[name]) do
         local bot = GetPlayerByName(botName)
         if bot and not bot:IsInCombat() and not player:IsInCombat() then
-            if bot:GetMapId() ~= player:GetMapId() and sameMap == true then
+            if bot:GetMapId() ~= player:GetMapId() and sameMap == "yes" then
                 return
             end
             isInLos = bot:IsWithinLoS(player)
@@ -1457,7 +1457,7 @@ local function PacketTeleDelay(_, _, player)
 end
 
 local function PacketMoveDelay(_, _, player)
-    local sameMap = true
+    local sameMap = "yes"
     player:RegisterEvent(function(_, _, _, player)
         Teleport(player, sameMap)
     end, 1000, 1)
@@ -1540,6 +1540,7 @@ end
 
 local function OnPlayerMapEnter(event, map, player)
     local sameMap = "openWorld"
+    print("Player "..player:GetName().." changing map!")
     if player:HasAura(50345) then
         player:RemoveAura(50345)
     end
