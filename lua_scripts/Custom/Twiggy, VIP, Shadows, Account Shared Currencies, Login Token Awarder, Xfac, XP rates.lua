@@ -1413,6 +1413,9 @@ end
 
 function Teleport(player, sameMap)
     local name = player:GetName()
+    if isPlayerBot[name] then
+        return
+    end
     local guid = player:GetGUIDLow()
     if not player:IsInGroup() then
         return -- Should probably add a sanity check here to disconnect bots not in your party in case party affiliation fails somehow
@@ -1450,6 +1453,10 @@ function Teleport(player, sameMap)
 end
 
 local function PacketTeleDelay(_, _, player)
+    local name = player:GetName()
+    if isPlayerBot[name] then
+        return
+    end
     local sameMap = "openWorld"
     player:RegisterEvent(function(_, _, _, player)
         Teleport(player, sameMap)
@@ -1457,6 +1464,10 @@ local function PacketTeleDelay(_, _, player)
 end
 
 local function PacketMoveDelay(_, _, player)
+    local name = player:GetName()
+    if isPlayerBot[name] then
+        return
+    end
     local sameMap = "yes"
     player:RegisterEvent(function(_, _, _, player)
         Teleport(player, sameMap)
@@ -1539,8 +1550,11 @@ local function OnBotCommand(event, player, command)
 end
 
 local function OnPlayerMapEnter(event, map, player)
+    local name = player:GetName()
+    if isPlayerBot[name] then
+        return
+    end
     local sameMap = "openWorld"
-    print("Player "..player:GetName().." changing map!")
     if player:HasAura(50345) then
         player:RemoveAura(50345)
     end
@@ -1549,6 +1563,9 @@ end
 
 local function OnDisallowedZones(event, player, newZone, newArea)
     local name = player:GetName()
+    if isPlayerBot[name] then
+        return
+    end
     if not botCount[name] or botCount[name] <= 0 then
         return
     end
