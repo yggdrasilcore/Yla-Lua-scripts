@@ -1302,7 +1302,11 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
                 table.insert(botMasters[guid], player:GetName())
                 botSummonTime[guid] = os.time()
                 player:RunCommand(".playerbots bot add " .. selectedChar.name) -- Add bot
-                isPlayerBot[selectedChar.name] = name
+                if not isPlayerBot[selectedChar.name] then
+                    isPlayerBot[selectedChar.name] = name
+                elseif not (isPlayerBot[selectedChar.name] == name) then
+                    isPlayerBot[selectedChar.name] = name
+                end
                 Hello(player)
             end
         else
@@ -1337,11 +1341,11 @@ local function Logout(event, player)
         end
     end
 
-    isPlayerBot[player:GetName()] = nil
-    botsAvailable[accountId]  = nil
-    activeBots[name]        = nil
-    botCount[name]          = nil
-    botMasters[guidlow]     = nil
+    isPlayerBot[name]           = nil
+    botsAvailable[accountId]    = nil
+    activeBots[name]            = nil
+    botCount[name]              = nil
+    botMasters[guidlow]         = nil
 end
 
 local function Login(event, player)
