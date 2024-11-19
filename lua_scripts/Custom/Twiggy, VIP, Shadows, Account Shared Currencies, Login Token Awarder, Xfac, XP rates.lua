@@ -1555,13 +1555,13 @@ end
 
 local function OnPlayerMapEnter(event, map, player)
     local name = player:GetName()
+    if player:HasAura(50345) then
+        player:RemoveAura(50345)
+    end
     if isPlayerBot[name] then
         return
     end
     local sameMap = "openWorld"
-    if player:HasAura(50345) then
-        player:RemoveAura(50345)
-    end
     Teleport(player, sameMap)
 end
 
