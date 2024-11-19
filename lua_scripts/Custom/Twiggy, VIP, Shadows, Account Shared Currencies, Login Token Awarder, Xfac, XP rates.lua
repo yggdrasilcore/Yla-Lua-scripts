@@ -1497,10 +1497,6 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
     if activeBots[playerName] then
         for _, botName in ipairs(activeBots[playerName]) do
             if receiverName == botName then
-                if string.match(msg, "summon") then
-                    return false
-                end
-                
                 local isValidCommand = false
                 for cmd, _ in pairs(validCommands) do
                     if string.match(msg:lower(), "^" .. cmd:lower()) then
@@ -1512,21 +1508,6 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
                 if not isValidCommand then
                     local bot = GetPlayerByName(botName)
                     bot:SendUnitWhisper("I don't understand what you mean! Please check Twiggy for commands I can react to.", 0, player)
-                end
-            end
-        end
-    end
-end
-
-local function OnGroup(event, player, msg, Type, lang, group)
-    local playerName = player:GetName()
-    if activeBots[playerName] then
-        for _, botName in ipairs(activeBots[playerName]) do
-            for _, member in ipairs(group:GetMembers()) do
-                local memberName = member:GetName()
-                if memberName == botName and msg == "summon" then
-                    player:SendBroadcastMessage("You can't say 'summon' in group chat while you have shadows active. Try 'Summon' instead.")
-                    return false, "Summon"
                 end
             end
         end
@@ -2199,7 +2180,6 @@ SetActiveBots()
 RegisterPlayerEvent(3, Login)
 RegisterPlayerEvent(4, Logout)
 RegisterPlayerEvent(19, OnWhisper)
-RegisterPlayerEvent(20, OnGroup)
 RegisterServerEvent(21, OnPlayerMapEnter)
 RegisterPlayerEvent(27, OnDisallowedZones)
 RegisterPlayerEvent(42, OnBotCommand)
