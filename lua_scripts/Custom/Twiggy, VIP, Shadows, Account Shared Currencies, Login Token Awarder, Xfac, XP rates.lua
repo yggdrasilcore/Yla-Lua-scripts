@@ -1535,14 +1535,6 @@ end
 
 local function OnPlayerMapEnter(event, map, player)
     local name = player:GetName()
-    if not player:HasAura(50345) then
-        player:AddAura(50345, player)
-        player:RegisterEvent(function(eventId, delay, repeats, player)
-            if player:HasAura(50345) then
-                player:RemoveAura(50345)
-            end
-        end, 100, 3)
-    end
     if isPlayerBot[name] then
         return
     end
