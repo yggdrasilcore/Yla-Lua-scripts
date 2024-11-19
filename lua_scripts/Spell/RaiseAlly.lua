@@ -2,7 +2,7 @@
 local function RaiseAllyCast(event, player, spell, skipCheck)
     if spell:GetEntry() == 61999 then
         local target = player:GetSelection()
-        if target and target:IsPlayer() and player:IsInSameGroupWith(target) and target:IsDead() then
+        if target and target:IsPlayer() and (player:IsInSameGroupWith(target) or player:IsInSameRaidWith(target)) and target:IsDead() then
             target:CastSpell(target, 46619)
 		    target:RegisterEvent(function(eventId, delay, repeats, target)
 				RaiseAllyGhoul = target:GetNearestCreature(10, 30230)
