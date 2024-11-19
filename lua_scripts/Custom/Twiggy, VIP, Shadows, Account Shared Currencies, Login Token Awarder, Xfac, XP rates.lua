@@ -1171,7 +1171,6 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
                             player:CastSpell(bot, BOT_TELE_VISUAL, true)
                             bot:CastSpell(bot, BOT_TELE_VISUAL, true)
                         else
-                            bot:AddAura(50345, bot)
                             bot:Teleport(player:GetMapId(), player:GetX() + math.random(-3, 3), player:GetY() + math.random(-3, 3), player:GetZ() + math.random(0, 0.1), player:GetO() + math.random(-6, 6))
                             player:CastSpell(bot, BOT_TELE_VISUAL, true)
                             local name = player:GetName()
@@ -1536,8 +1535,13 @@ end
 
 local function OnPlayerMapEnter(event, map, player)
     local name = player:GetName()
-    if player:HasAura(50345) then
-        player:RemoveAura(50345)
+    if not player:HasAura(50345) then
+        bot:AddAura(50345, bot)
+        player:RegisterEvent(function(eventId, delay, repeats, player)
+            if player:HasAura(50345) then
+                player:RemoveAura(50345)
+            end
+        end, 100, 3)
     end
     if isPlayerBot[name] then
         return
