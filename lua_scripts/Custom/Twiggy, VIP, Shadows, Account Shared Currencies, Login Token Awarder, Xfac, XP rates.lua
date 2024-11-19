@@ -1826,18 +1826,21 @@ local function OnPlayerMapChange(event, map, player)
         then -- Alliance master
             if (player:GetRace() == 1 or player:GetRace() == 3
             or player:GetRace() == 4 or player:GetRace() == 7
-            or player:GetRace() == 11) -- Bot is already alliance, do nothing
+            or player:GetRace() == 11) 
             then
-                return
+                return -- Bot is already alliance, do nothing
+            else
+                player:SetFaction(1802)
             end
-            player:SetFaction(1802)
         else -- Horde master
             if (player:GetRace() == 2 or player:GetRace() == 5
             or player:GetRace() == 6 or player:GetRace() == 8
-            or player:GetRace() == 10) then
+            or player:GetRace() == 10)
+            then
                 return -- Bot is already horde, do nothing
+            else
+                player:SetFaction(1801)
             end
-            player:SetFaction(1801)
         end
     else
         if player and not (
