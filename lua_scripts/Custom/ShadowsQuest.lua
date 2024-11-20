@@ -24,9 +24,9 @@ REPLACE INTO `quest_template` (
     `RequiredItemCount3`, `RequiredItemCount4`, `RequiredItemCount5`, `RequiredItemCount6`,
     `Unknown0`, `ObjectiveText1`, `ObjectiveText2`, `ObjectiveText3`, `ObjectiveText4`
 ) VALUES (
-    30000, 2, 80, 15, -284, 0, 0,
+    30000, 2, 15, 15, -284, 0, 0,
     0, 0, 0, 0,
-    0, 7, 0, 0, 0,
+    0, 3, 0, 0, 0,
     0, 0, 0, 21878, 0, 0,
     0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0,
