@@ -47000,7 +47000,7 @@ local function OnLogin(event, player)
                 if item then
                     if entryMap[playerGUID] then
                         if entryMap[playerGUID][item:GetGUIDLow()] then
-                            player:UpdateUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (item:GetSlot() * ITEM_SLOT_MULTIPLIER), entryMap[playerGUID][item:GetGUIDLow()])
+                            player:SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (item:GetSlot() * ITEM_SLOT_MULTIPLIER), entryMap[playerGUID][item:GetGUIDLow()])
                         end
                     end
                 end
