@@ -46658,20 +46658,16 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
                 for i = 1, #dataParts do
                     dataParts[i] = string.gsub(dataParts[i], "^%s*(.-)%s*$", "%1")
                     local num = tonumber(dataParts[i])
-                    if num and num > 20 then
+                    if num and num > 24 then
                         setspresent = true
-                        dataParts[i] = num
-                        if dataParts[i] > 20 then
-                            local itemId = dataParts[i]
-                            if itemId < 25 then return end
-                            local icon
-                            if itemId and itemIconCache[itemId] then
-                                icon = "Interface/ICONS/" .. itemIconCache[itemId]
-                            else
-                                icon = "Interface/ICONS/INV_Misc_QuestionMark"
-                            end
-                            player:GossipMenuAddItem(4, "|T" .. icon .. ":31:31:-24:0|t" .. GetItemLink(itemId), PRESETS + 2, 0)
+                        local itemId = num
+                        local icon
+                        if itemId and itemIconCache[itemId] then
+                            icon = "Interface/ICONS/" .. itemIconCache[itemId]
+                        else
+                            icon = "Interface/ICONS/INV_Misc_QuestionMark"
                         end
+                        player:GossipMenuAddItem(4, "|T" .. icon .. ":31:31:-24:0|t" .. GetItemLink(itemId), PRESETS + 2, 0)
                     end
                 end
                 player:GossipMenuAddItem(3, "|TInterface/ICONS/INV_Misc_Statue_02:31:31:-24:0|tUse this set", PRESETS + 21, presetID)
