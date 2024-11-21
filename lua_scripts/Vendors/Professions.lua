@@ -8,7 +8,7 @@ local professions = {
     {id = 171, name = "Alchemy", icon = "TRADE_ALCHEMY", unlearn = 415, learn = 416, unlearn_spell = 51303, learn_spells = {2259, 3101, 3464, 11611, 28596, 51303, 51304}, cost = DEFAULT_EMBLEMS_COST},
     {id = 164, name = "Blacksmithing", icon = "TRADE_BLACKSMITHING", unlearn = 417, learn = 418, unlearn_spell = 51298, learn_spells = {2018, 3100, 9785, 29844, 51298, 9788, 9787, 17041, 17040, 17039, 51300}, cost = DEFAULT_EMBLEMS_COST},
     {id = 333, name = "Enchanting", icon = "INV_Enchant_DustArcane", unlearn = 419, learn = 420, unlearn_spell = 51312, learn_spells = {7411, 7412, 7413, 13920, 28029, 51312, 51313}, cost = DEFAULT_EMBLEMS_COST},
-    {id = 202, name = "Engineering", icon = "TRADE_ENGINEERING", unlearn = 421, learn = 422, unlearn_spell = 51305, learn_spells = {4036, 4037, 4038, 12656, 30350, 51305, 20219, 20222, 51306}, cost = DEFAULT_EMBLEMS_COST},
+    {id = 202, name = "Engineering", icon = "TRADE_ENGINEERING", unlearn = 421, learn = 422, unlearn_spell = 51305, learn_spells = {4036, 4037, 4038, 12656, 30350, 51305, 51306}, cost = DEFAULT_EMBLEMS_COST},
     {id = 182, name = "Herbalism", icon = "TRADE_HERBALISM", unlearn = 423, learn = 424, unlearn_spell = 50301, learn_spells = {51005}, cost = REDUCED_EMBLEMS_COST},
     {id = 773, name = "Inscription", icon = "INV_Inscription_Tradeskill01", unlearn = 425, learn = 426, unlearn_spell = 45380, learn_spells = {45357, 45358, 45359, 45360, 45361, 45363}, cost = DEFAULT_EMBLEMS_COST},
     {id = 755, name = "Jewelcrafting", icon = "INV_MISC_GEM_BLOODGEM_01", unlearn = 427, learn = 428, unlearn_spell = 51310, learn_spells = {25229, 25230, 28894, 28895, 28897, 51311, 31252}, cost = DEFAULT_EMBLEMS_COST},
