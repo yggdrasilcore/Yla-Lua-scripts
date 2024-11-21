@@ -127,7 +127,9 @@ RegisterPlayerEvent(27, function(event, player, newArea, oldArea)
         
         local shadowSpeak = player:GetNearestCreature(50, SHADOW_ENTRY)
         
-        if shadowSpeak then
+        local timerender = player:GetNearestCreature(50, TIMERENDER_ENTRY)
+        
+        if shadowSpeak or timerender then
             return
         end
         
@@ -164,6 +166,7 @@ RegisterPlayerEvent(27, function(event, player, newArea, oldArea)
         player:SpawnCreature(SWIRL_ENTRY, twx, twy, z, facing + math.pi, 1, DespawnTimer)
         
         player:AddAura(SHACKLE_AURA, player)
+        player:AddAura(IMMUNE_ALL, player)
         
         player:RegisterEvent(function(eventId, delay, repeats, player)
             local shadowSpeak = player:GetNearestCreature(50, SHADOW_ENTRY)
@@ -175,8 +178,9 @@ RegisterPlayerEvent(27, function(event, player, newArea, oldArea)
         end, 5000, 1)
     end
     
-    if oldArea ~= newArea and oldArea == AREA_ID and player:HasQuest(QUEST_ID) and player:HasAura(SHACKLE_AURA) then
+    if oldArea ~= newArea and oldArea == AREA_ID and player:HasQuest(QUEST_ID) and (player:HasAura(SHACKLE_AURA) or player:HasAura(IMMUNE_ALL) then
         player:RemoveAura(SHACKLE_AURA)
+        player:RemoveAura(IMMUNE_ALL)
         shadowsEvent = os.time()
     end
 end)
