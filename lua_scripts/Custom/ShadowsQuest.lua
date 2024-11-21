@@ -178,7 +178,7 @@ RegisterPlayerEvent(27, function(event, player, newArea, oldArea)
         end, 5000, 1)
     end
     
-    if oldArea ~= newArea and oldArea == AREA_ID and player:HasQuest(QUEST_ID) and (player:HasAura(SHACKLE_AURA) or player:HasAura(IMMUNE_ALL) then
+    if oldArea ~= newArea and oldArea == AREA_ID and player:HasQuest(QUEST_ID) and (player:HasAura(SHACKLE_AURA) or player:HasAura(IMMUNE_ALL)) then
         player:RemoveAura(SHACKLE_AURA)
         player:RemoveAura(IMMUNE_ALL)
         shadowsEvent = os.time()
