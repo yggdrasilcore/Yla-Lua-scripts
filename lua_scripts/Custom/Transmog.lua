@@ -46669,6 +46669,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
                             else
                                 icon = "Interface/ICONS/INV_Misc_QuestionMark"
                             end
+                            print(itemId)
                             player:GossipMenuAddItem(4, "|T" .. icon .. ":31:31:-24:0|t" .. GetItemLink(itemId), PRESETS + 2, 0)
                         end
                     end
