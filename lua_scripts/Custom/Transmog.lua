@@ -46663,7 +46663,12 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
                         dataParts[i] = num
                         if dataParts[i] > 20 then
                             local itemId = dataParts[i]
-                            local icon = "Interface/ICONS/" .. itemIconCache[itemId] or "Interface/ICONS/INV_Misc_QuestionMark"
+                            local icon
+                            if itemId and itemIconCache[itemId] then
+                                icon = "Interface/ICONS/" .. itemIconCache[itemId]
+                            else
+                                icon = "Interface/ICONS/INV_Misc_QuestionMark"
+                            end
                             player:GossipMenuAddItem(4, "|T" .. icon .. ":31:31:-24:0|t" .. GetItemLink(itemId), PRESETS + 2, 0)
                         end
                     end
@@ -47565,9 +47570,29 @@ RegisterCreatureGossipEvent(TRANSMOG_VENDOR_NPC_ID, 2, MogVendorSelect)
 -- Transmogrify items event registrations
 ---------------------------------------------------------------------------------
 
+local function OnRepair(event, packet, player)
+    for slot = EQUIPMENT_SLOT_START, EQUIPMENT_SLOT_END-1 do
+        local item = player:GetItemByPos(INVENTORY_SLOT_BAG_0, slot)
+        if item then
+            local fentry = GetFakeEntry(item)
+            if fentry then
+                local origentry = item:GetEntry()
+                local slot = item:GetSlot()
+                player:SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * ITEM_SLOT_MULTIPLIER), item:GetEntry())
+                player:RegisterEvent(function(eventId, delay, repeats, player)
+                    if player then
+                        player:SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * ITEM_SLOT_MULTIPLIER), fentry)
+                    end
+                end, 100, 1)
+            end
+        end
+    end
+end
+
 RegisterPlayerEvent(3, OnLogin)
 RegisterPlayerEvent(4, OnLogout)
 RegisterPlayerEvent(29, OnEquip)
+RegisterPacketEvent(0x2A8, 5, OnRepair)
 
 RegisterCreatureGossipEvent(NPC_Entry, 1, OnGossipHello)
 RegisterCreatureGossipEvent(NPC_Entry, 2, OnGossipSelect)
