@@ -6,22 +6,6 @@ local priceChangeFaction	= 10
 local priceChangeRace 		= 15
 local VoteTokenCoeff		= 10
 
-local function hasSufficientCommunityTokens(player, amount)
-    return player:GetItemCount(communityTokenItemId) >= amount
-end
-
-local function hasSufficientVoteTokens(player, amount)
-    return player:GetItemCount(voteTokenItemId) >= amount
-end
-
-local function removeCommunityTokens(player, amount)
-    player:RemoveItem(communityTokenItemId, amount)
-end
-
-local function removeVoteTokens(player, amount)
-    player:RemoveItem(voteTokenItemId, amount)
-end
-
 local function updateAtLoginCache(player, bitmask)
     -- Check current flags individually
     local currentFlags = 0
@@ -70,7 +54,7 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
     elseif intid == 3 then -- Change Faction
         player:GossipClearMenu()
         player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tChoose payment method", 0, 3, false)
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tPay with "..priceChangeFaction.." Community Tokens", 0, 31, false, "Are you sure you want to pay "..priceRename.." Community Tokens to change your faction?")
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tPay with "..priceChangeFaction.." Community Tokens", 0, 31, false, "Are you sure you want to pay "..priceChangeFaction.." Community Tokens to change your faction?")
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_bijou_gold:32:32:-22:0|tPay with "..priceChangeFaction * VoteTokenCoeff.." Vote Tokens", 0, 32, false, "Are you sure you want to pay "..priceChangeFaction * VoteTokenCoeff.." Vote Tokens to change your faction?")
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 98, false)
         player:GossipSendMenu(12, creature, 61)
@@ -85,7 +69,7 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
         OnGossipHello(event, player, creature)
     elseif intid == 99 then -- Information
         player:GossipClearMenu()        
-        player:GossipMenuAddItem(0, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tAbout Character Services\n \nThrough pulling the strings of the Twisting Nether, I, the Ethereal Customizer, possess the power to change all aspects of your character. \n \nI charge Community Tokens or Vote Tokens for my services, which you may acquire through donating or voting for the server.\n \nMy services are non-refundable.\n ", 0, 99, false)
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tAbout Character Services\n \nThrough pulling the strings of the Twisting Nether, I, the Ethereal Customizer, possess the power to change all aspects of your character. \n \nI charge Community Tokens or Vote Tokens for my services, which you may acquire through donating or voting for the server.\n \nCustomizing, race-changing and faction-changing your character includes a free rename.\n \nMy services are non-refundable.\n ", 0, 99, false)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tGo back", 0, 98, false)
         player:GossipSendMenu(12, creature, 61)
     elseif intid == 11 or intid == 21 or intid == 31 or intid == 41 then -- Pay with Community Tokens
@@ -101,7 +85,7 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
         end
         local bitmask = 0
         if intid == 11 then
-            bitmask = 1
+            bitmask = 2
         elseif intid == 21 then
             bitmask = 2
         elseif intid == 31 then
@@ -111,11 +95,11 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
         end
         if player:HasAtLoginFlag(bitmask) then
             player:SendBroadcastMessage("You already have this service active.")
-        elseif hasSufficientCommunityTokens(player, communityTokenCost) then
-			removeCommunityTokens(player, communityTokenCost)
+        elseif player:GetItemCount(communityTokenItemId) >= communityTokenCost then
+            player:RemoveItem(communityTokenItemId, communityTokenCost)
 			updateAtLoginCache(player, bitmask)
 			player:SaveToDB()
-			player:SendBroadcastMessage("Your request has been processed. Please log out and log back in to apply the changes.")
+			player:SendBroadcastMessage("Your request has been processed. Please log out and back in to apply the changes.")
         else
             player:SendBroadcastMessage("You do not have enough Community Tokens.")
         end
@@ -133,7 +117,7 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
         end
         local bitmask = 0
         if intid == 12 then
-            bitmask = 1
+            bitmask = 2
         elseif intid == 22 then
             bitmask = 2
         elseif intid == 32 then
@@ -143,11 +127,11 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
         end
         if player:HasAtLoginFlag(bitmask) then
             player:SendBroadcastMessage("You already have this service active.")
-        elseif hasSufficientVoteTokens(player, voteCost) then
-			removeVoteTokens(player, voteCost)
+        elseif player:GetItemCount(voteTokenItemId) >= voteCost then
+            player:RemoveItem(voteTokenItemId, voteCost)
 			updateAtLoginCache(player, bitmask)
 			player:SaveToDB()
-			player:SendBroadcastMessage("Your request has been processed. Please log out and log back in to apply the changes.")
+			player:SendBroadcastMessage("Your request has been processed. Please log out and back in to apply the changes.")
         else
             player:SendBroadcastMessage("You do not have enough Vote Tokens.")
         end
