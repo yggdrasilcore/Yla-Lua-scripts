@@ -668,11 +668,12 @@ local function OnMoveSetFly(event, packet, player)
         if player:GetGossipTextId(player) == 12 then
             player:GossipComplete()
         end
-        if player:GetInstanceId() > 0 then
+        if player:GetInstanceId() > 0 or player:GetMapId() == 573 then
             for _, id in ipairs(BUFFIDS) do
                 if player:HasAura(id) then
                     if player:HasSpell(id) then
                         player:RemoveAura(id)
+                        player:SendBroadcastMessage("You can't fly here!")
                     end
                 end
             end
