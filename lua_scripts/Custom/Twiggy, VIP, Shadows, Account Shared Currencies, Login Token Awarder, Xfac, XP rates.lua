@@ -1441,7 +1441,7 @@ function Teleport(player, sameMap)
     end
     for i, botName in ipairs(activeBots[name]) do
         local bot = GetPlayerByName(botName)
-        if bot and not bot:IsInCombat() and not player:IsInCombat() then
+        if bot and not player:IsInCombat() then
             if bot:GetMapId() ~= player:GetMapId() and sameMap == "yes" then
                 return
             end
