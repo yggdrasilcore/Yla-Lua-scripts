@@ -105,7 +105,7 @@ RegisterItemEvent(ITEM_ENTRY, 2, function(event, player, item, target)
 end)
 
 -- Area change event
-RegisterPlayerEvent(27, function(event, player, newArea, oldArea)
+RegisterPlayerEvent(27, function(event, player, newZone, newArea)
     if newArea == AREA_ID and player:HasQuest(QUEST_ID) then
         shadowsEvent = os.time() + 180
         
@@ -122,6 +122,7 @@ RegisterPlayerEvent(27, function(event, player, newArea, oldArea)
                 end
                 player:SendAreaTriggerMessage("You didn't help your shadows in time and they got pulled into the Twisting Nether! Try again later.")
                 player:SendBroadcastMessage("You didn't help your shadows in time and they got pulled into the Twisting Nether! Try again later.")
+                shadowsEvent = os.time()
             end
         end, 180000, 1)
         
@@ -177,11 +178,9 @@ RegisterPlayerEvent(27, function(event, player, newArea, oldArea)
             end, 5000, 1)
         end, 5000, 1)
     end
-    
-    if oldArea ~= newArea and oldArea == AREA_ID and player:HasQuest(QUEST_ID) and (player:HasAura(SHACKLE_AURA) or player:HasAura(IMMUNE_ALL)) then
-        player:RemoveAura(SHACKLE_AURA)
+    if not (newArea == AREA_ID) then
         player:RemoveAura(IMMUNE_ALL)
-        shadowsEvent = os.time()
+        player:RemoveAura(SHACKLE_AURA)
     end
 end)
 
@@ -274,6 +273,7 @@ RegisterPlayerEvent(18, function(event, player, msg, Type, lang)
                         player:RemoveItem(ITEM_ENTRY, 1)
                         --player:SetQuestStatus(QUEST_ID, 6)
                         player:RewardQuest(QUEST_ID)
+                        shadowsEvent = os.time()
                     end
                 end, 6000, 1)
                 
