@@ -16,7 +16,7 @@ local function OnChat(event, player, msg, Type, lang)
             if timeDiff < 5 then
                 -- Inform player about remaining cooldown
                 local remainingTime = math.ceil(5 - timeDiff)
-                player:SendBroadcastMessage("Please wait " .. remainingTime .. " seconds before using this command again.")
+                player:SendBroadcastMessage("Please wait " .. remainingTime .. " seconds before resetting your talents again.")
                 return false
             end
         end
