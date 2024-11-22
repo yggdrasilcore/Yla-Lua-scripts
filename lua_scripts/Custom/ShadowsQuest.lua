@@ -105,7 +105,7 @@ RegisterItemEvent(ITEM_ENTRY, 2, function(event, player, item, target)
 end)
 
 -- Area change event
-RegisterPlayerEvent(27, function(event, player, newZone, newArea)
+RegisterPlayerEvent(47, function(event, player, oldArea, newArea)
     if newArea == AREA_ID and player:HasQuest(QUEST_ID) then
         shadowsEvent = os.time() + 180
         
