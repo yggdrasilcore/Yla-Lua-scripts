@@ -135,6 +135,7 @@ local function CacheCreatures()
           OR name LIKE '%zhevra%' 
           OR name LIKE '%snickerfang%' 
           OR name LIKE '%hyena%' 
+          OR name LIKE '%tundra scavenger%' 
           OR name LIKE '%mosshoof%' 
           OR name LIKE '%talbuk%' 
           OR name LIKE '%elk%' 
