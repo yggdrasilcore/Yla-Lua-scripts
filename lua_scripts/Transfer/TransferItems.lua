@@ -59,7 +59,12 @@ local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 i
                     local tempSlotId = item.type
                     if tempSlotId > 10 then 
                         local realSlotId = tempSlotId - 11
-                        player:EquipItem(item.itemid, realSlotId)
+                        if (player:GetClass() == 1 or player:GetClass() == 7)
+                        and realSlotId == 16 then -- Weapon in off hand goes to bag just in case the player can't equip it due to missing talents
+                            player:AddItem(item.itemid)
+                        else
+                            player:EquipItem(item.itemid, realSlotId)
+                        end
                     end
                 end
                 
