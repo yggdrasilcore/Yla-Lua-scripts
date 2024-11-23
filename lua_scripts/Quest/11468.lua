@@ -1,22 +1,17 @@
-local SPELL_ID = 44407
-local NPC_ID = 24747
-local ITEM_ID = 34120
-local DELAY = 3000 -- 3 seconds in milliseconds
-
-local function OnSpellCast(event, player, spell, skipCheck)
-    if spell:GetEntry() == SPELL_ID then
-	print("Fjord Hawk gathering cast!")
-        local target = spell:GetTarget()
-        if target and target:GetEntry() == NPC_ID then
-            player:RemoveItem(34102, 1) --Removes fjord grub
-			print("Fjord Hawk targeted!")
-            eventId = player:RegisterEvent(function(eventId, delay, repeats, player)
-                player:AddItem(ITEM_ID, 1)
-				print("Awarding Fjord Hawk item!")
-				player:RemoveEventById(eventId)
-            end, DELAY, 1)
+local function UseRockFalcon(event, player, item, target)
+    if not target or not (target:GetEntry() == 24747) then
+        return false
+    end
+    if target and target:GetEntry() == 24747 then -- Fjord Hawk
+        if player:GetData("lastHawkTime") and player:GetData("lastHawkTime") > os.time() then
+            return
         end
+        player:RemoveItem(34102, 1) --Removes fjord grub
+        player:RegisterEvent(function(eventId, delay, repeats, player)
+            player:AddItem(34120, 1) -- Fjord Hawk quest item
+        end, 3000, 1) -- Takes about 3 sec for bird to return
+        player:SetData("lastHawkTime", os.time() + 10)
     end
 end
 
-RegisterPlayerEvent(5, OnSpellCast)
+RegisterItemEvent(34121, 2, UseRockFalcon)
