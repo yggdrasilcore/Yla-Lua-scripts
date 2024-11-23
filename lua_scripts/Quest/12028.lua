@@ -1,24 +1,21 @@
-local SPELL_ID = 47190
-local DISPLAY_ID = 24465
-local MORPH_DELAY_MS = 100
+local WISP = 24465
+local MORPH_DELAY_MS = 1550
 local DEMORPH_DELAY_MS = 3*60*1000
 
-local function OnSpellCast(event, player, spell, skipCheck)
-    if spell:GetEntry() == SPELL_ID then
-        local playerGUID = player:GetGUID()
-        player:RegisterEvent(function()
-            local playerObject = GetPlayerByGUID(playerGUID)
-            if playerObject then
-                playerObject:SetDisplayId(DISPLAY_ID)
-            end
-        end, MORPH_DELAY_MS)
-        player:RegisterEvent(function()
-            local playerObject = GetPlayerByGUID(playerGUID)
-            if playerObject then
-                playerObject:DeMorph()
-            end
-        end, DEMORPH_DELAY_MS)
+local function OnWispForm(event, player, item, target)
+    if not player:GetNearestGameObject(5, 188416) then -- Player is too farm from Brazier, don't do anything
+        return
     end
+    player:RegisterEvent(function(eventid, delay, repeats, player) -- Player should be done casting by now, 1.5 sec + a 50 ms safeguard
+        if player and player:HasAura(47189) then -- If player finished casting, they have aura 47189 (Spiritual Insights)
+            player:SetDisplayId(WISP)
+        end
+        player:RegisterEvent(function(eventid, delay, repeats, player)
+            if player and (player:GetDisplayId() == WISP) then
+                player:DeMorph()
+            end
+        end, DEMORPH_DELAY_MS) -- Aura 47189 lasts for 3 minutes, after which we remove the morph
+    end, MORPH_DELAY_MS)
 end
 
-RegisterPlayerEvent(5, OnSpellCast)
+RegisterItemEvent(35907, 2, OnWispForm) -- 35907 is the incense item

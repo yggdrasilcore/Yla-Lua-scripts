@@ -1,5 +1,4 @@
 local QUEST_ID = 11648
-local SPELL_ID = 45634
 local REQUIRED_CASTS = 5
 local NPC_ID = 25478
 local AREA_ID = 4023
@@ -8,19 +7,15 @@ local emoteSet = 0
 
 local spellCastCount = {}
 
-local function OnSpellCast(event, player, spell, skipCheck)
-    if spell:GetEntry() == SPELL_ID then
-        if player:HasQuest(QUEST_ID) then
-            local playerGUID = player:GetGUIDLow()
-            spellCastCount[playerGUID] = (spellCastCount[playerGUID] or 0) + 1
-            
-            if spellCastCount[playerGUID] >= REQUIRED_CASTS then
-                player:CompleteQuest(QUEST_ID)
-                spellCastCount[playerGUID] = nil
-            else
-                local remainingCasts = REQUIRED_CASTS - spellCastCount[playerGUID]
-            end
-        end
+local function OnUseZapper(event, player, item, target)
+    local playerGUID = player:GetGUIDLow()
+    spellCastCount[playerGUID] = (spellCastCount[playerGUID] or 0) + 1
+    
+    if spellCastCount[playerGUID] >= REQUIRED_CASTS then
+        player:CompleteQuest(QUEST_ID)
+        spellCastCount[playerGUID] = nil
+    else
+        local remainingCasts = REQUIRED_CASTS - spellCastCount[playerGUID]
     end
 end
 
@@ -34,5 +29,5 @@ local function OnAreaTrigger(event, player, newZone, newArea)
     end
 end
 
-RegisterPlayerEvent(5, OnSpellCast)
+RegisterItemEvent(34811, 2, OnUseZapper)
 RegisterPlayerEvent(27, OnAreaTrigger)
