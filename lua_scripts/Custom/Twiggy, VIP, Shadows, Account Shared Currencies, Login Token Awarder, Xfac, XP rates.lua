@@ -908,12 +908,14 @@ local commandCategories = {
        commands = {
            {cmd = "follow", name = "Follow", desc = "Your shadows will follow the player. Say 'follow' in group chat or whisper to instruct shadow."},
            {cmd = "flee", name = "Flee", desc = "Your shadows will try to move away from their target while in combat. Say 'flee' in group chat or whisper to instruct shadow."},
+           {cmd = "runaway", name = "Run Away", desc = "Your shadows will try to kite their currently aggroed mobs by whispering or saying 'runaway' in group chat."},
            {cmd = "@tank flee", name = "Tank Flee", desc = "Your shadows will command the tank to flee from combat. Say '@tank flee' in group chat or whisper to instruct shadow."},
            {cmd = "@dps flee", name = "DPS Flee", desc = "Your shadows will command the DPS to flee from combat. Say '@dps flee' in group chat or whisper to instruct shadow."},
            {cmd = "@heal flee", name = "Healer Flee", desc = "Your shadows will command the healer to flee from combat. Say '@heal flee' in group chat or whisper to instruct shadow."},
            {cmd = "@melee flee", name = "Melee Flee", desc = "Your shadows will command melee players to flee from combat. Say '@melee flee' in group chat or whisper to instruct shadow."},
            {cmd = "@ranged flee", name = "Ranged Flee", desc = "Your shadows will command ranged players to flee from combat. Say '@ranged flee' in group chat or whisper to instruct shadow."},
            {cmd = "stay", name = "Stay", desc = "Your shadows will stay in its current position. Say 'stay' in group chat or whisper to instruct shadow."},
+           {cmd = "reset botAI", name = "Reset botAI", desc = "Say 'reset botAI' (case sensitive) in group chat or whispers to a shadow to reset its current settings."},
        }
    },
    combat = {
@@ -927,6 +929,7 @@ local commandCategories = {
            {cmd = "@melee attack", name = "Melee Attack", desc = "Your shadows will command melee players to attack the target. Say '@melee attack' in group chat or whisper to instruct shadow."},
            {cmd = "@ranged attack", name = "Ranged Attack", desc = "Your shadows will command ranged players to attack the target. Say '@ranged attack' in group chat or whisper to instruct shadow."},
            {cmd = "grind", name = "Grind", desc = "Make all shadows automatically attack nearby creatures that yield experience points. Say 'grind' in group chat to activate grind mode."},
+           {cmd = "reset botAI", name = "Reset botAI", desc = "Say 'reset botAI' (case sensitive) in group chat or whispers to a shadow to reset its current settings."},
        }
    },
    formation = {
@@ -942,18 +945,21 @@ local commandCategories = {
            {cmd = "formation chaos", name = "Chaos Formation", desc = "Your shadows will arrange itself in a chaotic formation. Say 'formation chaos' in group chat or whisper to instruct shadow."},
            {cmd = "formation shield", name = "Shield Formation", desc = "Your shadows will arrange itself in a shield formation. Say 'formation shield' in group chat or whisper to instruct shadow."},
            {cmd = "formation", name = "Default Formation", desc = "Your shadows will revert to its default formation. Say 'formation' in group chat or whisper to instruct shadow."},
+           {cmd = "reset botAI", name = "Reset botAI", desc = "Say 'reset botAI' (case sensitive) in group chat or whispers to a shadow to reset its settings."},
        }
    },
    worldinteraction = {
        name = "World Interaction", 
        intid = 23,
        commands = {
+           {cmd = "repair", name = "Repair", desc = "Your shadows will repair when you repair at an eligible vendor."},
+           {cmd = "talk", name = "Talk", desc = "By saying 'talk' in group chat or whispers to a shadow, your shadows will talk to your current target. This can be used to hand in quests or learn flight paths, for example."},
            {cmd = "trainer learn", name = "Learn Skills", desc = "Your shadows will learn applicable skills from the trainer you are currently talking to. Say 'trainer learn' in group chat or whisper to instruct shadow."},
            {cmd = "release", name = "Release Spirit", desc = "Your shadows will release its spirit upon death. Say 'release' in group chat or whisper to instruct shadow."},
            {cmd = "quests", name = "View Quests", desc = "Your shadows will display available quests. Say 'quests' in group chat or whisper to instruct shadow."},
            {cmd = "stats", name = "View Stats", desc = "Your shadows will display current stats. Say 'stats' in group chat or whisper to instruct shadow."},
            {cmd = "add all loot", name = "Loot All", desc = "Your shadows will loot all items from defeated enemies. Say 'add all loot' in group chat or whisper to instruct shadow."},
-           {cmd = "reset botAI", name = "Reset botAI", desc = "Say 'reset botAI' (case sensitive) in group chat or whispers to a shadow to reset its current settings."},
+           {cmd = "reset botAI", name = "Reset botAI", desc = "Say 'reset botAI' (case sensitive) in group chat or whispers to a shadow to reset its settings."},
         }
    },
    spell = {
@@ -974,7 +980,7 @@ local commandCategories = {
            {cmd = "u", name = "Use Inventory", desc = "Whisper 'u' to a shadow to make it use any available item specified in the message. If no item specified, your shadow will say which items can be used."},
            {cmd = "destroy", name = "Destroy Inventory", desc = "By whispering 'destroy' to a shadow, you can select items to destroy from its inventory."},
            {cmd = "rep", name = "Reputation", desc = "By whispering 'rep' or 'reputation' to a shadow, the shadow will tell you its current reputation standing of the faction of whichever NPC you are currently targetting."},
-           {cmd = "trade", name = "Trade", desc = "You may trade your shadows to distribute loot, free up inventory, pass mats around, etc. Simply trade them to get started. They will whisper you their inventory. To select items to trade, whisper them which item from their inventory you want traded. \n \nNote: Shadows cannot trade you soulbound items even if they have a valid trade timer."},
+           {cmd = "t", name = "Trade", desc = "You may trade your shadows to distribute loot, free up inventory, pass mats around, and so on. Whisper them 't' or trade them directly to get started. They will whisper you their inventory. To select items to trade, whisper them which item from their inventory you want traded. \n \nNote: Shadows cannot trade you soulbound items even if they have a valid trade timer."},
        }
    },
    talents = {
@@ -1347,9 +1353,20 @@ local function Logout(event, player)
     botMasters[guidlow]         = nil
 end
 
-local function Login(event, player)
+local function ShadowsLoginHook(event, player)
     local guidlow = player:GetGUIDLow()
     CharDBExecute("REPLACE INTO character_cooldowns (guid, item_id, cooldown_end) VALUES (" .. guidlow .. ", 0, " .. os.time() .. ")"); -- Lazy persistent storage solution. Could probably just use characters table directly. Initially wanted cache-persistent value attached to world but not possible in standard AC ELUNA
+    if isPlayerBot[player:GetName()] then -- Player is shadow
+        player:SetSkill(109, 300, 300, 300) -- Ensure shadow knows Orcish
+        player:SetSkill(98, 300, 300, 300) -- Ensure shadow knows Common
+    else
+        if player:HasSkill(109) and player:IsAlliance() then -- Player knows Orcish is alliance
+            player:SetSkill(109, 0, 0, 0) -- Forget Orcish
+        end
+        if player:HasSkill(98) and not player:IsAlliance() then -- Player knows Common and is not alliance (ie. horde)
+            player:SetSkill(98, 0, 0, 0) -- Forget Common
+        end
+    end  
 end
 
 function CheckActiveBots(eventid, delay, repeats, uninvitedPlayer)
@@ -1439,6 +1456,9 @@ function Teleport(player, sameMap)
     then
         return
     end
+    if not botCount[name] or botCount[name] == 0 then
+        return
+    end
     for i, botName in ipairs(activeBots[name]) do
         local bot = GetPlayerByName(botName)
         if bot and not player:IsInCombat() then
@@ -1477,6 +1497,20 @@ local function PacketMoveDelay(_, _, player)
     end, 1000, 1)
 end
 
+local function ShadowsRepairWithPlayer(event, packet, player)
+    local name = player:GetName()
+    if not botCount[name] or botCount[name] == 0 then
+        return
+    end
+    for i, botName in ipairs(activeBots[name]) do
+        local bot = GetPlayerByName(botName)
+        if bot and not player:IsInCombat() and not bot:IsInCombat() and bot:GetDistance(player) < 5 then
+            bot:DurabilityRepairAll(false) -- Shadows repair for free I guess. Not sure how to return cost to say if shadow can repair or not
+            bot:SendUnitWhisper("All items repaired!", 0, player)
+        end
+    end
+end
+
 local function buildCommandList()
     local commands = {}
     for _, category in pairs(commandCategories) do
@@ -1496,6 +1530,9 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
     if activeBots[playerName] then
         for _, botName in ipairs(activeBots[playerName]) do
             if receiverName == botName then
+                if msg:lower() == "repair" then
+                    bot:SendUnitWhisper("I can only repair when you repair!", 0, player)
+                end
                 local isValidCommand = false
                 for cmd, _ in pairs(validCommands) do
                     if string.match(msg:lower(), "^" .. cmd:lower()) then
@@ -2173,7 +2210,7 @@ RegisterCreatureGossipEvent(23198, 2, TwiggyGossipSelect)
 ------------------------------------------------------------------------------------------------
 
 SetActiveBots()
-RegisterPlayerEvent(3, Login)
+RegisterPlayerEvent(3, ShadowsLoginHook)
 RegisterPlayerEvent(4, Logout)
 RegisterPlayerEvent(19, OnWhisper)
 RegisterServerEvent(21, OnPlayerMapEnter)
@@ -2188,6 +2225,7 @@ RegisterPacketEvent(0x0C7, 5, PacketTeleDelay)
 RegisterPacketEvent(0x0C9, 5, PacketMoveDelay)
 RegisterPacketEvent(0x0CA, 5, PacketMoveDelay)
 RegisterPacketEvent(0x0CB, 5, PacketMoveDelay)
+RegisterPacketEvent(0x2A8, 5, ShadowsRepairWithPlayer)
 
 ------------------------------------------------------------------------------------------------
 -- End shadows event registrations
