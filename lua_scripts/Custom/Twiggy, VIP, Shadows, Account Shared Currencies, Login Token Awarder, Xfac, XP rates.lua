@@ -720,7 +720,6 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
     elseif intId == 12 then
 		player:DurabilityRepairAll(false)
         player:SendBroadcastMessage("You have repaired your items.")
-		
 		VIPmenu(player, creature)
     elseif intId == 13 then
         player:SendShowBank(player)
@@ -952,7 +951,7 @@ local commandCategories = {
        name = "World Interaction", 
        intid = 23,
        commands = {
-           {cmd = "repair", name = "Repair", desc = "Your shadows will repair when you repair at an eligible vendor."},
+           {cmd = "repair", name = "Repair", desc = "Your shadows will repair at a nearby eligible vendor if you say 'repair' in group chat or whispers."},
            {cmd = "talk", name = "Talk", desc = "By saying 'talk' in group chat or whispers to a shadow, your shadows will talk to your current target. This can be used to hand in quests or learn flight paths, for example."},
            {cmd = "trainer learn", name = "Learn Skills", desc = "Your shadows will learn applicable skills from the trainer you are currently talking to. Say 'trainer learn' in group chat or whisper to instruct shadow."},
            {cmd = "release", name = "Release Spirit", desc = "Your shadows will release its spirit upon death. Say 'release' in group chat or whisper to instruct shadow."},
@@ -1356,17 +1355,6 @@ end
 local function ShadowsLoginHook(event, player)
     local guidlow = player:GetGUIDLow()
     CharDBExecute("REPLACE INTO character_cooldowns (guid, item_id, cooldown_end) VALUES (" .. guidlow .. ", 0, " .. os.time() .. ")"); -- Lazy persistent storage solution. Could probably just use characters table directly. Initially wanted cache-persistent value attached to world but not possible in standard AC ELUNA
-    if isPlayerBot[player:GetName()] then -- Player is shadow
-        player:SetSkill(109, 300, 300, 300) -- Ensure shadow knows Orcish
-        player:SetSkill(98, 300, 300, 300) -- Ensure shadow knows Common
-    else
-        if player:HasSkill(109) and player:IsAlliance() then -- Player knows Orcish is alliance
-            player:SetSkill(109, 0, 0, 0) -- Forget Orcish
-        end
-        if player:HasSkill(98) and not player:IsAlliance() then -- Player knows Common and is not alliance (ie. horde)
-            player:SetSkill(98, 0, 0, 0) -- Forget Common
-        end
-    end  
 end
 
 function CheckActiveBots(eventid, delay, repeats, uninvitedPlayer)
@@ -1497,20 +1485,6 @@ local function PacketMoveDelay(_, _, player)
     end, 1000, 1)
 end
 
-local function ShadowsRepairWithPlayer(event, packet, player)
-    local name = player:GetName()
-    if not botCount[name] or botCount[name] == 0 then
-        return
-    end
-    for i, botName in ipairs(activeBots[name]) do
-        local bot = GetPlayerByName(botName)
-        if bot and not player:IsInCombat() and not bot:IsInCombat() and bot:GetDistance(player) < 5 then
-            bot:DurabilityRepairAll(false) -- Shadows repair for free I guess. Not sure how to return cost to say if shadow can repair or not
-            bot:SendUnitWhisper("All items repaired!", 0, player)
-        end
-    end
-end
-
 local function buildCommandList()
     local commands = {}
     for _, category in pairs(commandCategories) do
@@ -1530,9 +1504,6 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
     if activeBots[playerName] then
         for _, botName in ipairs(activeBots[playerName]) do
             if receiverName == botName then
-                if msg:lower() == "repair" then
-                    bot:SendUnitWhisper("I can only repair when you repair!", 0, player)
-                end
                 local isValidCommand = false
                 for cmd, _ in pairs(validCommands) do
                     if string.match(msg:lower(), "^" .. cmd:lower()) then
@@ -2225,7 +2196,6 @@ RegisterPacketEvent(0x0C7, 5, PacketTeleDelay)
 RegisterPacketEvent(0x0C9, 5, PacketMoveDelay)
 RegisterPacketEvent(0x0CA, 5, PacketMoveDelay)
 RegisterPacketEvent(0x0CB, 5, PacketMoveDelay)
-RegisterPacketEvent(0x2A8, 5, ShadowsRepairWithPlayer)
 
 ------------------------------------------------------------------------------------------------
 -- End shadows event registrations
