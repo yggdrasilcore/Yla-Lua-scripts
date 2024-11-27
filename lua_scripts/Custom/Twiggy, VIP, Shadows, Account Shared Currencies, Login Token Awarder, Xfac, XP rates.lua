@@ -1805,7 +1805,10 @@ local function OnPlayerMapChange(event, map, player)
     and not map:IsArena()
     then -- Faction adjustment for bots on xfac bot 
         master = GetPlayerByName(isPlayerBot[player:GetName()])
-        if master and (master:GetRace() == 1
+        if not master then -- Don't adjust if player isn't accessible; assume bot's faction was already adjusted on initial spawn
+            return
+        end
+        if (master:GetRace() == 1
         or master:GetRace() == 3 or master:GetRace() == 4
         or master:GetRace() == 7 or master:GetRace() == 11)
         then -- Alliance master
