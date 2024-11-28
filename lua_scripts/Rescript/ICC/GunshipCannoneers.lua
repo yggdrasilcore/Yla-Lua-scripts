@@ -14,13 +14,19 @@ local function OnSpawn(event, creature)
     print("Gunship Cannoneer Debug - gunship spawned")
     
     creature:RegisterEvent(function(eventId, delay, repeats, creature)
-        if not creature:GetNearestPlayer(400):IsInCombat() then
+        if not creature:GetNearestPlayer(400) or not (creature:GetNearestPlayer(400) and creature:GetNearestPlayer(400):IsInCombat()) then
             print("Gunship Cannoneer Debug - aborting gunship check due to no cb")
             creature:RemoveEventById(eventId)
             return
         end
         
         creature:RegisterEvent(function(eventId, delay, repeats, creature)
+            if not creature:GetNearestPlayer(400) or not (creature:GetNearestPlayer(400) and creature:GetNearestPlayer(400):IsInCombat()) then
+                print("Gunship Cannoneer Debug - aborting gunship check due to no cb")
+                creature:RemoveEventById(eventId)
+                return
+            end
+            
             local cannoneers = creature:GetCreaturesInRange(RANGE_CHECK, CREATURE_ID_1)
             print("Gunship Cannoneer Debug - Checking for ally cannoneers...")
             
@@ -40,8 +46,6 @@ local function OnSpawn(event, creature)
                                 cannoneer:CastSpell(player, SPELL_ID)
                                 print("Gunship Cannoneer Debug - player is in right area, shooting!")
                                 break
-                            else
-                                print("Gunship Cannoneer Debug - no players in cannoneer range area")
                             end
                         end
                     end, 0, 1)

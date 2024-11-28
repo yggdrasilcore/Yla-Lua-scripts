@@ -46,16 +46,16 @@ local function origZelSpawn(event, creature)
         end, 6150, 1)
 
         zelfrax:RegisterEvent(function(eventId, delay, repeats, creature)
-            print("final event - chase start!")
             local aggroTarget = creature:GetVictim()
             if aggroTarget and aggroTarget:IsPlayer() then
                 creature:MoveChase(aggroTarget)
             end
-        end, 6150, 0)  -- Repeat indefinitely to update chase target continuously
+        end, 6150, 10)
     end
 end
 
 local function OnCreatureDeath(event, creature, killer)
+    creature:RemoveEvents()
     origZel = creature:GetNearestCreature(200, 23864)
     if origZel then
         origZel:DespawnOrUnsummon()

@@ -73,7 +73,7 @@ local function OnEnterCombat(event, player, enemy)
         local warlords = enemy:GetCreaturesInRange(250, 37133, 0, 1) -- assuming 37133 is the warlord ID
         if warlords then
             for _, warlord in pairs(warlords) do
-                print("Warlord found!")
+                --print("Warlord found!")
                 -- Register check event if not already registered
                 if not warlord:GetData("WarlordCheck") then
                     warlord:SetData("WarlordCheck", true)
