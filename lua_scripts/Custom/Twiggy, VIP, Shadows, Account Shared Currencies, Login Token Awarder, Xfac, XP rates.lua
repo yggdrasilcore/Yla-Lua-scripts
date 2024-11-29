@@ -1552,6 +1552,9 @@ end
 
 local function OnDisallowedZones(event, player, newZone, newArea)
     local name = player:GetName()
+    if player:IsDead() then
+        return
+    end
     if isPlayerBot[name] then
         return
     end
