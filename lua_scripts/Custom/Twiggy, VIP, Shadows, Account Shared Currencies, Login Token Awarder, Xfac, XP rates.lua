@@ -1053,6 +1053,26 @@ local function Hello(player)
     player:GossipSendMenu(12, player, 200)
 end
 
+local function ListActiveShadows(player)
+    player:GossipClearMenu()
+
+    player:GossipMenuAddItem(0, "|TInterface/PaperDollInfoFrame/UI-GearManager-Undo:40:40:-24:0|tActive shadows:\n \n ", 0, 6)
+
+    if activeBots[name] then
+       for index, botName in ipairs(activeBots[name]) do
+           local menuText = string.format(
+               "|TInterface/ICONS/ability_vehicle_loadselfcatapult:40:40:-24:0|t%s\n \n ", 
+               botName
+           )
+           
+           player:GossipMenuAddItem(0, menuText, 0, 200 + index)
+       end
+    end
+
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:40:40:-24:0|tBack", 0, 999)
+    player:GossipSendMenu(12, player, 200)
+end
+
 local function ShadowsGossipSelect(event, player, object, sender, intid, code, menu_id)
     local accountId = player:GetAccountId()
     local guid = player:GetGUIDLow()
@@ -1192,24 +1212,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
         end
         Hello(player)
     elseif intid == 6 then  -- Show list of active shadows to remove
-        player:GossipClearMenu()
-
-        player:GossipMenuAddItem(0, "|TInterface/PaperDollInfoFrame/UI-GearManager-Undo:40:40:-24:0|tActive shadows:\n \n ", 0, 6)
-
-        if activeBots[name] then
-           for index, botName in ipairs(activeBots[name]) do
-               local menuText = string.format(
-                   "|TInterface/ICONS/ability_vehicle_loadselfcatapult:40:40:-24:0|t%s\n \n ", 
-                   botName
-               )
-               
-               player:GossipMenuAddItem(0, menuText, 0, 200 + index)
-           end
-        end
-
-        player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:40:40:-24:0|tBack", 0, 999)
-        player:GossipSendMenu(12, player, 200)
-
+        ListActiveShadows(player)
     elseif intid >= 200 and intid < 299 then  -- Bot removal selection
         local selectedIndex = intid - 200
 
@@ -1217,7 +1220,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
            local selectedBot = activeBots[name][selectedIndex]
            player:RunCommand(".playerbots bot remove " .. selectedBot)
            print("Removing bot "..selectedBot.." from gossip menu")
-           player:GossipComplete()
+           ListActiveShadows(player)
         end
     elseif intid == 10 then  -- "Add bot" option
         local group = player:GetGroup()
