@@ -954,9 +954,10 @@ if AIO_SERVER then
     end
     RegisterServerEvent(30, ONADDONMSG)
 
-    for k,v in ipairs(GetPlayersInWorld()) do
-        AIO.Handle(v, "AIO", "ForceReload")
-    end
+    -- mostly nick: Force reload commented out as we're not using any sensitive addons/UI requiring immediate load-in
+    --for k,v in ipairs(GetPlayersInWorld()) do
+    --    AIO.Handle(v, "AIO", "ForceReload")
+    --end
 
 else
 
