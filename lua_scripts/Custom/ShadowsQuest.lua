@@ -106,11 +106,11 @@ end)
 
 -- Area change event
 RegisterPlayerEvent(47, function(event, player, oldArea, newArea)
-    if newArea == AREA_ID and player:HasQuest(QUEST_ID) then
+    if newArea == AREA_ID and player:HasQuest(QUEST_ID) and (shadowsEvent <= os.time()) then
         shadowsEvent = os.time() + 180
         
         player:RegisterEvent(function(eventId, delay, repeats, player)
-            if player:GetAreaId() == AREA_ID and (player:HasItem(ITEM_ENTRY) or player:HasItem(QUEST_ITEM)) then
+            if player and player:GetAreaId() == AREA_ID and (player:HasItem(ITEM_ENTRY) or player:HasItem(QUEST_ITEM)) then
                 player:RemoveItem(ITEM_ENTRY, 1)
                 player:RemoveItem(QUEST_ITEM, 1)
                 player:RemoveQuest(QUEST_ID)
@@ -122,17 +122,19 @@ RegisterPlayerEvent(47, function(event, player, oldArea, newArea)
                 end
                 player:SendAreaTriggerMessage("You didn't help your shadows in time and they got pulled into the Twisting Nether! Try again later.")
                 player:SendBroadcastMessage("You didn't help your shadows in time and they got pulled into the Twisting Nether! Try again later.")
-                shadowsEvent = os.time()
             end
         end, 180000, 1)
         
-        local shadowSpeak = player:GetNearestCreature(50, SHADOW_ENTRY)
-        
-        local timerender = player:GetNearestCreature(50, TIMERENDER_ENTRY)
-        
-        if shadowSpeak or timerender then
-            return
+        local shadows = player:GetCreaturesInRange(50, SHADOW_ENTRY)
+        for _, shadow in pairs(shadows) do
+            shadow:DespawnOrUnsummon()
         end
+
+        local timerender = player:GetNearestCreature(50, TIMERENDER_ENTRY)
+        local swirl = player:GetNearestCreature(50, SWIRL_ENTRY)
+       
+        if timerender then timerender:DespawnOrUnsummon() end
+        if swirl then swirl:DespawnOrUnsummon() end
         
         eventState = 0
         
