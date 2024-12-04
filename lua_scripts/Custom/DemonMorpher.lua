@@ -42,6 +42,7 @@ local customFamilyNames = {
     ["Shocktrooper"] = 29,
     ["Dreadwarden"] = 29,
     ["Jaraxxus"] = 29,
+    ["Sathrovarr"] = 29,
     ["jaeden"] = 29,
     ["Terrormaster"] = 29, --This looks like a Doomguard but no one uses that so let's put it as Felguard mog
     ["Terrorfiend"] = 29, --This looks like a Doomguard but no one uses that so let's put it as Felguard mog
@@ -139,7 +140,7 @@ local function CacheCreatures()
     local demonCount = 0
 
     -- Demon cache
-    WorldDBQueryAsync("SELECT entry, name FROM creature_template WHERE type = 3 OR name = 'Arcane Devourer' OR name = 'Tainted Arcane Wrath' OR name = 'Vile Familiar' OR name = 'Grell'", function(demonResults)
+    WorldDBQueryAsync("SELECT entry, name FROM creature_template WHERE type = 3 OR name = 'Arcane Devourer' OR name = 'Corruptor' OR name = 'Tainted Arcane Wrath' OR name = 'Vile Familiar' OR name = 'Grell'", function(demonResults)
 
 		if demonResults then
 			repeat
