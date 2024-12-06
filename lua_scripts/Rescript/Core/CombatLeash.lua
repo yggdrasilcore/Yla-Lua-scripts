@@ -7,7 +7,6 @@ local function CombatLeash(event, player, enemy)
     player:GetMapId() == 571
     )
     then
-        print("[Combat Leash Fix]: Player is not in the correct map. Exiting |combat leash.")
         return
     end
 
