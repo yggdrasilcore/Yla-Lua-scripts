@@ -1038,7 +1038,7 @@ local function Hello(player)
         end)
     end
 
-    if VIPtime[player:GetGUIDLow()] > os.time() then -- Increased bot limit for VIP
+    if VIPtime[player:GetGUIDLow()] and VIPtime[player:GetGUIDLow()] > os.time() then -- Increased bot limit for VIP
         maxBotCount = maxVIPCount
     end
     
