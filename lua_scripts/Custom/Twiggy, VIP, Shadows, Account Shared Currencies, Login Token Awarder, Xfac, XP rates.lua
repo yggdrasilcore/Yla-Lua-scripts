@@ -415,7 +415,7 @@ end
 
 local function mainMenu(player, creature)
 	if not VIPtime[player:GetGUIDLow()] then
-		name = player:GetName()
+		local name = player:GetName()
 		CharDBQueryAsync("SELECT VIPTIME FROM ACCOUNTS_VIP WHERE ACCOUNT = " .. player:GetAccountId() .. ";", function(result)
 			player = GetPlayerByName(name)
 			if result then
@@ -1054,6 +1054,7 @@ local function Hello(player)
 end
 
 local function ListActiveShadows(player)
+    local name = player:GetName()
     player:GossipClearMenu()
 
     player:GossipMenuAddItem(0, "|TInterface/PaperDollInfoFrame/UI-GearManager-Undo:40:40:-24:0|tActive shadows:\n \n ", 0, 6)
@@ -1984,7 +1985,7 @@ local function OnXPRateChanger(event, player, object)
     local guid = player:GetGUIDLow()
     local currentRate = XPCache[guid] or 1
 	if not VIPtime[player:GetGUIDLow()] then
-		name = player:GetName()
+		local name = player:GetName()
 		CharDBQueryAsync("SELECT VIPTIME FROM ACCOUNTS_VIP WHERE ACCOUNT = " .. player:GetAccountId() .. ";", function(result)
 			local player = GetPlayerByName(name)
             local object = player:GetNearestCreature(10, 190023) or player
