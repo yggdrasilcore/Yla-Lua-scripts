@@ -2148,6 +2148,80 @@ local function onXPCommand(event, player, command)
 end
 
 ------------------------------------------------------------------------------------------------
+-- VIP commands start
+------------------------------------------------------------------------------------------------
+
+local function HandleVIPCommands(event, player, command)
+    if not command:lower():find("^vip") then
+        return
+    end
+    
+    if not VIPtime[player:GetGUIDLow()] then
+		local name = player:GetName()
+		CharDBQueryAsync("SELECT VIPTIME FROM ACCOUNTS_VIP WHERE ACCOUNT = " .. player:GetAccountId() .. ";", function(result)
+			player = GetPlayerByName(name)
+			if result then
+				VIPtime[player:GetGUIDLow()] = result:GetUInt32(0)
+
+                local cmd = command:lower()
+                
+                if cmd == "vip repair" then
+                    player:DurabilityRepairAll(false, 0, false)
+                    player:SendBroadcastMessage("All items have been repaired.")
+                    return false
+                    
+                elseif cmd == "vip mail" then
+                    player:SendShowMailBox(player:GetGUID())
+                    return false
+                    
+                elseif cmd == "vip bank" then
+                    player:SendShowBank(player)
+                    return false
+                    
+                elseif cmd == "vip xp" then
+                    player:RunCommand("xpchangemenu "..os.time())
+                    return false
+                end
+			else
+				VIPtime[player:GetGUIDLow()] = os.time()
+                player:SendBroadcastMessage("You don't have an active Yggdrasil VIP subscription.")
+			end
+		end)
+        return false
+	end
+
+    if not (VIPtime[player:GetGUIDLow()] and VIPtime[player:GetGUIDLow()] > os.time()) then
+        player:SendBroadcastMessage("You don't have an active Yggdrasil VIP subscription.")
+        return false
+    end
+
+    local cmd = command:lower()
+    
+    if cmd == "vip repair" then
+        player:DurabilityRepairAll(false, 0, false)
+        player:SendBroadcastMessage("All items have been repaired.")
+        return false
+        
+    elseif cmd == "vip mail" then
+        player:SendShowMailBox(player:GetGUID())
+        return false
+        
+    elseif cmd == "vip bank" then
+        player:SendShowBank(player)
+        return false
+        
+    elseif cmd == "vip xp" then
+		player:RunCommand("xpchangemenu "..os.time())
+        return false
+    end
+end
+
+RegisterPlayerEvent(42, HandleVIPCommands)
+------------------------------------------------------------------------------------------------
+-- VIP commands end
+------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------------
 -- XP rate changer event registrations
 ------------------------------------------------------------------------------------------------
 
