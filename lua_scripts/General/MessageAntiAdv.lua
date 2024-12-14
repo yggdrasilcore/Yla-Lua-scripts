@@ -1,41 +1,41 @@
 local blockedWords = {
-    -- Existing entries
-    "[.]com", "[.]br", "[.]ml", "bit[.]ly",
-    "[.] com", "[.] br", "[.] ml", "bit[.] ly", "bit [.]ly", 
-    "c o m", "[.] b r", "[.]b r", "[.] m l", "[.]m l", "b i t",
-    "account%s?%w*%s?for%s?%w*%s?sale", -- Selling accounts
-    
-    -- Generic TLDs
-    "[.]org", "[.]net", "[.]info", "[.]biz", "[.]xyz", 
-    "[.]online", "[.]site", "[.]tech", "[.]shop", "[.]store",
-    
-    -- Country Code TLDs
-    "[.]us", "[.]uk", "[.]ca", "[.]au", "[.]de", "[.]fr", 
-    "[.]jp", "[.]ru", "[.]cn", "[.]in", "[.]es", "[.]it", 
-    "[.]nl", "[.]ch", "[.]se", "[.]no", "[.]kr", "[.]mx",
-    
-    -- New server and game server advertising blocks
-    "battle%s*wow%s*new",
-    "new%s*blizzlike%s*(?:and)?%s*pvp%s*server",
-    "new%s*server",
-    
-    -- Eastern European and Middle Eastern TLDs
-    "[.]ua", "[.]by", "[.]md", "[.]rs", "[.]bg", "[.]hr", 
-    "[.]cz", "[.]sk", "[.]si", "[.]pl", "[.]ro", "[.]hu", "[.]ee", 
-    "[.]lv", "[.]lt", "[.]ba", "[.]mk", "[.]me", "[.]al", "[.]xn%-%-p1ai", -- Russia in Cyrillic
-    
-    -- Middle Eastern TLDs
-    "[.]ae", "[.]sa", "[.]il", "[.]iq", "[.]ir", "[.]jo", "[.]lb", 
-    "[.]ps", "[.]sy", "[.]ye", "[.]om", "[.]bh", "[.]kw", "[.]qa", 
-    "[.]xn%-%-wgv71a119e", -- Saudi Arabia in Arabic
-    "[.]xn%-%-mgb9awbf", -- Egypt in Arabic
-    
-    -- Additional Common TLDs
-    "[.]io", "[.]co", "[.]ai", "[.]app", "[.]dev", "[.]club", 
-    "[.]blog", "[.]email", "[.]news", "[.]media", "[.]live",
-    
-    -- Variations similar to existing pattern
-    "[.] org", "[.] net", "[.] info", "o r g", "n e t", "i n f o"
+   -- Existing entries
+   "[.]com%f[%s]", "[.]br%f[%s]", "[.]ml%f[%s]", "bit[.]ly%f[%s]",
+   "[.] com%f[%s]", "[.] br%f[%s]", "[.] ml%f[%s]", "bit[.] ly%f[%s]", "bit [.]ly%f[%s]", 
+   "c o m", "[.] b r", "[.]b r", "[.] m l", "[.]m l", "b i t",
+   "account%s?%w*%s?for%s?%w*%s?sale",
+   
+   -- Generic TLDs
+   "[.]org%f[%s]", "[.]net%f[%s]", "[.]info%f[%s]", "[.]biz%f[%s]", "[.]xyz%f[%s]", 
+   "[.]online%f[%s]", "[.]site%f[%s]", "[.]tech%f[%s]", "[.]shop%f[%s]", "[.]store%f[%s]",
+   
+   -- Country Code TLDs
+   "[.]us%f[%s]", "[.]uk%f[%s]", "[.]ca%f[%s]", "[.]au%f[%s]", "[.]de%f[%s]", "[.]fr%f[%s]", 
+   "[.]jp%f[%s]", "[.]ru%f[%s]", "[.]cn%f[%s]", "[.]in%f[%s]", "[.]es%f[%s]", "[.]it%f[%s]", 
+   "[.]nl%f[%s]", "[.]ch%f[%s]", "[.]se%f[%s]", "[.]no%f[%s]", "[.]kr%f[%s]", "[.]mx%f[%s]",
+   
+   -- Server blocks
+   "battle%s*wow%s*new",
+   "new%s*blizzlike%s*(?:and)?%s*pvp%s*server",
+   "new%s*server",
+   
+   -- Eastern European TLDs
+   "[.]ua%f[%s]", "[.]by%f[%s]", "[.]md%f[%s]", "[.]rs%f[%s]", "[.]bg%f[%s]", "[.]hr%f[%s]", 
+   "[.]cz%f[%s]", "[.]sk%f[%s]", "[.]si%f[%s]", "[.]pl%f[%s]", "[.]ro%f[%s]", "[.]hu%f[%s]", "[.]ee%f[%s]", 
+   "[.]lv%f[%s]", "[.]lt%f[%s]", "[.]ba%f[%s]", "[.]mk%f[%s]", "[.]me%f[%s]", "[.]al%f[%s]", "[.]xn%-%-p1ai%f[%s]",
+   
+   -- Middle Eastern TLDs
+   "[.]ae%f[%s]", "[.]sa%f[%s]", "[.]il%f[%s]", "[.]iq%f[%s]", "[.]ir%f[%s]", "[.]jo%f[%s]", "[.]lb%f[%s]", 
+   "[.]ps%f[%s]", "[.]sy%f[%s]", "[.]ye%f[%s]", "[.]om%f[%s]", "[.]bh%f[%s]", "[.]kw%f[%s]", "[.]qa%f[%s]", 
+   "[.]xn%-%-wgv71a119e%f[%s]",
+   "[.]xn%-%-mgb9awbf%f[%s]",
+   
+   -- Additional TLDs
+   "[.]io%f[%s]", "[.]co%f[%s]", "[.]ai%f[%s]", "[.]app%f[%s]", "[.]dev%f[%s]", "[.]club%f[%s]", 
+   "[.]blog%f[%s]", "[.]email%f[%s]", "[.]news%f[%s]", "[.]media%f[%s]", "[.]live%f[%s]",
+   
+   -- Variations
+   "[.] org%f[%s]", "[.] net%f[%s]", "[.] info%f[%s]", "o r g", "n e t", "i n f o"
 }
 
 local function antiPublishing(event, player, msg)
