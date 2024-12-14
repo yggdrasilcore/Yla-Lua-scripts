@@ -54,7 +54,8 @@ local function antiPublishing(event, player, msg)
 
     -- Check against other blocked patterns
     for _, v in ipairs(blockedWords) do 
-        if string.find(msg, v) then 
+        if string.find(msg, v) then
+            print(player:GetName().." just said blocked msg: "..msg)
             player:SendBroadcastMessage("I hope you're not intending to spam or market other servers here? :)")
             return false
         end 
