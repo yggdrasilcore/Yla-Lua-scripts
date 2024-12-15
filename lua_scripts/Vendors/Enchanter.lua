@@ -1,6 +1,6 @@
 local npcid = 190022
 local requiredItemID = 20880
-local requiredItemCount = 1
+local requiredItemCount = 5
 
 local T = {
     ["Menu"] = {
