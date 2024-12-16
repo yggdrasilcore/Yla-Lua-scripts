@@ -664,7 +664,6 @@ local function OnLoadScript()
                 local mountId = result:GetUInt32(1)
                 if mountId then
                     standardmount[guid] = mountId
-                    print("Standard mount for "..player:GetName().." is ".. standardmount[player:GetGUIDLow()])
                 end
             until not result:NextRow()
         end
