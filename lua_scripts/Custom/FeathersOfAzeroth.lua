@@ -461,6 +461,7 @@ local function ShowMountMenu(event, player, item, target, page, isStandardMount)
 end
 
 local function OnGossipSelect(event, player, object, sender, intid, code, menu_id)
+    print("Player "..player:GetName().." just clicked Feathers of Azeroth button "..intid)
     if intid == 1 then
         ShowMountMenu(event, player, item, target, 1)
     elseif intid >= 100000 and intid < 200000 then
@@ -502,7 +503,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         -- Mount selected as standard
         local mountId = intid - 800000
         standardmount[player:GetGUIDLow()] = mountId
-        print("Standard mount for "..player:GetName().." is ".. standardmount[player:GetGUIDLow()])
+        print("Selecting standard mount for "..player:GetName().." is ".. standardmount[player:GetGUIDLow()].." (mount ID "..mountId..")")
         CharDBExecute(string.format("REPLACE INTO character_flight (guid, standardmount) VALUES (%d, %d)", player:GetGUIDLow(), mountId))
         player:SendBroadcastMessage("Standard mount set successfully.")
         player:GossipComplete()
