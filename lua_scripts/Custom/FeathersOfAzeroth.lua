@@ -379,7 +379,7 @@ local function ShowManageStandardMount(event, player)
     player:GossipClearMenu()
     player:GossipMenuAddItem(0, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tWhat is standard mount?", 0, 300000)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_nature_swiftness:32:32:-22:0|tChoose standard mount", 0, 400000)
-    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_enggizmos_27:32:32:-22:0|tRemove standard mount", 0, 500000)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_enggizmos_27:32:32:-22:0|tRemove standard mount", 0, 300002)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_map_01:32:32:-22:0|tBack", 0, 1)
     player:GossipSendMenu(12, player, 182746573)
 end
@@ -388,7 +388,7 @@ local function ShowManageStandardMountCmd(event, player)
     player:GossipClearMenu()
     player:GossipMenuAddItem(0, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tWhat is standard mount?", 0, 300001)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_nature_swiftness:32:32:-22:0|tChoose standard mount", 0, 400000)
-    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_enggizmos_27:32:32:-22:0|tRemove standard mount", 0, 500001)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_enggizmos_27:32:32:-22:0|tRemove standard mount", 0, 300003)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_map_01:32:32:-22:0|tClose", 0, 2)
     player:GossipSendMenu(12, player, 182746573)
 end
@@ -489,13 +489,13 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         -- Previous page (standard mount)
         local currentPage = intid - 500000
         ShowMountMenu(event, player, nil, nil, currentPage - 1, true)
-    elseif intid == 500000 then
+    elseif intid == 300002 then
         standardmount[player:GetGUIDLow()] = nil
         print("Standard mount for "..player:GetName().." is nil")
         player:SendBroadcastMessage("Standard mount removed.")
         CharDBExecute(string.format("DELETE FROM character_flight WHERE guid = %d", player:GetGUIDLow()))
         ShowManageStandardMount(event, player)
-    elseif intid == 500001 then
+    elseif intid == 300003 then
         standardmount[player:GetGUIDLow()] = nil
         print("Standard mount for "..player:GetName().." is nil")
         player:SendBroadcastMessage("Standard mount removed.")
