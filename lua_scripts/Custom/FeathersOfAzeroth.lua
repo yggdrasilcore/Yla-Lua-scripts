@@ -450,11 +450,13 @@ local function ShowMountMenu(event, player, item, target, page, isStandardMount)
     
     -- Navigation buttons
     if page < maxPages then
-        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_map_01:32:32:-22:0|tNext Page", 0, 100000 + page)
+        local nextPageIntid = isStandardMount and (400000 + page) or (100000 + page)
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_map_01:32:32:-22:0|tNext Page", 0, nextPageIntid)
     end
     
     if page > 1 then
-        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_map_01:32:32:-22:0|tPrevious Page", 0, 200000 + page)
+        local prevPageIntid = isStandardMount and (500000 + page) or (200000 + page)
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_map_01:32:32:-22:0|tPrevious Page", 0, prevPageIntid)
     end
     
     player:GossipSendMenu(12, player, 182746573)
@@ -465,13 +467,13 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
     if intid == 1 then
         ShowMountMenu(event, player, item, target, 1)
     elseif intid >= 100000 and intid < 200000 then
-        -- Next page
+        -- Next page (normal mount)
         local currentPage = intid - 100000
-        ShowMountMenu(event, player, nil, nil, currentPage + 1)
+        ShowMountMenu(event, player, nil, nil, currentPage + 1, false)
     elseif intid >= 200000 and intid < 300000 then
-        -- Previous page
+        -- Previous page (normal mount)
         local currentPage = intid - 200000
-        ShowMountMenu(event, player, nil, nil, currentPage - 1)
+        ShowMountMenu(event, player, nil, nil, currentPage - 1, false)
     elseif intid == 300000 then
         ShowInfoPage(event, player)
     elseif intid == 300001 then
@@ -479,6 +481,14 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
     elseif intid == 400000 then
         -- Choose standard mount
         ShowMountMenu(event, player, nil, nil, 1, true)
+    elseif intid >= 400000 and intid < 500000 then
+        -- Next page (standard mount)
+        local currentPage = intid - 400000
+        ShowMountMenu(event, player, nil, nil, currentPage + 1, true)
+    elseif intid >= 500000 and intid < 600000 then
+        -- Previous page (standard mount)
+        local currentPage = intid - 500000
+        ShowMountMenu(event, player, nil, nil, currentPage - 1, true)
     elseif intid == 500000 then
         standardmount[player:GetGUIDLow()] = nil
         print("Standard mount for "..player:GetName().." is nil")
