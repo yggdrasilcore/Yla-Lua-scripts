@@ -480,13 +480,13 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         ShowMountMenu(event, player, nil, nil, 1, true)
     elseif intid == 500000 then
         standardmount[player:GetGUIDLow()] = nil
-        print("Standard mount for "..player:GetName().." is ".. standardmount[player:GetGUIDLow()])
+        print("Standard mount for "..player:GetName().." is nil")
         player:SendBroadcastMessage("Standard mount removed.")
         CharDBExecute(string.format("DELETE FROM character_flight WHERE guid = %d", player:GetGUIDLow()))
         ShowManageStandardMount(event, player)
     elseif intid == 500001 then
         standardmount[player:GetGUIDLow()] = nil
-        print("Standard mount for "..player:GetName().." is ".. standardmount[player:GetGUIDLow()])
+        print("Standard mount for "..player:GetName().." is nil")
         player:SendBroadcastMessage("Standard mount removed.")
         CharDBExecute(string.format("DELETE FROM character_flight WHERE guid = %d", player:GetGUIDLow()))
         ShowManageStandardMountCmd(event, player)
