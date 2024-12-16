@@ -480,11 +480,15 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         ShowMountMenu(event, player, nil, nil, 1, true)
     elseif intid == 500000 then
         standardmount[player:GetGUIDLow()] = nil
+        print("Standard mount for "..player:GetName().." is ".. standardmount[player:GetGUIDLow()])
         player:SendBroadcastMessage("Standard mount removed.")
+        CharDBExecute(string.format("DELETE FROM character_flight WHERE guid = %d", player:GetGUIDLow()))
         ShowManageStandardMount(event, player)
     elseif intid == 500001 then
         standardmount[player:GetGUIDLow()] = nil
+        print("Standard mount for "..player:GetName().." is ".. standardmount[player:GetGUIDLow()])
         player:SendBroadcastMessage("Standard mount removed.")
+        CharDBExecute(string.format("DELETE FROM character_flight WHERE guid = %d", player:GetGUIDLow()))
         ShowManageStandardMountCmd(event, player)
     elseif intid == 600000 then
         ShowManageStandardMount(event, player)
@@ -498,6 +502,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         -- Mount selected as standard
         local mountId = intid - 800000
         standardmount[player:GetGUIDLow()] = mountId
+        print("Standard mount for "..player:GetName().." is ".. standardmount[player:GetGUIDLow()])
         CharDBExecute(string.format("REPLACE INTO character_flight (guid, standardmount) VALUES (%d, %d)", player:GetGUIDLow(), mountId))
         player:SendBroadcastMessage("Standard mount set successfully.")
         player:GossipComplete()
@@ -546,6 +551,7 @@ local function OnUseItem(event, player, item, target)
     
     if standardmount[player:GetGUIDLow()] and not player:IsCasting() then
         player:CastSpell(player, standardmount[player:GetGUIDLow()], false)
+        print("Standard mount for "..player:GetName().." is ".. standardmount[player:GetGUIDLow()])
         player:RegisterEvent(function(eventId, delay, repeats, player)
             player:RegisterEvent(CheckZ, 200, 0)
         end, 3000, 1)
@@ -619,6 +625,7 @@ local function LoadStandardMount(event, player)
         local mountId = result:GetUInt32(0)
         if mountId  then
             standardmount[guid] = mountId
+            print("Standard mount for "..player:GetName().." is ".. standardmount[player:GetGUIDLow()])
         end
     end
 end
@@ -657,6 +664,7 @@ local function OnLoadScript()
                 local mountId = result:GetUInt32(1)
                 if mountId then
                     standardmount[guid] = mountId
+                    print("Standard mount for "..player:GetName().." is ".. standardmount[player:GetGUIDLow()])
                 end
             until not result:NextRow()
         end
