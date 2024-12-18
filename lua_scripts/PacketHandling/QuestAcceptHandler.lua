@@ -7,6 +7,15 @@ local function HandleQuestAccept(event, packet, player)
     local guid = packet:ReadGUID()
     local questId = packet:ReadULong()
     local unk1 = packet:ReadULong()
+
+    if questId == 10406 then
+        player:RegisterEvent(function(eventId, delay, repeats, player)
+            Demolitionist = player:GetNearestCreature(50, 20802)
+            if not Demolitionist then
+                player:CastSpell(player, 35679, false)
+            end
+        end, 3000)
+    end
     
     if questId == 12671 then
         player:RegisterEvent(function(eventId, delay, repeats, player)
