@@ -56,6 +56,7 @@ local function CacheCreatures()
           AND name NOT LIKE '%(%'
           AND name NOT LIKE '%"%'
           AND name NOT LIKE '%[%'
+          AND name NOT LIKE '%DESIGNER%'
           AND name NOT LIKE '%UNUSED%'
           AND name NOT LIKE '%TEST%'
           AND name NOT LIKE '%STABLED%'
@@ -505,6 +506,11 @@ local function ShowGossipPage(player, formId, page)
         ShowInitialGossipMenu(player)
         return
     end
+
+    -- Sort the creatureCache alphabetically by name
+    table.sort(creatureCache[guid][formId], function(a, b)
+        return a.name < b.name
+    end)
     
     player:GossipClearMenu()
     local startIndex = (page - 1) * ITEMS_PER_PAGE + 1

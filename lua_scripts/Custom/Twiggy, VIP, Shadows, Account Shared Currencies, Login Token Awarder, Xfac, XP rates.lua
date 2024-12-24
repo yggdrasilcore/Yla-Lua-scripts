@@ -107,6 +107,7 @@ local function PopulateMorphCache()
           AND name NOT LIKE '%"%'
           AND name NOT LIKE '%[%'
           AND name NOT LIKE '%UNUSED%'
+          AND name NOT LIKE '%DESIGNER%'
           AND name NOT LIKE '%TEST%'
           AND name NOT LIKE '%STABLED%'
           AND name NOT LIKE '%TAMED%'
@@ -328,24 +329,32 @@ local function PopulateMorphCache()
 end
 
 local function ShowCategoryContents(player, creature, category, page)
-	if intId then print(intId) end
-	if page then print(page) end
+    if page then print(page) end
     page = page or 1
     local itemsPerPage = 12
     local startIndex = (page - 1) * itemsPerPage + 1
     local endIndex = page * itemsPerPage
     player:GossipClearMenu()
-    
+
     local cache = cacheChoice[player:GetGUIDLow()]
-    
-    local totalItems = 0
-    for _ in pairs(cache) do
-        totalItems = totalItems + 1
-    end
-    local itemCount = 0
+
+    -- Create a temporary table to hold the entries in a sortable format
+    local tempTable = {}
     for entry, name in pairs(cache) do
+        table.insert(tempTable, {entry = entry, name = name})
+    end
+
+    -- Sort the temporary table alphabetically by name
+    table.sort(tempTable, function(a, b)
+        return a.name < b.name
+    end)
+
+    local totalItems = #tempTable
+    local itemCount = 0
+    for _, entryData in ipairs(tempTable) do
         itemCount = itemCount + 1
         if itemCount >= startIndex and itemCount <= endIndex then
+            local name = entryData.name
             if cache == catCache then
                 player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_catform:32:32:-22:0|t" .. name, 0, 999)
             elseif cache == bearCache then
@@ -366,6 +375,7 @@ local function ShowCategoryContents(player, creature, category, page)
             break
         end
     end
+
     -- Add pagination buttons
     if page > 1 then
         player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_map_01:32:32:-22:0|tPrevious Page", 0, 997)
@@ -373,8 +383,10 @@ local function ShowCategoryContents(player, creature, category, page)
     if endIndex < totalItems then
         player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_map_01:32:32:-22:0|tNext Page", 0, 998)
     end
+
     player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 500)
     player:GossipSendMenu(12, creature, 60)
+
     -- Store the current category and page in the player's temporary storage
     player:SetData("CurrentCategory", category)
     player:SetData("CurrentPage", page)
