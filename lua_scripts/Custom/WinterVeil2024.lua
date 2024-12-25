@@ -18,13 +18,6 @@
 
 local christmasGiftID = 41404
 
-local function CheckMount(eventId, delay, repeats, player)
-   if player:HasSpell(51960) then
-       player:RemoveItem(christmasGiftID, 1)
-       player:SendAreaTriggerMessage("You have learned how to summon the Frost Wyrm mount.")
-   end
-end
-
 local function OnUseItem(event, player, item, target)
    player:GossipClearMenu()
    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_gift_01:32:32:-22:0|tGreetings, "..player:GetName().."!\n \nYggdrasil's Santa Claus has a few gifts you can choose between. Which gift would you like to receive?\n \n ", 0, 10)
@@ -81,8 +74,10 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
            player:GossipComplete()
            return false
        end
-       player:LearnSpell(51960, true)
-       player:RegisterEvent(CheckMount, 1000, 1)
+       player:LearnSpell(51960)
+       if player:HasSpell(51960) then -- In case learn spell fails
+           player:RemoveItem(christmasGiftID, 1)
+       end
    end
    player:GossipComplete()
 end
