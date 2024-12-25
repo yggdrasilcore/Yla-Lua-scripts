@@ -90,6 +90,11 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
            player:GossipComplete()
            return false
        end
+       if player:GetLevel() < 70 then
+           player:SendAreaTriggerMessage("You must be at least level 70 to receive this gift.")
+           player:GossipComplete()
+           return false
+       end
        player:LearnSpell(51960)
        if player:HasSpell(51960) then -- In case learn spell fails
            player:RemoveItem(christmasGiftID, 1)
