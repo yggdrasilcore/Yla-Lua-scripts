@@ -138,8 +138,10 @@ local function OnPinfo(event, player, command)
                         if targetPlayer then status = "Online" else status = "Offline" end
 
                         local zoneName
-                        if zone then 
+                        if zone and not (zone == 52685) then 
                             zoneName = GetAreaName(zone)
+                        elseif zone and (zone == 52685) then
+                            zoneName = "The Mall"
                         else 
                             zoneName = tonumber(charRow["zone"]) > 4987 and "Unknown" or GetAreaName(charRow["zone"])
                         end
