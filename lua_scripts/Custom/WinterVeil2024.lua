@@ -36,7 +36,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_gift_01:32:32:-22:0|tGreetings, "..player:GetName().."!\n \nYggdrasil's Grandfather Winter has a few gifts you can choose between. Which gift would you like to receive?\n \n ", 0, 10)
        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_drink_11:32:32:-22:0|tSap of Yggdrasil\n \nRestores 3% of your health and mana per second for 25 sec. Binds to account. Can be consumed infinitely.\n \n ", 0, 1, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_drink_11:32:32:-22:0|tSap of Yggdrasil")
        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_frostemblem_01:32:32:-22:0|t100 Emblems of Frost\n \nPurchase gear, Primordial Saronite and more with Emblems of Frost.\n \n ", 0, 2, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_misc_frostemblem_01:32:32:-22:0|t100 Emblems of Frost")
-       player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|t25 Community Tokens\n \nCan be spent on VIP and vanity objects at the mall.\n \n ", 0, 3, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|t25 Community Tokens")
+       player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|t25 Community Tokens\n \nCan be spent on VIP and vanity objects at the mall. Claimable from level 40 and only once per account.\n \n ", 0, 3, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|t25 Community Tokens")
        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_fishingchair:32:32:-22:0|tFishing Chair\n \nRelax in Azeroth on a brand new reclined Fishing Chair.\n \n ", 0, 4, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_fishingchair:32:32:-22:0|tFishing Chair")
        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_gem_sapphire_01:32:32:-22:0|tFrost Wyrm Mount\n \nThis is a 280% Frost Wyrm mount. It requires Artisan Riding.\n \n ", 0, 5, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_misc_gem_sapphire_01:32:32:-22:0|tFrost Wyrm Mount")
        player:GossipSendMenu(12, player, 1035980)
@@ -53,8 +53,24 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
        player:AddItem(49426, 100)
        player:RemoveItem(christmasGiftID, 1)
    elseif intid == 3 then
-       player:AddItem(19322, 25)
-       player:RemoveItem(christmasGiftID, 1)
+       if (player:GetLevel() < 40) then
+           player:SendAreaTriggerMessage("You must be at least level 40 to claim this present!")
+           player:GossipComplete()
+           return false
+       end
+       local name = player:GetName()
+       local currentDate = tonumber(os.date("%m%d"))
+       local accguid = player:GetAccountId()
+       CharDBQueryAsync(string.format("SELECT guid FROM character_gift_events WHERE guid = %d AND event = 'AccountVeil2024'", accguid), function(result)
+           local player = GetPlayerByName(name)
+           if not result then
+               player:AddItem(19322, 25)
+               player:RemoveItem(christmasGiftID, 1)
+               CharDBExecute(string.format("INSERT INTO character_gift_events (guid, event, awarded, date) VALUES (%d, 'AccountVeil2024', 1, '%s')", accguid, os.date("%Y-%m-%d %H:%M:%S")))
+           else
+               player:SendAreaTriggerMessage("This present can only be claimed once per account.")
+           end
+       end)
    elseif intid == 4 then
        if player:HasItem(33223, 1, true) then
            player:SendAreaTriggerMessage("You already have this item!")
