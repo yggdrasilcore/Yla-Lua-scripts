@@ -21,6 +21,7 @@ local christmasGiftID = 41404
 local function CheckMount(eventId, delay, repeats, player)
    if player:HasSpell(51960) then
        player:RemoveItem(christmasGiftID, 1)
+       player:SendAreaTriggerMessage("You have learned how to summon the Frost Wyrm mount.")
    end
 end
 
@@ -94,15 +95,17 @@ local function OnLogin(event, player)
     if (currentDate >= 1224 and currentDate <= 1231) or (currentDate >= 101 and currentDate <= 102) then
         local guid = player:GetGUIDLow()
         
-        CharDBQueryAsync(string.format("SELECT guid FROM character_gift_events WHERE guid = %d AND event = 'Veil2024'", guid),
-            function(result)
-                if not result then
-                    local player = GetPlayerByName(name)
+        CharDBQueryAsync(string.format("SELECT guid FROM character_gift_events WHERE guid = %d AND event = 'Veil2024'", guid), function(result)
+            if not result then
+                local player = GetPlayerByName(name)
+                if not player:HasItem(41404, 1, true) then
                     player:AddItem(41404, 1)
-                    CharDBExecute(string.format("INSERT INTO character_gift_events (guid, event, awarded, date) VALUES (%d, 'Veil2024', 1, '%s')",
-                        guid, os.date("%Y-%m-%d %H:%M:%S")))
                 end
-            end)
+                if player:HasItem(41404, 1) then
+                    CharDBExecute(string.format("INSERT INTO character_gift_events (guid, event, awarded, date) VALUES (%d, 'Veil2024', 1, '%s')", guid, os.date("%Y-%m-%d %H:%M:%S")))
+                end
+            end
+        end)
     end
 end
 
