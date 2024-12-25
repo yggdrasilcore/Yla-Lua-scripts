@@ -85,9 +85,9 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
         end
         local bitmask = 0
         if intid == 11 then
-            bitmask = 2
+            bitmask = 8
         elseif intid == 21 then
-            bitmask = 2
+            bitmask = 8
         elseif intid == 31 then
             bitmask = 64
         elseif intid == 41 then
@@ -117,9 +117,9 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
         end
         local bitmask = 0
         if intid == 12 then
-            bitmask = 2
+            bitmask = 8
         elseif intid == 22 then
-            bitmask = 2
+            bitmask = 8
         elseif intid == 32 then
             bitmask = 64
         elseif intid == 42 then
