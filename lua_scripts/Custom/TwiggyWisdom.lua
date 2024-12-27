@@ -39,17 +39,17 @@ local function OnGossipSelect(event, player, item, sender, intid, code)
         target = player
     end
 
-    if target:IsPlayer() and
-    ((player:IsAlliance() and not target:IsAlliance()) or 
-    (not player:IsAlliance() and target:IsAlliance()) or
-    (player:IsInSameGroupWith(target) or player:IsInSameRaidWith(target)))
-    and target ~= player and (not target:IsAlive() or target:GetLevel() < 70) then
+    if (target == player) or (target:IsPlayer() and
+    ((player:IsAlliance() and target:IsAlliance()) or
+    (player:IsInSameGroupWith(target) or player:IsInSameRaidWith(target))) and
+    (target:IsAlive() or target:GetLevel() >= 70))
+    then
+        player:CastSpell(target, SCROLL_SPELLS[intid], true)
+    else
         player:SendBroadcastMessage("You can't use this item on this target.")
         player:SendAreaTriggerMessage("You can't use this item on this target.")
-    else
-        player:CastSpell(target, SCROLL_SPELLS[intid], true)
     end
-    
+
     player:GossipComplete()
 end
 
