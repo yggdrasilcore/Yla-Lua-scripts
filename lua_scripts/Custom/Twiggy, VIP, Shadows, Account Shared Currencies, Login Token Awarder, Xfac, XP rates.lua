@@ -4,7 +4,6 @@
 local BOT_TELE_VISUAL   = 64446
 local BotSummonCD       = 30 * 60 -- 30 minutes
 local minLevel          = 15
-local dkLimit           = 70 -- Prevents DKs from zapping toons into the scarlet enclave area
 
 local addCmdTimer       =   {}
 local logoutEvent       =   {}
@@ -444,8 +443,8 @@ local function mainMenu(player, creature)
     if player:HasItem(20739) then
         player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_feather_13:32:32:-22:0|tManage Feathers of Azeroth", 0, 7)
 	end
-    if (player:GetClass() == 6 and player:GetLevel() >= dkLimit)
-    or (player:GetClass() ~= 6 and player:GetLevel() >= minLevel)
+    if (player:GetMapId() ~= 609)
+    and (player:GetLevel() >= minLevel)
     and (player:GetQuestStatus(30000) == 6)
     then
         player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_holy_prayerofshadowprotection:32:32:-22:0|tManage Shadows", 0, 8)
