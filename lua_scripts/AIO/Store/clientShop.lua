@@ -580,7 +580,7 @@ end
 --------------------------------- 
 --Create dropdown menu
 local filterDropdown = CreateFrame("Frame", "CustomStoreFilterDropdown", mainFrame, "UIDropDownMenuTemplate")
-filterDropdown:SetSize(250, 40)  -- Increased size from original 200,30
+filterDropdown:SetSize(250, 40)
 filterDropdown:SetPoint("BOTTOMRIGHT", mainFrame, "BOTTOMRIGHT", -5, 80)
 
 -- Set larger text size for the dropdown button
@@ -600,7 +600,7 @@ local function FilterDropdown_OnClick(self, arg1, arg2, checked)
         if costType == "All Currencies" or buttonCostType == costType then
             button:SetPoint("TOPLEFT", 0, -(buttonIndex - 1) * 22)
             buttonIndex = buttonIndex + 1
-            contentHeight = contentHeight + 45
+            contentHeight = contentHeight + 10
             button:Show()
         else
             button:Hide()
@@ -860,12 +860,10 @@ end
 local function TabButton_OnClick(self)
     local tabID = self:GetID()
     PopulateItemList(tabID)
-
-    -- Handle tab click, e.g., fetch items from server or update UI
-    -- print("Tab clicked:", tabID)
-
+    UIDropDownMenu_SetText(filterDropdown, "Filter by Currency")
     PopulateItemList(tabID)
 end
+
 
 for i, tab in ipairs(tabsInfo) do
     local button = CreateTabButton(tab.id, tab.name, TabButton_OnClick)
@@ -1142,4 +1140,4 @@ blockingPanel:SetScript("OnDragStop", function(self)
     mainFrame:StopMovingOrSizing()
 end)
 
-icon:Hide() -- Start hidden for live test
+--icon:Hide() -- Start hidden for live test
