@@ -5,32 +5,7 @@ end
 
 local UIHandlers = AIO.AddHandlers("UIFix", {})
 
-local function ApplyTwiggyTooltip(tooltip)
-   tooltip:ClearLines()
-   tooltip:AddLine("|cffffffffTwiggy|r")
-   tooltip:AddLine("|cffffffffInstant|r")
-   tooltip:AddLine("Right Click to summon and dismiss")
-   tooltip:AddLine("Twiggy, your personal branch and")
-   tooltip:AddLine("assistant of Yggdrasil.")
-   tooltip:Show()
-end
-
-local function ModifyTwiggyTooltip(tooltip)
-   local name, _, spellId = GameTooltip:GetSpell()
-   if spellId == 40405 then
-       ApplyTwiggyTooltip(tooltip)
-   end
-end
-
--- Hook the spell link insertion
-local oldChatEdit_InsertLink = ChatEdit_InsertLink
-function ChatEdit_InsertLink(text, ...)
-   if text and text:find("spell:40405") then
-       text = text:gsub("Lucky", "Twiggy")
-   end
-   return oldChatEdit_InsertLink(text, ...)
-end
-
+-- Crossfaction unit menu start
 
 CrossFactionMenu = {};
 CrossFactionMenu.Macros = {};
@@ -80,9 +55,15 @@ function CrossFactionMenu.Macros.contextMenuClick(self)
     CloseDropDownMenus();
 end
 
+local lastInteractTime = 0
+
 function CrossFactionMenu.Macros.invite(name)
-    --print("Inviting: " .. name);
-    InviteUnit(name);
+    local currentTime = GetTime()
+    if currentTime - lastInteractTime >= 0.1 then
+        --print("Inviting: " .. name);
+        InviteUnit(name);
+        lastInteractTime = currentTime
+    end
 end
 
 function CrossFactionMenu.Macros.whisper(name)
@@ -95,13 +76,19 @@ function CrossFactionMenu.Macros.whisper(name)
 end
 
 function CrossFactionMenu.Macros.follow(name)
-    --print("Trying to follow: " .. name);
-    UIErrorsFrame:AddMessage("You need to be in a group with this player to follow them.", 1.0, 0.1, 0.1, 1.0);
+    local currentTime = GetTime()
+    if currentTime - lastInteractTime >= 0.1 then
+        UIErrorsFrame:AddMessage("You need to be in a group with this player to follow them.", 1.0, 0.1, 0.1, 1.0);
+        lastInteractTime = currentTime
+    end
 end
 
 function CrossFactionMenu.Macros.trade(name)
-    --print("Trying to trade with: " .. name);
-    UIErrorsFrame:AddMessage("You need to be in a group with this player to trade them.", 1.0, 0.1, 0.1, 1.0);
+    local currentTime = GetTime()
+    if currentTime - lastInteractTime >= 0.1 then
+        UIErrorsFrame:AddMessage("You need to be in a group with this player to trade them.", 1.0, 0.1, 0.1, 1.0);
+        lastInteractTime = currentTime
+    end
 end
 
 function CrossFactionMenu.Macros.updateMenu()
@@ -146,6 +133,97 @@ function CrossFactionMenu.Macros.updateMenu()
         table.insert(UnitPopupMenus["RAID_PLAYER"], 2, "CrossFactionMenu_Whisper");
         table.insert(UnitPopupMenus["TEAM"], 2, "CrossFactionMenu_Whisper");
     end
+end
+
+-- Spell description/tooltip corrections
+
+local function ApplyTwiggyTooltip(tooltip)
+   tooltip:ClearLines()
+   tooltip:AddLine("|cffffffffTwiggy|r")
+   tooltip:AddLine("|cffffffffInstant|r")
+   tooltip:AddLine("Right Click to summon and dismiss")
+   tooltip:AddLine("Twiggy, your personal branch and")
+   tooltip:AddLine("assistant of Yggdrasil.")
+   tooltip:Show()
+end
+
+local function ApplyChromaticMountTooltip(tooltip)
+   tooltip:ClearLines()
+   tooltip:AddLine("|cffffffffChromatic Mount|r")
+   tooltip:AddLine("|cffffffff1.5 sec cast|r")
+   tooltip:AddLine("Summons and dismisses a rideable")
+   tooltip:AddLine("Chromatic Drake. This is a very fast")
+   tooltip:AddLine("mount with permanent slow fall.")
+   tooltip:Show()
+end
+
+local function ApplyWeaksauceTooltip(tooltip)
+   tooltip:ClearLines()
+   tooltip:AddLine("|cffffffffOld Crappy McWeakSauce|r")
+   tooltip:AddLine("|cffffffff1.5 sec cast|r")
+   tooltip:AddLine("Summons and dismisses a crappy")
+   tooltip:AddLine("rideable wyvern mount. This is an")
+   tooltip:AddLine("unbearably slow mount. Not usable")
+   tooltip:AddLine("while flagged for PVP.")
+   tooltip:Show()
+end
+
+local function ApplyMonasteryTPTooltip(tooltip)
+   tooltip:ClearLines()
+   tooltip:AddLine("|cffffffffTeleport Monastery|r")
+   tooltip:AddLine("|cffffffff2 sec cast|r")
+   tooltip:AddLine("Teleports you to the entrance of")
+   tooltip:AddLine("Scarlet Monastery.")
+   tooltip:Show()
+end
+
+local function ApplyWorgenFormTooltip(tooltip)
+   tooltip:ClearLines()
+   tooltip:AddLine("|cffffffffWorgen From|r")
+   tooltip:AddLine("|cffffffffInstant|r")
+   tooltip:AddLine("Temporarily transforms you into")
+   tooltip:AddLine("the form of a Worgen.")
+   tooltip:Show()
+end
+
+local function ApplyFrogFormTooltip(tooltip)
+   tooltip:ClearLines()
+   tooltip:AddLine("|cffffffffFrog From|r")
+   tooltip:AddLine("|cffffffffInstant|r")
+   tooltip:AddLine("Transforms you into the form")
+   tooltip:AddLine("of a frog for 60 seconds.")
+   tooltip:Show()
+end
+
+local function ModifySpellTooltip(tooltip)
+   local name, _, spellId = GameTooltip:GetSpell()
+   if spellId == 40405 then
+       ApplyTwiggyTooltip(tooltip)
+   end
+   if spellId == 24576 then
+       ApplyChromaticMountTooltip(tooltip)
+   end
+   if spellId == 32420 then
+       ApplyWeaksauceTooltip(tooltip)
+   end
+   if spellId == 427 then
+       ApplyMonasteryTPTooltip(tooltip)
+   end
+   if spellId == 32819 then
+       ApplyWorgenFormTooltip(tooltip)
+   end
+   if spellId == 3329 then
+       ApplyFrogFormTooltip(tooltip)
+   end
+end
+
+-- Hook the spell link insertion
+local oldChatEdit_InsertLink = ChatEdit_InsertLink
+function ChatEdit_InsertLink(text, ...)
+   if text and text:find("spell:40405") then
+       text = text:gsub("Lucky", "Twiggy")
+   end
+   return oldChatEdit_InsertLink(text, ...)
 end
 
 function UIHandlers.Initialize(player)
@@ -197,14 +275,65 @@ function UIHandlers.Initialize(player)
     -- TWIGGY TOOLTIP 
     -------------------------------------------------------------------
     
-    GameTooltip:HookScript("OnTooltipSetSpell", ModifyTwiggyTooltip)
-    
+    GameTooltip:HookScript("OnTooltipSetSpell", ModifySpellTooltip)
+
+    -- Function to modify the tooltip contents
+    local function ModifyCustomStoreTooltip(tooltip)
+        for i = 1, tooltip:NumLines() do
+            local line = _G[tooltip:GetName() .. "TextLeft" .. i]
+            if line and line:GetText() then
+                if line:GetText():find("Chromatic Mount") then
+                    ApplyChromaticMountTooltip(tooltip)
+                    return
+                end
+                if line:GetText():find("Old Crappy McWeakSauce") then
+                    ApplyWeaksauceTooltip(tooltip)
+                    return
+                end
+                if line:GetText():find("Teleport Monastery") then
+                    ApplyMonasteryTPTooltip(tooltip)
+                    return
+                end
+                if line:GetText():find("Worgen Form") then
+                    ApplyWorgenFormTooltip(tooltip)
+                    return
+                end
+                if line:GetText():find("Frog Form") then
+                    ApplyFrogFormTooltip(tooltip)
+                    return
+                end
+            end
+        end
+    end
+
+    -- Override the SetHyperlink method for CustomStoreTooltip
+    local originalSetHyperlink = CustomStoreTooltip.SetHyperlink
+    CustomStoreTooltip.SetHyperlink = function(self, link, ...)
+        originalSetHyperlink(self, link, ...)
+        ModifyCustomStoreTooltip(self)
+    end
+
     -- Hook clicked links OK
     local oldSetItemRef = SetItemRef
     function SetItemRef(link, text, button, chatFrame)
         oldSetItemRef(link, text, button, chatFrame)
         if link:find("spell:40405") then
             ApplyTwiggyTooltip(ItemRefTooltip)
+        end
+        if link:find("spell:24576") then
+            ApplyChromaticMountTooltip(ItemRefTooltip)
+        end
+        if link:find("spell:32420") then
+            ApplyWeaksauceTooltip(ItemRefTooltip)
+        end
+        if link:find("spell:427%f[%d]") then
+            ApplyMonasteryTPTooltip(ItemRefTooltip)
+        end
+        if link:find("spell:32819") then
+            ApplyWorgenFormTooltip(ItemRefTooltip)
+        end
+        if link:find("spell:3329%f[%d]") then
+            ApplyFrogFormTooltip(ItemRefTooltip)
         end
     end
    
