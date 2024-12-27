@@ -39,7 +39,11 @@ local function OnGossipSelect(event, player, item, sender, intid, code)
         target = player
     end
 
-    if target ~= player and (not target:IsAlive() or target:GetLevel() < 70) then
+    if target:IsPlayer() and
+    ((player:IsAlliance() and not target:IsAlliance()) or 
+    (not player:IsAlliance() and target:IsAlliance()) or
+    (player:IsInSameGroupWith(target) or player:IsInSameRaidWith(target)))
+    and target ~= player and (not target:IsAlive() or target:GetLevel() < 70) then
         player:SendBroadcastMessage("You can't use this item on this target.")
         player:SendAreaTriggerMessage("You can't use this item on this target.")
     else
