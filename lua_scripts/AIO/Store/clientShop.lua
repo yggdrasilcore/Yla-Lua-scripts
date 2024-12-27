@@ -1140,4 +1140,4 @@ blockingPanel:SetScript("OnDragStop", function(self)
     mainFrame:StopMovingOrSizing()
 end)
 
---icon:Hide() -- Start hidden for live test
+icon:Hide() -- Start hidden for live test
