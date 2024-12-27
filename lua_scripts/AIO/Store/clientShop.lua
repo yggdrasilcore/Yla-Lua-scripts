@@ -538,11 +538,7 @@ local function CreateItemButton(parent, index, id, text, icon, onClick, itemType
         "OnEnter",
         function(self)
             itemTooltip:SetOwner(self, "ANCHOR_CURSOR")
-            if itemType == "item" then
-                itemTooltip:SetHyperlink("item:" .. id)
-            elseif itemType == "spell" then
-                itemTooltip:SetSpellByID(id)
-            end
+            itemTooltip:SetHyperlink(itemType..":" .. id)
             itemTooltip:Show()
         end
     )
