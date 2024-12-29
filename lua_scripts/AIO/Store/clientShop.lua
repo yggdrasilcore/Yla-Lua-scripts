@@ -26,7 +26,8 @@ local itemsInfo = {
         { id = 44728, name = "Potion of Yggdrasil Rejuvenation", itemType = "item", quantity = "1", costType = "Community Tokens",    cost = 25 },
         { id = 23578, name = "Twiggy's Tonic", itemType = "item", quantity = "1", costType = "Community Tokens",    cost = 25 },
         { id = 41415, name = "Twiggy's Wisdom", itemType = "item", quantity = "1", costType = "Community Tokens",    cost = 25 },
-        { id = 20739, name = "Feathers of Azeroth", itemType = "item", quantity = "1", costType = "Gold",    cost = 500000 },
+        { id = 20739, name = "Feathers of Azeroth", itemType = "item", quantity = "1", costType = "Vote Tokens",    cost = 150 },
+        { id = 20739, name = "Feathers of Azeroth", itemType = "item", quantity = "1", costType = "Community Tokens",    cost = 15 },
         { id = 17890, name = "Druid Medallion", itemType = "item", quantity = "1", costType = "Vote Tokens",    cost = 50 },
         { id = 17890, name = "Druid Medallion", itemType = "item", quantity = "1", costType = "Community Tokens",    cost = 10 },
         { id = 5041, name = "Demonic Scroll", itemType = "item", quantity = "1", costType = "Vote Tokens",    cost = 25 },
@@ -261,23 +262,12 @@ itemTooltip:SetClampedToScreen(true)
 local mainFrame = CreateFrame("Frame", "CustomStoreMainFrame", UIParent, "UIPanelDialogTemplate")
 mainFrame:SetSize(800, 500)
 mainFrame:SetPoint("CENTER")
--- mainFrame:SetBackdrop(
---     {
---         bgFile = "Interface/DialogFrame/UI-DialogBox-Background",
---         edgeFile = "Interface/DialogFrame/UI-DialogBox-Border",
---         tile = true,
---         tileSize = 32,
---         edgeSize = 32,
---         insets = { left = 11, right = 12, top = 12, bottom = 11 }
---     }
--- )
 mainFrame:SetMovable(true)
 mainFrame:EnableMouse(true)
 mainFrame:RegisterForDrag("LeftButton")
 mainFrame:SetScript("OnDragStart", mainFrame.StartMoving)
 mainFrame:SetScript("OnDragStop", mainFrame.StopMovingOrSizing)
 mainFrame:SetClampedToScreen(true)
--- mainFrame:Show()
 mainFrame:Hide()
 -- Create the currency balance display
 local currencyFrame = CreateFrame("Frame", nil, mainFrame)
@@ -297,17 +287,17 @@ currencyFrame:SetBackdropColor(0, 0, 0, 0.8)
 currencyFrame:SetBackdropBorderColor(0.6, 0.6, 0.6, 1)
 
 -- Create header
-local headerText = currencyFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+local headerText = currencyFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 headerText:SetPoint("TOPLEFT", currencyFrame, "TOPLEFT", 10, -10)
 headerText:SetText("Currency Balances:")
 
 -- Create labels (left side)
-local goldLabel = currencyFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-goldLabel:SetPoint("TOPLEFT", currencyFrame, "TOPLEFT", 10, -25)
-goldLabel:SetText("Gold:")
+-- local goldLabel = currencyFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+-- goldLabel:SetPoint("TOPLEFT", currencyFrame, "TOPLEFT", 10, -25)
+-- goldLabel:SetText("Gold:")
 
 local communityTokensLabel = currencyFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-communityTokensLabel:SetPoint("TOPLEFT", goldLabel, "BOTTOMLEFT", 0, -5)
+communityTokensLabel:SetPoint("TOPLEFT", currencyFrame, "TOPLEFT", 10, -40)
 communityTokensLabel:SetText("Community Tokens:")
 
 local voteTokensLabel = currencyFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -319,11 +309,11 @@ activityTokensLabel:SetPoint("TOPLEFT", voteTokensLabel, "BOTTOMLEFT", 0, -5)
 activityTokensLabel:SetText("Activity Tokens:")
 
 -- Create values (right side)
-local goldValue = currencyFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-goldValue:SetPoint("TOPRIGHT", currencyFrame, "TOPRIGHT", -10, -25)
+-- local goldValue = currencyFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+-- goldValue:SetPoint("TOPRIGHT", currencyFrame, "TOPRIGHT", -10, -25)
 
 local communityTokensValue = currencyFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-communityTokensValue:SetPoint("TOPRIGHT", goldValue, "BOTTOMRIGHT", 0, -5)
+communityTokensValue:SetPoint("TOPRIGHT", currencyFrame, "TOPRIGHT", -10, -40)
 
 local voteTokensValue = currencyFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 voteTokensValue:SetPoint("TOPRIGHT", communityTokensValue, "BOTTOMRIGHT", 0, -5)
@@ -342,7 +332,7 @@ local function UpdateCurrencyBalances()
     local voteTokens = GetItemCount(20880)
     local activityTokens = GetItemCount(37742)
 
-    goldValue:SetText(costText)
+    --goldValue:SetText(costText)
     communityTokensValue:SetText(communityTokens)
     voteTokensValue:SetText(voteTokens)
     activityTokensValue:SetText(activityTokens)
@@ -629,7 +619,7 @@ local function InitializeFilterDropdown(self, level)
     UIDropDownMenu_AddButton(info)
     
     local costTypes = {
-        "Gold",
+        --"Gold",
         "Community Tokens",
         "Vote Tokens",
         "Activity Tokens"
@@ -805,7 +795,7 @@ local function PopulateItemList(tabID)
 
     -- Update the scrollbar's values based on the content frame's height
     local slider = _G[itemList.scrollFrame:GetName() .. "ScrollBar"]
-    slider:SetMinMaxValues(0, math.max(0, contentHeight - itemList.scrollFrame:GetHeight()))
+    slider:SetMinMaxValues(0, math.max(0, contentHeight+30 - itemList.scrollFrame:GetHeight()))
     slider:SetValue(0)
 
     -- Show the scrollbar only if the contentHeight is greater than the scrollFrame's height
@@ -818,6 +808,7 @@ local function PopulateItemList(tabID)
     -- Remove existing item buttons
     for _, child in ipairs({ itemList.contentFrame:GetChildren() }) do
         child:Hide()
+        child:SetParent(nil)
     end
 
     wipe(createdButtons) -- Clear previous buttons array
