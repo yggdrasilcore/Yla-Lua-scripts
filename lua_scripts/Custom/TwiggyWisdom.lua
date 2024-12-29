@@ -45,12 +45,12 @@ local function OnGossipSelect(event, player, item, sender, intid, code)
     (target:IsAlive() or target:GetLevel() >= 70))
     then
         player:CastSpell(target, SCROLL_SPELLS[intid], true)
+        OnUse(_, player, item, player:GetSelection())
     else
         player:SendBroadcastMessage("You can't use this item on this target.")
         player:SendAreaTriggerMessage("You can't use this item on this target.")
+        player:GossipComplete()
     end
-
-    player:GossipComplete()
 end
 
 RegisterItemEvent(ITEM_ENTRY, 2, OnUse)
