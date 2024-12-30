@@ -893,95 +893,43 @@ SlashCmdList["CUSTOMSTORE"] = function()  -- Keys in SlashCmdList should be uppe
 end
 
 tinsert(UISpecialFrames, mainFrame:GetName()) -- allows frame to be closed with escape key
+-- Create button for the Game Menu
+local storeButton = CreateFrame("Button", "GameMenuButtonStore", GameMenuFrame, "GameMenuButtonTemplate")
+storeButton:SetText("Yggdrasil Store")
+storeButton:SetSize(144, 21)
+storeButton:ClearAllPoints()
+storeButton:SetPoint("TOP", GameMenuButtonContinue, "BOTTOM", 0, -15)
 
--- Add icon on worldframe for easy access
-local icon = CreateFrame("Button", nil, WorldFrame)
-icon:SetSize(32, 32)
-icon:SetPoint("BOTTOM", Minimap, "BOTTOM", 0, -50) -- Anchor to the bottom center of the minimap, 50 pixels below (30 pixels lower than before)
+-- Hook the OnShow script to position the storeButton
+GameMenuFrame:HookScript("OnShow", function()
 
-icon:SetNormalTexture("Interface\\Icons\\wowtoken")
-local tex = icon:CreateFontString(nil, "OVERLAY")
-tex:SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
-tex:SetPoint("CENTER", icon, "BOTTOM", 0, 20)
-tex:SetText("Yggdrasil Store")
-
--- Create a texture behind the text
-local backgroundTexture = icon:CreateTexture(nil, "BACKGROUND")
-backgroundTexture:SetTexture("Interface\\Buttons\\UI-Panel-Button-Up") -- You can change this to any texture you prefer
-backgroundTexture:SetWidth(200) -- Adjust the width as needed
-backgroundTexture:SetHeight(40) -- Adjust the height as needed
-backgroundTexture:SetPoint("CENTER", icon, "BOTTOM", 35, 15)
-
-icon:SetFrameStrata("LOW")
-icon:SetClampedToScreen(true)
-icon:SetScript(
-    "OnClick",
-    function(self, button, down)
-        if mainFrame:IsShown() then
-            mainFrame:Hide()
-        else
-            mainFrame:Show()
-            categoryHeader:Hide()
-            AIO.Msg():Add("CustomStore", "GetCategories"):Send()
-            -- Highlight the first tab button when the frame is shown
-            if tabsInfo[1] then
-                local firstButton = _G["categoryListButton" .. tabsInfo[1].id]
-            end
-        end
+    -- Check if GameMenuButtonMoveAnything exists and position it relative to the storeButton
+    local moveAnythingButton = _G["GameMenuButtonMoveAnything"]
+    if moveAnythingButton then
+        moveAnythingButton:ClearAllPoints()
+        moveAnythingButton:SetPoint("TOP", storeButton, "BOTTOM", 0, -15)
     end
-)
+end)
 
-icon:SetScript(
-    "OnEnter",
-    function(self)
-        icon:SetAlpha(1)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("Click to open the Yggdrasil Store")
-        GameTooltip:Show()
-    end
-)
-icon:SetScript(
-    "OnLeave",
-    function(self)
-        icon:SetAlpha(0.5)
-        GameTooltip:Hide()
-    end
-)
--- drag able
-icon:SetMovable(true)
-icon:EnableMouse(true)
-icon:RegisterForDrag("LeftButton")
-icon:SetScript(
-    "OnDragStart",
-    function(self)
-        self:StartMoving()
-    end
-)
-icon:SetScript(
-    "OnDragStop",
-    function(self)
-        self:StopMovingOrSizing()
-    end
-)
+local moveAnythingButton = _G["GameMenuButtonMoveAnything"]
+if moveAnythingButton then
+    GameMenuFrame:SetHeight(GameMenuFrame:GetHeight() + 60)
+else
+    GameMenuFrame:SetHeight(GameMenuFrame:GetHeight() + 30)
+end
 
--- Create the toggle button
-local toggleButton = CreateFrame("Button", nil, mainFrame, "UIPanelButtonTemplate")
-toggleButton:SetSize(137, 50)
-toggleButton:SetText("Show/Hide\nStore Button")
-toggleButton:SetPoint("BOTTOMLEFT", 20, 10)
-
--- Get the text object of the button
-local buttonText = toggleButton:GetFontString()
-
--- Adjust the text position
-buttonText:SetPoint("CENTER", 0, -1)
-
-toggleButton:SetScript("OnClick", function()
-    if icon:IsVisible() then
-        icon:Hide()
-        print("You can show/hide the Yggdrasil Store by using the '/store' command.")
+storeButton:SetScript("OnClick", function()
+    HideUIPanel(GameMenuFrame)
+    if mainFrame:IsShown() then
+        mainFrame:Hide()
     else
-        icon:Show()
+        mainFrame:Show()
+        categoryHeader:Hide()
+        AIO.Msg():Add("CustomStore", "GetCategories"):Send()
+        -- Highlight the first tab button when the frame is shown
+        if tabsInfo[1] then
+            local firstButton = _G["categoryListButton" .. tabsInfo[1].id]
+        end
     end
 end)
 
@@ -989,7 +937,7 @@ end)
 local helpButton = CreateFrame("Button", nil, mainFrame, "UIPanelButtonTemplate")
 helpButton:SetSize(137, 50)
 helpButton:SetText("Help")
-helpButton:SetPoint("BOTTOMLEFT", toggleButton, "TOPLEFT", 0, 3)
+helpButton:SetPoint("BOTTOMLEFT", 20, 10)
 helpButton:SetScript("OnClick", function()
     HelpMicroButton:Click()
     KnowledgeBaseFrameGMTalk:Click()
@@ -1005,8 +953,8 @@ welcomeFrame:SetFrameStrata("DIALOG")
 -- Create a blocking panel that will catch all mouse events
 local blockingPanel = CreateFrame("Frame", nil, welcomeFrame)
 blockingPanel:SetAllPoints()
-blockingPanel:EnableMouse(true) -- This makes it catch all mouse events
-blockingPanel:SetFrameLevel(welcomeFrame:GetFrameLevel() + 10) -- Set it above other elements
+blockingPanel:EnableMouse(true)
+blockingPanel:SetFrameLevel(welcomeFrame:GetFrameLevel() + 10)
 
 -- Move the existing background panel setup after the blocking panel
 local bgPanel = CreateFrame("Frame", nil, welcomeFrame)
@@ -1049,7 +997,7 @@ slider:SetFrameLevel(blockingPanel:GetFrameLevel() + 2)
 local BUTTONS_PER_ROW = 3
 local BUTTON_SIZE = 100
 local SPACING = 20
-local START_X = -((BUTTONS_PER_ROW * (BUTTON_SIZE + SPACING)) / 2) + (BUTTON_SIZE / 2) + 335 -- Move 200 pixels to the right
+local START_X = -((BUTTONS_PER_ROW * (BUTTON_SIZE + SPACING)) / 2) + (BUTTON_SIZE / 2) + 335
 local START_Y = -10
 
 local function CreateCategoryButton(parent, index, name, icon)
@@ -1106,11 +1054,6 @@ mainFrame:HookScript("OnShow", function()
     welcomeFrame:Show()
 end)
 
-if not icon:IsVisible() then
-    icon:ClearAllPoints()
-    icon:SetPoint("TOP", WorldFrame, "TOP", 0, -125)
-end
-
 -- Make the bgPanel and blockingPanel draggable
 bgPanel:SetMovable(true)
 bgPanel:EnableMouse(true)
@@ -1131,5 +1074,3 @@ end)
 blockingPanel:SetScript("OnDragStop", function(self)
     mainFrame:StopMovingOrSizing()
 end)
-
-icon:Hide() -- Start hidden for live test
