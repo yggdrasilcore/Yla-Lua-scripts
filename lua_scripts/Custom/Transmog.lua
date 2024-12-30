@@ -46972,30 +46972,32 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
     end
 end
 
+local applyMogOnMapChange = {}
+
 local function OnLogin(event, player)
     local playerGUID = player:GetGUIDLow()
+    if event == 28 and not applyMogOnMapChange[playerGUID] then
+        return
+    end
     local playername = player:GetName()
+    applyMogOnMapChange[playerGUID] = nil
     
     entryMap[playerGUID] = {}
-    CharDBQueryAsync("SELECT GUID, FakeEntry FROM custom_transmogrification WHERE Owner = "..playerGUID,
-        function(result)
+    CharDBQueryAsync("SELECT GUID, FakeEntry FROM custom_transmogrification WHERE Owner = "..playerGUID, function(result)
         local player = GetPlayerByName(playername)
         if result then
             repeat
                 local itemGUID = result:GetUInt32(0)
                 local fakeEntry = result:GetUInt32(1)
-                -- if sObjectMgr:GetItemTemplate(fakeEntry) then
-                -- {
                 dataMap[itemGUID] = playerGUID
                 entryMap[playerGUID][itemGUID] = fakeEntry
-                -- }
-                -- else
-                --     sLog:outError(LOG_FILTER_SQL, "Item entry (Entry: %u, itemGUID: %u, playerGUID: %u) does not exist, deleting.", fakeEntry, itemGUID, playerGUID)
-                --     Transmogrification::DeleteFakeFromDB(itemGUID)
-                -- end
             until not result:NextRow()
 
             for slot = EQUIPMENT_SLOT_START, EQUIPMENT_SLOT_END-1 do
+                if not player then
+                    applyMogOnMapChange[playerGUID] = true
+                    return
+                end
                 local item = player:GetItemByPos(INVENTORY_SLOT_BAG_0, slot)
                 if item then
                     if entryMap[playerGUID] then
@@ -47587,6 +47589,7 @@ local function OnRepair(event, packet, player)
 end
 
 RegisterPlayerEvent(3, OnLogin)
+RegisterPlayerEvent(28, OnLogin) -- On map change, in case player zones into expired/invalid instance
 RegisterPlayerEvent(4, OnLogout)
 RegisterPlayerEvent(29, OnEquip)
 RegisterPacketEvent(0x2A8, 5, OnRepair)
