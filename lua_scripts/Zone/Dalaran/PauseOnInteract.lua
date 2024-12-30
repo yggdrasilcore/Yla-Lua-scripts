@@ -6,7 +6,7 @@ local function OnPacketReceive(event, packet, player)
     if target then
         local aura = player:AddAura(35340, target)
         if aura then
-            aura:SetDuration(15000)
+            aura:SetDuration(20000)
         end
     end
 end
