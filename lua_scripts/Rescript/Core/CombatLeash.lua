@@ -54,7 +54,7 @@ local function CombatLeash(event, player, enemy)
             local currentHpPct = mob:GetHealthPct()
             local previousHpPct = mob:GetData("LeashPct") or currentHpPct
             
-            if not (mob:IsInCombat() and mob:GetSelection() == player) then
+            if not (mob:IsInCombat() and mob:GetSelection() and mob:GetSelection() == player) then
                 return
             end
             
