@@ -132,7 +132,7 @@ local function OnCommand(event, player, command)
         local gmRank = player:GetGMRank()
         local cbstoptime = player:GetData("cbstoptime")
         local currentTime = os.time()
-        if gmRank < 2 and not (cbstoptime and math.abs(currentTime - cbstoptime) <= 2) then
+        if (gmRank < 2) or not (cbstoptime and math.abs(currentTime - cbstoptime) <= 2) then
             if debugprint == 1 then
                 print("Denying combatstop command for "..player:GetName())
             end
