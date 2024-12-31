@@ -62,7 +62,7 @@ REPLACE INTO `item_template` (`entry`, `class`, `subclass`, `SoundOverrideSubcla
 
 -- Constants
 local QUEST_ID = 30000
-local ITEM_ENTRY = 21878
+local TELEPORT_ITEM = 21878
 local QUEST_ITEM = 39163
 local AREA_ID = 268 -- Azshara crater temple 
 local SHADOW_ENTRY = 30842 -- Player shadows
@@ -86,7 +86,7 @@ local minLevel = 15
 local dkLimit = 70 -- Prevents DKs from zapping toons into the scarlet enclave area
 
 -- Item use event
-RegisterItemEvent(ITEM_ENTRY, 2, function(event, player, item, target)
+RegisterItemEvent(TELEPORT_ITEM, 2, function(event, player, item, target)
     if shadowsEvent > os.time() then
         player:SendAreaTriggerMessage("You can't save your shadows right now! Try again in a few minutes.")
         player:SendBroadcastMessage("You can't save your shadows right now! Try again in a few minutes.")
@@ -110,8 +110,8 @@ RegisterPlayerEvent(47, function(event, player, oldArea, newArea)
         shadowsEvent = os.time() + 180
         
         player:RegisterEvent(function(eventId, delay, repeats, player)
-            if player and player:GetAreaId() == AREA_ID and (player:HasItem(ITEM_ENTRY) or player:HasItem(QUEST_ITEM)) then
-                player:RemoveItem(ITEM_ENTRY, 1)
+            if player and player:GetAreaId() == AREA_ID and (player:HasItem(TELEPORT_ITEM) or player:HasItem(QUEST_ITEM)) then
+                player:RemoveItem(TELEPORT_ITEM, 1)
                 player:RemoveItem(QUEST_ITEM, 1)
                 player:RemoveQuest(QUEST_ID)
                 player:AddItem(QUEST_ITEM, 1)
@@ -272,7 +272,7 @@ RegisterPlayerEvent(18, function(event, player, msg, Type, lang)
                     for _, shadow in pairs(shadows) do
                         shadow:CastSpell(shadow, 32783, false)
                         player:RemoveItem(QUEST_ITEM, 1)
-                        player:RemoveItem(ITEM_ENTRY, 1)
+                        player:RemoveItem(TELEPORT_ITEM, 1)
                         --player:SetQuestStatus(QUEST_ID, 6)
                         player:RewardQuest(QUEST_ID)
                         shadowsEvent = os.time()
@@ -306,13 +306,6 @@ function AddLostAura(event, shadow, target)
     end
 end
 
-local function OnLogout(event, player)
-    if player:HasItem(ITEM_ENTRY, 1) and (player:GetQuestStatus(30000) == 6) then
-        player:RemoveItem(ITEM_ENTRY, 1)
-        player:RemoveQuest(QUEST_ID)
-    end
-end
-
 local function OnLevelUp(event, player, oldLevel)
     if (player:GetClass() == 6 and oldLevel == dkLimit - 1) or
     (player:GetClass() ~= 6 and oldLevel == minLevel - 1)
@@ -327,17 +320,29 @@ local function OnLogin(event, player)
     if player:GetLevel() < minLevel then
         return
     end
-    if player:HasQuest(QUEST_ID) and not player:HasItem(ITEM_ENTRY, 1) then
-        player:AddItem(ITEM_ENTRY, 1)
+    if player:HasQuest(QUEST_ID) and not player:HasItem(TELEPORT_ITEM, 1) then
+        player:AddItem(TELEPORT_ITEM, 1)
     end
     if not player:HasQuest(QUEST_ID) and not (player:GetQuestStatus(QUEST_ID) == 6) and not player:HasItem(QUEST_ITEM) then
-        if player:HasItem(ITEM_ENTRY, 1) then
-            player:RemoveItem(ITEM_ENTRY, 1)
+        if player:HasItem(TELEPORT_ITEM, 1) then
+            player:RemoveItem(TELEPORT_ITEM, 1)
         end
         player:AddItem(QUEST_ITEM, 1)
         player:RegisterEvent(function(eventId, delay, repeats, player)
             player:SendBroadcastMessage("You hear mysterious whispers echo in the horizon... An unknown item from the void appears!")
         end, 1000, 1)
+    end
+    if player:HasItem(TELEPORT_ITEM, 1) and (player:GetQuestStatus(30000) == 6) then
+        player:RemoveItem(TELEPORT_ITEM, 1)
+        if player:HasQuest(QUEST_ID) then
+            player:RemoveQuest(QUEST_ID)
+        end
+    end
+    if player:HasItem(QUEST_ITEM, 1) and (player:GetQuestStatus(30000) == 6) then
+        player:RemoveItem(QUEST_ITEM, 1)
+        if player:HasQuest(QUEST_ID) then
+            player:RemoveQuest(QUEST_ID)
+        end
     end
 end
 
