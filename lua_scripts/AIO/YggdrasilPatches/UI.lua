@@ -5,7 +5,96 @@ end
 
 local UIHandlers = AIO.AddHandlers("UIFix", {})
 
+-------------------------------------------
+-- Correction for AH deposit price
+-------------------------------------------
+
+local lastGold = 0
+local lastSilver = 0
+local lastCopper = 0
+local isOnUpdateActive = false
+
+local function CalculateNewPrice(gold, silver, copper)
+    -- Convert the total price to copper
+    local totalCopper = (gold * 10000) + (silver * 100) + copper
+    -- Calculate 20% of the total price
+    local newTotalCopper = math.floor(totalCopper * 0.2)
+    -- Split the new total price back into gold, silver, and copper
+    local newGold = math.floor(newTotalCopper / 10000)
+    newTotalCopper = newTotalCopper % 10000
+    local newSilver = math.floor(newTotalCopper / 100)
+    local newCopper = newTotalCopper % 100
+    return newGold, newSilver, newCopper
+end
+
+local function ModifyDeposit()
+    local gold = 0
+    local silver = 0
+    local copper = 0
+
+    -- Check if the deposit frame and its elements exist
+    if AuctionsDepositMoneyFrame then
+        -- Read GoldButton
+        if AuctionsDepositMoneyFrameGoldButton and AuctionsDepositMoneyFrameGoldButton:IsVisible() then
+            gold = tonumber(AuctionsDepositMoneyFrameGoldButton:GetText()) or 0
+        end
+
+        -- Read SilverButton
+        if AuctionsDepositMoneyFrameSilverButton and AuctionsDepositMoneyFrameSilverButton:IsVisible() then
+            silver = tonumber(AuctionsDepositMoneyFrameSilverButton:GetText()) or 0
+        end
+
+        -- Read CopperButton
+        if AuctionsDepositMoneyFrameCopperButton and AuctionsDepositMoneyFrameCopperButton:IsVisible() then
+            copper = tonumber(AuctionsDepositMoneyFrameCopperButton:GetText()) or 0
+        end
+
+        -- Check if the price has changed
+        if gold ~= lastGold or silver ~= lastSilver or copper ~= lastCopper then
+            -- Calculate the new price
+            local newGold, newSilver, newCopper = CalculateNewPrice(gold, silver, copper)
+
+            -- Set the new values
+            if AuctionsDepositMoneyFrameGoldButton and AuctionsDepositMoneyFrameGoldButton:IsVisible() then
+                AuctionsDepositMoneyFrameGoldButton:SetText(newGold)
+            end
+
+            if AuctionsDepositMoneyFrameSilverButton and AuctionsDepositMoneyFrameSilverButton:IsVisible() then
+                AuctionsDepositMoneyFrameSilverButton:SetText(newSilver)
+            end
+
+            if AuctionsDepositMoneyFrameCopperButton and AuctionsDepositMoneyFrameCopperButton:IsVisible() then
+                AuctionsDepositMoneyFrameCopperButton:SetText(newCopper)
+            end
+
+            -- Update the last known values
+            lastGold = newGold
+            lastSilver = newSilver
+            lastCopper = newCopper
+
+            -- Print the new total cost
+            --print("New Price: " .. newGold .. " gold, " .. newSilver .. " silver, " .. newCopper .. " copper.")
+        end
+    end
+end
+
+local function MonitorDepositChanges()
+    if AuctionsDepositMoneyFrame and not isOnUpdateActive then
+        AuctionsDepositMoneyFrame:SetScript("OnUpdate", ModifyDeposit)
+        isOnUpdateActive = true
+    end
+end
+
+local function StopMonitoringDepositChanges()
+    if AuctionsDepositMoneyFrame and isOnUpdateActive then
+        AuctionsDepositMoneyFrame:SetScript("OnUpdate", nil)
+        isOnUpdateActive = false
+    end
+end
+
+-------------------------------------
 -- Crossfaction unit menu start
+-------------------------------------
 
 CrossFactionMenu = {};
 CrossFactionMenu.Macros = {};
@@ -227,50 +316,63 @@ function ChatEdit_InsertLink(text, ...)
 end
 
 function UIHandlers.Initialize(player)
-    --if not IsAddOnLoaded("CrossFactionMenu") then
-        CrossFactionMenu.Macros.onLoad();
-        local f = CreateFrame("Frame")
-        f:RegisterEvent("PLAYER_TARGET_CHANGED")
-        f:RegisterEvent("RAID_MEMBERS_CHANGED")
-        f:RegisterEvent("PARTY_MEMBERS_CHANGED")
-        f:SetScript("OnEvent", function(self, event, unit)
-            if event == "PLAYER_TARGET_CHANGED" then
-                CrossFactionMenu.Macros.updateMenu();
-            else
-                local targetName = UnitName("target")
-                if not targetName then return end
-                
-                -- Create timer frame
-                local timerFrame = CreateFrame("Frame")
-                timerFrame.elapsed = 0
-                timerFrame:SetScript("OnUpdate", function(self, elapsed)
-                    self.elapsed = self.elapsed + elapsed
-                    if self.elapsed >= 0.05 then -- 50ms
-                        local isInGroup = UnitInParty("target") or UnitInRaid("target")
-                        local playerFaction = UnitFactionGroup("player")
-                        local targetFaction = UnitFactionGroup("target")
-                        
-                        if playerFaction ~= targetFaction then
-                            if isInGroup then
-                                for _, menu in pairs(UnitPopupMenus) do
-                                    for i = #menu, 1, -1 do
-                                        if string.find(menu[i], "CrossFactionMenu_") then
-                                            table.remove(menu, i)
-                                        end
+    CrossFactionMenu.Macros.onLoad();
+    local f = CreateFrame("Frame")
+    f:RegisterEvent("PLAYER_TARGET_CHANGED")
+    f:RegisterEvent("RAID_MEMBERS_CHANGED")
+    f:RegisterEvent("PARTY_MEMBERS_CHANGED")
+    f:SetScript("OnEvent", function(self, event, unit)
+        if event == "PLAYER_TARGET_CHANGED" then
+            CrossFactionMenu.Macros.updateMenu();
+        else
+            local targetName = UnitName("target")
+            if not targetName then return end
+            
+            -- Create timer frame
+            local timerFrame = CreateFrame("Frame")
+            timerFrame.elapsed = 0
+            timerFrame:SetScript("OnUpdate", function(self, elapsed)
+                self.elapsed = self.elapsed + elapsed
+                if self.elapsed >= 0.05 then -- 50ms
+                    local isInGroup = UnitInParty("target") or UnitInRaid("target")
+                    local playerFaction = UnitFactionGroup("player")
+                    local targetFaction = UnitFactionGroup("target")
+                    
+                    if playerFaction ~= targetFaction then
+                        if isInGroup then
+                            for _, menu in pairs(UnitPopupMenus) do
+                                for i = #menu, 1, -1 do
+                                    if string.find(menu[i], "CrossFactionMenu_") then
+                                        table.remove(menu, i)
                                     end
                                 end
-                            else
-                                CrossFactionMenu.Macros.updateMenu()
                             end
                         else
                             CrossFactionMenu.Macros.updateMenu()
                         end
-                        self:SetScript("OnUpdate", nil) -- Clean up timer
+                    else
+                        CrossFactionMenu.Macros.updateMenu()
                     end
-                end)
+                    self:SetScript("OnUpdate", nil) -- Clean up timer
+                end
+            end)
+        end
+    end)
+    
+    -- AH Price corrections
+    local depositframe = CreateFrame("Frame")
+    depositframe:RegisterEvent("AUCTION_HOUSE_SHOW")
+    depositframe:RegisterEvent("AUCTION_HOUSE_CLOSED")
+    depositframe:SetScript("OnEvent", function(self, event, ...)
+        if event == "AUCTION_HOUSE_SHOW" then
+            if AuctionsDepositMoneyFrame then
+                AuctionsDepositMoneyFrame:HookScript("OnShow", MonitorDepositChanges)
             end
-        end)
-    --end
+        elseif event == "AUCTION_HOUSE_CLOSED" then
+            StopMonitoringDepositChanges()
+        end
+    end)
+
     ------------------------------------------------------------------- 
     -- TWIGGY TOOLTIP 
     -------------------------------------------------------------------
