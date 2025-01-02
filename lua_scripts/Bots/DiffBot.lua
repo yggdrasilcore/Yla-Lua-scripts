@@ -30,14 +30,9 @@ local function onServerUpdate(event, diff)
         
         -- Prepare alert message for Discord
         local playerCount = #GetPlayersInWorld()
-        local eventCount = #GetActiveGameEvents()
 		local message
-		
-		if eventCount > 50 then
-			message = string.format("High server diff alert! Diff: %d ms, Players online: %d, Active Eluna events: %d. Consider reloading ELUNA!", diff, playerCount, eventCount)
-		else
-			message = string.format("High server diff alert! Diff: %d ms, Players online: %d, Active Eluna events: %d. Consider restarting!", diff, playerCount, eventCount)
-        end
+        
+        message = string.format("High server diff alert! Diff: %d ms, Players online: %d. Consult the logs to learn why.", diff, playerCount)
 		
         -- Send alert to Discord
         SendToDiscord(message)
@@ -49,3 +44,5 @@ local function onServerUpdate(event, diff)
 end
 
 RegisterServerEvent(13, onServerUpdate)
+
+SendToDiscord("ELUNA server status checker loaded! If you didn't reload ELUNA, this means the worldserver just crashed or restarted.")
