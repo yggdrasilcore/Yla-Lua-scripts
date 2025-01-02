@@ -43,6 +43,9 @@ local function onServerUpdate(event, diff)
     end
 end
 
-RegisterServerEvent(13, onServerUpdate)
+local function onStartup(event)
+    SendToDiscord("ELUNA server status checker loaded! If you didn't reload ELUNA, this means the worldserver just crashed or restarted.")
+end
 
-SendToDiscord("ELUNA server status checker loaded! If you didn't reload ELUNA, this means the worldserver just crashed or restarted.")
+RegisterServerEvent(13, onServerUpdate)
+RegisterServerEvent(14, onStartup)
