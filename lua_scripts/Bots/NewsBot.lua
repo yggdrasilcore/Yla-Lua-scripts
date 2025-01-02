@@ -19,6 +19,12 @@ local function sanitizeString(str)
     if type(str) ~= "string" then
         return tostring(str)
     end
+    
+    -- Remove emoji sequences
+    str = str:gsub("\\u%x%x%x%x\\u%x%x%x%x", "")
+    -- Remove single Unicode emoji characters
+    str = str:gsub("[\xF0-\xF7][\x80-\xBF][\x80-\xBF][\x80-\xBF]", "")
+    
     return str:gsub("'", "''")
               :gsub("\\", "\\\\")
               :gsub("\n", "\\n")
@@ -32,6 +38,11 @@ local function parseJsonToHtml(json)
     for message in json:gmatch("{.-}") do
         local content = message:match('"content":"(.-)"') or ""
         content = content:gsub("\\\"", "\""):gsub("\\n", "\n")
+        
+        -- Remove emoji sequences
+        content = content:gsub("\\u%x%x%x%x\\u%x%x%x%x", "")
+        -- Remove single Unicode emoji characters
+        content = content:gsub("[\xF0-\xF7][\x80-\xBF][\x80-\xBF][\x80-\xBF]", "")
         
         if content ~= "" and content ~= "No content" then
             content = content:gsub("@", "")
@@ -84,7 +95,7 @@ end
 
 -- Function to fetch the most recent message and convert to HTML
 local function fetchAndConvertToHtml()
-	print("[News Bot]: Checking for news...")
+    print("[News Bot]: Checking for news...")
     HttpRequest("GET", url, headers, function(status, body, headers)
         if status == 200 then
             id = math.ceil(tonumber(body:match(',"id":"(%d+)"')) / 100000000000)
@@ -112,7 +123,7 @@ local function fetchAndConvertToHtml()
     end)
 end
 
-CreateLuaEvent(fetchAndConvertToHtml, 5000, 1) -- Runs every 6 hrs
+CreateLuaEvent(fetchAndConvertToHtml, 5000, 1) -- Run on reload eluna/server startup
 
 -- Trigger syncing to external website table (MySQL trigger)
 --[[
