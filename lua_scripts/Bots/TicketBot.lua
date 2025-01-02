@@ -17,36 +17,36 @@ end
 local function OnTicketOpen()
 	print("Opcode 0x206 registered!")
     CreateLuaEvent(function()
-    CharDBQueryAsync("SELECT id, name, description, closedBy, viewed, type FROM gm_ticket WHERE viewed = 0 AND type = 0", function(queryResult)
+        CharDBQueryAsync("SELECT id, name, description, closedBy, viewed, type FROM gm_ticket WHERE viewed = 0 AND type = 0", function(queryResult)
 
-		if queryResult then
-			local ticketsToUpdate = {}
+            if queryResult then
+                local ticketsToUpdate = {}
 
-			repeat
-				local id = queryResult:GetUInt32(0)
-				local name = queryResult:GetString(1)
-				local description = queryResult:GetString(2)
-				local closedBy = queryResult:GetInt32(3)
-				local viewed = queryResult:GetUInt8(4)
-				
-				if not idClosed[id] then
-					idClosed[id] = true
+                repeat
+                    local id = queryResult:GetUInt32(0)
+                    local name = queryResult:GetString(1)
+                    local description = queryResult:GetString(2)
+                    local closedBy = queryResult:GetInt32(3)
+                    local viewed = queryResult:GetUInt8(4)
+                    
+                    if not idClosed[id] then
+                        idClosed[id] = true
 
-					SendToDiscord(string.format("**New in-game GM Ticket! ID: %d.** \\nName: %s. \\nDescription: %s", 
-						id, name, description))
-					table.insert(ticketsToUpdate, id)
-				end
-			until not queryResult:NextRow()
+                        SendToDiscord(string.format("**New in-game GM Ticket! ID: %d.** \\nName: %s. \\nDescription: %s", 
+                            id, name, description))
+                        table.insert(ticketsToUpdate, id)
+                    end
+                until not queryResult:NextRow()
 
-			-- Update the viewed status of processed tickets
-			if #ticketsToUpdate > 0 then
-				for _, id in ipairs(ticketsToUpdate) do
-					print("Updating ticket ID: " .. id .. " to viewed.")
-					CharDBExecute("UPDATE gm_ticket SET viewed = 1 WHERE id = " .. id)
-				end
-			end
-		end
-	end)
+                -- Update the viewed status of processed tickets
+                if #ticketsToUpdate > 0 then
+                    for _, id in ipairs(ticketsToUpdate) do
+                        print("Updating ticket ID: " .. id .. " to viewed.")
+                        CharDBExecute("UPDATE gm_ticket SET viewed = 1 WHERE id = " .. id)
+                    end
+                end
+            end
+        end)
         RemoveEventById(1)
     end, 500, 1)
 end
@@ -69,11 +69,16 @@ local function OnTicketClose(event, player, opcode, packet)
 					repeat
 						local id = queryResult:GetUInt32(0)
 						local closedBy = queryResult:GetInt32(1)  -- Changed to GetInt32 for signed integer
+                        local player = GetPlayerByGUID(closedBy)
 						if idClosed[id] then
 							idClosed[id] = nil
 							--print("ID: " .. id .. ", Closed by: " .. closedBy)
-							SendToDiscord("**Ticket with ID: " .. id .. " closed.** \\nClosed by: " .. closedBy)
-						end
+                            if player then
+                                SendToDiscord("**Ticket with ID: " .. id .. " closed.** \\nClosed by: " .. player:GetName())
+                            else
+                                SendToDiscord("**Ticket with ID: " .. id .. " closed.** \\nClosed by GUID: " .. closedBy)
+                            end
+                        end
 					until not queryResult:NextRow()
 				end
 			end)
