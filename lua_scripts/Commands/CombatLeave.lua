@@ -49,7 +49,7 @@ local function ClearCombat(event, player, command)
     end
 end
 
-local TimedCBCheck = {}
+local TimedCBCheckTable = {}
 
 local function TimedCBCheck(eventid, delay, repeats, player)
     if not player then 
@@ -57,12 +57,10 @@ local function TimedCBCheck(eventid, delay, repeats, player)
         return 
     end
     
-    print(string.format("TimedCBCheck running for player %s", player:GetName()))
-    
     if not player:IsInCombat() then
         print(string.format("Player %s no longer in combat, removing boss fight flag", player:GetName()))
         player:SetData("isInBossFight", nil)
-        TimedCBCheck[player:GetGUIDLow()] = nil
+        TimedCBCheckTable[player:GetGUIDLow()] = nil
         RemoveEventById(eventid)
         return
     end
@@ -70,11 +68,11 @@ local function TimedCBCheck(eventid, delay, repeats, player)
     local hasBossInRange = false
     local creatures = player:GetCreaturesInRange(200)
     
-    print(string.format("Checking %d creatures in range for player %s", #creatures, player:GetName()))
+    --print(string.format("Checking %d creatures in range for player %s", #creatures, player:GetName()))
     
     for _, creature in pairs(creatures) do
         if creature:GetRank() > 1 and creature:IsInCombat() then
-            print(string.format("Found boss rank creature %s in combat", creature:GetName()))
+            print(string.format("Combat check debug for "..player:GetName()..": Found boss rank creature %s in combat", creature:GetName()))
             hasBossInRange = true
             break
         end
@@ -86,7 +84,7 @@ local function TimedCBCheck(eventid, delay, repeats, player)
         print("scheduling combat clear")
     end
     
-    if player:GetInstanceId() then
+    if player:GetInstanceId() and not hasBossInRange then
         print(string.format("Player %s is in instance, clearing combat", player:GetName()))
         player:SetData("cbstoptime", os.time())
         player:RunCommand("combatstop")
@@ -94,25 +92,17 @@ local function TimedCBCheck(eventid, delay, repeats, player)
     end
 end
 
-local function EnterCombat(event, player, enemy)
-    print(string.format("Player %s entered combat", player:GetName()))
-    
+local function EnterCombat(event, player, enemy)    
     if enemy then
-        print("enemy is present")
         local creature = enemy:ToCreature()
         if not creature then
             return
         end
-        print("creature OK")
-        
-        print("creature rank: "..creature:GetRank())
         if creature:GetRank() > 1 then
-            print("Enemy is boss")
             player:SetData("isInBossFight", true)    
-            if not TimedCBCheck[player:GetGUIDLow()] then
-                TimedCBCheck[player:GetGUIDLow()] = true
-                player:RegisterEvent(TimedCBCheck, 20000, 0)
-                print("Registered TimedCBCheck event")
+            if not TimedCBCheckTable[player:GetGUIDLow()] then
+                TimedCBCheckTable[player:GetGUIDLow()] = true
+                player:RegisterEvent(TimedCBCheck, 30000, 0)
             end
         end
     end
