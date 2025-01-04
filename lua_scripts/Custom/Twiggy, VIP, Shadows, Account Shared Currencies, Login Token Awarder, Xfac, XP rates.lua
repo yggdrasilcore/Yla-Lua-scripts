@@ -2040,7 +2040,7 @@ local function OnXPRateChanger(event, player, object)
             
             player:GossipClearMenu()
             
-            if player:GetLevel() == 80 then
+            if player:GetLevel() == 81 then
                 player:GossipMenuAddItem(0, "|TINTERFACE/ICONS/achievement_level_80:32:32:-22:0|tNo services available\n \nThere are no experience services available at level 80.\n \n ", 0, 999)
             else
                 player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/spell_fire_burningspeed:32:32:-22:0|tYour experience rate is: x"..currentRate, 0, 999)
