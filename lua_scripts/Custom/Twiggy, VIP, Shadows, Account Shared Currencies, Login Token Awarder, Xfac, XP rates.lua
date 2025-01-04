@@ -406,7 +406,6 @@ local function VIPmenu(player, creature)
 			timeMessage = "Less than a minute left"
 		end
 
-		print("VIPTIME for account " .. player:GetAccountId() .. " is: " .. timeMessage)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_holy_borrowedtime:32:32:-22:0|tVIP status: On (" .. timeMessage .. ")", 0, 2)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_blacksmithing:32:32:-22:0|tVIP repair", 0, 12)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_01:32:32:-22:0|tVIP bank", 0, 13)
@@ -425,17 +424,6 @@ local function VIPmenu(player, creature)
 end
 
 local function mainMenu(player, creature)
-	if not VIPtime[player:GetGUIDLow()] then
-		local name = player:GetName()
-		CharDBQueryAsync("SELECT VIPTIME FROM ACCOUNTS_VIP WHERE ACCOUNT = " .. player:GetAccountId() .. ";", function(result)
-			player = GetPlayerByName(name)
-			if result then
-				VIPtime[player:GetGUIDLow()] = result:GetUInt32(0)
-			else
-				VIPtime[player:GetGUIDLow()] = os.time()
-			end
-		end)
-	end
     player:GossipMenuAddItem(4, "|TInterface/ICONS/ABILITY_DRUID_MANATREE:32:32:-22:0|tI'm Twiggy, your own branch of\n         Yggdrasil! How can I help you?\n ", 0, 1)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tVIP options", 0, 2)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|tRAF menu", 0, 6)
@@ -1938,6 +1926,7 @@ local function TokensOnLogin(event, player)
     end
     local accountId = player:GetAccountId()
 
+    local name = player:GetName()
     local playerGUID = player:GetGUID()
     local communitymessage = false
     local votemessage = false
@@ -1971,6 +1960,37 @@ local function TokensOnLogin(event, player)
     if not (communitymessage or votemessage) then
 		player:SendBroadcastMessage("Please remember to vote on Yggdrasilwow.com. Vote Tokens can be redeemed for XP boosts, transmogs, and vanity items.")
     end
+    
+    CharDBQueryAsync("SELECT VIPTIME FROM ACCOUNTS_VIP WHERE ACCOUNT = " .. player:GetAccountId() .. ";", function(result)
+        player = GetPlayerByName(name)
+        if result and player then
+            VIPtime[player:GetGUIDLow()] = result:GetUInt32(0)
+            
+            local vipTime = VIPtime[player:GetGUIDLow()]
+            local remainingTime = vipTime - os.time()
+
+            if remainingTime >= 86400 then
+                timeMessage = string.format("%d days left", math.ceil(remainingTime / 86400))
+            elseif remainingTime >= 3600 then
+                timeMessage = string.format("%d hours left", math.ceil(remainingTime / 3600))
+            elseif remainingTime >= 60 then
+                timeMessage = string.format("%d minutes left", math.ceil(remainingTime / 60))
+            else
+                timeMessage = "Less than a minute left"
+            end
+
+            player:RegisterEvent(function(eventId, delay, repeats, player)
+                if not player then return end
+                player:SendBroadcastMessage("|cffA64DFF[Yggdrasil VIP]|r: Your subscription is valid for " .. timeMessage .. ".")
+            end, 2000, 1)
+        elseif player then
+            VIPtime[player:GetGUIDLow()] = os.time()
+            player:RegisterEvent(function(eventId, delay, repeats, player)
+                if not player then return end
+                player:SendBroadcastMessage("|cffA64DFF[Yggdrasil VIP]|r: You don't have an active subscription.")
+            end, 2000, 1)
+        end
+    end)
 end
 
 -------------------------------------------------------------------------------------------------------------------------
