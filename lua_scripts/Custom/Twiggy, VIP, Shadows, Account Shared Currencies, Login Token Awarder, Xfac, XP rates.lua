@@ -1346,15 +1346,18 @@ local function Logout(event, player)
     local name = player:GetName()
     
     -- Check if player is set as active anywhere in the table
-    for playerName, bots in pairs(activeBots) do
+    for botMaster, bots in pairs(activeBots) do
         for i, botName in ipairs(bots) do
             if botName == name then
                 -- Found the player as a bot somewhere, remove them from that player's list
-                table.remove(activeBots[playerName], i)
-                player:RemoveFromGroup()
-                if botCount[playerName] then
-                    botCount[playerName] = botCount[playerName] - 1
+                table.remove(activeBots[botMaster], i)
+                if botCount[botMaster] then
+                    botCount[botMaster] = botCount[botMaster] - 1
                 end
+                if GetPlayerByName(botMaster):GetInstanceId() or player:GetInstanceId() then
+                    return -- Don't boot players' bots from group if in RHC as it can bug out the instance group
+                end
+                player:RemoveFromGroup()
                 break
             end
         end
