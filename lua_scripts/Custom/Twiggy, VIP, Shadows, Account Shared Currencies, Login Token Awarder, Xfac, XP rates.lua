@@ -1970,11 +1970,11 @@ local function TokensOnLogin(event, player)
             local remainingTime = vipTime - os.time()
 
             if remainingTime >= 86400 then
-                timeMessage = string.format("%d days left", math.ceil(remainingTime / 86400))
+                timeMessage = string.format("%d days", math.ceil(remainingTime / 86400))
             elseif remainingTime >= 3600 then
-                timeMessage = string.format("%d hours left", math.ceil(remainingTime / 3600))
+                timeMessage = string.format("%d hours", math.ceil(remainingTime / 3600))
             elseif remainingTime >= 60 then
-                timeMessage = string.format("%d minutes left", math.ceil(remainingTime / 60))
+                timeMessage = string.format("%d minutes", math.ceil(remainingTime / 60))
             else
                 timeMessage = "Less than a minute left"
             end
