@@ -1978,10 +1978,14 @@ local function TokensOnLogin(event, player)
             else
                 timeMessage = "Less than a minute left"
             end
-
+            
             player:RegisterEvent(function(eventId, delay, repeats, player)
                 if not player then return end
-                player:SendBroadcastMessage("|cffA64DFF[Yggdrasil VIP]|r: Your subscription is valid for " .. timeMessage .. ".")
+                if timeMessage == "Less than a minute left" then 
+                    player:SendBroadcastMessage("|cffA64DFF[Yggdrasil VIP]|r: You don't have an active subscription.")
+                else
+                    player:SendBroadcastMessage("|cffA64DFF[Yggdrasil VIP]|r: Your subscription is valid for " .. timeMessage .. ".")
+                end
             end, 2000, 1)
         elseif player then
             VIPtime[player:GetGUIDLow()] = os.time()
