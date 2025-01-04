@@ -43,7 +43,25 @@ local function ClearCombat(event, player, command)
 end
 
 local function TimedCBCheck(eventid, delay, repeats, player)
-    if not player or (player and not player:IsInCombat()) then
+    if not player then return end
+    
+    if not player:IsInCombat() then
+        player:SetData("isInBossFight", nil)
+        RemoveEventById(eventid)
+        return
+    end
+    
+    local hasBossInRange = false
+    local creatures = player:GetCreaturesInRange(200)
+    
+    for _, creature in pairs(creatures) do
+        if creature:GetRank() > 2 and creature:IsInCombat() then
+            hasBossInRange = true
+            break
+        end
+    end
+    
+    if not hasBossInRange then
         player:SetData("isInBossFight", nil)
         RemoveEventById(eventid)
     end
@@ -52,13 +70,12 @@ end
 local function EnterCombat(event, player, enemy)
     if enemy then
         creature = enemy:ToCreature()
-        if creature and creature:GetRank() > 1 then
+        if creature and creature:GetRank() > 2 then
             player:SetData("isInBossFight", true)
-            player:RegisterEvent(TimedCBCheck, 30000, 0)
+            player:RegisterEvent(TimedCBCheck, 20000, 0)
         end
     end
 end
-        
 
 RegisterPlayerEvent(33, EnterCombat)
 RegisterPlayerEvent(42, ClearCombat)

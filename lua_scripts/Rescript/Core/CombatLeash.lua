@@ -117,7 +117,7 @@ local function CombatLeash(event, player, enemy)
             if debugprint == 1 then
                 print("[Combat Leash Fix]: No NPCs nearby. Removing event.")
             end
-            player:SetData("combatstoptime", os.time())
+            player:SetData("cbstoptime", os.time())
             player:RunCommand("combatstop")
             player:RemoveEventById(eventId)
         end
@@ -132,7 +132,13 @@ local function OnCommand(event, player, command)
         local gmRank = player:GetGMRank()
         local cbstoptime = player:GetData("cbstoptime")
         local currentTime = os.time()
-        if (gmRank < 2) or not (cbstoptime and math.abs(currentTime - cbstoptime) <= 2) then
+        if gmRank > 2 then
+            if debugprint == 1 then
+                print("Permitting combatstop command for "..player:GetName())
+            end
+            return true
+        end
+        if not (cbstoptime and math.abs(currentTime - cbstoptime) <= 2) then
             if debugprint == 1 then
                 print("Denying combatstop command for "..player:GetName())
             end
