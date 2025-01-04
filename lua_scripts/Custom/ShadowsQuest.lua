@@ -353,7 +353,6 @@ local function OnQuestAbandon(event, player, questId)
 end
 
 RegisterPlayerEvent(3, OnLogin)
-RegisterPlayerEvent(4, OnLogout)
 RegisterPlayerEvent(13, OnLevelUp)
 RegisterPlayerEvent(38, OnQuestAbandon)
 RegisterCreatureEvent(SHADOW_ENTRY, 1, AddLostAura)
