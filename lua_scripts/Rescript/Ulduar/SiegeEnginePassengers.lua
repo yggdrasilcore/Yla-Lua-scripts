@@ -6,20 +6,16 @@ local function OnEnterVehicle(event, packet, player)
     if not player then
         return
     end
-    print(string.format("Player object found: %s", player:GetName()))
     
     local selection = player:GetSelection()
     if not selection then
         return
     end
-    print(string.format("Selection found with GUID: %d", selection:GetGUIDLow()))
     
     -- Check if the selected vehicle is Salvaged Demolisher
     local entryId = selection:GetEntry()
-    print(string.format("Checking entry ID: %d", entryId))
     
     if entryId == 33060 then
-        print("Salvaged Demolisher (33060) confirmed")
         local vehicleGUID = selection:GetGUIDLow()
         local instanceId = player:GetInstanceId()
         local vehicleKey = string.format("%d:%d", instanceId, vehicleGUID)
@@ -49,9 +45,7 @@ local function OnEnterVehicle(event, packet, player)
     end
 end
 
-local function OnLeaveVehicle(event, player, playerPacket)
-    print(string.format("Leave Vehicle event triggered. Event type: %d", event))
-    
+local function OnLeaveVehicle(event, player, playerPacket)    
     local playerName
     local instanceId
     
@@ -59,11 +53,9 @@ local function OnLeaveVehicle(event, player, playerPacket)
     if event == 4 or event == 8 then
         playerName = player:GetName()
         instanceId = player:GetInstanceId()
-        print(string.format("Player logout/disconnect event for: %s in instance %d", playerName, instanceId))
     else
         playerName = playerPacket:GetName()
         instanceId = playerPacket:GetInstanceId()
-        print(string.format("Vehicle leave packet event for: %s in instance %d", playerName, instanceId))
     end
     
     local found = false
