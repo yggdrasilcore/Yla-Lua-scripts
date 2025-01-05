@@ -1928,6 +1928,7 @@ local function TokensOnLogin(event, player)
 
     local name = player:GetName()
     local playerGUID = player:GetGUID()
+    local GUIDLow = player:GetGUIDLow()
     local communitymessage = false
     local votemessage = false
     
@@ -1962,9 +1963,9 @@ local function TokensOnLogin(event, player)
     end
     
     CharDBQueryAsync("SELECT VIPTIME FROM ACCOUNTS_VIP WHERE ACCOUNT = " .. player:GetAccountId() .. ";", function(result)
-        player = GetPlayerByName(name)
-        if result and player then
-            VIPtime[player:GetGUIDLow()] = result:GetUInt32(0)
+        local player = GetPlayerByName(name)
+        if result then
+            VIPtime[GUIDLow] = result:GetUInt32(0)
             
             local vipTime = VIPtime[player:GetGUIDLow()]
             local remainingTime = vipTime - os.time()
@@ -1987,8 +1988,9 @@ local function TokensOnLogin(event, player)
                     player:SendBroadcastMessage("|cffA64DFF[Yggdrasil VIP]|r: Your subscription is valid for " .. timeMessage .. ".")
                 end
             end, 2000, 1)
-        elseif player then
-            VIPtime[player:GetGUIDLow()] = os.time()
+        else
+            VIPtime[GUIDLow] = os.time()
+            if not player then return end
             player:RegisterEvent(function(eventId, delay, repeats, player)
                 if not player then return end
                 player:SendBroadcastMessage("|cffA64DFF[Yggdrasil VIP]|r: You don't have an active subscription.")
