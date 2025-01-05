@@ -4,6 +4,8 @@ local function OnPacketReceive(event, packet, player)
     end
     local target = player:GetSelection():ToCreature()
     if target then
+        if target:GetOwner() then owner = target:GetOwner():ToPlayer() end
+        if owner then return end
         local aura = player:AddAura(35340, target)
         if aura then
             aura:SetDuration(20000)
