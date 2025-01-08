@@ -391,8 +391,24 @@ local function ShowCategoryContents(player, creature, category, page)
     player:SetData("CurrentPage", page)
 end
 
+local function CheckVIP()
+    for _, player in pairs(GetPlayersInWorld()) do
+        local name = player:GetName()
+        local GUIDLow = player:GetGUIDLow()
+        CharDBQueryAsync("SELECT VIPTIME FROM ACCOUNTS_VIP WHERE ACCOUNT = " .. player:GetAccountId() .. ";", function(result)
+            local player = GetPlayerByName(name)
+            if result then
+                VIPtime[GUIDLow] = result:GetUInt32(0)
+                print("VIP found: "..player:GetName()..".")
+            else
+                VIPtime[GUIDLow] = os.time()
+            end
+        end)
+    end
+end
+
 local function VIPmenu(player, creature)
-	if VIPtime[player:GetGUIDLow()] > os.time() then
+	if VIPtime[player:GetGUIDLow()] and VIPtime[player:GetGUIDLow()] > os.time() then
 		local vipTime = VIPtime[player:GetGUIDLow()]
 		local remainingTime = vipTime - os.time()
 
@@ -2193,6 +2209,10 @@ local function HandleVIPCommands(event, player, command)
 			player = GetPlayerByName(name)
 			if result then
 				VIPtime[player:GetGUIDLow()] = result:GetUInt32(0)
+                
+                if not VIPtime[player:GetGUIDLow()] or (VIPtime[player:GetGUIDLow()] and VIPtime[player:GetGUIDLow()] < os.time()) then
+                    return false
+                end
 
                 local cmd = command:lower()
                 
@@ -2202,7 +2222,23 @@ local function HandleVIPCommands(event, player, command)
                     return false
                     
                 elseif cmd == "vip mail" then
-                    player:SendShowMailBox(player:GetGUID())
+                    local guid = player:GetGUIDLow()
+                    local currentTime = os.time()
+
+                    if not mailboxtime[guid] then 
+                        mailboxtime[guid] = 0
+                    end
+                    
+                    if mailboxtime[guid] <= currentTime then
+                        player:CastSpell(player, 54710, true)
+                        mailboxtime[guid] = currentTime + 900
+                    else
+                        local remainingTime = mailboxtime[guid] - currentTime
+                        local minutes = math.floor(remainingTime / 60)
+                        local seconds = remainingTime % 60
+                        
+                        player:SendAreaTriggerMessage(string.format("Your VIP mailbox is on cooldown for %d minutes and %d seconds.", minutes, seconds))
+                    end
                     return false
                     
                 elseif cmd == "vip bank" then
@@ -2234,7 +2270,24 @@ local function HandleVIPCommands(event, player, command)
         return false
         
     elseif cmd == "vip mail" then
-        player:SendShowMailBox(player:GetGUID())
+
+        local guid = player:GetGUIDLow()
+        local currentTime = os.time()
+
+        if not mailboxtime[guid] then 
+            mailboxtime[guid] = 0
+        end
+        
+        if mailboxtime[guid] <= currentTime then
+            player:CastSpell(player, 54710, true)
+            mailboxtime[guid] = currentTime + 900
+        else
+            local remainingTime = mailboxtime[guid] - currentTime
+            local minutes = math.floor(remainingTime / 60)
+            local seconds = remainingTime % 60
+            
+            player:SendAreaTriggerMessage(string.format("Your VIP mailbox is on cooldown for %d minutes and %d seconds.", minutes, seconds))
+        end
         return false
         
     elseif cmd == "vip bank" then
@@ -2248,6 +2301,8 @@ local function HandleVIPCommands(event, player, command)
 end
 
 RegisterPlayerEvent(42, HandleVIPCommands)
+CheckVIP() -- Sets players with VIP as active VIP on load/reload ELUNA
+
 ------------------------------------------------------------------------------------------------
 -- VIP commands end
 ------------------------------------------------------------------------------------------------
