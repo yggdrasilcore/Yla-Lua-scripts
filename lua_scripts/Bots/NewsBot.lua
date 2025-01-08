@@ -14,7 +14,7 @@ local function getCurrentDate()
     return string.format("%04d-%02d-%02d", year, month, day)
 end
 
--- Function to sanitize strings for SQL insertion
+-- Fix the escape sequences
 local function sanitizeString(str)
     if type(str) ~= "string" then
         return tostring(str)
@@ -26,18 +26,18 @@ local function sanitizeString(str)
     str = str:gsub("[\xF0-\xF7][\x80-\xBF][\x80-\xBF][\x80-\xBF]", "")
     
     return str:gsub("'", "''")
-              :gsub("\\", "\\\\")
-              :gsub("\n", "\\n")
-              :gsub("\r", "\\r")
-              :gsub("\000", "\\0")
+             :gsub("\\", "\\\\")
+             :gsub("\n", "\\n")
+             :gsub("\r", "\\r")
+             :gsub("\000", "\\0")
 end
 
--- Function to parse JSON response to formatted HTML
+-- Fix the JSON parsing
 local function parseJsonToHtml(json)
     local html = ""
     for message in json:gmatch("{.-}") do
-        local content = message:match('"content":"(.-)"') or ""
-        content = content:gsub("\\\"", "\""):gsub("\\n", "\n")
+        local content = message:match('"content":"(.-)[^\\]"') or ""
+        content = content:gsub('\\"', '"'):gsub("\\n", "\n")
         
         -- Remove emoji sequences
         content = content:gsub("\\u%x%x%x%x\\u%x%x%x%x", "")
