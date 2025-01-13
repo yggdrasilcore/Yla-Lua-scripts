@@ -1980,6 +1980,7 @@ local function TokensOnLogin(event, player)
     
     CharDBQueryAsync("SELECT VIPTIME FROM ACCOUNTS_VIP WHERE ACCOUNT = " .. player:GetAccountId() .. ";", function(result)
         local player = GetPlayerByName(name)
+        if not player then return end
         if result then
             VIPtime[GUIDLow] = result:GetUInt32(0)
             
