@@ -1980,11 +1980,10 @@ local function TokensOnLogin(event, player)
     
     CharDBQueryAsync("SELECT VIPTIME FROM ACCOUNTS_VIP WHERE ACCOUNT = " .. player:GetAccountId() .. ";", function(result)
         local player = GetPlayerByName(name)
-        if not player then return end
         if result then
             VIPtime[GUIDLow] = result:GetUInt32(0)
             
-            local vipTime = VIPtime[player:GetGUIDLow()]
+            local vipTime = VIPtime[GUIDLow]
             local remainingTime = vipTime - os.time()
 
             if remainingTime >= 86400 then
@@ -1997,6 +1996,7 @@ local function TokensOnLogin(event, player)
                 timeMessage = "Less than a minute left"
             end
             
+            if not player then return end
             player:RegisterEvent(function(eventId, delay, repeats, player)
                 if not player then return end
                 if timeMessage == "Less than a minute left" then 
