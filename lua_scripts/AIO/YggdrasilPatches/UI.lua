@@ -78,9 +78,19 @@ local function ModifyDeposit()
     end
 end
 
+local function ModifyDuration()
+    if DurationDropDownText and DurationDropDownText:GetText() == "12 Hours" then DurationDropDownText:SetText("42 Hours") end
+    if DurationDropDownText and DurationDropDownText:GetText() == "24 Hours" then DurationDropDownText:SetText("84 Hours") end
+    if DurationDropDownText and DurationDropDownText:GetText() == "48 Hours" then DurationDropDownText:SetText("7 Days") end
+    if DropDownList1Button1 and DropDownList1Button1:GetText() == "12 Hours" then DropDownList1Button1:SetText("42 Hours") end
+    if DropDownList1Button2 and DropDownList1Button2:GetText() == "24 Hours" then DropDownList1Button2:SetText("84 Hours") end
+    if DropDownList1Button3 and DropDownList1Button3:GetText() == "48 Hours" then DropDownList1Button3:SetText("7 Days") end
+end
+
 local function MonitorDepositChanges()
     if AuctionsDepositMoneyFrame and not isOnUpdateActive then
         AuctionsDepositMoneyFrame:SetScript("OnUpdate", ModifyDeposit)
+        DurationDropDown:SetScript("OnUpdate", ModifyDuration)
         isOnUpdateActive = true
     end
 end
@@ -88,6 +98,7 @@ end
 local function StopMonitoringDepositChanges()
     if AuctionsDepositMoneyFrame and isOnUpdateActive then
         AuctionsDepositMoneyFrame:SetScript("OnUpdate", nil)
+        DurationDropDown:SetScript("OnUpdate", nil)
         isOnUpdateActive = false
     end
 end
