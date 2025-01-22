@@ -3,10 +3,14 @@ local HOME_POS = {x = 6409, y = 422, z = 511.348, o = 0.62}
 local eventActive3081 = false
 
 local function HandleQuestAccept(event, packet, player)   
-    -- Read packet data (guid, questId, unk1)
     local guid = packet:ReadGUID()
     local questId = packet:ReadULong()
     local unk1 = packet:ReadULong()
+    
+    if questId == 13263 or questId == 13389 then
+        player:CastSpell(player, 76010, true)
+        player:NearTeleport(5754, 2055, 504, 5.68)
+    end
 
     if questId == 10406 then
         player:RegisterEvent(function(eventId, delay, repeats, player)
