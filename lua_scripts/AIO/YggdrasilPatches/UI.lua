@@ -1,4 +1,5 @@
 local AIO = AIO or require("AIO")
+
 if AIO.AddAddon() then
    return
 end
@@ -326,151 +327,167 @@ function ChatEdit_InsertLink(text, ...)
    return oldChatEdit_InsertLink(text, ...)
 end
 
-function UIHandlers.Initialize(player)
-    CrossFactionMenu.Macros.onLoad();
-    local f = CreateFrame("Frame")
-    f:RegisterEvent("PLAYER_TARGET_CHANGED")
-    f:RegisterEvent("RAID_MEMBERS_CHANGED")
-    f:RegisterEvent("PARTY_MEMBERS_CHANGED")
-    f:SetScript("OnEvent", function(self, event, unit)
-        if event == "PLAYER_TARGET_CHANGED" then
-            CrossFactionMenu.Macros.updateMenu();
-        else
-            local targetName = UnitName("target")
-            if not targetName then return end
-            
-            -- Create timer frame
-            local timerFrame = CreateFrame("Frame")
-            timerFrame.elapsed = 0
-            timerFrame:SetScript("OnUpdate", function(self, elapsed)
-                self.elapsed = self.elapsed + elapsed
-                if self.elapsed >= 0.05 then -- 50ms
-                    local isInGroup = UnitInParty("target") or UnitInRaid("target")
-                    local playerFaction = UnitFactionGroup("player")
-                    local targetFaction = UnitFactionGroup("target")
-                    
-                    if playerFaction ~= targetFaction then
-                        if isInGroup then
-                            for _, menu in pairs(UnitPopupMenus) do
-                                for i = #menu, 1, -1 do
-                                    if string.find(menu[i], "CrossFactionMenu_") then
-                                        table.remove(menu, i)
-                                    end
+-- Function that handles the AFK toggle event
+local function OnPlayerAFKChanged(self, event, arg1)
+    if arg1 == "player" then
+        if UnitIsAFK("player") then
+            --Add anti AFK functionality here
+        end
+    end
+end
+
+
+---------------- Event registrations
+
+-- Register event for AFK status change
+local z = CreateFrame("Frame")
+z:RegisterEvent("PLAYER_FLAGS_CHANGED")
+z:SetScript("OnEvent", OnPlayerAFKChanged)
+
+-- Crossfaction Menus
+CrossFactionMenu.Macros.onLoad();
+local f = CreateFrame("Frame")
+f:RegisterEvent("RAID_MEMBERS_CHANGED")
+f:RegisterEvent("PLAYER_TARGET_CHANGED")
+f:RegisterEvent("PARTY_MEMBERS_CHANGED")
+f:SetScript("OnEvent", function(self, event, unit)
+    if event == "PLAYER_TARGET_CHANGED" then
+        CrossFactionMenu.Macros.updateMenu();
+    else
+        local targetName = UnitName("target")
+        if not targetName then return end
+        
+        -- Create timer frame
+        local timerFrame = CreateFrame("Frame")
+        timerFrame.elapsed = 0
+        timerFrame:SetScript("OnUpdate", function(self, elapsed)
+            self.elapsed = self.elapsed + elapsed
+            if self.elapsed >= 0.05 then -- 50ms
+                local isInGroup = UnitInParty("target") or UnitInRaid("target")
+                local playerFaction = UnitFactionGroup("player")
+                local targetFaction = UnitFactionGroup("target")
+                
+                if playerFaction ~= targetFaction then
+                    if isInGroup then
+                        for _, menu in pairs(UnitPopupMenus) do
+                            for i = #menu, 1, -1 do
+                                if string.find(menu[i], "CrossFactionMenu_") then
+                                    table.remove(menu, i)
                                 end
                             end
-                        else
-                            CrossFactionMenu.Macros.updateMenu()
                         end
                     else
                         CrossFactionMenu.Macros.updateMenu()
                     end
-                    self:SetScript("OnUpdate", nil) -- Clean up timer
+                else
+                    CrossFactionMenu.Macros.updateMenu()
                 end
-            end)
-        end
-    end)
-    
-    -- AH Price corrections
-    local depositframe = CreateFrame("Frame")
-    depositframe:RegisterEvent("AUCTION_HOUSE_SHOW")
-    depositframe:RegisterEvent("AUCTION_HOUSE_CLOSED")
-    depositframe:SetScript("OnEvent", function(self, event, ...)
-        if event == "AUCTION_HOUSE_SHOW" then
-            if AuctionsDepositMoneyFrame then
-                AuctionsDepositMoneyFrame:HookScript("OnShow", MonitorDepositChanges)
+                self:SetScript("OnUpdate", nil) -- Clean up timer
             end
-        elseif event == "AUCTION_HOUSE_CLOSED" then
-            StopMonitoringDepositChanges()
+        end)
+    end
+end)
+
+-- AH Price corrections
+local depositframe = CreateFrame("Frame")
+depositframe:RegisterEvent("AUCTION_HOUSE_SHOW")
+depositframe:RegisterEvent("AUCTION_HOUSE_CLOSED")
+depositframe:SetScript("OnEvent", function(self, event, ...)
+    if event == "AUCTION_HOUSE_SHOW" then
+        if AuctionsDepositMoneyFrame then
+            AuctionsDepositMoneyFrame:HookScript("OnShow", MonitorDepositChanges)
         end
-    end)
+    elseif event == "AUCTION_HOUSE_CLOSED" then
+        StopMonitoringDepositChanges()
+    end
+end)
 
-    ------------------------------------------------------------------- 
-    -- TWIGGY TOOLTIP 
-    -------------------------------------------------------------------
-    
-    GameTooltip:HookScript("OnTooltipSetSpell", ModifySpellTooltip)
+------------------------------------------------------------------- 
+-- TWIGGY TOOLTIP 
+-------------------------------------------------------------------
 
-    -- Function to modify the tooltip contents
-    local function ModifyCustomStoreTooltip(tooltip)
-        for i = 1, tooltip:NumLines() do
-            local line = _G[tooltip:GetName() .. "TextLeft" .. i]
-            if line and line:GetText() then
-                if line:GetText():find("Chromatic Mount") then
-                    ApplyChromaticMountTooltip(tooltip)
-                    return
-                end
-                if line:GetText():find("Old Crappy McWeakSauce") then
-                    ApplyWeaksauceTooltip(tooltip)
-                    return
-                end
-                if line:GetText():find("Teleport Monastery") then
-                    ApplyMonasteryTPTooltip(tooltip)
-                    return
-                end
-                if line:GetText():find("Worgen Form") then
-                    ApplyWorgenFormTooltip(tooltip)
-                    return
-                end
-                if line:GetText():find("Frog Form") then
-                    ApplyFrogFormTooltip(tooltip)
-                    return
-                end
+GameTooltip:HookScript("OnTooltipSetSpell", ModifySpellTooltip)
+
+-- Function to modify the tooltip contents
+local function ModifyCustomStoreTooltip(tooltip)
+    for i = 1, tooltip:NumLines() do
+        local line = _G[tooltip:GetName() .. "TextLeft" .. i]
+        if line and line:GetText() then
+            if line:GetText():find("Chromatic Mount") then
+                ApplyChromaticMountTooltip(tooltip)
+                return
+            end
+            if line:GetText():find("Old Crappy McWeakSauce") then
+                ApplyWeaksauceTooltip(tooltip)
+                return
+            end
+            if line:GetText():find("Teleport Monastery") then
+                ApplyMonasteryTPTooltip(tooltip)
+                return
+            end
+            if line:GetText():find("Worgen Form") then
+                ApplyWorgenFormTooltip(tooltip)
+                return
+            end
+            if line:GetText():find("Frog Form") then
+                ApplyFrogFormTooltip(tooltip)
+                return
             end
         end
     end
-
-    -- Override the SetHyperlink method for CustomStoreTooltip
-    local originalSetHyperlink = CustomStoreTooltip.SetHyperlink
-    CustomStoreTooltip.SetHyperlink = function(self, link, ...)
-        originalSetHyperlink(self, link, ...)
-        ModifyCustomStoreTooltip(self)
-    end
-
-    -- Hook clicked links OK
-    local oldSetItemRef = SetItemRef
-    function SetItemRef(link, text, button, chatFrame)
-        oldSetItemRef(link, text, button, chatFrame)
-        if link:find("spell:40405") then
-            ApplyTwiggyTooltip(ItemRefTooltip)
-        end
-        if link:find("spell:24576") then
-            ApplyChromaticMountTooltip(ItemRefTooltip)
-        end
-        if link:find("spell:32420") then
-            ApplyWeaksauceTooltip(ItemRefTooltip)
-        end
-        if link:find("spell:427%f[%d]") then
-            ApplyMonasteryTPTooltip(ItemRefTooltip)
-        end
-        if link:find("spell:32819") then
-            ApplyWorgenFormTooltip(ItemRefTooltip)
-        end
-        if link:find("spell:3329%f[%d]") then
-            ApplyFrogFormTooltip(ItemRefTooltip)
-        end
-    end
-   
-    local function filterFunc(_, _, msg, ...)
-        if msg and msg:find("spell:40405") then
-            local newMsg = msg:gsub("Lucky", "Twiggy")
-            return false, newMsg, ...
-        end
-        return false
-    end
-
-    local oldSendChatMessage = SendChatMessage
-    function SendChatMessage(msg, ...)
-        if msg and msg:find("spell:40405") then
-            msg = msg:gsub("Lucky", "Twiggy")
-        end
-        oldSendChatMessage(msg, ...)
-    end
-
-    -- Register all chat filters
-    ChatFrame_AddMessageEventFilter("CHAT_MSG_SAY", filterFunc)
-    ChatFrame_AddMessageEventFilter("CHAT_MSG_YELL", filterFunc)
-    ChatFrame_AddMessageEventFilter("CHAT_MSG_CHANNEL", filterFunc)
-    ChatFrame_AddMessageEventFilter("CHAT_MSG_WHISPER", filterFunc)
-    ChatFrame_AddMessageEventFilter("CHAT_MSG_PARTY", filterFunc)
-    ChatFrame_AddMessageEventFilter("CHAT_MSG_RAID", filterFunc)
 end
+
+-- Override the SetHyperlink method for CustomStoreTooltip
+local originalSetHyperlink = CustomStoreTooltip.SetHyperlink
+CustomStoreTooltip.SetHyperlink = function(self, link, ...)
+    originalSetHyperlink(self, link, ...)
+    ModifyCustomStoreTooltip(self)
+end
+
+-- Hook clicked links OK
+local oldSetItemRef = SetItemRef
+function SetItemRef(link, text, button, chatFrame)
+    oldSetItemRef(link, text, button, chatFrame)
+    if link:find("spell:40405") then
+        ApplyTwiggyTooltip(ItemRefTooltip)
+    end
+    if link:find("spell:24576") then
+        ApplyChromaticMountTooltip(ItemRefTooltip)
+    end
+    if link:find("spell:32420") then
+        ApplyWeaksauceTooltip(ItemRefTooltip)
+    end
+    if link:find("spell:427%f[%d]") then
+        ApplyMonasteryTPTooltip(ItemRefTooltip)
+    end
+    if link:find("spell:32819") then
+        ApplyWorgenFormTooltip(ItemRefTooltip)
+    end
+    if link:find("spell:3329%f[%d]") then
+        ApplyFrogFormTooltip(ItemRefTooltip)
+    end
+end
+
+local function filterFunc(_, _, msg, ...)
+    if msg and msg:find("spell:40405") then
+        local newMsg = msg:gsub("Lucky", "Twiggy")
+        return false, newMsg, ...
+    end
+    return false
+end
+
+local oldSendChatMessage = SendChatMessage
+function SendChatMessage(msg, ...)
+    if msg and msg:find("spell:40405") then
+        msg = msg:gsub("Lucky", "Twiggy")
+    end
+    oldSendChatMessage(msg, ...)
+end
+
+-- Register all chat filters
+ChatFrame_AddMessageEventFilter("CHAT_MSG_SAY", filterFunc)
+ChatFrame_AddMessageEventFilter("CHAT_MSG_YELL", filterFunc)
+ChatFrame_AddMessageEventFilter("CHAT_MSG_CHANNEL", filterFunc)
+ChatFrame_AddMessageEventFilter("CHAT_MSG_WHISPER", filterFunc)
+ChatFrame_AddMessageEventFilter("CHAT_MSG_PARTY", filterFunc)
+ChatFrame_AddMessageEventFilter("CHAT_MSG_RAID", filterFunc)
