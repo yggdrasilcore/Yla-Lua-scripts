@@ -771,9 +771,9 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
 			player:SendAreaTriggerMessage(string.format("Your VIP mailbox is on cooldown for %d minutes and %d seconds.", minutes, seconds))
 		end
     elseif intId == 15 then
-        player:SendTaxiMenu(creature)
+        player:SendTaxiMenu(creature) -- Disabled, doesn't work
     elseif intId == 16 then
-        player:SendTrainerList(creature)
+        player:SendTrainerList(creature) -- Disabled, doesn't work
     elseif intId == 17 then
 		
 		local cooldownEnd = LoadVIPVendorCooldown(player)
@@ -816,10 +816,6 @@ end
 
 local function OnPlayerLogin(event, player)
     if player:HasItem(32498) or player:HasSpell(40405) then
-		if player:HasItem(37430) then
-			player:RemoveItem(37430, 1)
-			player:SendBroadcastMessage("Twiggy has removed your mall stone to provide this service for you.", 0)
-		end
         return
     else
         player:AddItem(32498, 1)
