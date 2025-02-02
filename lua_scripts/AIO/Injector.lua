@@ -151,7 +151,7 @@ local pushingName = {}
 local reloadGraceTimer = 60 -- No. of secs to allow for long/slow reloads
     
 local function PushInitModule(eventid, delay, repeats)
-    local player = GetPlayerByName(pushingName)
+    local player = GetPlayerByName(pushingName[eventid])
     if not player then 
 		RemoveEventById(eventid)
         pushingName[eventid] = nil
