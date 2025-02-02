@@ -2028,6 +2028,7 @@ local function TokensOnLogin(event, player)
     
     CharDBQueryAsync("SELECT VIPTIME FROM ACCOUNTS_VIP WHERE ACCOUNT = " .. player:GetAccountId() .. ";", function(result)
         local player = GetPlayerByName(name)
+        if not player then return end
         if result then
             VIPtime[GUIDLow] = result:GetUInt32(0)
             
@@ -2044,9 +2045,7 @@ local function TokensOnLogin(event, player)
                 timeMessage = "Less than a minute left"
             end
             
-            if not player then return end
             player:RegisterEvent(function(eventId, delay, repeats, player)
-                if not player then return end
                 if timeMessage == "Less than a minute left" then 
                     player:SendBroadcastMessage("|cffA64DFF[Yggdrasil VIP]|r: You don't have an active subscription.")
                 else
@@ -2055,9 +2054,7 @@ local function TokensOnLogin(event, player)
             end, 2000, 1)
         else
             VIPtime[GUIDLow] = os.time()
-            if not player then return end
             player:RegisterEvent(function(eventId, delay, repeats, player)
-                if not player then return end
                 player:SendBroadcastMessage("|cffA64DFF[Yggdrasil VIP]|r: You don't have an active subscription.")
             end, 2000, 1)
         end
