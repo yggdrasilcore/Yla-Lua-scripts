@@ -1,7 +1,4 @@
 local NPC_ID = 190098
-local VOTE_TOKEN_ID = 377420
-local MORPH_ITEM = 17890
-local PRICE = 50
 
 local function OnGossipHello(event, player, object)
 	if player:GetClass() == 11 then
