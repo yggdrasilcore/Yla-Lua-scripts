@@ -88,7 +88,7 @@ local function OnGossipHello(event, player, creature)
         player:GossipMenuAddItem(4, "Nevermind", 0, MENU_OFFSET + 2)
         player:GossipSendMenu(1, player, 60)
     else
-        player:SendBroadcastMessage("I only cater to Warlocks.")
+        creature:SendUnitWhisper("I only cater to Warlocks.", 0, player)
     end
 end
 

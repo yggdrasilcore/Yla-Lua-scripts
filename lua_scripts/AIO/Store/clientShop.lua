@@ -876,18 +876,30 @@ for i, tab in ipairs(tabsInfo) do
 end
 
 local f = CreateFrame("Frame")
-f:SetScript("OnEvent", OnEvent)
 f:RegisterEvent("CHAT_MSG_ADDON")
 
-SLASH_CUSTOMSTORE1 = "/store"  -- The prefix should match the SlashCmdList key
-SlashCmdList["CUSTOMSTORE"] = function()  -- Keys in SlashCmdList should be uppercase
+local function OnEvent(self, event, prefix, message, channel, sender)
+    if event == "CHAT_MSG_ADDON" and prefix == "CustomShop" and message == "openstore" then
+        mainFrame:Show()
+        categoryHeader:Hide()
+        
+        AIO.Msg():Add("CustomShop", "GetCategories"):Send()
+        if tabsInfo[1] then
+            local firstButton = _G["categoryListButton" .. tabsInfo[1].id]
+        end
+    end
+end
+
+f:SetScript("OnEvent", OnEvent)
+
+SLASH_CUSTOMSTORE1 = "/store"
+SlashCmdList["CUSTOMSTORE"] = function()
     if mainFrame:IsShown() then
         mainFrame:Hide()
     else
         mainFrame:Show()
         categoryHeader:Hide()
         AIO.Msg():Add("CustomShop", "GetCategories"):Send()
-        -- Highlight the first tab button when the frame is shown
         if tabsInfo[1] then
             local firstButton = _G["categoryListButton" .. tabsInfo[1].id]
         end
