@@ -107,7 +107,7 @@ function OnGossipSelect(event, player, creature, sender, intid, code)
        
    elseif(intid == 10) then -- Flight/riding
        player:GossipClearMenu()
-       player:GossipMenuAddItem(0, "You can both purchase the flight paths of the old world and train your riding skill at the medium floor of the inn atop the hill.", 0, 10)
+       player:GossipMenuAddItem(0, "You can both purchase the flight paths of the old world and train your riding skill at the medium floor of the inn atop the hill. If you wish to fly in the old world, visit the tent by the westernmost precipice to learn more.", 0, 10)
        player:GossipMenuAddItem(0, "Go back", 0, 1)
        player:GossipSendMenu(12, creature)
        
