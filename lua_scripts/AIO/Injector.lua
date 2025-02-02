@@ -146,35 +146,49 @@ local function SendAddonInjector(player)
 	SendPayloadInform(player)
 end
 
-local function PushInitModule(eventid, delay, repeats, player)
+local pushingModule = {}
+local pushingName = {}
+local reloadGraceTimer = 60 -- No. of secs to allow for long/slow reloads
+    
+local function PushInitModule(eventid, delay, repeats)
+    local player = GetPlayerByName(pushingName)
+    if not player then 
+		RemoveEventById(eventid)
+        pushingName[eventid] = nil
+        return
+    end
 	if(player:GetData("ModuleInit") == true) then
-		player:RemoveEventById(eventid)
+		RemoveEventById(eventid)
 		SendAddonInjector(player)
-		return;
+        pushingModule[player:GetGUIDLow()] = nil
+        pushingName[eventid] = nil
+		return
 	end
 
 	player:SendAddonMessage("ws", "SendAddonMessage('wc', 'loaded', 'WHISPER', UnitName('player'));", 7, player) -- No debug
-	--player:SendAddonMessage("ws", "SendAddonMessage('wc', 'loaded', 'WHISPER', UnitName('player')); print('[WardenLoader]: Injection successful.')", 7, player)
 end
 
 local function AwaitInjection(event, player)
 	player:QueueWardenPayload()
 	player:SetData("ModuleInit", false)
-	player:RegisterEvent(PushInitModule, 1000, 0)
+    pushingModule[player:GetGUIDLow()] = true
+	local pushId = CreateLuaEvent(PushInitModule, 1000, 0)
+    pushingName[pushId] = player:GetName()
 end
 
-local reloadGraceTimer = 60 -- No. of secs to allow for long/slow reloads
 
 local function SetReloadFlag(event, packet, player)
-	player:SetData("JustReloaded", os.time() + reloadGraceTimer) -- Sets JustReloaded flag on cancel logout, which fires immediately before a reload. Some risk for false positives but it's likely immaterial
+	player:SetData("JustReloaded", os.time() + reloadGraceTimer) -- Sets JustReloaded flag on cancel logout, which fires immediately before a reload
 end
 
 local function AwaitPacketInjection(event, packet, player)
-    if player:GetData("JustReloaded") and player:GetData("JustReloaded") > os.time() then -- Inject only 
+    if player:GetData("JustReloaded") and player:GetData("JustReloaded") > os.time() and not pushingModule[player:GetGUIDLow()] then -- Inject only if both cancel logout AND set action bars called close to each other, and not currently injecting to player 
         player:QueueWardenPayload()
         player:SetData("ModuleInit", false)
         player:SetData("JustReloaded", nil) -- Remove the reload flag we just set
-        player:RegisterEvent(PushInitModule, 1000, 0)
+        pushingModule[player:GetGUIDLow()] = true
+        local pushId = CreateLuaEvent(PushInitModule, 1000, 0)
+        pushingName[pushId] = player:GetName()
     end
 end
 
