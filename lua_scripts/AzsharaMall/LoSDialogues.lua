@@ -268,7 +268,7 @@ end
 local function Scribe(event, creature, who)
     if who:ToPlayer() and creature:GetDistance(who) < 10 and creature:IsWithinLoS(who) then
         if not lastGreeting[creature:GetGUIDLow()] or (lastGreeting[creature:GetGUIDLow()] and (lastGreeting[creature:GetGUIDLow()] < os.time())) then
-            lastGreeting[creature:GetGUIDLow()] = os.time() + 45
+            lastGreeting[creature:GetGUIDLow()] = os.time() + 90
             creature:SendUnitSay("Did you know papyrus is made of wood, "..who:GetName().."? I wonder why I became a scribe...", 0)
             creature:PerformEmote(1)
         end
@@ -278,7 +278,7 @@ end
 local function Herb(event, creature, who)
     if who:ToPlayer() and creature:GetDistance(who) < 10 and creature:IsWithinLoS(who) then
         if not lastGreeting[creature:GetGUIDLow()] or (lastGreeting[creature:GetGUIDLow()] and (lastGreeting[creature:GetGUIDLow()] < os.time())) then
-            lastGreeting[creature:GetGUIDLow()] = os.time() + 45
+            lastGreeting[creature:GetGUIDLow()] = os.time() + 90
             creature:SendUnitSay("I became an herbalist to stay in touch with my roots.", 0)
             creature:PerformEmote(1)
             creature:RegisterEvent(function(e, d, r, c)
