@@ -44,8 +44,23 @@ local function onServerUpdate(event, diff)
 end
 
 local function onStartup(event)
-    SendToDiscord("ELUNA server status checker loaded! If you didn't reload ELUNA, this means the worldserver just crashed or restarted.")
+    local query = CharDBQuery("SELECT value FROM worldstates WHERE entry = 99999")
+    if query and query:GetUInt32(0) then
+        CharDBExecute("DELETE FROM worldstates WHERE entry = 99999")
+        return
+    end
+    SendToDiscord("Unscheduled worldserver restart detected! This is most likely a crash or a compose recreate without a gracefully shutdown!")
 end
 
+local function onShutdown(event)
+    if event == 11 then -- Start shutdown
+        CharDBExecute("INSERT INTO worldstates (entry, value, comment) VALUES (99999, 1, 'Worldserver gracefully shut down')")
+    elseif event == 12 then -- Cancel shutdown
+        CharDBExecute("DELETE FROM worldstates WHERE entry = 99999")
+    end
+end
+
+RegisterServerEvent(11, onShutdown)
 RegisterServerEvent(13, onServerUpdate)
+RegisterServerEvent(12, onShutdown)
 RegisterServerEvent(14, onStartup)
