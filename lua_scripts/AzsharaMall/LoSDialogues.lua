@@ -265,6 +265,38 @@ local function EdgeWarning(event, creature, who)
     end
 end
 
+local function Scribe(event, creature, who)
+    if who:ToPlayer() and creature:GetDistance(who) < 10 and creature:IsWithinLoS(who) then
+        if not lastGreeting[creature:GetGUIDLow()] or (lastGreeting[creature:GetGUIDLow()] and (lastGreeting[creature:GetGUIDLow()] < os.time())) then
+            lastGreeting[creature:GetGUIDLow()] = os.time() + 45
+            creature:SendUnitSay("Did you know papyrus is made of wood, "..who:GetName().."? I wonder why I became a scribe...", 0)
+            creature:PerformEmote(1)
+        end
+    end
+end
+
+local function Herb(event, creature, who)
+    if who:ToPlayer() and creature:GetDistance(who) < 10 and creature:IsWithinLoS(who) then
+        if not lastGreeting[creature:GetGUIDLow()] or (lastGreeting[creature:GetGUIDLow()] and (lastGreeting[creature:GetGUIDLow()] < os.time())) then
+            lastGreeting[creature:GetGUIDLow()] = os.time() + 45
+            creature:SendUnitSay("I became an herbalist to stay in touch with my roots.", 0)
+            creature:PerformEmote(1)
+            creature:RegisterEvent(function(e, d, r, c)
+                local alchemist = c:GetNearestCreature(50, 95001)
+                if alchemist then
+                    alchemist:SendUnitSay("You keep making the same joke! You are the worst coworker I've ever had!", 0)
+                    alchemist:PerformEmote(1)
+                end
+                c:RegisterEvent(function(e, d, r, c)
+                    c:SendUnitSay("And you're the meanest coworker I've ever had...", 0)
+                    c:SendUnitEmote(c:GetName().." cries.")
+                    c:PerformEmote(18)
+                end, 20000)
+            end, 10000)
+        end
+    end
+end
+
 local function Feathers(event, creature, who, id)
     -- wp of citizen
     if event == 6 then
@@ -294,9 +326,11 @@ local function Feathers(event, creature, who, id)
                 creature:SendUnitEmote("Citizen of Yggdrasil mounts the gryphon.", 0) 
             end, 3000)
             creature:RegisterEvent(function(e, d, r, creature)
+                local mount = creature:GetNearestCreature(50, 541)
+                if mount then mount:SetRespawnDelay(30) mount:DespawnOrUnsummon() end
                 creature:Mount(6852)
                 creature:MoveTo(2, 1046, 414, 338.87894)
-            end, 7000)
+            end, 6000)
         elseif id == 2 then
             creature:MoveTo(3, 1038,  419, 339.32596)
         elseif id == 3 then
@@ -335,8 +369,10 @@ end
 RegisterCreatureEvent(35160, 27, DruidEnvoy) -- ally druid
 RegisterCreatureEvent(57690, 27, DruidEnvoy) -- horde druid
 RegisterCreatureEvent(95026, 27, FlightTrainerDialogue) -- Flight trainer
-RegisterCreatureEvent(401250, 6, Feathers) -- Flight trainer
-RegisterCreatureEvent(190099, 27, Feathers) -- Flight trainer
+RegisterCreatureEvent(95005, 27, Herb) -- Herb trainer
+RegisterCreatureEvent(95006, 27, Scribe) -- Scribe trainer
+RegisterCreatureEvent(401250, 6, Feathers) -- feathers event citizen
+RegisterCreatureEvent(190099, 27, Feathers) -- feathers vendor
 RegisterCreatureEvent(190011, 27, HunterDialogue) -- Hunter pets
 RegisterCreatureEvent(190013, 27, ProfDialogue) -- Profession master
 RegisterCreatureEvent(190023, 27, XPDialogue) -- XP changer pets
