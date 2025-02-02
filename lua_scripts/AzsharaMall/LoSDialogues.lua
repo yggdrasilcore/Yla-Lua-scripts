@@ -235,16 +235,119 @@ local function Guide(event, creature, who)
     end
 end
 
+local function Guild(event, creature, who)
+    if who:ToPlayer() and creature:GetDistance(who) < 7 and creature:IsWithinLoS(who) then
+        if not lastGreeting[creature:GetGUIDLow()] or (lastGreeting[creature:GetGUIDLow()] and (lastGreeting[creature:GetGUIDLow()] < os.time())) then
+            lastGreeting[creature:GetGUIDLow()] = os.time() + 90
+            creature:SendUnitSay("Hello, "..who:GetName()..". Come to me if you need to rename your guild or create a new one with less than 10 players.", 0)
+            creature:PerformEmote(3)
+        end
+    end
+end
+
+local function DruidEnvoy(event, creature, who)
+    if who:ToPlayer() and creature:GetDistance(who) < 7 and creature:IsWithinLoS(who) then
+        if not lastGreeting[creature:GetGUIDLow()] or (lastGreeting[creature:GetGUIDLow()] and (lastGreeting[creature:GetGUIDLow()] < os.time())) then
+            lastGreeting[creature:GetGUIDLow()] = os.time() + 90
+            creature:SendUnitSay("It is important for druids to be represented in matters pertaining to the fabric of Yggdrasil's nature.", 0)
+            creature:PerformEmote(3)
+        end
+    end
+end
+
+local function EdgeWarning(event, creature, who)
+    if who:ToPlayer() and creature:GetDistance(who) < 15 and creature:IsWithinLoS(who) then
+        if not lastGreeting[creature:GetGUIDLow()] or (lastGreeting[creature:GetGUIDLow()] and (lastGreeting[creature:GetGUIDLow()] < os.time())) then
+            lastGreeting[creature:GetGUIDLow()] = os.time() + 45
+            creature:SendUnitSay("Halt, "..who:GetName().."! You mustn't proceed. The area that lies ahead is corrupted and unsafe for travel. Please turn back immediately!", 0)
+            creature:PerformEmote(35)
+        end
+    end
+end
+
+local function Feathers(event, creature, who, id)
+    -- wp of citizen
+    if event == 6 then
+        if id == 0 then
+            local citizen = creature
+            citizen:SendUnitSay("Wow! So you are telling me I could ride that Riding Gryphon right now, if I buy your feathers?", 0)
+            creature:PerformEmote(25)
+            local creature = citizen:GetNearestCreature(50, 190099)
+            if creature then
+                creature:RegisterEvent(function(e, d, r, creature)
+                    creature:SendUnitSay("Yes, precisely, citizen. If you purchase it now I may even let you try my Gryphon.", 0) 
+                end, 10000)
+                citizen:RegisterEvent(function(e, d, r, citizen)
+                    citizen:SendUnitSay("You're on!", 0) 
+                end, 25000)
+                citizen:RegisterEvent(function(e, d, r, citizen)
+                    citizen:SendUnitEmote("Citizen of Yggdrasil and the bird breeder make the trade.", 0) 
+                end, 35000)
+                citizen:RegisterEvent(function(e, d, r, citizen)
+                    citizen:SendUnitSay("Time to fly! I'm so excited!", 0) 
+                    citizen:MoveTo(1, 1049.57, 407.32, 338.56534)
+                end, 40000)
+            end
+        elseif id == 1 then
+            creature:RegisterEvent(function(e, d, r, creature)
+                creature:PerformEmote(69)
+                creature:SendUnitEmote("Citizen of Yggdrasil mounts the gryphon.", 0) 
+            end, 3000)
+            creature:RegisterEvent(function(e, d, r, creature)
+                creature:Mount(6852)
+                creature:MoveTo(2, 1046, 414, 338.87894)
+            end, 7000)
+        elseif id == 2 then
+            creature:MoveTo(3, 1038,  419, 339.32596)
+        elseif id == 3 then
+            creature:MoveTo(4, 1028.508,  419.3684, 341.42722)
+        elseif id == 4 then
+            creature:MoveTo(5, 1022.1253,  417.14633, 343.91782)
+        elseif id == 5 then
+            creature:SendUnitSay("Taking off!", 0)
+            creature:MoveTo(6, 566,  358, 404)
+            creature:SetHover(true)
+            creature:SetDisableGravity(true)
+        elseif id == 6 then
+            creature:DespawnOrUnsummon()
+        end
+        return
+    end
+    
+    -- Initiate event on LOS with feather vendor
+    if who:ToPlayer() and creature:GetDistance(who) < 15 and creature:IsWithinLoS(who) then
+        if not lastGreeting[creature:GetGUIDLow()] or (lastGreeting[creature:GetGUIDLow()] and (lastGreeting[creature:GetGUIDLow()] < os.time())) then
+            lastGreeting[creature:GetGUIDLow()] = os.time() + 300
+            creature:SendUnitSay("Hello, citizen! If you want to fly in Azeroth, come to me. My "..GetItemLink(20739).." can make any mount fly in the old world.", 0)
+            creature:PerformEmote(3)
+            if creature:GetNearestCreature(100, 401250) then return end -- abort if already active event
+            local citizen = creature:SpawnCreature(401250, 1044, 370, 333.3795, 1.46, 1, 100000)
+            if citizen then
+                creature:SetHover(false)
+                creature:SetDisableGravity(false)
+                citizen:SetWalk(true)
+                citizen:MoveTo(0, 1050, 405, 338.3377)
+            end
+        end
+    end
+end
+
+RegisterCreatureEvent(35160, 27, DruidEnvoy) -- ally druid
+RegisterCreatureEvent(57690, 27, DruidEnvoy) -- horde druid
 RegisterCreatureEvent(95026, 27, FlightTrainerDialogue) -- Flight trainer
+RegisterCreatureEvent(401250, 6, Feathers) -- Flight trainer
+RegisterCreatureEvent(190099, 27, Feathers) -- Flight trainer
 RegisterCreatureEvent(190011, 27, HunterDialogue) -- Hunter pets
 RegisterCreatureEvent(190013, 27, ProfDialogue) -- Profession master
 RegisterCreatureEvent(190023, 27, XPDialogue) -- XP changer pets
+RegisterCreatureEvent(190089, 27, MogDialogue) -- Mog itemizer
 RegisterCreatureEvent(190090, 27, InstanceDialogue) -- XP changer pets
 RegisterCreatureEvent(190091, 27, PetRenameDialogue) -- Pet renamer
-RegisterCreatureEvent(190089, 27, MogDialogue) -- Mog itemizer
+RegisterCreatureEvent(190092, 27, Guild) -- Guild guy
 RegisterCreatureEvent(110000, 27, MamaDialogue) -- Mama Twig
 RegisterCreatureEvent(110001, 27, PapaDialogue) -- Papa Twig
 RegisterCreatureEvent(110002, 27, PatrolDialogue) -- Twig Patrol
-RegisterCreatureEvent(110005, 27, Guide) -- Twig Patrol
+RegisterCreatureEvent(110005, 27, Guide) -- Twig guide
+RegisterCreatureEvent(110006, 27, EdgeWarning) -- Twig safekepeer
 
 print("[MALL]: Loaded mall dialogues")
