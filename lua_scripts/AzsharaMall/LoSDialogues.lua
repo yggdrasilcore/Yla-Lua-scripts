@@ -285,7 +285,7 @@ local function Feathers(event, creature, who, id)
                 end, 35000)
                 citizen:RegisterEvent(function(e, d, r, citizen)
                     citizen:SendUnitSay("Time to fly! I'm so excited!", 0) 
-                    citizen:MoveTo(1, 1049.57, 407.32, 338.56534)
+                    citizen:MoveTo(1, 1048, 409, citizen:GetMap():GetHeight(1048, 409))
                 end, 40000)
             end
         elseif id == 1 then
