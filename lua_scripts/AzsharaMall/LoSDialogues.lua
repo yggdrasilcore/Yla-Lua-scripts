@@ -1,6 +1,9 @@
 local hasDialogueEvent = {}
 local lastGreeting = {}
 
+local APPRENTICE_ENTRY = 110007
+local MASTER_ENTRY = 110008
+
 local ProfessionMessages = {
     "Did you know that alchemy was one of the precursors to modern chemistry?",
     "The art of blacksmithing dates back to the Bronze Age!",
@@ -366,12 +369,196 @@ local function Feathers(event, creature, who, id)
     end
 end
 
+local MASTER_COMMANDS = {
+   "Okay, druid! Now, cast the %s %s form!",
+   "Great! Now it's time for the %s %s form!",
+   "Show me your %s %s form, apprentice!", 
+   "Let's see your %s %s transformation!",
+   "Time to practice the %s %s form!"
+}
+
+local APPRENTICE_RESPONSES = {
+    "Did I do it?",
+    "How's this looking, master?",
+    "Was that the right form?",
+    "Hnnng!",
+    "I hope I got it right this time!",
+    "Is this what you were looking for?"
+}
+
+local MASTER_FEEDBACK = {
+    "Great!",
+    "Hmm, not quite!",
+    "Perfect form!",
+    "Keep practicing!",
+    "You're getting the hang of it!",
+    "Great! Soon, you'll be ready for trying Flight Form morphs!",
+    "Let's try again in a little bit.",
+    "Impressive!",
+    "Almost there!"
+}
+
+local FORM_TYPES = {
+   [1] = {name = "Cat", morphs = {}},
+   [2] = {name = "Bear", morphs = {}}, 
+   [3] = {name = "Travel", morphs = {}},
+   [5] = {name = "Tree", morphs = {}},
+   [6] = {name = "Boomkin", morphs = {}}
+}
+
+local FORM_IDS = {1, 2, 3, 5, 6}
+
+local function populatePlayerMorphCache()
+   CharDBQueryAsync("SELECT DISTINCT id, form, name FROM character_morphs", function(results)
+       if not results then return end
+       
+       repeat
+           local morphId = results:GetUInt32(0)
+           local form = results:GetUInt32(1)
+           local morphName = results:GetString(2)
+           
+           if FORM_TYPES[form] then
+               table.insert(FORM_TYPES[form].morphs, {id = morphId, name = morphName})
+           end
+       until not results:NextRow()
+   end)
+end
+
+-- Function to pick a random form type and return both name and morph ID
+local function pickRandomForm()
+    local formId = FORM_IDS[math.random(#FORM_IDS)]
+    local formData = FORM_TYPES[formId]
+    
+    return formData.name, formData.morphs[math.random(#formData.morphs)]
+end
+
+local function MorphScript(creature)
+    creature:RegisterEvent(function(eventId, delay, repeats, creature)
+        -- Find closest apprentice
+        local apprentice = creature:GetNearestCreature(50, APPRENTICE_ENTRY)
+        if not apprentice then return end
+
+        -- Select random form type and get both name and morph ID
+        local formName, morphData = pickRandomForm()
+        local formId
+
+        if formName == "Cat" then formId = 1
+        elseif formName == "Bear" then formId = 2
+        elseif formName == "Travel" then formId = 3
+        elseif formName == "Tree" then formId = 5
+        elseif formName == "Boomkin" then formId = 6
+        end
+
+        -- Select a random morph from the morphs list for the chosen form
+        local selectedMorph = morphData  -- This already contains the correct morph data (id and name)
+
+        -- Master's initial command
+        local morphName = selectedMorph.name
+        local command = MASTER_COMMANDS[math.random(#MASTER_COMMANDS)]
+        creature:SendUnitSay(string.format(command, morphName, formName), 0)
+        creature:PerformEmote(1)
+
+        -- Apprentice morphs after 5 seconds
+        apprentice:RegisterEvent(function(eventId, delay, repeats, apprentice)
+            apprentice:CastSpell(apprentice, 61335, true)
+            apprentice:SetDisplayId(selectedMorph.id)
+        end, 5000 * 2, 1)
+
+        -- Apprentice response after 8 seconds
+        apprentice:RegisterEvent(function(eventId, delay, repeats, apprentice)
+            local response = APPRENTICE_RESPONSES[math.random(#APPRENTICE_RESPONSES)]
+            apprentice:SendUnitSay(response, 0)
+            apprentice:PerformEmote(1)
+        end, 8000 * 2, 1)
+
+        -- Master's feedback after 10 seconds
+        creature:RegisterEvent(function(eventId, delay, repeats, creature)
+            local feedback = MASTER_FEEDBACK[math.random(#MASTER_FEEDBACK)]
+            creature:SendUnitSay(feedback, 0)
+            creature:PerformEmote(1)
+        end, 10000 * 2, 1)
+        
+        apprentice:RegisterEvent(function(eventId, delay, repeats, apprentice)
+            apprentice:DeMorph()
+        end, 15000 * 2, 1)
+        
+        apprentice:RegisterEvent(function(eventId, delay, repeats, apprentice)
+            apprentice:SendUnitSay("Ready for next task, master!", 0)
+            apprentice:PerformEmote(2)
+        end, 20000 * 2, 1)
+        
+    end, {50000, 200000}, 0)
+end
+
+local function ObserverScript(creature)
+    creature:RegisterEvent(function(eventId, delay, repeats, creature)
+        local i = math.random(1,5)
+        if i == 1 then
+            creature:SendUnitSay("It's so exciting to watch them learn new morphs!", 0)
+        elseif i == 2 then
+            creature:SendUnitSay("One day, I hope to get my very own "..GetItemLink(17890).."!", 0)
+        elseif i == 3 then
+            creature:SendUnitSay("This is my favorite time of day!", 0)
+        elseif i == 4 then
+            creature:SendUnitSay("Woah! That form is my favorite so far.", 0)
+        elseif i == 5 then
+            creature:SendUnitSay("Woohoo!", 0)
+        end
+        creature:PerformEmote(4)
+    end, {60000, 190000}, 0)
+end
+
+local function ApproachBear(event, creature, who)
+    if who:ToPlayer() then
+        if not creature:GetData("MorphEvent") then
+            creature:SetData("MorphEvent", true)
+            local masters = {}
+            local creaturesInRange = creature:GetCreaturesInRange(200, MASTER_ENTRY)
+            
+            for _, master in pairs(creaturesInRange) do
+                table.insert(masters, master)
+            end
+            
+            for _, master in pairs(masters) do
+                if master:GetData("MorphEventActive") then
+                    return
+                end
+                master:SetData("MorphEventActive", true)
+                MorphScript(master)
+            end
+            
+            local observers = {}
+            local observersInRange = creature:GetCreaturesInRange(200, 110009)
+
+            for _, observer in pairs(observersInRange) do
+                table.insert(observers, observer)
+            end
+
+            for _, observer in pairs(observers) do
+                if observer:GetData("MorphEventActive") then
+                    return
+                end
+                observer:SetData("MorphEventActive", true)
+                ObserverScript(observer)
+            end
+        end
+        if not lastGreeting[creature:GetGUIDLow()] or (lastGreeting[creature:GetGUIDLow()] and (lastGreeting[creature:GetGUIDLow()] < os.time())) then
+            lastGreeting[creature:GetGUIDLow()] = os.time() + 90
+            creature:SendUnitSay("Keep practising your "..GetItemLink(17890).." shapeshifts! If you don't have a medallion yet, come talk to me.", 0)
+        end
+    end
+end
+
 RegisterCreatureEvent(35160, 27, DruidEnvoy) -- ally druid
 RegisterCreatureEvent(57690, 27, DruidEnvoy) -- horde druid
 RegisterCreatureEvent(95026, 27, FlightTrainerDialogue) -- Flight trainer
 RegisterCreatureEvent(95005, 27, Herb) -- Herb trainer
 RegisterCreatureEvent(95006, 27, Scribe) -- Scribe trainer
-RegisterCreatureEvent(401250, 6, Feathers) -- feathers event citizen
+RegisterCreatureEvent(110000, 27, MamaDialogue) -- Mama Twig
+RegisterCreatureEvent(110001, 27, PapaDialogue) -- Papa Twig
+RegisterCreatureEvent(110002, 27, PatrolDialogue) -- Twig Patrol
+RegisterCreatureEvent(110005, 27, Guide) -- Twig guide
+RegisterCreatureEvent(110006, 27, EdgeWarning) -- Twig safekepeer
 RegisterCreatureEvent(190099, 27, Feathers) -- feathers vendor
 RegisterCreatureEvent(190011, 27, HunterDialogue) -- Hunter pets
 RegisterCreatureEvent(190013, 27, ProfDialogue) -- Profession master
@@ -380,10 +567,8 @@ RegisterCreatureEvent(190089, 27, MogDialogue) -- Mog itemizer
 RegisterCreatureEvent(190090, 27, InstanceDialogue) -- XP changer pets
 RegisterCreatureEvent(190091, 27, PetRenameDialogue) -- Pet renamer
 RegisterCreatureEvent(190092, 27, Guild) -- Guild guy
-RegisterCreatureEvent(110000, 27, MamaDialogue) -- Mama Twig
-RegisterCreatureEvent(110001, 27, PapaDialogue) -- Papa Twig
-RegisterCreatureEvent(110002, 27, PatrolDialogue) -- Twig Patrol
-RegisterCreatureEvent(110005, 27, Guide) -- Twig guide
-RegisterCreatureEvent(110006, 27, EdgeWarning) -- Twig safekepeer
+RegisterCreatureEvent(190098, 27, ApproachBear) -- Morph bear
+RegisterCreatureEvent(401250, 6, Feathers) -- feathers event citizen
+populatePlayerMorphCache()
 
 print("[MALL]: Loaded mall dialogues")
