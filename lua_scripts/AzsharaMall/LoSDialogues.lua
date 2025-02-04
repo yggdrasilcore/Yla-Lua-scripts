@@ -370,11 +370,11 @@ local function Feathers(event, creature, who, id)
 end
 
 local MASTER_COMMANDS = {
-   "Okay, druid! Now, cast the %s %s form!",
-   "Great! Now it's time for the %s %s form!",
-   "Show me your %s %s form, apprentice!", 
-   "Let's see your %s %s transformation!",
-   "Time to practice the %s %s form!"
+   "Okay, druid! Now, cast the %s %s Form!",
+   "Great! Now it's time for the %s %s Form!",
+   "Show me your %s %s Form, apprentice!", 
+   "Let's see your %s %s Form!",
+   "Time to practice the %s %s Form!"
 }
 
 local APPRENTICE_RESPONSES = {
@@ -403,7 +403,7 @@ local FORM_TYPES = {
    [2] = {name = "Bear", morphs = {}}, 
    [3] = {name = "Travel", morphs = {}},
    [5] = {name = "Tree", morphs = {}},
-   [6] = {name = "Boomkin", morphs = {}}
+   [6] = {name = "Moonkin", morphs = {}}
 }
 
 local FORM_IDS = {1, 2, 3, 5, 6}
