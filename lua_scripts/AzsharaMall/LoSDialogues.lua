@@ -278,6 +278,16 @@ local function Scribe(event, creature, who)
     end
 end
 
+local function Fish(event, creature, who)
+    if who:ToPlayer() and creature:GetDistance(who) < 10 and creature:IsWithinLoS(who) then
+        if not lastGreeting[creature:GetGUIDLow()] or (lastGreeting[creature:GetGUIDLow()] and (lastGreeting[creature:GetGUIDLow()] < os.time())) then
+            lastGreeting[creature:GetGUIDLow()] = os.time() + 90
+            creature:SendUnitSay("Turns out fishing rods are made from trees. Luckily, I am a tree, so I can just use my own twigs!", 0)
+            creature:PerformEmote(2)
+        end
+    end
+end
+
 local function Herb(event, creature, who)
     if who:ToPlayer() and creature:GetDistance(who) < 10 and creature:IsWithinLoS(who) then
         if not lastGreeting[creature:GetGUIDLow()] or (lastGreeting[creature:GetGUIDLow()] and (lastGreeting[creature:GetGUIDLow()] < os.time())) then
@@ -554,6 +564,7 @@ RegisterCreatureEvent(57690, 27, DruidEnvoy) -- horde druid
 RegisterCreatureEvent(95026, 27, FlightTrainerDialogue) -- Flight trainer
 RegisterCreatureEvent(95005, 27, Herb) -- Herb trainer
 RegisterCreatureEvent(95006, 27, Scribe) -- Scribe trainer
+RegisterCreatureEvent(95014, 27, Fish) -- Scribe trainer
 RegisterCreatureEvent(110000, 27, MamaDialogue) -- Mama Twig
 RegisterCreatureEvent(110001, 27, PapaDialogue) -- Papa Twig
 RegisterCreatureEvent(110002, 27, PatrolDialogue) -- Twig Patrol
