@@ -6,6 +6,7 @@ end
 
 local UIHandlers = AIO.AddHandlers("UIFix", {})
 
+local FeathersSpell = 29118
 -------------------------------------------
 -- Correction for AH deposit price
 -------------------------------------------
@@ -287,6 +288,16 @@ local function ApplyWorgenFormTooltip(tooltip)
    tooltip:Show()
 end
 
+local function ApplyFoATooltip(tooltip)
+   tooltip:ClearLines()
+   tooltip:AddLine("|cffffffffFeather Burst|r")
+   tooltip:AddLine("The Feathers of Azeroth burst")
+   tooltip:AddLine("around the wings of your flying")
+   tooltip:AddLine("mounts, permitting their use in")
+   tooltip:AddLine("in old world areas.")
+   tooltip:Show()
+end
+
 local function ApplyFrogFormTooltip(tooltip)
    tooltip:ClearLines()
    tooltip:AddLine("|cffffffffFrog From|r")
@@ -313,6 +324,9 @@ local function ModifySpellTooltip(tooltip)
    if spellId == 32819 then
        ApplyWorgenFormTooltip(tooltip)
    end
+   if spellId == FeathersSpell then
+       ApplyFoATooltip(tooltip)
+   end
    if spellId == 3329 then
        ApplyFrogFormTooltip(tooltip)
    end
@@ -331,7 +345,23 @@ end
 local function OnPlayerAFKChanged(self, event, arg1)
     if arg1 == "player" then
         if UnitIsAFK("player") then
-            --Add anti AFK functionality here
+            -- Start the timer if it's not already running
+            if not self.afkTimer then
+                self.afkTimer = 0
+                self:SetScript("OnUpdate", function(self, elapsed)
+                    self.afkTimer = self.afkTimer + elapsed
+                    if self.afkTimer >= 120 then -- 120 seconds = 2 minutes
+                        self.afkTimer = 0
+                        SendChatMessage(".afk", "SAY")
+                    end
+                end)
+            end
+        else
+            -- Stop the timer if the player is no longer AFK
+            if self.afkTimer then
+                self.afkTimer = nil
+                self:SetScript("OnUpdate", nil)
+            end
         end
     end
 end
@@ -429,6 +459,10 @@ local function ModifyCustomStoreTooltip(tooltip)
                 ApplyWorgenFormTooltip(tooltip)
                 return
             end
+            if line:GetText():find("Feather Burst") then
+                ApplyFoATooltip(tooltip)
+                return
+            end
             if line:GetText():find("Frog Form") then
                 ApplyFrogFormTooltip(tooltip)
                 return
@@ -463,6 +497,9 @@ function SetItemRef(link, text, button, chatFrame)
     if link:find("spell:32819") then
         ApplyWorgenFormTooltip(ItemRefTooltip)
     end
+    if link:find("spell:"..FeathersSpell) then
+        ApplyFoATooltip(ItemRefTooltip)
+    end
     if link:find("spell:3329%f[%d]") then
         ApplyFrogFormTooltip(ItemRefTooltip)
     end
@@ -491,3 +528,211 @@ ChatFrame_AddMessageEventFilter("CHAT_MSG_CHANNEL", filterFunc)
 ChatFrame_AddMessageEventFilter("CHAT_MSG_WHISPER", filterFunc)
 ChatFrame_AddMessageEventFilter("CHAT_MSG_PARTY", filterFunc)
 ChatFrame_AddMessageEventFilter("CHAT_MSG_RAID", filterFunc)
+
+
+-- Spell Flight stuff
+
+local BUFFIDS = {
+    3363, 8153, 32235, 32239, 32240,
+    32242, 32243, 32244, 32245, 32246, 32289, 32290, 32292, 32295, 32296, 32297, 32345,
+    33943, 37015, 39798, 39800, 39801, 39802, 39803, 39910, 40120, 40192,
+    40212, 41513, 41514, 41515, 41516, 41517, 41518, 42667, 42668, 42673, 42679, 43810,
+    43927, 44151, 44153, 44317, 44655, 44744, 44824, 44825, 44827, 46197, 46199,
+    47037, 48023, 49193, 51617, 51960, 54726, 54727, 54729, 54903, 58615,
+    59567, 59568, 59569, 59570, 59571, 59650, 59961, 59976, 59996, 60002, 60021, 60024, 60025,
+    60099, 61229, 61230, 61289, 61294, 61309, 61442, 61444, 61446, 61451,
+    61996, 61997, 62048, 63796, 63844, 63956, 63963, 64927, 65439, 66087,
+    66088, 67336, 69395, 71346, 71347, 71810, 72283, 72284, 72807, 72808, 74854, 74855,
+    75596, 75617, 75618, 76153, 75973
+}
+
+-- Create a name-to-id lookup table
+local spellNameToID = {}
+for _, id in pairs(BUFFIDS) do
+    local name = GetSpellInfo(id)
+    if name then
+        spellNameToID[name] = id
+    end
+end
+
+local spellCastFrame = CreateFrame("Frame")
+
+local lastSendTime = 0
+
+local function OnEvent(self, event, unit, spellName, spellRank, lineID)
+    if not IsSpellKnown(FeathersSpell) then return end
+    if InCombatLockdown() then return end
+    if UnitUsingVehicle("player") then return end
+    if not (
+    --GetRealZoneText() == "Azshara Crater" or -- mall flight disabled
+    GetCurrentMapContinent() == 1 or GetCurrentMapContinent() == 2 or GetCurrentMapContinent() == 3) then return end
+    if event == "UNIT_SPELLCAST_FAILED" and unit == "player" then
+        if IsFlying() then
+            return
+        end
+        local spellID = spellNameToID[spellName]
+        if spellID and spellID > 0 then 
+
+            local isInstance, _ =  IsInInstance()
+            if not isInstance and (GetTime() - lastSendTime) >= 0.1 then
+                if IsMounted() then
+                    Dismount()
+                end
+                SendChatMessage("." .. spellID, "SAY")
+                UIErrorsFrame:Clear()
+                lastSendTime = GetTime()
+            end
+        end
+    end
+end
+
+spellCastFrame:RegisterEvent("UNIT_SPELLCAST_FAILED")
+spellCastFrame:SetScript("OnEvent", OnEvent)
+
+-- Define the UpdateAllButtons function
+function UpdateAllButtons(toggle)
+    -- Check if we're in an outdoor area or instance
+    if IsSpellKnown(FeathersSpell) then
+        local isInstance, _ = IsInInstance()
+        local isIndoors = IsIndoors()
+
+        -- Loop through all possible action buttons, including action bar and pet bar buttons
+        for i = 1, 120 do
+        
+            local button
+            
+            if IsAddOnLoaded("ElvUI") then
+                if i <= 12 then
+                    button = _G['ElvUI_Bar1Button' .. i]
+                elseif i <= 24 then
+                    button = _G['ElvUI_Bar2Button' .. (i - 12)]
+                elseif i <= 36 then
+                    button = _G['ElvUI_Bar3Button' .. (i-24)]
+                elseif i <= 48 then
+                    button = _G['ElvUI_Bar4Button' .. (i-36)]
+                elseif i <= 60 then
+                    button = _G['ElvUI_Bar5Button' .. (i-48)]
+                elseif i <= 72 then
+                    button = _G['ElvUI_Bar6Button' .. (i-60)]
+                else
+                    return
+                end
+            elseif IsAddOnLoaded("Bartender4") then
+                button = _G["BT4Button" .. i]
+            elseif IsAddOnLoaded("Dominos") then
+                button = _G["DominosActionButton" .. i]
+            else -- No addon, hook normal action buttons
+                if i <= 12 then
+                    button = _G['ActionButton' .. i]
+                elseif i <= 24 then
+                    button = _G['BonusActionButton' .. (i - 12)]
+                elseif i <= 36 then
+                    button = _G['MultiBarRightButton' .. (i-24)]
+                elseif i <= 48 then
+                    button = _G['MultiBarLeftButton' .. (i-36)]
+                elseif i <= 60 then
+                    button = _G['MultiBarBottomRightButton' .. (i-48)]
+                elseif i <= 72 then
+                    button = _G['MultiBarBottomLeftButton' .. (i-60)]
+                else
+                    return -- Stock UI doesn't have more than 72 buttons
+                end
+            end
+            
+            if button then
+            
+                -- Get the action type and check if it's usable
+                local actionType, id, subType, spellID = GetActionInfo(i)
+                
+                local isUsable, notEnoughMana = IsUsableAction(i)
+                local isDisabled = not isUsable or not button:IsEnabled()
+
+                -- Check for mount or companion action types
+                if spellID and actionType == "companion" and subType == "MOUNT" then
+                    local buttonWidth, buttonHeight = button:GetSize()
+
+                    -- Check if spellID is in BUFFIDS
+                    for _, id in pairs(BUFFIDS) do
+                        if spellID == id then
+                            -- Create or get a custom texture for the button only outside or in instances
+                            if not button.customTexture then
+                                -- Create the custom texture
+                                local customTexture = button:CreateTexture(nil, "ARTWORK")
+                                customTexture:SetAllPoints(button)  -- Make the custom texture fill the button
+                                button.customTexture = customTexture  -- Store the reference to the custom texture
+                            end
+
+                            local map = GetCurrentMapContinent()
+
+                            -- Set texture and ensure size when outside or not in an instance
+                            if not isIndoors and not isInstance and not InCombatLockdown()
+                            and (
+                            -- (GetRealZoneText() == "Azshara Crater") or -- mall flight disabled
+                            map == 1 or map == 2 or map == 3) and not (toggle == "off") then
+                                local texture = GetActionTexture(i)  -- Get the mount texture
+                                button.customTexture:SetTexture(texture)  -- Apply the mount texture
+                                button:SetSize(buttonWidth, buttonHeight)  -- Ensure the button size is retained
+                            elseif button.customTexture then
+                                button.customTexture:Hide()  -- Hide the custom texture when indoors
+                                button.customTexture = nil  -- Clean up the reference to the custom texture
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Create the frame for event handling
+local worldEnterFrame = CreateFrame("Frame")
+local updateScheduled = false
+local elapsedTime = 0
+
+-- Register the events to trigger when the player enters the world, changes zones, or enters/leaves combat
+worldEnterFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+worldEnterFrame:RegisterEvent("ZONE_CHANGED")
+worldEnterFrame:RegisterEvent("PLAYER_REGEN_DISABLED") -- Enter combat
+worldEnterFrame:RegisterEvent("PLAYER_REGEN_ENABLED")  -- Leave combat
+worldEnterFrame:RegisterEvent("SPELLS_CHANGED")
+
+worldEnterFrame:SetScript("OnEvent", function(self, event, ...)
+    if (event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED") then
+        if not updateScheduled then
+            updateScheduled = true
+            elapsedTime = 0  -- Reset elapsed time
+            self:SetScript("OnUpdate", function(_, elapsed)
+                elapsedTime = elapsedTime + elapsed
+                if elapsedTime >= 1 then
+                    UpdateAllButtons()
+                    updateScheduled = false
+                    self:SetScript("OnUpdate", nil)  -- Stop the OnUpdate loop
+                end
+            end)
+        end
+    elseif event == "PLAYER_REGEN_ENABLED" or ("SPELLS_CHANGED") then
+        UpdateAllButtons()
+    elseif event == "PLAYER_REGEN_DISABLED" then
+        local toggle = "off"
+        UpdateAllButtons(toggle)
+    end
+end)
+
+-- Hook into ActionButton_UpdateUsable to call UpdateAllButtons
+hooksecurefunc("ActionButton_UpdateUsable", function(button)
+    UpdateAllButtons()
+end)
+
+UpdateAllButtons()
+
+
+local function OnSpellCastSucceed(_, _, _, name)
+    if name == "Worgen Form" then
+        SendChatMessage(".32819", "SAY")  -- Send a message in "say" chat
+    end
+end
+
+-- Register the event when a spell is cast
+local spellSucceed = CreateFrame("Frame")
+spellSucceed:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+spellSucceed:SetScript("OnEvent", OnSpellCastSucceed)
