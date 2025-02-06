@@ -1,4 +1,4 @@
-local ITEM_ENTRY = 20739
+local FeathersItem = 20739
 local MOUNTS_PER_PAGE = 10
 local MOUNT_DATA = {}
 local MOUNT_ICONS = {}
@@ -704,6 +704,20 @@ local function OnCommand(event, player, command)
         ShowManageStandardMountCmd(event, player)
         return false
     end
+
+    for _, spellId in ipairs(BUFFIDS) do
+        if command == tostring(spellId) then
+            if player:IsCasting() or not player:HasSpell(spellId) or not player:HasItem(FeathersItem, 1, true)
+            then
+                return false
+            end
+            player:CastSpell(player, spellId, false)
+            player:RegisterEvent(function(eventId, delay, repeats, player)
+                player:RegisterEvent(CheckZ, 200, 0)
+            end, 3000, 1)
+            return false
+        end
+    end
 end
 
 OnLoadScript()
@@ -713,6 +727,6 @@ RegisterPlayerEvent(3, LoadStandardMount)
 RegisterPlayerEvent(27, OnChangeZone)
 RegisterPlayerEvent(28, OnNewMap)
 RegisterPlayerEvent(42, OnCommand)
-RegisterItemEvent(ITEM_ENTRY, 2, OnUseItem)
+RegisterItemEvent(FeathersItem, 2, OnUseItem)
 RegisterPlayerGossipEvent(182746573, 2, OnGossipSelect)
 RegisterPacketEvent(0x346, 5, OnMoveSetFly)
