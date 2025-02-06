@@ -20,6 +20,6 @@ RegisterGameObjectEvent(182352, 14, OnHordePortal)
 RegisterGameObjectEvent(176500, 14, OnHordePortal)
 
 RegisterGameObjectEvent(176296, 14, OnAllyPortal)
-RegisterGameObjectEvent(176498, 14, OnAllyPortal)
+RegisterGameObjectEvent(176497, 14, OnAllyPortal)
 RegisterGameObjectEvent(176498, 14, OnAllyPortal)
 RegisterGameObjectEvent(182351, 14, OnAllyPortal)
