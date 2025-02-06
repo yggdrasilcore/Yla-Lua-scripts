@@ -1,4 +1,5 @@
 local FeathersItem = 20739
+local FeathersSpell = 29118
 local MOUNTS_PER_PAGE = 10
 local MOUNT_DATA = {}
 local MOUNT_ICONS = {}
@@ -14,7 +15,7 @@ local BUFFIDS = {
     60099, 61229, 61230, 61289, 61294, 61309, 61442, 61444, 61446, 61451,
     61996, 61997, 62048, 63796, 63844, 63956, 63963, 64927, 65439, 66087,
     66088, 67336, 69395, 71346, 71347, 71810, 72283, 72284, 72807, 72808, 74854, 74855,
-    75596, 75617, 75618, 76153
+    75596, 75617, 75618, 76153, 75973, 75972, 75957
 }
 
 local LAST_WARNING_TIME = {}  -- Table to store the last warning time for each player, to not flood chat box
@@ -22,6 +23,7 @@ local ZCheckActive = {}
 
 -- ELEVATION BARRIERS
 local MAX_Z = 1000 -- Max Z in Kalimdor and Eastern Kingdoms unless zone/area exception
+local AZSHARACRATER_MAX_Z = 650
 local SILVERMOON_MAX_Z = 50
 local ISLEOFQD_MAX_Z = 81
 local ORGRIMMAR_MAX_Z = 62.5
@@ -57,7 +59,7 @@ local FELWOOD = 361
 local HYJAL = 616
 local STORMWIND = 1519
 local SWHARBOR = 4411
--- local PROBLEM_AREAS = {2273, 2274, 3433, 3496, 3513, 3914} -- Deprecated, keeping in case these come in handy later
+local AZSHARACRATER = 268000 -- change to 268 to enable flight in azshara crater
 
 local SW_PARK = {
     {x = -8756, y = 918},
@@ -228,7 +230,7 @@ local SW_ENTRANCE = {
 
 -- Query spell names and icons from spell_dbc and build the lookup tables
 do
-    local result = WorldDBQuery("SELECT ID, Name_Lang_enUS, SpellIconID FROM spell_dbc WHERE ID IN (3363, 8153, 32235, 32239, 32240, 32242, 32243, 32244, 32245, 32246, 32289, 32290, 32292, 32295, 32296, 32297, 32345, 32420, 33943, 37015, 39798, 39800, 39801, 39802, 39803, 39910, 40120, 40192, 40212, 41513, 41514, 41515, 41516, 41517, 41518, 42667, 42668, 42673, 42679, 43810, 43927, 44151, 44153, 44317, 44655, 44744, 44824, 44825, 44827, 46197, 46199, 47037, 48023, 49193, 51617, 51960, 54726, 54727, 54729, 54903, 58615, 59567, 59568, 59569, 59570, 59571, 59650, 59961, 59976, 59996, 60002, 60021, 60024, 60025, 60099, 61229, 61230, 61289, 61294, 61309, 61442, 61444, 61446, 61451, 61996, 61997, 62048, 63796, 63844, 63956, 63963, 64927, 65439, 66087, 66088, 67336, 69395, 71346, 71347, 71810, 72283, 72284, 72807, 72808, 74854, 74855, 75596, 75617, 75618, 76153)")
+    local result = WorldDBQuery("SELECT ID, Name_Lang_enUS, SpellIconID FROM spell_dbc WHERE ID IN (3363, 8153, 32235, 32239, 32240, 32242, 32243, 32244, 32245, 32246, 32289, 32290, 32292, 32295, 32296, 32297, 32345, 32420, 33943, 37015, 39798, 39800, 39801, 39802, 39803, 39910, 40120, 40192, 40212, 41513, 41514, 41515, 41516, 41517, 41518, 42667, 42668, 42673, 42679, 43810, 43927, 44151, 44153, 44317, 44655, 44744, 44824, 44825, 44827, 46197, 46199, 47037, 48023, 49193, 51617, 51960, 54726, 54727, 54729, 54903, 58615, 59567, 59568, 59569, 59570, 59571, 59650, 59961, 59976, 59996, 60002, 60021, 60024, 60025, 60099, 61229, 61230, 61289, 61294, 61309, 61442, 61444, 61446, 61451, 61996, 61997, 62048, 63796, 63844, 63956, 63963, 64927, 65439, 66087, 66088, 67336, 69395, 71346, 71347, 71810, 72283, 72284, 72807, 72808, 74854, 74855, 75596, 75973, 75617, 75618, 76153)")
     
     local spellIconIds = {}
     if result then
@@ -311,7 +313,7 @@ local function CheckZ(eventId, delay, repeats, player)
     if not player or not mountId or not (
     zoneId == SILVERMOON or zoneId == ISLEOFQD or zoneId == EVERSONG or zoneId == GHOSTLANDS or zoneId == STORMWIND or
     zoneId == ORGRIMMAR or zoneId == UNDERCITY or areaId == RUINSOFLORDAERON or areaId == SHININGSTRAND or 
-    zoneId == SWHARBOR
+    zoneId == SWHARBOR or zoneId == AZSHARACRATER
     )   
     then
         player:RemoveEventById(eventId)
@@ -325,24 +327,22 @@ local function CheckZ(eventId, delay, repeats, player)
     if zoneId == ORGRIMMAR then
         maxAllowedZ = ORGRIMMAR_MAX_Z
         teleportZ = ORGRIMMAR_MAX_Z
-    end
-    if zoneId == UNDERCITY then
+    elseif zoneId == UNDERCITY then
         maxAllowedZ = UNDERCITY_MAX_Z
         teleportZ = UNDERCITY_MAX_Z-1
-    end
-    if areaId == RUINSOFLORDAERON then
+    elseif areaId == RUINSOFLORDAERON then
         maxAllowedZ = RUINSOFLORADERON_MAX_Z
         teleportZ = RUINSOFLORADERON_MAX_Z-1
-    end
-    if areaId == SHININGSTRAND then
+    elseif areaId == SHININGSTRAND then
         maxAllowedZ = RUINSOFLORADERON_MAX_Z
         teleportZ = RUINSOFLORADERON_MAX_Z-1
-    end
-    if zoneId == SILVERMOON then
+    elseif zoneId == SILVERMOON then
         maxAllowedZ = SILVERMOON_MAX_Z
         teleportZ = SILVERMOON_MAX_Z
-    end
-    if zoneId == ISLEOFQD then
+    elseif zoneId == AZSHARACRATER then
+        maxAllowedZ = AZSHARACRATER_MAX_Z
+        teleportZ = AZSHARACRATER_MAX_Z
+    elseif zoneId == ISLEOFQD then
         maxAllowedZ = ISLEOFQD_MAX_Z
         teleportZ = ISLEOFQD_MAX_Z
     end
@@ -545,6 +545,10 @@ local function OnUseItem(event, player, item, target)
         return false
     end
     
+    if not player:HasSpell(FeathersSpell) then
+        player:LearnSpell(FeathersSpell)
+    end
+    
     local mapId = player:GetMapId()
     local zoneId = player:GetZoneId()
     local areaId = player:GetAreaId()
@@ -575,14 +579,24 @@ end
 
 local function OnNewMap(event, player)
     local mapId = player:GetMapId()
-    local zoneId = newZone
-	local areaId = newArea
+    local zoneId = player:GetZoneId()
+    local areaId = player:GetAreaId()
+    if zoneId == 268 then -- azsharacrater
+        player:RegisterEvent(function(eventId, delay, repeats, player)
+            for _, id in ipairs(BUFFIDS) do
+                if player:HasAura(id) then
+                    player:RemoveAura(id)
+                end
+            end
+        end, 100, 1) -- Check for mount 100 ms after entering new map
+        return
+    end 
     if 
     (
     mapId == KALIMDOR or mapId == EASTERN_KINGDOMS or
     zoneId == SILVERMOON or zoneId == ISLEOFQD or zoneId == EVERSONG or zoneId == GHOSTLANDS or zoneId == STORMWIND or
     zoneId == ORGRIMMAR or zoneId == UNDERCITY or areaId == RUINSOFLORDAERON or areaId == SHININGSTRAND or 
-    zoneId == SWHARBOR
+    zoneId == SWHARBOR or zoneId == AZSHARACRATER
     ) 
     and not player:HasItem(20739)
     then
@@ -653,7 +667,7 @@ local function OnLoadScript()
             if player and player:CanFly() and (
             zoneId == SILVERMOON or zoneId == ISLEOFQD or zoneId == EVERSONG or zoneId == GHOSTLANDS or zoneId == STORMWIND or
             zoneId == ORGRIMMAR or zoneId == UNDERCITY or areaId == RUINSOFLORDAERON or areaId == SHININGSTRAND or 
-            zoneId == SWHARBOR
+            zoneId == SWHARBOR or ZoneId == AZSHARACRATER
             )   
             then
                 ZCheckActive[player:GetGUIDLow()] = true
@@ -707,7 +721,8 @@ local function OnCommand(event, player, command)
 
     for _, spellId in ipairs(BUFFIDS) do
         if command == tostring(spellId) then
-            if player:IsCasting() or not player:HasSpell(spellId) or not player:HasItem(FeathersItem, 1, true)
+            if player:IsCasting() or not player:HasSpell(spellId)
+            --or not player:HasItem(FeathersItem, 1, true)
             then
                 return false
             end
@@ -720,13 +735,54 @@ local function OnCommand(event, player, command)
     end
 end
 
+local function OnX53(event, player, spell, skipCheck)
+    if spell:GetEntry() == 75973 then
+        local zoneId = player:GetZoneId()
+        local areaId = player:GetAreaId()
+        local mapId = player:GetMapId()
+        if not
+        (
+        mapId == KALIMDOR or mapId == EASTERN_KINGDOMS or
+        zoneId == SILVERMOON or zoneId == ISLEOFQD or zoneId == EVERSONG or zoneId == GHOSTLANDS or zoneId == STORMWIND or
+        zoneId == ORGRIMMAR or zoneId == UNDERCITY or areaId == RUINSOFLORDAERON or areaId == SHININGSTRAND or 
+        zoneId == SWHARBOR or zoneId == AZSHARACRATER
+        ) 
+        then return true end
+        if player:HasSpell(34091) then player:AddAura(75972, player) print("adding fly x-53")
+        elseif player:HasSpell(34090) then player:AddAura(75957, player) print("adding slow fly x-53")
+        end
+        return false
+    end
+end
+
+local function OnMountDismount(event, packet, player)
+    local zoneId = player:GetZoneId()
+    local areaId = player:GetAreaId()
+    local mapId = player:GetMapId()
+    if not
+    (
+    mapId == KALIMDOR or mapId == EASTERN_KINGDOMS or
+    zoneId == SILVERMOON or zoneId == ISLEOFQD or zoneId == EVERSONG or zoneId == GHOSTLANDS or zoneId == STORMWIND or
+    zoneId == ORGRIMMAR or zoneId == UNDERCITY or areaId == RUINSOFLORDAERON or areaId == SHININGSTRAND or 
+    zoneId == SWHARBOR or zoneId == AZSHARACRATER
+    ) 
+    then return end
+    
+    if player:HasAura(72282) then -- invincible
+        if player:HasSpell(34091) then player:RemoveAura(72282) player:AddAura(72284, player)
+        elseif player:HasSpell(34090) then player:RemoveAura(72282) player:AddAura(72283, player)
+        end
+    end
+end
 OnLoadScript()
 WorldDBExecute("UPDATE item_template SET description = 'This item has the ability to wrap the wings of your flying mounts with the Feathers of Azeroth, permitting their use in Azeroth.' WHERE entry = 20739")
 CharDBExecute("CREATE TABLE IF NOT EXISTS character_flight (guid INT UNSIGNED NOT NULL, standardmount INT UNSIGNED, X FLOAT, Y FLOAT, Z FLOAT, O FLOAT, var1 INT UNSIGNED, var2 INT UNSIGNED, var3 INT UNSIGNED, PRIMARY KEY (guid))")
 RegisterPlayerEvent(3, LoadStandardMount)
+RegisterPlayerEvent(5, OnX53)
 RegisterPlayerEvent(27, OnChangeZone)
 RegisterPlayerEvent(28, OnNewMap)
 RegisterPlayerEvent(42, OnCommand)
 RegisterItemEvent(FeathersItem, 2, OnUseItem)
 RegisterPlayerGossipEvent(182746573, 2, OnGossipSelect)
+RegisterPacketEvent(0x516, 7, OnMountDismount) -- Set collision height (typically when mounting)
 RegisterPacketEvent(0x346, 5, OnMoveSetFly)
