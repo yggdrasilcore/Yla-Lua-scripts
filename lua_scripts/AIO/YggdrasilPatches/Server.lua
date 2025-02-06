@@ -20,3 +20,15 @@ local function OnAddonMessageReceived(event, player, _type, header, data, target
 end
 
 RegisterServerEvent(30, OnAddonMessageReceived)
+
+local function WorgenForm(event, player, command)
+    if command == "32819" then
+        if player:HasAura(32819) then
+            local aura = player:AddAura(32819, player)
+            aura:SetDuration(5 * 60 * 1000)
+        end
+        return false
+    end
+end
+
+RegisterPlayerEvent(42, WorgenForm)
