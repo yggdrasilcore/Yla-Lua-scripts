@@ -2,6 +2,7 @@ local NPC_ID = 190090
 local TOKEN_ITEM_ID = 20880
 local MAX_MENU_ITEMS = 8
 local model_ID = 27486
+local freeReset = {}
 
 local instanceData = {
     [249] = {name = "Onyxia's Lair", size = 25},
@@ -45,7 +46,7 @@ local instanceData = {
   --  [600] = {name = "Drak'Tharon Keep", size = 5},
   --  [601] = {name = "Azjol-Nerub", size = 5},
   --  [602] = {name = "Halls of Lightning", size = 5},
-    [603] = {name = "Ulduar", size = 5},
+    [603] = {name = "Ulduar", size = 25},
   --  [604] = {name = "Gundrak", size = 5},
   --  [608] = {name = "Violet Hold", size = 5},
     [615] = {name = "The Obsidian Sanctum", size = 25},
@@ -94,9 +95,15 @@ local function GetTokenCost(difficulty)
 end
 
 local function ChargeTokens(player, difficulty)
+    local guid = player:GetGUIDLow()
     local tokenCost = GetTokenCost(difficulty)
     if tokenCost == 0 then return true end
-
+    
+    if not freeReset[guid] then
+        freeReset[guid] = 0
+        return true
+    end
+    
     if player:GetItemCount(TOKEN_ITEM_ID) >= tokenCost then
         player:RemoveItem(TOKEN_ITEM_ID, tokenCost)
         return true
@@ -127,10 +134,19 @@ end
 
 local function ResetInstanceLockout(player, map, difficulty)
     if ChargeTokens(player, difficulty) then
+        local guid = player:GetGUIDLow()
+        if (not freeReset[guid] or (freeReset[guid] < os.time())) then 
+            freeReset[guid] = os.time() + 7 * 24 * 60 * 60
+            CharDBExecute("REPLACE INTO character_instance_vendor_reset (guid, time) VALUES (" .. guid .. ", " .. freeReset[guid] .. ");")
+        end
         player:UnbindInstance(map, difficulty)
-        local instanceName = instanceData[map] and instanceData[map].name or "Unidentified map - please alert a GM."
+        local instanceName = instanceData[map] and instanceData[map].name
         local difficultyName = GetDifficultyName(difficulty, instanceData[map] and instanceData[map].size or 0)
-        player:SendBroadcastMessage("Your instance lockout for " .. instanceName .. " (" .. difficultyName .. ") has been reset.")
+        if instanceName then
+            player:SendBroadcastMessage("Your instance lockout for " .. instanceName .. " (" .. difficultyName .. ") has been reset.")
+        else
+            player:SendBroadcastMessage("Your chosen instance lockout has been reset.")
+        end
     end
 end
 
@@ -154,6 +170,7 @@ local function SortInstancesByMapID(instances)
     return sortedInstances
 end
 local function GenerateMenu(page, player, creature)
+    local guid = player:GetGUIDLow()
     player:GossipClearMenu()
     
     local instances = GetSavedInstanceLockouts(player)
@@ -174,6 +191,8 @@ local function GenerateMenu(page, player, creature)
             local instanceName = instanceData[map].name
             local difficultyName = GetDifficultyName(difficulty, instanceData[map].size)
             local tokenCost = GetTokenCost(difficulty)
+            
+            if (not freeReset[guid] or (freeReset[guid] < os.time())) then tokenCost = 0 end
             
             local gossipText = "Reset " .. instanceName .. " " .. difficultyName .. "                 (Cost: " .. tokenCost .. " Vote Tokens)"
             player:GossipMenuAddItem(2, gossipText, 0, map * 10 + difficulty, false, "Are you sure you want to reset " .. instanceName .. " " .. difficultyName .. " for " .. tokenCost .. " vote tokens?")
@@ -201,6 +220,15 @@ local function GenerateMenu(page, player, creature)
 end
 
 local function OnGossipHello(event, player, creature)
+    local guid = player:GetGUIDLow()
+    if not freeReset[guid] then
+        local result = CharDBQuery("SELECT time FROM character_instance_vendor_reset WHERE guid = " .. guid)
+        if result then
+            freeReset[guid] = result:GetUInt32(0)
+        else
+            freeReset[guid] = 0
+        end
+    end
     player:GossipClearMenu()
     GenerateMenu(1, player, creature)
 end
@@ -223,3 +251,4 @@ end
 
 RegisterCreatureGossipEvent(NPC_ID, 1, OnGossipHello)
 RegisterCreatureGossipEvent(NPC_ID, 2, OnGossipSelect)
+CharDBExecute("CREATE TABLE IF NOT EXISTS character_instance_vendor_reset (guid INT NOT NULL, time INT NOT NULL, PRIMARY KEY (guid));")
