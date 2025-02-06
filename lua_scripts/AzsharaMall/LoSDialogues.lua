@@ -559,6 +559,16 @@ local function ApproachBear(event, creature, who)
     end
 end
 
+local function XPdialogue(event, creature, who)
+    if who:ToPlayer() and creature:GetDistance(who) < 10 and creature:IsWithinLoS(who) then
+        if not lastGreeting[creature:GetGUIDLow()] or (lastGreeting[creature:GetGUIDLow()] and (lastGreeting[creature:GetGUIDLow()] < os.time())) then
+            lastGreeting[creature:GetGUIDLow()] = os.time() + 90
+            creature:SendUnitSay("Welcome to Yggdrasil, "..who:GetName().."! Let me know if you would like to adjust your XP rate or learn more about Yggdrasil.", 0)
+            creature:PerformEmote(3)
+        end
+    end
+end
+
 RegisterCreatureEvent(35160, 27, DruidEnvoy) -- ally druid
 RegisterCreatureEvent(57690, 27, DruidEnvoy) -- horde druid
 RegisterCreatureEvent(95026, 27, FlightTrainerDialogue) -- Flight trainer
@@ -566,6 +576,8 @@ RegisterCreatureEvent(95005, 27, Herb) -- Herb trainer
 RegisterCreatureEvent(95006, 27, Scribe) -- Scribe trainer
 RegisterCreatureEvent(95014, 27, Fish) -- Scribe trainer
 RegisterCreatureEvent(110000, 27, MamaDialogue) -- Mama Twig
+RegisterCreatureEvent(190023, 27, XPdialogue) -- Mama Twig
+RegisterCreatureEvent(1900230, 27, XPdialogue) -- Mama Twig
 RegisterCreatureEvent(110001, 27, PapaDialogue) -- Papa Twig
 RegisterCreatureEvent(110002, 27, PatrolDialogue) -- Twig Patrol
 RegisterCreatureEvent(110005, 27, Guide) -- Twig guide
