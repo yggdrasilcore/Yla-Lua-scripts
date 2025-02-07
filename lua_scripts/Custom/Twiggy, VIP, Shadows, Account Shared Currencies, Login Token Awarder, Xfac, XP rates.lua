@@ -822,6 +822,23 @@ local function OnPlayerLogin(event, player)
     end
 end
 
+local function CheckVipLogin(event, player)
+    if isPlayerBot[name] then
+        return
+    end
+    local name = player:GetName()
+    local GUIDLow = player:GetGUIDLow()
+    CharDBQueryAsync("SELECT VIPTIME FROM ACCOUNTS_VIP WHERE ACCOUNT = " .. player:GetAccountId() .. ";", function(result)
+        local player = GetPlayerByName(name)
+        if result then
+            VIPtime[GUIDLow] = result:GetUInt32(0)
+            print("VIP found: "..player:GetName()..".")
+        else
+            VIPtime[GUIDLow] = os.time()
+        end
+    end)
+end
+
 -- Twiggy and VIP script end
 
 -- Shadows Script Start
@@ -2364,6 +2381,7 @@ local function HandleVIPCommands(event, player, command)
 end
 
 RegisterPlayerEvent(42, HandleVIPCommands)
+RegisterPlayerEvent(3, CheckVipLogin)
 CheckVIP() -- Sets players with VIP as active VIP on load/reload ELUNA
 
 ------------------------------------------------------------------------------------------------
