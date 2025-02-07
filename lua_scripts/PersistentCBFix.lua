@@ -62,7 +62,7 @@ local function OnKillCreature(event, killer, killed)
         -- Clear combat for player-owned creatures
         if nearbyCreatures then
             for _, creature in pairs(nearbyCreatures) do
-                if creature:IsInCombat() and creature:GetOwner():ToPlayer() then
+                if creature:IsInCombat() and creature:GetOwner() and creature:GetOwner():ToPlayer() then
                     print("Clearing combat for player "..creature:GetOwner():GetName().."'s creature: "..creature:GetName())
                     creature:ClearInCombat()
                 end
