@@ -439,7 +439,9 @@ local function ShowMountMenu(event, player, item, target, page, isStandardMount)
         local iconPath = MOUNT_ICONS[spellId]
         if spellId == 75596 then 
             iconPath = "Interface/ICONS/ability_mount_frostyflyingcarpet"
-        end
+        elseif spellId == 75973 then 
+            iconPath = "Interface/ICONS/ability_mount_rocketmount2"
+		end
         -- Add icon to gossip menu item
         if isStandardMount then
             player:GossipMenuAddItem(4, "|T" .. iconPath .. ":32:32:-22:0|t" .. spellName, 0, 800000 + spellId)
