@@ -589,137 +589,260 @@ end
 spellCastFrame:RegisterEvent("UNIT_SPELLCAST_FAILED")
 spellCastFrame:SetScript("OnEvent", OnEvent)
 
--- Define the UpdateAllButtons function
-function UpdateAllButtons(toggle)
-    -- Check if we're in an outdoor area or instance
-    if IsSpellKnown(FeathersSpell) then
-        local isInstance, _ = IsInInstance()
-        local isIndoors = IsIndoors()
+-- Helper function to get the correct button based on slot and UI addon
+function GetActionButton(slot)    
+    if IsAddOnLoaded("ElvUI") then
+        if slot <= 12 then
+            return _G['ElvUI_Bar1Button' .. slot]
+        elseif slot <= 24 then
+            return _G['ElvUI_Bar2Button' .. (slot - 12)]
+        elseif slot <= 36 then
+            return _G['ElvUI_Bar3Button' .. (slot - 24)]
+        elseif slot <= 48 then
+            return _G['ElvUI_Bar4Button' .. (slot - 36)]
+        elseif slot <= 60 then
+            return _G['ElvUI_Bar5Button' .. (slot - 48)]
+        elseif slot <= 72 then
+            return _G['ElvUI_Bar6Button' .. (slot - 60)]
+        end
+    elseif IsAddOnLoaded("Bartender4") then
+        return _G["BT4Button" .. slot]
+    elseif IsAddOnLoaded("Dominos") then
+        return _G["DominosActionButton" .. slot]
+    else -- No addon, hook normal action buttons
+        if slot <= 12 then
+            return _G['ActionButton' .. slot]
+        elseif slot <= 24 then
+            return _G['BonusActionButton' .. (slot - 12)]
+        elseif slot <= 36 then
+            return _G['MultiBarRightButton' .. (slot - 24)]
+        elseif slot <= 48 then
+            return _G['MultiBarLeftButton' .. (slot - 36)]
+        elseif slot <= 60 then
+            return _G['MultiBarBottomRightButton' .. (slot - 48)]
+        elseif slot <= 72 then
+            return _G['MultiBarBottomLeftButton' .. (slot - 60)]
+        end
+    end
+    return nil
+end
 
-        -- Loop through all possible action buttons, including action bar and pet bar buttons
-        for i = 1, 120 do
-        
-            local button
-            
-            if IsAddOnLoaded("ElvUI") then
-                if i <= 12 then
-                    button = _G['ElvUI_Bar1Button' .. i]
-                elseif i <= 24 then
-                    button = _G['ElvUI_Bar2Button' .. (i - 12)]
-                elseif i <= 36 then
-                    button = _G['ElvUI_Bar3Button' .. (i-24)]
-                elseif i <= 48 then
-                    button = _G['ElvUI_Bar4Button' .. (i-36)]
-                elseif i <= 60 then
-                    button = _G['ElvUI_Bar5Button' .. (i-48)]
-                elseif i <= 72 then
-                    button = _G['ElvUI_Bar6Button' .. (i-60)]
-                else
-                    return
+function HandleButtonTexture(i, toggle)
+    local class, classFileName = UnitClass("player")
+    local button
+
+    if i >= 121 and i <= 127 and class == "Druid" then
+        button = _G['ShapeshiftButton' .. (i - 120)]  -- Get the ShapeshiftButton
+    elseif i < 120 then
+        button = GetActionButton(i)  -- For regular action buttons (1-120)
+    end
+
+    if not button then
+        return
+    end
+    
+    -- Get the action type and check if it's usable
+    local actionType, id, subType, spellID = GetActionInfo(i)
+    local isUsable, notEnoughMana = IsUsableAction(i)
+    local isDisabled = not isUsable or not button:IsEnabled()
+	
+	local flightShapeButton
+	local disabled
+	
+	if class == "Druid" and i >= 121 and i <= 127 then
+		local dtex, name, isActive, isCastable = GetShapeshiftFormInfo(i-120)
+		if dtex == "Interface\\Icons\\Ability_Druid_FlightForm" and not isActive then
+			texture = "Interface\\Icons\\Ability_Druid_FlightForm"
+			spellID = 40120
+			flightShapeButton = true
+		end
+    else
+        texture = GetActionTexture(i)  -- For action buttons, get the action texture
+    end
+	
+    -- Check if the button's icon is the flight form icon (applies to action buttons)
+    local isFlightForm = texture == "Interface\\Icons\\Ability_Druid_FlightForm"
+	
+    -- Check for mount or companion action types, or if the icon is flight form
+    if spellID and (actionType == "companion" and subType == "MOUNT" or isFlightForm) 
+	or (spellID == 40120 and flightShapeButton)
+	then
+        local buttonWidth, buttonHeight = button:GetSize()
+
+		if spellID == 40120 then
+			local name, rank, icon, powerCost, isFunnel, powerType
+			if IsSpellKnown(40120) then
+				name, rank, icon, powerCost, isFunnel, powerType = GetSpellInfo(40120)
+			elseif IsSpellKnown(33943) then
+				name, rank, icon, powerCost, isFunnel, powerType = GetSpellInfo(33943)
+			end
+			local currMana = UnitPower("player", 0)
+			if currMana < powerCost then
+				disabled = true
+				-- print("Not enough mana to cast, setting to disabled")
+			end
+		end
+		
+        -- Check if spellID is in BUFFIDS
+        for _, id in pairs(BUFFIDS) do
+            if spellID == id then
+                -- If no custom texture, create one
+                if not button.customTexture then
+                    local customTexture = button:CreateTexture(nil, "ARTWORK")
+                    customTexture:SetAllPoints(button)
+                    button.customTexture = customTexture
                 end
-            elseif IsAddOnLoaded("Bartender4") then
-                button = _G["BT4Button" .. i]
-            elseif IsAddOnLoaded("Dominos") then
-                button = _G["DominosActionButton" .. i]
-            else -- No addon, hook normal action buttons
-                if i <= 12 then
-                    button = _G['ActionButton' .. i]
-                elseif i <= 24 then
-                    button = _G['BonusActionButton' .. (i - 12)]
-                elseif i <= 36 then
-                    button = _G['MultiBarRightButton' .. (i-24)]
-                elseif i <= 48 then
-                    button = _G['MultiBarLeftButton' .. (i-36)]
-                elseif i <= 60 then
-                    button = _G['MultiBarBottomRightButton' .. (i-48)]
-                elseif i <= 72 then
-                    button = _G['MultiBarBottomLeftButton' .. (i-60)]
-                else
-                    return -- Stock UI doesn't have more than 72 buttons
-                end
-            end
-            
-            if button then
-            
-                -- Get the action type and check if it's usable
-                local actionType, id, subType, spellID = GetActionInfo(i)
-                
-                local isUsable, notEnoughMana = IsUsableAction(i)
-                local isDisabled = not isUsable or not button:IsEnabled()
 
-                -- Check for mount or companion action types
-                if spellID and actionType == "companion" and subType == "MOUNT" then
-                    local buttonWidth, buttonHeight = button:GetSize()
+                local map = GetCurrentMapContinent()
 
-                    -- Check if spellID is in BUFFIDS
-                    for _, id in pairs(BUFFIDS) do
-                        if spellID == id then
-                            -- Create or get a custom texture for the button only outside or in instances
-                            if not button.customTexture then
-                                -- Create the custom texture
-                                local customTexture = button:CreateTexture(nil, "ARTWORK")
-                                customTexture:SetAllPoints(button)  -- Make the custom texture fill the button
-                                button.customTexture = customTexture  -- Store the reference to the custom texture
-                            end
-
-                            local map = GetCurrentMapContinent()
-
-                            -- Set texture and ensure size when outside or not in an instance
-                            if not isIndoors and not isInstance and not InCombatLockdown()
-                            and (
-                            -- (GetRealZoneText() == "Azshara Crater") or -- mall flight disabled
-                            map == 1 or map == 2 or map == 3) and not (toggle == "off") then
-                                local texture = GetActionTexture(i)  -- Get the mount texture
-                                button.customTexture:SetTexture(texture)  -- Apply the mount texture
-                                button:SetSize(buttonWidth, buttonHeight)  -- Ensure the button size is retained
-                            elseif button.customTexture then
-                                button.customTexture:Hide()  -- Hide the custom texture when indoors
-                                button.customTexture = nil  -- Clean up the reference to the custom texture
-                            end
-                        end
-                    end
+                -- Add the custom texture if conditions are met
+                if not IsIndoors() and not IsInInstance() and not InCombatLockdown()
+                and (map == 1 or map == 2 or map == 3) and not (toggle == "off")
+				and not disabled then
+					if flightShapeButton then
+						-- print("Setting texture ", texture)
+					end
+					button.customTexture:SetTexture(texture)
+					button:SetSize(buttonWidth, buttonHeight)
+					button:SetFrameStrata("TOOLTIP")
+                elseif button.customTexture then
+                    -- If conditions aren't met, remove the custom texture
+                    button.customTexture:Hide()
+                    button.customTexture = nil
                 end
             end
         end
     end
+	
+    -- Check if the player is currently in a shapeshift form
+    if class == "Druid" then
+        local shapeshiftForm = GetShapeshiftForm()  -- Get the current shapeshift form (returns 0 if not in a shapeshift)
+
+        -- If the player is in a shapeshift form (e.g., flight form)
+        if shapeshiftForm and shapeshiftForm > 0 then
+            -- Check all buttons and remove any custom textures related to flight form
+            if button.customTexture then
+                button.customTexture:Hide()
+                button.customTexture = nil
+            end
+			
+			if texture == "Interface\\Icons\\Spell_Nature_WispSplode" then
+				local buttonWidth, buttonHeight = button:GetSize()
+                if not button.customTexture then
+                    local customTexture = button:CreateTexture(nil, "ARTWORK")
+                    customTexture:SetAllPoints(button)
+                    button.customTexture = customTexture
+                end
+				local texture = GetActionTexture(i)
+				button.customTexture:SetTexture(texture)
+				button:SetSize(buttonWidth, buttonHeight)
+			end
+        end
+    end
 end
 
--- Create the frame for event handling
+local lastUpdateTime = 0
+local updateCooldown = 0.001  -- 1 milliseconds
+
+function UpdateAllButtons(toggle)
+    -- Get the current time
+    local currentTime = GetTime()
+	
+	if toggle == "shapeshiftOff" then updateCooldown = 1 end
+	
+    -- If it's been less than 10ms since the last update, don't run the function again
+	if currentTime - lastUpdateTime < updateCooldown then
+		return
+	end
+
+    -- Update the timestamp to the current time
+    lastUpdateTime = currentTime
+
+    if IsSpellKnown(FeathersSpell) then
+        for i = 1, 127 do
+            HandleButtonTexture(i, toggle)
+        end
+    end
+end
+
+-- Event handling frame setup remains the same
 local worldEnterFrame = CreateFrame("Frame")
 local updateScheduled = false
 local elapsedTime = 0
 
--- Register the events to trigger when the player enters the world, changes zones, or enters/leaves combat
 worldEnterFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 worldEnterFrame:RegisterEvent("ZONE_CHANGED")
-worldEnterFrame:RegisterEvent("PLAYER_REGEN_DISABLED") -- Enter combat
-worldEnterFrame:RegisterEvent("PLAYER_REGEN_ENABLED")  -- Leave combat
+worldEnterFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
+worldEnterFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 worldEnterFrame:RegisterEvent("SPELLS_CHANGED")
 
+local class, classFileName = UnitClass("player")
+if class == "Druid" then
+	worldEnterFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
+    worldEnterFrame:RegisterEvent("UNIT_MANA")
+end
+
+local shapeshiftActive = false
+local updateScheduled = false
+local elapsedTime = 0
+
 worldEnterFrame:SetScript("OnEvent", function(self, event, ...)
-    if (event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED") then
+    if event == "UPDATE_SHAPESHIFT_FORM" then
+        if GetShapeshiftForm() and GetShapeshiftForm() > 0 and not shapeshiftActive then
+            shapeshiftActive = true
+            UpdateAllButtons()
+        elseif GetShapeshiftForm() and GetShapeshiftForm() < 1 and shapeshiftActive then
+            shapeshiftActive = false
+            UpdateAllButtons("shapeshiftOff")
+        end
+    elseif event == "UNIT_MANA" and class == "Druid" then
+        local unit = ...
+        if unit == "player" then
+            UpdateAllButtons()
+        end
+    elseif event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED" then
         if not updateScheduled then
             updateScheduled = true
-            elapsedTime = 0  -- Reset elapsed time
+            elapsedTime = 0
             self:SetScript("OnUpdate", function(_, elapsed)
                 elapsedTime = elapsedTime + elapsed
                 if elapsedTime >= 1 then
                     UpdateAllButtons()
                     updateScheduled = false
-                    self:SetScript("OnUpdate", nil)  -- Stop the OnUpdate loop
+                    self:SetScript("OnUpdate", nil)
                 end
             end)
         end
-    elseif event == "PLAYER_REGEN_ENABLED" or ("SPELLS_CHANGED") then
+    elseif event == "PLAYER_REGEN_ENABLED" or event == "SPELLS_CHANGED" then
         UpdateAllButtons()
     elseif event == "PLAYER_REGEN_DISABLED" then
-        local toggle = "off"
-        UpdateAllButtons(toggle)
+        UpdateAllButtons("off")
     end
 end)
 
--- Hook into ActionButton_UpdateUsable to call UpdateAllButtons
+
+-- Hook into ActionButton_UpdateUsable
 hooksecurefunc("ActionButton_UpdateUsable", function(button)
+    UpdateAllButtons()
+end)
+
+-- Hook into PickupAction
+hooksecurefunc("PickupAction", function(slot)
+    local button = GetActionButton(slot)
+    if button and button.customTexture then
+        button.customTexture:Hide()
+        button.customTexture = nil
+    end
+    UpdateAllButtons()
+end)
+
+-- Hook into PlaceAction
+hooksecurefunc("PlaceAction", function(slot)
+    local button = GetActionButton(slot)
+    if button and button.customTexture then
+        button.customTexture:Hide()
+        button.customTexture = nil
+    end
     UpdateAllButtons()
 end)
 
