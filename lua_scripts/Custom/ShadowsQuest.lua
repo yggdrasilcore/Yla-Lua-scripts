@@ -65,6 +65,7 @@ local QUEST_ID = 30000
 local TELEPORT_ITEM = 21878
 local QUEST_ITEM = 39163
 local AREA_ID = 268 -- Azshara crater temple 
+local MAP_ID = 37 -- Azshara crater
 local SHADOW_ENTRY = 30842 -- Player shadows
 local TIMERENDER_ENTRY = 27900 -- Hostile NPC
 local SWIRL_ENTRY = 17838 -- Swirly texture from time warp
@@ -84,13 +85,21 @@ local oldO = 0
 local locationChar = 0
 local minLevel = 15
 local dkLimit = 70 -- Prevents DKs from zapping toons into the scarlet enclave area
+local EventLocation = {-639.76, -259.62, 352.58, 2.27}
 
 -- Item use event
-RegisterItemEvent(TELEPORT_ITEM, 2, function(event, player, item, target)
+
+local function ShadowsTeleItem(event, player, item, target)
+    if player:GetAreaId() == AREA_ID then 
+        player:SendAreaTriggerMessage("You can't save your shadows from this location! Try again someplace else.")
+        player:SendBroadcastMessage("You can't save your shadows from this location! Try again someplace else.")
+        return false
+    end
+    
     if shadowsEvent > os.time() then
         player:SendAreaTriggerMessage("You can't save your shadows right now! Try again in a few minutes.")
         player:SendBroadcastMessage("You can't save your shadows right now! Try again in a few minutes.")
-        return
+        return false
     end
     
     oldMap = player:GetMapId()
@@ -100,95 +109,111 @@ RegisterItemEvent(TELEPORT_ITEM, 2, function(event, player, item, target)
     oldO = player:GetO()
     locationChar = player:GetGUIDLow()
     
-    player:Teleport(37, -639.76, -259.62, 352.58, 2.27)
+    player:Teleport(MAP_ID, EventLocation[1], EventLocation[2], EventLocation[3], EventLocation[4])
+
     return false
-end)
+end
 
--- Area change event
-RegisterPlayerEvent(47, function(event, player, oldArea, newArea)
-    if newArea == AREA_ID and player:HasQuest(QUEST_ID) and (shadowsEvent <= os.time()) then
-        shadowsEvent = os.time() + 180
+local function ShadowsMap(event, player)
+    if player:GetAreaId() == AREA_ID then
+        if player:HasQuest(QUEST_ID) and (shadowsEvent <= os.time()) then
         
-        player:RegisterEvent(function(eventId, delay, repeats, player)
-            if player and player:GetAreaId() == AREA_ID and (player:HasItem(TELEPORT_ITEM) or player:HasItem(QUEST_ITEM)) then
-                player:RemoveItem(TELEPORT_ITEM, 1)
-                player:RemoveItem(QUEST_ITEM, 1)
-                player:RemoveQuest(QUEST_ID)
-                player:AddItem(QUEST_ITEM, 1)
-                if locationChar == player:GetGUIDLow() then
-                    player:Teleport(oldMap, oldX, oldY, oldZ, oldO)
-                else
-                    player:CastSpell(player, HEARTHSTONE, true)
-                end
-                player:SendAreaTriggerMessage("You didn't help your shadows in time and they got pulled into the Twisting Nether! Try again later.")
-                player:SendBroadcastMessage("You didn't help your shadows in time and they got pulled into the Twisting Nether! Try again later.")
+            local playerLocation = {player:GetLocation()}
+            if not ((player:GetX() >= EventLocation[1]-1 and player:GetX() <= EventLocation[1]+1) and
+                    (player:GetY() >= EventLocation[2]-1 and player:GetY() <= EventLocation[2]+1)) then
+                    player:SetData("ShadowsQuestEvent", nil)
+                return
             end
-        end, 180000, 1)
-        
-        local shadows = player:GetCreaturesInRange(50, SHADOW_ENTRY)
-        for _, shadow in pairs(shadows) do
-            shadow:DespawnOrUnsummon()
-        end
 
-        local timerender = player:GetNearestCreature(50, TIMERENDER_ENTRY)
-        local swirl = player:GetNearestCreature(50, SWIRL_ENTRY)
-       
-        if timerender then timerender:DespawnOrUnsummon() end
-        if swirl then swirl:DespawnOrUnsummon() end
-        
-        eventState = 0
-        
-        local x, y, z, o = player:GetLocation()
-        local facing = player:GetO()
-        
-        -- Spawn shadows in cone
-        for i = -1, 1 do
-            local angle = facing + (i * 0.5)
-            local sx = x + (math.cos(angle) * 20)
-            local sy = y + (math.sin(angle) * 20)
-            local shadow = player:SpawnCreature(SHADOW_ENTRY, sx, sy, z, angle + math.pi, 1, DespawnTimer)
-            shadow:SetLevel(player:GetLevel())
-            shadow:SetDisplayId(player:GetDisplayId())
-            shadow:SetFaction(35)
-            shadow:AddAura(SHADOWFORM_AURA, shadow)
-            shadow:AddAura(SHACKLE_AURA, shadow)
-            shadow:AddAura(STUN_AURA, shadow)
-        end
-        
-        -- Spawn Timerender
-        local tx = x + (math.cos(facing) * 30)
-        local ty = y + (math.sin(facing) * 30)
-        local timerender = player:SpawnCreature(TIMERENDER_ENTRY, tx, ty, z, facing + math.pi, 1, DespawnTimer)
-        timerender:SetLevel(player:GetLevel() + 3)
-        timerender:AddAura(STUN_AURA, timerender)
-        timerender:AddAura(IMMUNE_ALL, timerender)
-        
-        -- Spawn Swirl
-        local twx = x + (math.cos(facing) * 35)
-        local twy = y + (math.sin(facing) * 35)
-        player:SpawnCreature(SWIRL_ENTRY, twx, twy, z, facing + math.pi, 1, DespawnTimer)
-        
-        player:AddAura(SHACKLE_AURA, player)
-        player:AddAura(IMMUNE_ALL, player)
-        
-        player:RegisterEvent(function(eventId, delay, repeats, player)
-            local shadowSpeak = player:GetNearestCreature(50, SHADOW_ENTRY)
-            shadowSpeak:SendUnitSay("Help us, "..player:GetName().."! We are shadows of your characters and have been trapped in time by the Black Dragonflight! Quickly, instruct us to break these chains and fight back!", 0)
+            player:SetData("ShadowsQuestEvent", true)
+            
+            shadowsEvent = os.time() + 180
+            
             player:RegisterEvent(function(eventId, delay, repeats, player)
-                player:SendAreaTriggerMessage("Instruct your shadows to defend themselves! Say \"formation shield\"!")
-                player:SendBroadcastMessage("Instruct your shadows to defend themselves! Say \"formation shield\"!")
-            end, 5000, 1)
-        end, 5000, 1)
-    end
-    if not (newArea == AREA_ID) then
-        player:RemoveAura(IMMUNE_ALL)
-        player:RemoveAura(SHACKLE_AURA)
-    end
-end)
+                if player and player:GetAreaId() == AREA_ID and (player:HasItem(TELEPORT_ITEM) or player:HasItem(QUEST_ITEM)) then
+                    player:RemoveItem(TELEPORT_ITEM, 1)
+                    player:RemoveItem(QUEST_ITEM, 1)
+                    player:RemoveQuest(QUEST_ID)
+                    player:AddItem(QUEST_ITEM, 1)
+                    if locationChar == player:GetGUIDLow() then
+                        player:Teleport(oldMap, oldX, oldY, oldZ, oldO)
+                    else
+                        player:CastSpell(player, HEARTHSTONE, true)
+                    end
+                    player:SendAreaTriggerMessage("You didn't help your shadows in time and they got pulled into the Twisting Nether! Try again later.")
+                    player:SendBroadcastMessage("You didn't help your shadows in time and they got pulled into the Twisting Nether! Try again later.")
+                end
+            end, 180000, 1)
+            
+            local shadows = player:GetCreaturesInRange(50, SHADOW_ENTRY)
+            for _, shadow in pairs(shadows) do
+                shadow:DespawnOrUnsummon()
+            end
 
--- Chat command event
-RegisterPlayerEvent(18, function(event, player, msg, Type, lang)
+            local timerender = player:GetNearestCreature(50, TIMERENDER_ENTRY)
+            local swirl = player:GetNearestCreature(50, SWIRL_ENTRY)
+           
+            if timerender then timerender:DespawnOrUnsummon() end
+            if swirl then swirl:DespawnOrUnsummon() end
+            
+            eventState = 0
+            
+            local x, y, z, o = player:GetLocation()
+            local facing = player:GetO()
+            
+            -- Spawn shadows in cone
+            for i = -1, 1 do
+                local angle = facing + (i * 0.5)
+                local sx = x + (math.cos(angle) * 20)
+                local sy = y + (math.sin(angle) * 20)
+                local shadow = player:SpawnCreature(SHADOW_ENTRY, sx, sy, z, angle + math.pi, 1, DespawnTimer)
+                shadow:SetLevel(player:GetLevel())
+                shadow:SetDisplayId(player:GetDisplayId())
+                shadow:SetFaction(35)
+                shadow:AddAura(SHADOWFORM_AURA, shadow)
+                shadow:AddAura(SHACKLE_AURA, shadow)
+                shadow:AddAura(STUN_AURA, shadow)
+            end
+            
+            -- Spawn Timerender
+            local tx = x + (math.cos(facing) * 30)
+            local ty = y + (math.sin(facing) * 30)
+            local timerender = player:SpawnCreature(TIMERENDER_ENTRY, tx, ty, z, facing + math.pi, 1, DespawnTimer)
+            timerender:SetLevel(player:GetLevel() + 3)
+            timerender:AddAura(STUN_AURA, timerender)
+            timerender:AddAura(IMMUNE_ALL, timerender)
+            
+            -- Spawn Swirl
+            local twx = x + (math.cos(facing) * 35)
+            local twy = y + (math.sin(facing) * 35)
+            player:SpawnCreature(SWIRL_ENTRY, twx, twy, z, facing + math.pi, 1, DespawnTimer)
+            
+            player:AddAura(SHACKLE_AURA, player)
+            player:AddAura(IMMUNE_ALL, player)
+            print("Scheduling first event")
+            player:RegisterEvent(function(eventId, delay, repeats, player)
+                print("first event firing")
+                local shadowSpeak = player:GetNearestCreature(50, SHADOW_ENTRY)
+                shadowSpeak:SendUnitSay("Help us, "..player:GetName().."! We are shadows of your characters and have been trapped in time by the Black Dragonflight! Quickly, instruct us to break these chains and fight back!", 0)
+                player:RegisterEvent(function(eventId, delay, repeats, player)
+                    print("firing defend call")
+                    player:SendAreaTriggerMessage("Instruct your shadows to defend themselves! Say \"formation shield\"!")
+                    player:SendBroadcastMessage("Instruct your shadows to defend themselves! Say \"formation shield\"!")
+                end, 5000)
+            end, 5000)
+        else
+            player:SetData("ShadowsQuestEvent", nil)
+            player:RemoveAura(IMMUNE_ALL)
+            player:RemoveAura(SHACKLE_AURA)
+        end
+    end
+end
+
+local function Talk(event, player, msg, Type, lang)
     if player:GetAreaId() ~= AREA_ID then return end
+    
+    if not player:GetData("ShadowsQuestEvent") then print("event not active on player") return end
+    
     local shadowSpeak = player:GetNearestCreature(50, SHADOW_ENTRY)
     
     if not shadowSpeak then return end
@@ -265,7 +290,7 @@ RegisterPlayerEvent(18, function(event, player, msg, Type, lang)
                 
                 shadowSpeak:RegisterEvent(function(eventId, delay, repeats, shadowSpeak)
                     shadowSpeak:SendUnitSay("Allow us to teleport you back to your original location.", 0)
-                end, 5000, 1)
+                end, 10000, 1)
                 
                 player:RegisterEvent(function(eventId, delay, repeats, player)
                     local shadows = player:GetCreaturesInRange(50, SHADOW_ENTRY)
@@ -277,7 +302,7 @@ RegisterPlayerEvent(18, function(event, player, msg, Type, lang)
                         player:RewardQuest(QUEST_ID)
                         shadowsEvent = os.time()
                     end
-                end, 6000, 1)
+                end, 12000, 1)
                 
                 local swirl = player:GetCreaturesInRange(50, SWIRL_ENTRY)[1]
                 if swirl then
@@ -291,12 +316,13 @@ RegisterPlayerEvent(18, function(event, player, msg, Type, lang)
                     else
                         player:CastSpell(player, HEARTHSTONE, true)
                     end
-                end, 10000, 1)
+                end, 13000, 1)
                 
             end, 4000, 1)
         end
     end
-end)
+end
+
 
 function AddLostAura(event, shadow, target)
     if shadow:GetAreaId() == AREA_ID then
@@ -354,6 +380,9 @@ end
 
 RegisterPlayerEvent(3, OnLogin)
 RegisterPlayerEvent(13, OnLevelUp)
+RegisterPlayerEvent(18, Talk)
+RegisterPlayerEvent(28, ShadowsMap)
 RegisterPlayerEvent(38, OnQuestAbandon)
+RegisterItemEvent(TELEPORT_ITEM, 2, ShadowsTeleItem)
 RegisterCreatureEvent(SHADOW_ENTRY, 1, AddLostAura)
 RegisterCreatureEvent(SHADOW_ENTRY, 2, AddLostAura)
