@@ -23,11 +23,11 @@ local disallowedZones   =   {4298, 4197, 3628, 3666} -- Scarlet Enclave (DK star
 -- Start Mall TP vars
 local ITEM_ID = 37430
 local COOLDOWN = 3600 -- 1 hour cooldown in seconds
-local MAP_ID = 573
-local X = 250.504822
-local Y = 504.449799
-local Z = 24.741276
-local ORIENTATION = 5.461457
+local MAP_ID = 37
+local X = 888.082
+local Y = 119.53
+local Z = 288.031
+local ORIENTATION = 1.09494
 -- End Mall TP vars
 
 -- VIP vars
