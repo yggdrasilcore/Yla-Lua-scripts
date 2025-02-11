@@ -47057,7 +47057,7 @@ function ItemCache.LoadCache()
 	local i = 1
 	local Query
 	
-	WorldDBQueryAsync("SELECT entry, class, name, subclass, InventoryType, RequiredLevel, Quality, maxcount FROM item_template WHERE ((InventoryType>0 AND InventoryType NOT IN (28, 27, 24, 18, 19, 12) AND ItemLevel < 200) OR (Name LIKE '%frostmourne%' AND ItemLevel < 201)) AND name NOT LIKE '%deprecated%' AND Quality != 7 AND name NOT LIKE '%Sword2H, Corrupted%' AND name NOT LIKE '%Tigole%' ORDER BY Name ASC;", function(Query)
+	WorldDBQueryAsync("SELECT entry, class, name, subclass, InventoryType, ItemLevel, RequiredLevel, Quality, maxcount FROM item_template WHERE ((InventoryType>0 AND InventoryType NOT IN (28, 27, 24, 18, 19, 12) AND ItemLevel < 200) OR (Name LIKE '%frostmourne%' AND ItemLevel < 201)) AND name NOT LIKE '%deprecated%' AND Quality != 7 AND name NOT LIKE '%Sword2H, Corrupted%' AND name NOT LIKE '%Tigole%' ORDER BY Name ASC;", function(Query)
         if Query then
             repeat
                 local name = Query:GetString(2)
@@ -47073,7 +47073,8 @@ function ItemCache.LoadCache()
                         name = name,
                         subclass = Query:GetUInt32(3),
                         InventoryType = inventoryType,
-                        level = Query:GetUInt32(5),
+                        itemLevel = Query:GetUInt32(5),
+                        level = Query:GetUInt32(6),
                         quality = quality,
                         maxcount = maxcount
                     }
@@ -47120,7 +47121,7 @@ local function PlayerHasEnoughFreeSlots(player, requiredSlots)
 		end
 	end
 
-	print("Total free slots found: " .. freeSlots)
+	--print("Total free slots found: " .. freeSlots)
 	return freeSlots >= requiredSlots
 end
 
@@ -47409,19 +47410,19 @@ local function MogVendorSelect(event, player, object, sender, intid, code)
 		DisplaySlotItems(player, object, items, intid, 24000)
 
 	elseif intid == 6000000 then
-		print("Search input received. Code: " .. (code or "nil"))
+		--print("Search input received. Code: " .. (code or "nil"))
 		if code then
 			if code ~= "" then
 				currentSearchTerm = code:lower()
 				print("Search term set to: " .. currentSearchTerm)
 				ItemCache.GenerateSearchMenu(player, object, 1)
 			else
-				print("Empty search term received")
+				--print("Empty search term received")
 				player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_spyglass_01:31:31:-24:0|tPlease enter a valid search term", 0, 5000003)
 				player:GossipSendMenu(12, object)
 			end
 		else
-			print("Search was canceled")
+			--print("Search was canceled")
 			MogVendorHello(event, player, object)
 		end
 	elseif intid > 8000000 and intid < 8100000 then
@@ -47452,7 +47453,8 @@ local function MogVendorSelect(event, player, object, sender, intid, code)
             if PlayerHasEnoughCurrency(player, itemCost) then
                 if PlayerHasEnoughFreeSlots(player, 1) then
                     if player:GetItemCount(itemId) < maxcount then
-                        player:AddItem(itemId, 1)
+						local item = player:GetItemByEntry(itemId)
+						player:AddItem(itemId, 1)
                         player:RemoveItem(CURRENCY_ID, itemCost)
                         player:SendBroadcastMessage("You have purchased " .. GetItemLink(itemId) .. " for " .. itemCost .. " " .. CURRENCY_NAME .. ".")
                         print("Player "..player:GetName().." has purchased " .. GetItemLink(itemId) .. " for " .. itemCost .. " " .. CURRENCY_NAME .. ".")
@@ -47488,13 +47490,26 @@ local function MogVendorSelect(event, player, object, sender, intid, code)
 		end
 		
 		local quality = itemData and itemData.quality or 0
+		local itemLevel = itemData and itemData.itemLevel
+		local level = itemData and itemData.level or 0
 		local itemCost = math.floor((itemId / 1000)/3*2 + (baseItemCost / 4 * quality^1.4))
+
 		if quality >= 5 then
 			itemCost = math.max(itemCost, 100)
 		end
 		
 		player:GossipMenuAddItem(0, "|TInterface/ICONS/" .. itemIconCache[itemId] .. ":31:31:-24:0|tInspect " .. itemLink .. "\n \nClick here to receive an inspect link. \n \n ", 0, 7000000 + itemId)
-
+			
+		if level == 0 then
+			local reqLevel = math.ceil(itemLevel / 2.5)
+			if player:GetLevel() < reqLevel then
+				player:GossipMenuAddItem(0, "|TInterface/ICONS/achievement_level_80:31:31:-24:0|tRequired level to purchase: ".. math.ceil(itemLevel / 2.5) .."\n \nYou are too low level to purchase this item.\n \n ", 0, 0)
+				player:GossipMenuAddItem(4, "|TInterface/ICONS/trade_engineering:31:31:-24:0|tGo back", 0, 0)
+				player:GossipSendMenu(12, object)
+				return
+			end
+		end
+		
 		if PlayerHasEnoughCurrency(player, itemCost) then
 			if PlayerHasEnoughFreeSlots(player, 1) then
 				player:GossipMenuAddItem(0, "|TInterface/ICONS/" .. itemIconCache[itemId] .. ":31:31:-24:0|tBuy " .. itemLink .. "?\n \nClick here to buy the item.\nPrice:  " .. itemCost .. " "..CURRENCY_NAME.."\n \n ", 0, 8000000 + itemId)
@@ -47516,6 +47531,7 @@ local function MogVendorSelect(event, player, object, sender, intid, code)
 		local itemId = intid - 2000000
 		local itemLink = GetItemLink(itemId)
 		local baseItemCost = math.ceil(itemId / 1000)
+		player:GossipClearMenu()
 		
 		-- Find the item in the ItemCache
 		local itemData
@@ -47527,13 +47543,25 @@ local function MogVendorSelect(event, player, object, sender, intid, code)
 		end
 		
 		local quality = itemData and itemData.quality or 0
-		local itemCost = math.floor(baseItemCost/3*2 + (baseItemCost / 4 * quality^1.4))
-		
+		local itemLevel = itemData and itemData.itemLevel
+		local level = itemData and itemData.level or 0
+		local itemCost = math.floor((itemId / 1000)/3*2 + (baseItemCost / 4 * quality^1.4))
+
 		if quality >= 5 then
 			itemCost = math.max(itemCost, 100)
 		end
-		player:GossipClearMenu()
+		
 		player:GossipMenuAddItem(0, "|TInterface/ICONS/" .. itemIconCache[itemId] .. ":31:31:-24:0|tInspect " .. itemLink .. "\n \nClick here to receive an inspect link. \n \n ", 0, 7000000 + itemId)
+		
+		if level == 0 then
+			local reqLevel = math.ceil(itemLevel / 2.5)
+			if player:GetLevel() < reqLevel then
+				player:GossipMenuAddItem(0, "|TInterface/ICONS/achievement_level_80:31:31:-24:0|tRequired level to purchase: ".. math.ceil(itemLevel / 2.5) .."\n \nYou are too low level to purchase this item.\n \n ", 0, 0)
+				player:GossipMenuAddItem(4, "|TInterface/ICONS/trade_engineering:31:31:-24:0|tGo back", 0, 0)
+				player:GossipSendMenu(12, object)
+				return
+			end
+		end
 		
 		if PlayerHasEnoughCurrency(player, itemCost) then
 			if PlayerHasEnoughFreeSlots(player, 1) then
