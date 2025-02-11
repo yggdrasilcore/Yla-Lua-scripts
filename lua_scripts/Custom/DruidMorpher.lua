@@ -848,13 +848,14 @@ local function HideWeapon(eventId, delay, repeats, player)
 end
 
 local function Morpher(eventId, delay, repeats, player)
-	if player and player:GetClass() == 11 and player:HasItem(17890) and not player:IsPvPFlagged() then 
+	if player and player:GetClass() == 11 and player:HasItem(17890) and not player:IsPvPFlagged() and player:IsAlive() then
 		local guid = player:GetGUIDLow()
 		
-		if player:HasAura(71561) or player:HasAura(71484) or player:HasAura(71560) or player:HasAura(71556) or player:HasAura(71485) or player:HasAura(71492) then 
+		--if player:HasAura(71561) or player:HasAura(71484) or player:HasAura(71560) or player:HasAura(71556) or player:HasAura(71485) or player:HasAura(71492) then 
 			--print("[Druid Morph Module]: DBW stopped morph for "..player:GetName())
 		
-		elseif player:HasAura(3025) then -- Cat
+		--else
+		if player:HasAura(3025) then -- Cat
 			if not morphSelection1[guid] then
 				local morphdb1 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 1") -- Load active morph status
 				if morphdb1 then 
@@ -965,17 +966,22 @@ end
 
 local function Shapeshift(event, player, spell, skipCheck)
     local spellId = spell:GetEntry()
-
-    if player:HasItem(17890) and player:GetClass() == 11
-	and	not player:IsPvPFlagged() and
+	if not player:HasItem(17890) then return end
+    if not (player:GetClass() == 11) then return end
+	if player:IsPvPFlagged() then return end
+	
+	if
 	(spellId == 768 or spellId == 9634
 	or spellId == 5487 or spellId == 783
 	or spellId == 40120 or spellId == 33943
 	or spellId == 33891 or spellId == 24858
-	or spellId == 1066 or spellId == 71561
-	or spellId == 71484 or spellId == 71560
-	or spellId == 71556 or spellId == 71485 
-	or spellId == 71492) then
+	or spellId == 1066
+	-- DBW below
+	--or spellId == 71561 or spellId == 71492
+	--or spellId == 71484 or spellId == 71560
+	--or spellId == 71556 or spellId == 71485 
+	)
+	then
 		
 		playerName = player:GetName()
 		
@@ -1013,16 +1019,16 @@ local function Shapeshift(event, player, spell, skipCheck)
             formId = 7 -- Aquatic Form	
 			--print("[Druid Morph Module]: Shifter - Aquatic shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection7[guid])
 			player:RegisterEvent(Morpher, MorphApplicationDelay, MorphRepeats)
-        elseif (spellId == 71561 or spellId == 71484 or spellId == 71560 or spellId == 71556 or spellId == 71485 or spellId == 71492) then
-            if (player:HasAura(768) or player:HasAura(32356) or player:HasAura(3025)) and morphSelection1[guid] then
-				player:RegisterEvent(DBWfix, DBWDelay, DBWRepeats)
-				--print("[Druid Morph Module]: DBW detected!")
-            elseif (player:HasAura(9634) or player:HasAura(5487)) and morphSelection2[guid] then
-				player:RegisterEvent(DBWfix, DBWDelay, DBWRepeats)
-				--print("[Druid Morph Module]: DBW detected!")
-            else
-                return
-            end
+        --elseif (spellId == 71561 or spellId == 71484 or spellId == 71560 or spellId == 71556 or spellId == 71485 or spellId == 71492) then
+        --		 if (player:HasAura(768) or player:HasAura(32356) or player:HasAura(3025)) and morphSelection1[guid] then
+		--		player:RegisterEvent(DBWfix, DBWDelay, DBWRepeats)
+		--		--print("[Druid Morph Module]: DBW detected!")
+        --    elseif (player:HasAura(9634) or player:HasAura(5487)) and morphSelection2[guid] then
+		--		player:RegisterEvent(DBWfix, DBWDelay, DBWRepeats)
+		--		--print("[Druid Morph Module]: DBW detected!")
+        --    else
+        --        return
+        --    end
         else
             return
         end
@@ -1190,6 +1196,13 @@ local function OnMapChange(event, player)
 	end
 end
 
+local function DBMMorph(event, player, command)
+    if command == "dbmmorph" and player:IsAlive() then
+		player:RegisterEvent(Morpher, 0)
+		return false
+    end
+end
+
 CacheCreatures() -- Caching available creatures from world DB on script initialization
 
 RegisterPlayerEvent(3, OnLogin) 
@@ -1198,6 +1211,7 @@ RegisterPlayerEvent(5, Shapeshift) -- On spellcast shapeshifts, to initialize mo
 RegisterPlayerEvent(7, OnKillCreature)
 RegisterPlayerEvent(28, OnMapChange)
 RegisterPlayerEvent(33, OnCombat)
+RegisterPlayerEvent(42, DBMMorph)
 RegisterItemGossipEvent(ITEM_ID, 1, OnGossipHello)
 RegisterPlayerGossipEvent(0, 2, OnGossipSelect)
 RegisterServerEvent(33, ReloadEluna) -- On reload eluna	

@@ -859,3 +859,59 @@ end
 local spellSucceed = CreateFrame("Frame")
 spellSucceed:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 spellSucceed:SetScript("OnEvent", OnSpellCastSucceed)
+
+-- Kaldorei medallion
+local class, classFileName = UnitClass("player")
+if class == "Druid" then
+    local frame = CreateFrame("Frame")
+    frame:RegisterEvent("UNIT_AURA")
+    local trinketSpellIDs = {
+        71561, -- Trinket 1
+        71484, -- Trinket 2
+        71560, -- Trinket 3
+        71556, -- Trinket 4
+        71485, -- Trinket 5
+        71492  -- Trinket 6
+    }
+    
+    -- Get icons for our spell IDs
+    local spellIcons = {}
+    for _, spellID in pairs(trinketSpellIDs) do
+        local _, _, icon = GetSpellInfo(spellID)
+        spellIcons[icon] = spellID
+    end
+    
+    local activeBuffs = {}
+    
+    local function CheckBuffs(self, event, unit)
+        if unit and unit ~= "player" then return end
+        
+        local currentActive = {}
+        
+        -- Scan buffs
+        for i = 1, 40 do
+            local _, _, icon = UnitBuff("player", i)
+            if not icon then 
+                break 
+            end
+            
+            if spellIcons[icon] then
+                currentActive[icon] = true
+            end
+        end
+        
+        -- Check for removals
+        for icon, spellID in pairs(spellIcons) do
+            if activeBuffs[icon] and not currentActive[icon] then
+                SendChatMessage(".dbmmorph", "SAY")
+            end
+        end
+        
+        activeBuffs = currentActive
+    end
+    
+    frame:SetScript("OnEvent", CheckBuffs)
+    
+    -- Do initial check immediately
+    CheckBuffs()
+end
