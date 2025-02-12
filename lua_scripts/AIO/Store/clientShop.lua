@@ -906,6 +906,10 @@ SlashCmdList["CUSTOMSTORE"] = function()
     end
 end
 
+local reToggleMenu
+
+if GameMenuFrame and GameMenuFrame:IsShown() then reToggleMenu = true GameMenuFrame:Hide() end
+
 tinsert(UISpecialFrames, mainFrame:GetName()) -- allows frame to be closed with escape key
 -- Create button for the Game Menu
 local storeButton = CreateFrame("Button", "GameMenuButtonStore", GameMenuFrame, "GameMenuButtonTemplate")
@@ -1088,3 +1092,5 @@ end)
 blockingPanel:SetScript("OnDragStop", function(self)
     mainFrame:StopMovingOrSizing()
 end)
+
+if reToggleMenu == true then GameMenuFrame:Show() end
