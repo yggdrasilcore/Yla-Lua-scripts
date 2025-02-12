@@ -1,12 +1,10 @@
-local LEVEL_MOUNTS_AND_STONE = 10
-local LEVEL80 = 80
-
 function OnLevelUp(event, player, oldLevel)
+	if player:GetData("LvlRewardsDisabled") then return end
     local newLevel = player:GetLevel()
     local team = player:GetTeam()
     
-    if newLevel >= LEVEL_MOUNTS_AND_STONE and oldLevel < LEVEL_MOUNTS_AND_STONE then
-        player:LearnSpell(33389) --riding
+    if newLevel >= 10 and oldLevel < 10 then
+        player:LearnSpell(33388) --riding
         if team == 0 then
             player:LearnSpell(472)  --alliance mount
         elseif team == 1 then
@@ -31,7 +29,7 @@ function OnLevelUp(event, player, oldLevel)
     elseif newLevel >= 70 and oldLevel < 70 then
         player:ModifyMoney(4000000) -- 400g
         player:SendBroadcastMessage("Congratulations on reaching level 70! You have earned 400 gold.")
-    elseif newLevel >= LEVEL80 and oldLevel < LEVEL80 then
+    elseif newLevel >= 80 and oldLevel < 80 then
         player:AddItem(40753, 200) -- 200 EOV
         player:ModifyMoney(5000000) -- 500g
         player:SendBroadcastMessage("Congratulations on reaching level 80! You have been awarded 200 Emblems of Valor and 500 gold for your accomplishment.")
