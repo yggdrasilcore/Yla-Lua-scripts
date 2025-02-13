@@ -74,7 +74,6 @@ local function ModifyDeposit()
             lastSilver = newSilver
             lastCopper = newCopper
 
-            -- Print the new total cost
             --print("New Price: " .. newGold .. " gold, " .. newSilver .. " silver, " .. newCopper .. " copper.")
         end
     end
@@ -591,7 +590,9 @@ spellCastFrame:SetScript("OnEvent", OnEvent)
 
 -- Helper function to get the correct button based on slot and UI addon
 function GetActionButton(slot)    
-    if IsAddOnLoaded("ElvUI") then
+    if IsAddOnLoaded("Bartender4") then
+        return _G["BT4Button" .. slot]
+	elseif IsAddOnLoaded("ElvUI") then
         if slot <= 12 then
             return _G['ElvUI_Bar1Button' .. slot]
         elseif slot <= 24 then
@@ -605,8 +606,6 @@ function GetActionButton(slot)
         elseif slot <= 72 then
             return _G['ElvUI_Bar6Button' .. (slot - 60)]
         end
-    elseif IsAddOnLoaded("Bartender4") then
-        return _G["BT4Button" .. slot]
     elseif IsAddOnLoaded("Dominos") then
         return _G["DominosActionButton" .. slot]
     else -- No addon, hook normal action buttons
@@ -915,3 +914,66 @@ if class == "Druid" then
     -- Do initial check immediately
     CheckBuffs()
 end
+
+--------------------------------------
+-- LVL Rewards Toggle
+--------------------------------------
+
+local LvlRewardsDisabled
+
+local function onAddonMessage(self, event, prefix, message, channel, sender)
+    if prefix == "LvlRewardsDisabled" then
+        if message and message:find("DISABLED") then
+            LvlRewardsDisabled = 1
+        elseif message and message:find("ENABLED") then
+            LvlRewardsDisabled = 0
+        end
+		if InterfaceOptionsFeaturesPanel:IsShown() then
+			InterfaceOptionsFeaturesPanel:Hide()
+			InterfaceOptionsFeaturesPanel:Show()
+		end
+	end
+end
+
+local chatmsgaddon = CreateFrame("Frame")
+chatmsgaddon:RegisterEvent("CHAT_MSG_ADDON")
+chatmsgaddon:SetScript("OnEvent", onAddonMessage)
+SendChatMessage(".lvlrewardsstatus", "GUILD") -- Sends a request for the current level-up rewards status
+
+InterfaceOptionsFeaturesPanel:HookScript("OnShow", function(self)
+    if not DisableLevelUpRewardsCheckbox and LvlRewardsDisabled then
+        local checkbox = CreateFrame("CheckButton", "DisableLevelUpRewardsCheckbox", InterfaceOptionsFeaturesPanel, "InterfaceOptionsCheckButtonTemplate")
+        checkbox:SetPoint("TOPLEFT", InterfaceOptionsFeaturesPanelPreviewTalentChanges, "BOTTOMLEFT", 0, -45)
+		
+		if LvlRewardsDisabled == 0 then 
+			checkbox:SetChecked(true)
+		else
+			checkbox:SetChecked(false)
+		end
+			
+        local text = checkbox:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+        text:SetPoint("LEFT", checkbox, "RIGHT", 4, 0)
+        text:SetText("Receive Level-Up Rewards")
+
+        local function OnCheckboxClick(self)
+            if self:GetChecked() then
+                SendChatMessage(".lvlrewardson", "GUILD")  -- Send message to enable rewards
+            else
+                SendChatMessage(".lvlrewardsoff", "GUILD") -- Send message to disable rewards
+            end
+        end
+
+        checkbox:SetScript("OnClick", OnCheckboxClick)
+
+        local description = checkbox:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        description:SetPoint("TOPLEFT", checkbox, "BOTTOMLEFT", 35, -5)
+        description:SetText("If disabled, you will not receive gold and vanity rewards\non every 10 levels. If you pass a reward level with this\nfeature disabled, the reward cannot be claimed later.")
+        description:SetTextColor(1, 1, 1)  -- Set text color to white
+        description:SetJustifyH("LEFT")    -- Align text to the left
+
+        local background = checkbox:CreateTexture(nil, "BACKGROUND")
+        background:SetPoint("TOPLEFT", description, "TOPLEFT", -5, 5)
+        background:SetPoint("BOTTOMRIGHT", description, "BOTTOMRIGHT", 5, -5)
+		
+	end
+end)
