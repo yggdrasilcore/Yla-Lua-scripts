@@ -292,7 +292,7 @@ local AIO_ADDONSORDER = {}
 local LibWindow
 local LuaSrcDiet
 local NewQueue = NewQueue or require("queue")
-local Smallfolk = Smallfolk or require("smallfolk")
+local Smallfolk = Smallfolk or require("Smallfolk")
 local lualzw = lualzw or require("lualzw")
 if AIO_SERVER then
     LuaSrcDiet = require("LuaSrcDiet")
