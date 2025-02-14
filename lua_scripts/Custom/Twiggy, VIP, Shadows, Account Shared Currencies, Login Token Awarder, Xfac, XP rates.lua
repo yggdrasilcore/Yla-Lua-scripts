@@ -1479,6 +1479,11 @@ function Teleport(player, sameMap)
     if player:IsDead() then
         return
     end
+	if not bot:IsAlive() then
+		print("Bot dead")
+		return
+	end
+	print("Bot lives")
     if not botCount[name] or botCount[name] == 0 then
         return
     end
@@ -1501,7 +1506,7 @@ function Teleport(player, sameMap)
             if bot:GetMapId() ~= player:GetMapId() and sameMap == "yes" then
                 return
             end
-            if not bot:IsWithinLoS(player) and bot:IsAlive() and
+            if not bot:IsWithinLoS(player) and
 			(((bot:GetZ() < player:GetZ() - 20) or (bot:GetZ() > player:GetZ() + 20) or (player:GetDistance(bot) > 100))
 			or not ((bot:GetMapId() == player:GetMapId())))
 			or
