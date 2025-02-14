@@ -16,7 +16,7 @@ local function OnKillCreature(event, killer, killed)
     
     if nearbyCreatures then
         for _, creature in pairs(nearbyCreatures) do
-            if creature:IsInCombat() then
+            if creature:IsInCombat() and (creature:IsAlive() or creature:GetHealth() > 0) then
                 local threatList = creature:GetThreatList()
                 print(string.format("Debug: Checking %s threat list", creature:GetName()))
                 
