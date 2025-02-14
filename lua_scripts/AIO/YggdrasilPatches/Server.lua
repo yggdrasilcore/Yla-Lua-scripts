@@ -36,6 +36,7 @@ local function OnAddonMessageReceived(event, player, _type, header, data, target
 end
 
 local function AIO_UI_FIX(event, player, command)
+	if not player then return end
 	local guid = player:GetGUIDLow()
 	
 	if event == 3 then -- on login, check reward state
