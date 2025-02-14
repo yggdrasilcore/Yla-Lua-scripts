@@ -1499,10 +1499,9 @@ function Teleport(player, sameMap)
         local bot = GetPlayerByName(botName)
         if bot and not player:IsInCombat() then
 			if (bot:GetHealth() == 0) and not bot:HasAura(8326) then -- Stops unreleased ghost corpses from being teleported
-				print("Not teleporting dead bot")
+				bot:SendUnitWhisper("I cannot come with you unless you resurrect me or tell me to release.", 0, player)
 				return
 			end 
-			print("Bot lives")
             if bot:GetMapId() ~= player:GetMapId() and sameMap == "yes" then
                 return
             end
