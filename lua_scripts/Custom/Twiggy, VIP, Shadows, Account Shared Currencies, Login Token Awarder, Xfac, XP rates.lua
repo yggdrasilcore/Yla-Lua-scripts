@@ -1502,7 +1502,7 @@ function Teleport(player, sameMap)
                 return
             end
             isInLos = bot:IsWithinLoS(player)
-            if not isInLos and (((bot:GetZ() < player:GetZ() - 20) or (bot:GetZ() > player:GetZ() + 20)) or not ((bot:GetMapId() == player:GetMapId()))) then
+            if not isInLos and (((bot:GetZ() < player:GetZ() - 20) or (bot:GetZ() > player:GetZ() + 20) or (player:GetDistance(bot) > 100)) or not ((bot:GetMapId() == player:GetMapId()))) then
                 bot:Teleport(player:GetMapId(), player:GetX() + math.random(-1, 1), player:GetY() + math.random(-1, 1), player:GetZ(), player:GetO() + math.random(-6, 6))
                 print("Teleporting bot "..botName.." to "..name)
             end
