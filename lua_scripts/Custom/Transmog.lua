@@ -47062,8 +47062,8 @@ function ItemCache.LoadCache()
             repeat
                 local name = Query:GetString(2)
                 local inventoryType = Query:GetUInt32(4)
-                local quality = Query:GetUInt32(6)
-                local maxcount = Query:GetUInt32(7)
+                local quality = Query:GetUInt32(7)
+                local maxcount = Query:GetUInt32(8)
                 if not (name:find("%(") or name:find("%)") or 
                         name:find("%[") or name:find("%]") or 
                         name:lower():find("unused") or name:lower():find("test")) then
@@ -47414,7 +47414,7 @@ local function MogVendorSelect(event, player, object, sender, intid, code)
 		if code then
 			if code ~= "" then
 				currentSearchTerm = code:lower()
-				print("Search term set to: " .. currentSearchTerm)
+				print("[Transmog item vendor]: "..player:GetName().." is searching for: " .. currentSearchTerm)
 				ItemCache.GenerateSearchMenu(player, object, 1)
 			else
 				--print("Empty search term received")
@@ -47531,7 +47531,6 @@ local function MogVendorSelect(event, player, object, sender, intid, code)
 		local itemId = intid - 2000000
 		local itemLink = GetItemLink(itemId)
 		local baseItemCost = math.ceil(itemId / 1000)
-		player:GossipClearMenu()
 		
 		-- Find the item in the ItemCache
 		local itemData
@@ -47545,6 +47544,7 @@ local function MogVendorSelect(event, player, object, sender, intid, code)
 		local quality = itemData and itemData.quality or 0
 		local itemLevel = itemData and itemData.itemLevel
 		local level = itemData and itemData.level or 0
+		
 		local itemCost = math.floor((itemId / 1000)/3*2 + (baseItemCost / 4 * quality^1.4))
 
 		if quality >= 5 then
