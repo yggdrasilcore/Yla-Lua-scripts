@@ -1498,10 +1498,10 @@ function Teleport(player, sameMap)
     for i, botName in ipairs(activeBots[name]) do
         local bot = GetPlayerByName(botName)
         if bot and not player:IsInCombat() then
-			if not bot:IsAlive() then
-				print("Bot dead")
+			if (bot:GetHealth() == 0) and not bot:HasAura(8326) then -- Stops unreleased ghost corpses from being teleported
+				print("Not teleporting dead bot")
 				return
-			end
+			end 
 			print("Bot lives")
             if bot:GetMapId() ~= player:GetMapId() and sameMap == "yes" then
                 return
@@ -1512,6 +1512,7 @@ function Teleport(player, sameMap)
 			or
 			(player:GetDistance(bot) > 400)
 			then
+				if bot:HasAura(8326) then RunCommand("revive "..bot:GetName()) end -- handle auto revive of bots on enter instance/raid
                 bot:Teleport(player:GetMapId(), player:GetX() + math.random(-1, 1), player:GetY() + math.random(-1, 1), player:GetZ(), player:GetO() + math.random(-6, 6))
                 print("Teleporting bot "..botName.." to "..name)
             end
