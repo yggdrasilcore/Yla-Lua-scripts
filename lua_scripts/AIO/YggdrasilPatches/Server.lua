@@ -101,6 +101,11 @@ local function AIO_UI_FIX(event, player, command)
 	end
 end
 
+local function CMSGAreaCodeTrigger(event, packet, player)
+	if not player:GetAreaId() == 4564 then return end
+	if not player:HasSpell(54197) then return end
+	player:SendAddonMessage("CheckMounts", "ENABLED", 7, player)
+end
 local guidString = ""
 local first = true
 
@@ -138,3 +143,4 @@ RegisterPlayerEvent(4, AIO_UI_FIX)
 RegisterPlayerEvent(25, AIO_UI_FIX)
 RegisterPlayerEvent(42, AIO_UI_FIX)
 RegisterServerEvent(30, OnAddonMessageReceived)
+RegisterPacketEvent(0x0B4, 5, CMSGAreaCodeTrigger)

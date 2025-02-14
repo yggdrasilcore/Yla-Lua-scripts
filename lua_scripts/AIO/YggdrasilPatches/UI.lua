@@ -564,7 +564,10 @@ local function OnEvent(self, event, unit, spellName, spellRank, lineID)
     if UnitUsingVehicle("player") then return end
     if not (
     --GetRealZoneText() == "Azshara Crater" or -- mall flight disabled
-    GetCurrentMapContinent() == 1 or GetCurrentMapContinent() == 2 or GetCurrentMapContinent() == 3) then return end
+    GetSubZoneText() == "Krasus' Landing" or
+    GetCurrentMapContinent() == 1 or GetCurrentMapContinent() == 2 or GetCurrentMapContinent() == 3
+	)
+	then return end
     if event == "UNIT_SPELLCAST_FAILED" and unit == "player" then
         if IsFlying() then
             return
@@ -577,6 +580,19 @@ local function OnEvent(self, event, unit, spellName, spellRank, lineID)
                 if IsMounted() then
                     Dismount()
                 end
+				
+                local map = GetCurrentMapContinent()
+				local x, y = GetPlayerMapPosition("player")
+				
+				local KrasusCanFly
+				local subzone = GetSubZoneText()
+				local canColdWeather = IsSpellKnown(54197)
+				
+				if map == 4 and subzone == "Krasus' Landing" and canColdWeather and x < 0.655 then
+					
+					return
+				end
+
                 SendChatMessage("." .. spellID, "SAY")
                 UIErrorsFrame:Clear()
                 lastSendTime = GetTime()
@@ -630,6 +646,7 @@ function HandleButtonTexture(i, toggle)
     local class, classFileName = UnitClass("player")
     local button
 
+	
     if i >= 121 and i <= 127 and class == "Druid" then
         button = _G['ShapeshiftButton' .. (i - 120)]  -- Get the ShapeshiftButton
     elseif i < 120 then
@@ -685,6 +702,7 @@ function HandleButtonTexture(i, toggle)
         -- Check if spellID is in BUFFIDS
         for _, id in pairs(BUFFIDS) do
             if spellID == id then
+	
                 -- If no custom texture, create one
                 if not button.customTexture then
                     local customTexture = button:CreateTexture(nil, "ARTWORK")
@@ -693,22 +711,40 @@ function HandleButtonTexture(i, toggle)
                 end
 
                 local map = GetCurrentMapContinent()
+				local x, y = GetPlayerMapPosition("player")
+				
+				local KrasusCanFly
+				local subzone = GetSubZoneText()
+				local canColdWeather = IsSpellKnown(54197)
 
+				if map == 4 and subzone == "Krasus' Landing" and canColdWeather and x > 0.655 then
+					KrasusCanFly = true
+				else
+					KrasusCanFly = false
+				end
+				
                 -- Add the custom texture if conditions are met
-                if not IsIndoors() and not IsInInstance() and not InCombatLockdown()
-                and (map == 1 or map == 2 or map == 3) and not (toggle == "off")
-				and not disabled then
-					if flightShapeButton then
-						-- print("Setting texture ", texture)
+				if toggle == "off" then
+					if button.customTexture then
+						button.customTexture:Hide()
+						button.customTexture = nil
 					end
+					return
+				end
+				
+				if not IsIndoors() and not IsInInstance() and not InCombatLockdown()
+				and ((map == 1 or map == 2 or map == 3 or KrasusCanFly)
+				or toggle == "KrasusLanding")
+				and not disabled then
 					button.customTexture:SetTexture(texture)
 					button:SetSize(buttonWidth, buttonHeight)
 					button:SetFrameStrata("TOOLTIP")
-                elseif button.customTexture then
-                    -- If conditions aren't met, remove the custom texture
-                    button.customTexture:Hide()
-                    button.customTexture = nil
-                end
+				else
+					if button.customTexture then
+						button.customTexture:Hide()
+						button.customTexture = nil
+					end
+				end
             end
         end
     end
@@ -754,6 +790,17 @@ function UpdateAllButtons(toggle)
 		return
 	end
 
+	local map = GetCurrentMapContinent()
+	local x, y = GetPlayerMapPosition("player")
+	
+	local KrasusCanFly
+	local subzone = GetSubZoneText()
+	local canColdWeather = IsSpellKnown(54197)
+	
+	if map == 4 and subzone == "Krasus' Landing" and canColdWeather and x < 0.655 then
+		toggle = "off"
+	end
+
     -- Update the timestamp to the current time
     lastUpdateTime = currentTime
 
@@ -774,6 +821,8 @@ worldEnterFrame:RegisterEvent("ZONE_CHANGED")
 worldEnterFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 worldEnterFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 worldEnterFrame:RegisterEvent("SPELLS_CHANGED")
+worldEnterFrame:RegisterEvent("SPELL_UPDATE_USABLE")
+worldEnterFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 
 local class, classFileName = UnitClass("player")
 if class == "Druid" then
@@ -783,6 +832,7 @@ end
 
 local shapeshiftActive = false
 local updateScheduled = false
+local KrasusLanding
 local elapsedTime = 0
 
 worldEnterFrame:SetScript("OnEvent", function(self, event, ...)
@@ -800,6 +850,9 @@ worldEnterFrame:SetScript("OnEvent", function(self, event, ...)
             UpdateAllButtons()
         end
     elseif event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED" then
+		if not (GetSubZoneText() == "Krasus' Landing") then
+			KrasusLanding = nil
+		end
         if not updateScheduled then
             updateScheduled = true
             elapsedTime = 0
@@ -816,11 +869,14 @@ worldEnterFrame:SetScript("OnEvent", function(self, event, ...)
         UpdateAllButtons()
     elseif event == "PLAYER_REGEN_DISABLED" then
         UpdateAllButtons("off")
+    elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
+        local timestamp, subevent, _, _, _, _, name, _, spellID, _, _, _ = ...
+        if name == (GetUnitName("player", false)) and subevent == "SPELL_AURA_APPLIED" and spellID == 58600 then
+            UpdateAllButtons("off")
+        end
     end
 end)
 
-
--- Hook into ActionButton_UpdateUsable
 hooksecurefunc("ActionButton_UpdateUsable", function(button)
     UpdateAllButtons()
 end)
@@ -846,7 +902,6 @@ hooksecurefunc("PlaceAction", function(slot)
 end)
 
 UpdateAllButtons()
-
 
 local function OnSpellCastSucceed(_, _, _, name)
     if name == "Worgen Form" then
@@ -922,7 +977,12 @@ end
 local LvlRewardsDisabled
 
 local function onAddonMessage(self, event, prefix, message, channel, sender)
-    if prefix == "LvlRewardsDisabled" then
+	if prefix == "CheckMounts" then
+        if message and message:find("ENABLED") then
+			KrasusLanding = true
+            UpdateAllButtons("KrasusLanding")
+		end
+    elseif prefix == "LvlRewardsDisabled" then
         if message and message:find("DISABLED") then
             LvlRewardsDisabled = 1
         elseif message and message:find("ENABLED") then
