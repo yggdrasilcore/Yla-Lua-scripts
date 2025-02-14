@@ -1479,11 +1479,6 @@ function Teleport(player, sameMap)
     if player:IsDead() then
         return
     end
-	if not bot:IsAlive() then
-		print("Bot dead")
-		return
-	end
-	print("Bot lives")
     if not botCount[name] or botCount[name] == 0 then
         return
     end
@@ -1503,6 +1498,11 @@ function Teleport(player, sameMap)
     for i, botName in ipairs(activeBots[name]) do
         local bot = GetPlayerByName(botName)
         if bot and not player:IsInCombat() then
+			if not bot:IsAlive() then
+				print("Bot dead")
+				return
+			end
+			print("Bot lives")
             if bot:GetMapId() ~= player:GetMapId() and sameMap == "yes" then
                 return
             end
