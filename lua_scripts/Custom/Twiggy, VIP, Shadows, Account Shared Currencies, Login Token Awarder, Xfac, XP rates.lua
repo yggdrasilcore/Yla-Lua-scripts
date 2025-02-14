@@ -1501,7 +1501,7 @@ function Teleport(player, sameMap)
             if bot:GetMapId() ~= player:GetMapId() and sameMap == "yes" then
                 return
             end
-            if not bot:IsWithinLoS(player) and	
+            if not bot:IsWithinLoS(player) and bot:IsAlive() and
 			(((bot:GetZ() < player:GetZ() - 20) or (bot:GetZ() > player:GetZ() + 20) or (player:GetDistance(bot) > 100))
 			or not ((bot:GetMapId() == player:GetMapId())))
 			or
