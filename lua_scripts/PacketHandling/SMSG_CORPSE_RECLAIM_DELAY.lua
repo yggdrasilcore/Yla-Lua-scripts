@@ -7,7 +7,8 @@ local function killPlayer(e, d, r, player)
 end
 
 local function On0x269(event, packet, player)
-	if player:GetHealth() > 0 then
+	if player:GetHealth() > 0 and not (player:HasAura(8326) or player:HasAura(20584)) then
+		print("Reviving on 0x269")
 		RunCommand("revive "..player:GetName())
 		player:RegisterEvent(killPlayer, 1100, 1) -- If player is alive 1 second later, it means we gotta try again. KillPlayer() will make this packet fire again.
 	end
