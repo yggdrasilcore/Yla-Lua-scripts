@@ -2130,13 +2130,13 @@ local function OnXPRateChanger(event, player, object)
     end
 
     if not (object == player) then
-        player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/ABILITY_DRUID_MANATREE:32:32:-22:0|tTell me about Yggdrasil", 0, 1)
-        player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/spell_fire_burningspeed:32:32:-22:0|tLet me change my XP rate", 0, 2)
+        player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/ABILITY_DRUID_MANATREE:32:32:-22:0|tTell me about Yggdrasil", 0, 11)
+        player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/spell_fire_burningspeed:32:32:-22:0|tLet me change my XP rate", 0, 12)
         player:GossipMenuAddItem(0, "|TINTERFACE/ICONS/inv_misc_enggizmos_27:32:32:-22:0|tClose", 0, 997)
         player:GossipSendMenu(12, object)
     else
         if player:GetLevel() == 80 and not (player:GetClass() == 3) then
-            player:GossipMenuAddItem(0, "|TINTERFACE/ICONS/achievement_level_80:32:32:-22:0|tNo services available\n \nThere are no experience services available at level 80.\n \n ", 0, 2)
+            player:GossipMenuAddItem(0, "|TINTERFACE/ICONS/achievement_level_80:32:32:-22:0|tNo services available\n \nThere are no experience services available at level 80.\n \n ", 0, 12)
         else
             player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/spell_fire_burningspeed:32:32:-22:0|tYour experience rate is: x"..currentRate, 0, 2)
             player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/Achievement_Quests_Completed_08:32:32:-22:0|tSet rates x1", 0, 1, false, "Are you sure you want to change your experience rate to: x1?")
@@ -2163,9 +2163,9 @@ end
 local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
     print(intid)
     local currentRate = XPCache[player:GetGUIDLow()] or 1
-    if intid == 1 then
+    if intid == 11 then
     
-        player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/ABILITY_DRUID_MANATREE:32:32:-22:0|tTell me about Yggdrasil\n \nThe realms of Azeroth are connected in many ways, including through the Twisting Nether. However, in recent times, it has become apparent that an earthern force connects our realms as well. We've come to call this force Yggdrasil.\n \nThe roots of Yggdrasil have, since the dawn of time, come to grow new spurs, from which the world's Twiggies have risen.\n \nUs Twiggies have since taken it upon them to ease the burden of travelers in Azeroth. Every newcomer receives their own Branch of Yggdrasil, also known as Twiggy, to guide them.\n \nTwiggy can inform you of the features Yggdrasil brings, teleport you to the mall, and more.\n \n ", 0, 1)
+        player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/ABILITY_DRUID_MANATREE:32:32:-22:0|tTell me about Yggdrasil\n \nThe realms of Azeroth are connected in many ways, including through the Twisting Nether. However, in recent times, it has become apparent that an earthern force connects our realms as well. We've come to call this force Yggdrasil.\n \nThe roots of Yggdrasil have, since the dawn of time, come to grow new spurs, from which the world's Twiggies have risen.\n \nUs Twiggies have since taken it upon them to ease the burden of travelers in Azeroth. Every newcomer receives their own Branch of Yggdrasil, also known as Twiggy, to guide them.\n \nTwiggy can inform you of the features Yggdrasil brings, teleport you to the mall, and more.\n \n ", 0, 11)
         player:GossipMenuAddItem(0, "|TINTERFACE/ICONS/inv_misc_enggizmos_27:32:32:-22:0|tGo back", 0, 998)
         if not (object == player) then
             player:GossipSendMenu(12, object)
@@ -2173,7 +2173,7 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
             player:GossipSendMenu(12, player, 35355)
         end
         
-    elseif intid == 2 then
+    elseif intid == 12 then
 
         local cost6 = " (1x "..currencyNameSingular..")"
         local cost7 = " (2x "..currencyName..")"
@@ -2191,7 +2191,7 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
     
         player:GossipClearMenu()
         if player:GetLevel() == 80 and not (player:GetClass() == 3) then
-            player:GossipMenuAddItem(0, "|TINTERFACE/ICONS/achievement_level_80:32:32:-22:0|tNo services available\n \nThere are no experience services available at level 80.\n \n ", 0, 2)
+            player:GossipMenuAddItem(0, "|TINTERFACE/ICONS/achievement_level_80:32:32:-22:0|tNo services available\n \nThere are no experience services available at level 80.\n \n ", 0, 12)
         else
             player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/spell_fire_burningspeed:32:32:-22:0|tYour experience rate is: x"..currentRate, 0, 2)
             player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/Achievement_Quests_Completed_08:32:32:-22:0|tSet rates x1", 0, 1, false, "Are you sure you want to change your experience rate to: x1?")
