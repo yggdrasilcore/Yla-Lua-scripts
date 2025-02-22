@@ -5,6 +5,5 @@ services:
       - ${DOCKER_VOL_DATA:-yggdrasilcore-client-data}:/azerothcore/env/dist/data
     env_file:
       - ygg_confs/worldserver.env
-      - ygg_confs/ahbot.env
       - ygg_confs/eluna.env
       - ygg_confs/transmog.env
