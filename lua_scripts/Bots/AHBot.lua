@@ -29,7 +29,7 @@ local AnnounceOnLogin		= false			-- Default: True. Announces to all players on l
 local EnableBuyer			= true			-- Default: True.
 local AHBuyTimer 			= 0.5 			-- Default: 0.5 (hours). How often the AH bot will try to purchase a few items.
 local ItemLevelLimit 		= 187			-- Default: 187. Prevents bots from buying items above this item level, to ensure players get access to those items instead.
-local BotsBuyFromBots		= true			-- Default: False. Prevent bots from buying other bots' items.
+local BotsBuyFromBots		= false			-- Default: False. Prevent bots from buying other bots' items.
 local CostFormula 			= 1     		-- Default: 1. 1 = Quality based scaling, 2 = Entry ID influenced, 3 = Quality/Level focused, 4 = Balanced multi-factor, 5 = Progressive thresholds, 6 = Random (1000-1000000)
 local BotsPriceTolerance	= 1.5			-- Default: 1.5. Factor with which unadjusted CostFormula is multiplied to return how much a bot is willing to pay for an item. 
 local PlaceBidChance		= 20			-- Default: 10 (%). Setting to 0 disables bids. 
