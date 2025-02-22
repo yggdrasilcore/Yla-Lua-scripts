@@ -15,7 +15,7 @@
 local EnableAHBot			= true			-- Default: True. If false, AH bot is disabled. 
 local AHBots				= {1391}		-- Default: 1, 2, 3, 4, 5. Chooses which player GUID lows will be used as AH bots. Must match extant characters. Not faction specific.
 local EnabledAuctionHouses	= {7}			-- Default: 2, 6, 7. Possible values: 2 is ally, 6 is horde, 7 is cross faction (neutral). Multiple values accepted, like {2, 6, 7}. Only 7 is required on cross-faction servers.
-local AHBotActionDebug		= false			-- Default: False. Enables various action debug prints. Critical prints will still be active even if false.
+local AHBotActionDebug		= true			-- Default: False. Enables various action debug prints. Critical prints will still be active even if false.
 local AHBotItemDebug		= false			-- Default: False. Enables debug prints on item handling, cost per item entry, Quality, etc.
 local ActionsPerCycle		= 500			-- Default: 500 (items). The higher the value, the faster the bots fill the AH up to the min auctions limit and the more items they buy, at the expense of performance.
 local StartupDelay 			= 1000			-- Default: 1000 (ms). Delay after startup/Eluna reload before the auction house initializes. Having this set to 0 will cause lag on initial world load. 
@@ -46,7 +46,7 @@ local MaxAuctions 			= 10000			-- Default: 5000. Max number of auctions posted b
 local MinAuctions			= 2000	 		-- Default: 2000. Min number of auctions. If under this value, AH will repopulate sales. If over, but less than max, has 30% chance per check to populate AH.
 local RepopulationChance	= 30			-- Default: 30. Percentage chance to partially restock AH if stock is between max and min during a periodical check. Can be overriden to force populate whenever with ".ahbot auctions add". 
 local CostFormula 			= 1 	    	-- Default: 1. 1 = Quality based scaling, 2 = Entry ID influenced, 3 = Quality/Level focused, 4 = Balanced multi-factor, 5 = Progressive thresholds, 6 = Random (1000-1000000)
-local CostVariance			= 20			-- Default: 20. How many % to randomize prices with. 
+local SellPriceVariance		= 20			-- Default: 20. How many % to randomize prices with. 
 local AHSellTimer 			= 5 			-- Default: 5 (hours). How often the AH bot will check whether it needs to put up new auctions, in hours.
 local SellOnStartup			= true			-- Default: True. Used for debugging and instantly populating an empty auction house. If true, fires AH bot on Eluna load (startup / Eluna reloads). If false, activates on AHSellTimer. 
 local ApplyRandomProperties = true			-- Default: True. Adds enchant/random stats and corresponding name to items (e.g., "of the Eagle"). This is DBC-based with Lua tables copied into this script. Disable if non-WotLK core.
@@ -817,6 +817,7 @@ if EnableItemFilters then
 		table.insert(conditions, "NAME NOT LIKE '%Pale Skinner%'")
 		table.insert(conditions, "NAME NOT LIKE '%Pioneer Buckler%'")
 		table.insert(conditions, "NAME NOT LIKE '%locust wing%'")
+		table.insert(conditions, "NAME NOT LIKE '%community token	%'")
 		table.insert(conditions, "NAME NOT LIKE '%thick citrine%'")
 		table.insert(conditions, "NAME NOT LIKE '%brilliant citrine%'")
 		table.insert(conditions, "NAME NOT LIKE '%nightbloom lilac%'")
@@ -887,6 +888,7 @@ if EnableItemFilters then
 		table.insert(conditions, "NAME NOT LIKE '%word of thawing%'")
 		table.insert(conditions, "NAME NOT LIKE '%grimoire%'")
 		table.insert(conditions, "NAME NOT LIKE '%deprecated%'")
+		table.insert(conditions, "NAME NOT LIKE '%cowardly flight%'")
 		table.insert(conditions, "NAME NOT LIKE '%book%'")
 		table.insert(conditions, "NAME NOT LIKE '%libram%'")
 		table.insert(conditions, "NAME NOT LIKE '%brazie''s%'")
@@ -1161,7 +1163,6 @@ end
 ---------------------------------------------------------------------------------
 
 local function AHBot_BuyAuction()
-	BuyOnStartup = false
     local query
     if BotsBuyFromBots then
         query = string.format("SELECT id, itemguid, houseid, itemowner, buyoutprice, buyguid, lastbid, startbid, time FROM auctionhouse WHERE houseid IN (%s) LIMIT %d", houseList, ActionsPerCycle)
@@ -1172,7 +1173,7 @@ local function AHBot_BuyAuction()
     end
     
 	CharDBQueryAsync(query, function(results)
-		if not results then return end
+		if not results then if BuyOnStartup and SellOnStartup then BuyOnStartup = false SendMessageToGMs("No eligible items to buy. Loading in new auctions...") RunCommand("reload auctions") end return end
 		
 		local tempResults = {}
 		local auctionResults = {}
@@ -1191,6 +1192,7 @@ local function AHBot_BuyAuction()
 				bidtime = results:GetUInt32(8)
 			})
 		until not results:NextRow() or #tempResults >= ActionsPerCycle
+		BuyOnStartup = false
 		
 		-- Then process the temporary table to remove entries we don't want to place bids/buyouts on
 		if DisableBidFight then
@@ -1463,8 +1465,8 @@ local function AddAuctions(specificHouse)
 							
 							cost = cost * stack
 							
-							if CostVariance then
-								cost = cost * math.random(1 - (CostVariance/100), 1 + (CostVariance/100))
+							if SellPriceVariance then
+								cost = cost * math.random(1 - (SellPriceVariance/100), 1 + (SellPriceVariance/100))
 							end
 							
 							if AdjustedAmmoPrices then
@@ -1614,7 +1616,6 @@ end
 ---------------------------------------------------------------------------------
 -- Initialize item_template cache and initial event scheduling
 ---------------------------------------------------------------------------------
-
 
 local ItemTemplateSize = 0
 
