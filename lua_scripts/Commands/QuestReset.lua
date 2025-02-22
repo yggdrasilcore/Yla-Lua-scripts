@@ -1,14 +1,26 @@
+local lastCommandTime = 0 -- Throttler to reduce DB load
+
 local function QuestReset(event, player, command)
     if command:find("quest reset %d+$") and player:GetGMRank() > 0 then
-        local guid = tonumber(command:match("%d+"))
-        if guid and guid >= 1 and guid <= 99999 then
-            local charGuid = player:GetGUIDLow()
+        local currentTime = os.time()
+        if (currentTime - lastCommandTime) < 1 then
+            player:SendAreaTriggerMessage("Please wait before using this command again.")
+            player:SendBroadcastMessage("Please wait before using this command again.")
+            return false
+        end
+        lastCommandTime = currentTime
+        
+        local questId = tonumber(command:match("%d+"))
+        local target = player:GetSelection()
+        
+        if not target then
+			target = player
+        end
+        
+        if questId then
+            local targetGuid = target:GetGUIDLow()
             
-            -- Cache the selected number (guid) and character GUID
-            local cachedGuid = guid
-            local cachedCharGuid = charGuid
-            
-            -- Check if the quest exists for the character in any of the tables
+            -- Check if the quest exists for the target character
             local tables = {
                 "character_queststatus",
                 "character_queststatus_daily",
@@ -20,7 +32,7 @@ local function QuestReset(event, player, command)
             
             local questExists = false
             for _, tableName in ipairs(tables) do
-                local result = CharDBQuery(string.format("SELECT 1 FROM %s WHERE guid = %d AND quest = %d LIMIT 1", tableName, cachedCharGuid, cachedGuid))
+                local result = CharDBQuery(string.format("SELECT 1 FROM %s WHERE guid = %d AND quest = %d LIMIT 1", tableName, targetGuid, questId))
                 if result then
                     questExists = true
                     break
@@ -28,41 +40,50 @@ local function QuestReset(event, player, command)
             end
             
             if questExists then
-                -- Send a popup message to the player
-                player:SendAreaTriggerMessage("Do you really want to reset quest ID " ..cachedGuid.."? This will log you out! Type '.confirm' to proceed or '.cancel' to cancel.")
+                -- Set CanConfirm data and store quest info
+                player:SetData("CanConfirm", true)
+                player:SetData("QuestToReset", questId)
+                player:SetData("TargetGuid", targetGuid)
                 
-                -- Register an event to wait for the player's response
-                player:RegisterEvent(function(eventId, delay, repeats, player)
-                    local function ConfirmReset(event, player, command)
-                        if command == "confirm" and player:GetGMRank() > 0 then
-                            -- Perform CHARDBQUERY to delete the quest from all tables
-                            for _, tableName in ipairs(tables) do
-                                CharDBQuery(string.format("DELETE FROM %s WHERE guid = %d AND quest = %d", tableName, cachedCharGuid, cachedGuid))
-                            end
-                            
-                            player:SendAreaTriggerMessage("Quest reset completed for quest ID: " .. cachedGuid)
-                            
-                            -- Schedule player logout after 200ms
-                            player:RegisterEvent(function(eventId, delay, repeats, player)
-                                player:LogoutPlayer()
-                            end, 200, 1)
-                            
-                            return false
-                        elseif command == "cancel" and player:GetGMRank() > 0 then
-                            player:SendAreaTriggerMessage("Quest reset cancelled.")
-                            return false
-                        end
-                    end
-                    RegisterPlayerEvent(42, ConfirmReset)
-                end, 100, 1)
+                player:SendAreaTriggerMessage(string.format("Do you want to reset quest ID %d for player %s? Type '.confirm' to proceed or '.cancel' to cancel.", questId, target:GetName()))
+                player:SendBroadcastMessage(string.format("Do you want to reset quest ID %d for player %s? Type '.confirm' to proceed or '.cancel' to cancel.", questId, target:GetName()))
             else
-                player:SendAreaTriggerMessage("You haven't completed quest ID " .. cachedGuid .. ". Only completed quests can be reset.")
+                player:SendAreaTriggerMessage("Selected player hasn't completed quest ID " .. questId .. ". Only completed quests can be reset.")
+                player:SendBroadcastMessage("Selected player hasn't completed quest ID " .. questId .. ". Only completed quests can be reset.")
             end
             
             return false
         else
             player:SendAreaTriggerMessage("Invalid quest ID. Please use a number between 1 and 99999.")
+            player:SendBroadcastMessage("Invalid quest ID. Please use a number between 1 and 99999.")
         end
+    end
+    if command == "confirm" and player:GetGMRank() > 0 and player:GetData("CanConfirm") then
+        local questId = player:GetData("QuestToReset")
+        local targetGuid = player:GetData("TargetGuid")
+        
+        local tables = {
+            "character_queststatus",
+            "character_queststatus_daily",
+            "character_queststatus_monthly",
+            "character_queststatus_rewarded",
+            "character_queststatus_seasonal",
+            "character_queststatus_weekly"
+        }
+        
+        for _, tableName in ipairs(tables) do
+            CharDBQuery(string.format("DELETE FROM %s WHERE guid = %d AND quest = %d", tableName, targetGuid, questId))
+        end
+        
+        player:SendAreaTriggerMessage("Quest reset done for quest ID: " .. questId .. ". Target must relog for reset to become active.")
+        player:SendBroadcastMessage("Quest reset done for quest ID: " .. questId .. ". Target must relog for reset to become active.")
+        player:SetData("CanConfirm", false)
+        return false
+    elseif command == "cancel" and player:GetGMRank() > 0 and player:GetData("CanConfirm") then
+        player:SendAreaTriggerMessage("Quest reset cancelled.")
+        player:SendBroadcastMessage("Quest reset cancelled.")
+        player:SetData("CanConfirm", false)
+        return false
     end
 end
 
