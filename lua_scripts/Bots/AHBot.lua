@@ -13,7 +13,7 @@
 -------------------------------------------------------------------------------------------------------------------------
 
 local EnableAHBot			= true			-- Default: True. If false, AH bot is disabled. 
-local AHBots				= {20, 27}		-- Default: 1, 2, 3, 4, 5. Chooses which player GUID lows will be used as AH bots. Must match extant characters. Not faction specific.
+local AHBots				= {1391}		-- Default: 1, 2, 3, 4, 5. Chooses which player GUID lows will be used as AH bots. Must match extant characters. Not faction specific.
 local EnabledAuctionHouses	= {7}			-- Default: 2, 6, 7. Possible values: 2 is ally, 6 is horde, 7 is cross faction (neutral). Multiple values accepted, like {2, 6, 7}. Only 7 is required on cross-faction servers.
 local AHBotActionDebug		= false			-- Default: False. Enables various action debug prints. Critical prints will still be active even if false.
 local AHBotItemDebug		= false			-- Default: False. Enables debug prints on item handling, cost per item entry, Quality, etc.
