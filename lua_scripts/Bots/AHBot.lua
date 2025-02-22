@@ -20,7 +20,7 @@ local AHBotItemDebug		= false			-- Default: False. Enables debug prints on item 
 local ActionsPerCycle		= 500			-- Default: 500 (items). The higher the value, the faster the bots fill the AH up to the min auctions limit and the more items they buy, at the expense of performance.
 local StartupDelay 			= 1000			-- Default: 1000 (ms). Delay after startup/Eluna reload before the auction house initializes. Having this set to 0 will cause lag on initial world load. 
 local EnableGMMessages		= true			-- Default: True. Messages all online GMs on command and initiation events.
-local AnnounceOnLogin		= true			-- Default: True. Announces to all players on login that this server runs the Eluna AH Bot module.
+local AnnounceOnLogin		= false			-- Default: True. Announces to all players on login that this server runs the Eluna AH Bot module.
 
 -------------------------------------------------------------------------------------------------------------------------
 -- Buyer Configs
