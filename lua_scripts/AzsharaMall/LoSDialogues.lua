@@ -142,7 +142,7 @@ end
 
 local function HunterDialogue(event, creature, who)
     if who:ToPlayer() and creature:GetDistance(who) < 7 and who:GetClass() == 3 and creature:IsWithinLoS(who) then
-        if not player:HasSpell(19577) then
+        if who:HasSpell(19577) then
             return
         end
         if not lastGreeting[creature:GetGUIDLow()] and (lastGreeting[creature:GetGUIDLow()] and (lastGreeting[creature:GetGUIDLow()] < os.time())) then

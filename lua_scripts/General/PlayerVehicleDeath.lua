@@ -6,7 +6,7 @@ local function EnterPlayerVehicle(event, packet, player)
 end
 
 local function HandlePlayerKill(event, killer, killed)
-    if killed:IsOnVehicle() then
+    if killed:IsOnVehicle() and killed:GetData("vehicleName") then
         local playerVehicle = GetPlayerByName(killed:GetData("vehicleName"))
         local vehicle = playerVehicle:GetVehicleKit()
         if vehicle and vehicle:IsOnBoard(killed) then

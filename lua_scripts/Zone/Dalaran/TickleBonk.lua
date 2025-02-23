@@ -51,10 +51,6 @@ local function NormalBonkTime(eventId, delay, repeats)
         targetplayer = chosenPlayer:GetName()
         
         if npc then
-            squirrel = npc:GetNearestCreature(200, 1412) -- Hack fix for missing squirrel movements in Dalaran
-            if squirrel then
-                squirrel:MoveRandom(10)
-            end
             
             npc:MoveRandom(10)
             npc:CastSpell(npc, SPELL_ID_1)
@@ -85,7 +81,7 @@ local function NormalBonkTime(eventId, delay, repeats)
                 chosenPlayer = GetPlayerByName(targetplayer)
                 if chosenPlayer then
                     npc:EmoteState(11) -- laugh
-                    npc:SetFaction(679)
+                    npc:SetFaction(1194)
                 end
             end, 12500, 1)
             
@@ -142,11 +138,6 @@ local function BonkTime(eventId, delay, repeats)
         if npc then
             local randomItem = HALLOWEEN_MASKS[math.random(#HALLOWEEN_MASKS)]
             npc:AddAura(randomItem, npc)
-
-            squirrel = npc:GetNearestCreature(200, 1412)
-            if squirrel then
-                squirrel:MoveRandom(10)
-            end
             
             npc:MoveRandom(10)
             npc:CastSpell(npc, SPELL_ID_1)
