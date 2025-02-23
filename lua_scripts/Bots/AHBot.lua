@@ -155,6 +155,27 @@ if not EnabledAuctionHouses then error("[Eluna AH Bot]: Core - No valid auction 
 -- Helper functions, tables, etc.
 -------------------------------------------------------------------------------------------------------------------------
 
+-- As the core iterates upwards through auction IDs from the highest extrant value on startup,
+-- we must insert either far above or far below this value. The caveat of this is that, on 
+-- reload eluna, we can't tell whether an insert was made on the same session as Eluna
+-- can't access the core's AH counter. So, we're tracking server startup instead and assigning
+-- a tag to all inserts to identify which we can safely go below and which we must be above.
+
+local StartupID = 2 -- 1 means created by the core, 2 means created by Eluna
+
+local function processStartUp(event)
+	CharDBQueryAsync("SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'auctionhouse' AND column_name = 'StartupID'", function(result) -- Checks if tracker exists
+		if not result or result:GetUInt64(0) == 0 then
+			CharDBExecute("ALTER TABLE auctionhouse ADD COLUMN StartupID INT NOT NULL DEFAULT 1") -- Identifies and ensures all entries tracked by the core are 1
+		elseif event == 14 then
+			CharDBExecute("UPDATE auctionhouse SET StartupID = 1 WHERE StartupID > 1") -- Ensures all entries tracked by the core are 1
+		end
+	end)
+end
+
+processStartUp()
+RegisterServerEvent(14, processStartUp)
+
 local itemCache = {}										-- Stores all entries from the item_template for further processing
 local NextAHBotSellCycle = os.time() + AHSellTimer * 60 * 60-- Used in print and cmd feedback
 local AHBotSellEventId										-- Used to track if running, for cmd etc
@@ -1394,30 +1415,57 @@ local function AddAuctions(specificHouse)
 				local lastItemId = itemResult:GetUInt32(0)
 				if AHBotActionDebug then print("[Eluna AH Bot Debug]: Seller - Found start item GUID for next batch of instantiations: ".. lastItemId) end
 				
-				CharDBQueryAsync("SELECT MIN(id), MAX(id) FROM auctionhouse", function(result)
-					local minId = result:GetUInt32(0)
-					local maxId = result:GetUInt32(1)
-					local UINT32_MAX = 4294967295
-					local INCREMENT = 10000000
-				   
-					if not lastAuctionId then 
-						if minId > INCREMENT then
-							lastAuctionId = 1
-						else
-							for i = 1, 4190 do -- Goes up to 4.1B (safely below uint32 max)
-								local threshold = i * INCREMENT
-								if maxId < threshold then
-									lastAuctionId = threshold
-									break
-								end
-							end
-							if not lastAuctionId then
-								lastAuctionId = 1 -- Fallback if everything else is too high
+				CharDBQueryAsync("SELECT id, StartupID FROM auctionhouse ORDER BY StartupID DESC", function(result)
+					local availableIds = {}
+					local maxId = 0
+					local usedIds = {}
+					
+					-- Get highest and second highest StartupID and build used IDs set
+					local highestStartupId = 0
+					local secondHighestStartupId = 0
+					local maxIdForSecondHighest = 0
+					
+					repeat
+						local id = result:GetUInt32(0)
+						local startupId = result:GetUInt32(1)
+						
+						usedIds[id] = true
+						
+						maxId = math.max(maxId, id)
+						
+						if startupId > highestStartupId then
+							secondHighestStartupId = highestStartupId
+							highestStartupId = startupId
+						elseif startupId > secondHighestStartupId and startupId < highestStartupId then
+							secondHighestStartupId = startupId
+						end
+						
+						if startupId == secondHighestStartupId then
+							maxIdForSecondHighest = math.max(maxIdForSecondHighest, id)
+						end
+					until not result:NextRow()
+					
+					-- If only one StartupID found, use maxId as the upper bound
+					local upperBound = secondHighestStartupId > 0 and maxIdForSecondHighest or maxId
+					
+					-- Find available IDs below the upper bound
+					for i = 1, upperBound do
+						if not usedIds[i] then
+							table.insert(availableIds, i)
+							if #availableIds >= ActionsPerCycle then
+								break
 							end
 						end
 					end
 					
-					if AHBotActionDebug then print("[Eluna AH Bot Debug]: Seller - Found start auction ID for next batch of inserts: " .. lastAuctionId) end
+					-- If we need more IDs, add them above maxId in 10mln increments
+					if #availableIds < ActionsPerCycle then
+						local nextId = maxId + 10000000
+						while #availableIds < ActionsPerCycle do
+							table.insert(availableIds, nextId)
+							nextId = nextId + 1
+						end
+					end
 					
 					local itemQueryParts = {}
 					local auctionQueryParts = {}
@@ -1450,7 +1498,8 @@ local function AddAuctions(specificHouse)
 						else
 							auctionCount = auctionCount + 1
 							lastItemId = lastItemId + 1
-							lastAuctionId = lastAuctionId + 1
+							lastAuctionId = availableIds[1]
+							table.remove(availableIds, 1)
 							
 							local randomBot = AHBots[math.random(1, #AHBots)]
 							
@@ -1590,17 +1639,15 @@ local function AddAuctions(specificHouse)
 								randomStats .. ", " .. item.durability .. ", "..item.duration..", '')")
 
 							-- Add auction entry
-							table.insert(auctionQueryParts, string.format(
-								"(%d, %d, %d, %d, %d, %d, 0, 0, %d, 1)",
-								lastAuctionId, houseId, lastItemId, randomBot, cost, expireTime, startBid
-							))
+							table.insert(auctionQueryParts, string.format("(%d, %d, %d, %d, %d, %d, 0, 0, %d, 1, %d)",
+								lastAuctionId, houseId, lastItemId, randomBot, cost, expireTime, startBid, StartupID))
 						end
 					end
 					-- We're nesting our next operations in async queries to ensure they don't overlap and are performed in rapid succession
 					if #itemQueryParts > 0 then 
 					
 						local itemQuery = "INSERT INTO item_instance (guid, itemEntry, owner_guid, creatorGuid, giftCreatorGuid, count, duration, charges, flags, enchantments, randomPropertyId, durability, playedTime, text) VALUES " .. table.concat(itemQueryParts, ",")
-						local auctionQuery = "INSERT INTO auctionhouse (id, houseid, itemguid, itemowner, buyoutprice, time, buyguid, lastbid, startbid, deposit) VALUES " .. table.concat(auctionQueryParts, ",")
+						local auctionQuery = "INSERT INTO auctionhouse (id, houseid, itemguid, itemowner, buyoutprice, time, buyguid, lastbid, startbid, deposit, StartupID) VALUES " .. table.concat(auctionQueryParts, ",")
 						CharDBQueryAsync(itemQuery, function(results) -- Insert items in database first
 							CharDBQueryAsync(auctionQuery, function(results) -- Once item inserts are complete, insert auctions
 								if AHBotActionDebug then print("[Eluna AH Bot Debug]: Seller - " .. auctionCount .. " auctions added to auction house no. " .. houseId .. ".") end
@@ -1811,7 +1858,7 @@ local function AHBot_Cmd(event, player, command)
 		CharDBQueryAsync("UPDATE auctionhouse SET time = 1 WHERE itemowner IN (" .. botList .. ")", function(query)
 			local player = GetPlayerByName(name)
 			SendMessageToGMs("GM "..name.." has set all bot auctions to expire on next auction update. Reloading auctions cache...")
-			RunCommand("reload auctions") -- Instantiates auctions
+			RunCommand("reload auctions")
 			print("[Eluna AH Bot]: GM "..player:GetGUIDLow().." expired all auction houses' bot auctions.")	
 		end)
 		return false
@@ -1819,7 +1866,7 @@ local function AHBot_Cmd(event, player, command)
 		CharDBQueryAsync("UPDATE auctionhouse SET time = 1 WHERE itemowner IN (" .. botList .. ") AND houseid = 2", function(query)
 			local player = GetPlayerByName(name)
 			SendMessageToGMs("GM "..name.." has set bot auctions on house ID 2 to expire on next auction update. Reloading auctions cache...")
-			RunCommand("reload auctions") -- Instantiates auctions
+			RunCommand("reload auctions")
 			print("[Eluna AH Bot]: GM "..player:GetGUIDLow().." expired bot auctions on auction house 2.")	
 		end)
 		return false
@@ -1827,7 +1874,7 @@ local function AHBot_Cmd(event, player, command)
 		CharDBQueryAsync("UPDATE auctionhouse SET time = 1 WHERE itemowner IN (" .. botList .. ") AND houseid = 6", function(query)
 			local player = GetPlayerByName(name)
 			SendMessageToGMs("GM "..name.." has set bot auctions on house ID 6 to expire on next auction update. Reloading auctions cache...")
-			RunCommand("reload auctions") -- Instantiates auctions
+			RunCommand("reload auctions")
 			print("[Eluna AH Bot]: GM "..player:GetGUIDLow().." expired bot auctions on auction house 6.")	
 		end)
 		return false
@@ -1877,7 +1924,8 @@ local function AHBot_Cmd(event, player, command)
 				if not houseEnabled then
 					player:SendBroadcastMessage("|cFFD8D8E6[Eluna AH Bot GM]|r: Syntax error. Auction house not found or disabled in AH bot config.")
 				end
-				return false
+			else
+				player:SendBroadcastMessage("|cFFD8D8E6[Eluna AH Bot GM]|r: Syntax error. Auction house not found or disabled in AH bot config.")
 			end
 		end
 		return false
