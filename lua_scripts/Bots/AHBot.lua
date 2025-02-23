@@ -34,7 +34,7 @@ local CostFormula 			= 1     		-- Default: 1. 1 = Quality based scaling, 2 = Ent
 local BotsPriceTolerance	= 1.5			-- Default: 1.5. Factor with which unadjusted CostFormula is multiplied to return how much a bot is willing to pay for an item. 
 local PlaceBidChance		= 20			-- Default: 10 (%). Setting to 0 disables bids. 
 local PlaceBuyoutChance		= 10			-- Default: 5 (%). Settings to 0 disables buyouts.
-local BuyOnStartup			= true			-- Default: True. Ibid SellOnStartup. 
+local BuyOnStartup			= true			-- Default: True. Buyer bot will start buying auctions immediately on server start, instead of on AHBuyTimer. If false, will still activate on AHBuyTimer. 
 local DisableBidFight		= true			-- Default: True. Don't place bids/buyouts on items that players have already placed bids on
 
 -------------------------------------------------------------------------------------------------------------------------
@@ -48,6 +48,7 @@ local RepopulationChance	= 30			-- Default: 30. Percentage chance to partially r
 local CostFormula 			= 1 	    	-- Default: 1. 1 = Quality based scaling, 2 = Entry ID influenced, 3 = Quality/Level focused, 4 = Balanced multi-factor, 5 = Progressive thresholds, 6 = Random (1000-1000000)
 local SellPriceVariance		= 20			-- Default: 20. How many % to randomize prices with. 
 local AHSellTimer 			= 5 			-- Default: 5 (hours). How often the AH bot will check whether it needs to put up new auctions, in hours.
+local SellOnStartup			= true			-- Default: True. Used for debugging and instantly populating an empty auction house. If true, fires AH bot on Eluna load (startup / Eluna reloads). If false, activates on AHSellTimer. 
 local ApplyRandomProperties = true			-- Default: True. Adds enchant/random stats and corresponding name to items (e.g., "of the Eagle"). This is DBC-based with Lua tables copied into this script. Disable if non-WotLK core.
 local SetAsCraftedBy		= true			-- Default: True. Marks items created by player spells as created by the AH bot posting the item.
 
