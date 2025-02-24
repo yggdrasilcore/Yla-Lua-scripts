@@ -738,7 +738,7 @@ function HandleButtonTexture(i, toggle)
 				and not disabled then
 					button.customTexture:SetTexture(texture)
 					button:SetSize(buttonWidth, buttonHeight)
-					button:SetFrameStrata("TOOLTIP")
+					button:SetFrameStrata("HIGH")
 				else
 					if button.customTexture then
 						button.customTexture:Hide()
