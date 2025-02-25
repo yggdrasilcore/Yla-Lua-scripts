@@ -185,6 +185,7 @@ RegisterServerEvent(14, TagElunaAuctions)
 
 local itemCache = {}										-- Stores all entries from the item_template for further processing
 local NextAHBotSellCycle = os.time() + AHSellTimer * 60 * 60-- Used in print and cmd feedback
+local NextAHBotBuyCycle	= os.time() + AHBuyTimer * 60 * 60 	-- Used in print and cmd feedback 
 local AHBotSellEventId										-- Used to track if running, for cmd etc
 local AHBotBuyEventId										-- Used to track if the indefinite Lua event for the AH bot is running, to not schedule another on top through the cmd system
 local botList = table.concat(AHBots, ",") 					-- Converts table to a string for SQL and concat interaction
@@ -1747,8 +1748,9 @@ local function AddAuctions(specificHouse)
 	end)
 end
 
-local function AHBot_SellItems(specificHouse)
+local function AHBot_SellItems(_, _, _, specificHouse)
 	if not specificHouse then
+		currentHouse = 0
 		for _, houseId in ipairs(EnabledAuctionHouses) do
 			currentHouse = currentHouse + houseId
 		end
@@ -1911,7 +1913,7 @@ local function AHBot_Cmd(event, player, command)
 		player:SendBroadcastMessage("|- Number of possible items in auction house pool: ".. ItemTemplateSize)
 		player:SendBroadcastMessage("|- Bot items on auction houses on last cycle: "..(table.concat(auctionInfo, ", ")))
 		player:SendBroadcastMessage("|- Next auction house bot sell cycle (hours:minutes): ".. os.date("%H:%M", NextAHBotSellCycle))
-		player:SendBroadcastMessage("|- Next auction house bot sell cycle: in " .. math.ceil((NextAHBotSellCycle - os.time()) / 60) .. " minutes")
+		player:SendBroadcastMessage("|- Next auction house bot buy cycle: in " .. math.ceil((NextAHBotBuyCycle - os.time()) / 60) .. " minutes")
 		local status
 		if AHBotSellEventId then status = "Online" else status = "Offline" end
 		player:SendBroadcastMessage("Status auction house bot seller service: "..status)
@@ -1964,7 +1966,7 @@ local function AHBot_Cmd(event, player, command)
 			overrideHouse = overrideHouse + houseId
 		end
 		if overrideHouse > 1 then
-			AHBot_SellItems(overrideHouse)
+			AHBot_SellItems(_, _, _, overrideHouse)
 			SendMessageToGMs("GM "..name.." has force added " .. ActionsPerCycle .. " auctions to auction house(s) ".. houseList)
 			print("[Eluna AH Bot]: GM "..player:GetGUIDLow().." force added auctions on all auction houses: ".. houseList)
 		else
@@ -1980,7 +1982,7 @@ local function AHBot_Cmd(event, player, command)
 				for _, enabledId in ipairs(EnabledAuctionHouses) do
 					if enabledId == houseId then
 						houseEnabled = true
-						AHBot_SellItems(houseId)
+						AHBot_SellItems(_, _, _, houseId)
 						SendMessageToGMs("GM "..player:GetName().." has force added " .. ActionsPerCycle .. " auctions to auction house ID "..houseId..".")
 						print("[Eluna AH Bot]: GM "..player:GetGUIDLow().." force added auctions on auction house "..houseId..".")
 						break
