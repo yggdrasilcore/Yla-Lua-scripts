@@ -928,6 +928,7 @@ if EnableItemFilters then
 		table.insert(conditions, "NAME NOT LIKE '%walnut stock%'")
 		table.insert(conditions, "NAME NOT LIKE '%virtuoso inking%'")
 		table.insert(conditions, "NAME NOT LIKE '%dictionary%'")
+		table.insert(conditions, "NAME NOT LIKE '%moonlit katana%'")
 		table.insert(conditions, "NAME NOT LIKE '%Omar%'")
 		table.insert(conditions, "NAME NOT LIKE '%depleted%'")
 		table.insert(conditions, "NAME NOT LIKE '%bottomless inscription bag%'")
@@ -1669,14 +1670,14 @@ local function AddAuctions(specificHouse)
 									item.subclass == 2 or item.subclass == 3 or item.subclass == 6 or
 									item.subclass == 13 or item.subclass == 15 or item.subclass == 16 or 
 									item.subclass == 17 or item.subclass == 18)) then -- Stamina, Agility. To-do: Boomie leather gear.
-									suffixOptions = {50, 56, 63, 68, 69, 71, 74, 82, 84, 89, 91, 31, 32, 33, 34, 35}
+									suffixOptions = {56, 63, 68, 69, 71, 74, 84, 89, 91, 31, 32, 33, 34, 35}
 									
 								elseif (item.class == 4 and item.subclass == 3) then -- Mail gear, hunter/shaman
 									suffixOptions = {91, 89, 86, 71, 69, 63, 67, 50, 31, 32, 33, 34, 35}
 									
 								elseif item.class == 2 or (item.class == 4 and -- Plate gear, remaining weapons
 									(item.subclass == 4 or item.subclass == 6)) then -- Plate armor and shields
-									suffixOptions = {92, 89, 86, 84, 68, 71, 72, 66, 62, 63, 43, 42, 41, 31, 32, 33, 34, 35}
+									suffixOptions = {92, 89, 86, 84, 68, 71, 72, 66, 62, 63, 43, 41, 31, 32, 33, 34, 35}
 								else -- Random stats failsafe
 									suffixOption = math.random(49, 75)
 								end
