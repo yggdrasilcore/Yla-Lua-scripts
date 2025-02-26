@@ -115,8 +115,8 @@ local ItemWeights = {
     },
     Mats = {
         ["Gray/Poor"] 			= 0,
-        ["White/Common"] 		= 2,
-        ["Green/Uncommon"] 		= 30,
+        ["White/Common"] 		= 30,
+        ["Green/Uncommon"] 		= 20,
         ["Blue/Rare"] 			= 10,
         ["Purple/Epic"] 		= 1,
         ["Orange/Legendary"] 	= 0,
