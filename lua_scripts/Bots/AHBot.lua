@@ -144,6 +144,8 @@ local NeverSellIDs			= {									-- Default: Various items not intended for AH s
 							   37201, -- Corpse Dust
 							   17195, -- Fake Mistletoe
 							   44432, -- China Glyph of Raise Dead??
+							    4439, -- Wooden Stock, vendor trash
+							   40533, -- Electrified blade, unobtainable item
 							   -- Deprecated Classic mounts
 							   1041, 1133, 1134, 2413, 2415, 5663, 5874, 5875, 
 							   8583, 8589, 8590, 8627, 8628, 8630, 8633, 14062,
