@@ -4,7 +4,7 @@ local MaxGOCharges = {
     -- {gameObjectId, maxCharges}
     [193061] = 50, -- Refreshment Table (level 80)
     [186812] = 50, -- Refreshment Table (level 70)
-    [181622] = 25, -- Ritual of Souls
+    -- [181622] = 25, -- Ritual of Souls WRONG ID
     [192152] = 10, -- Big Berry Pie Cake
     [192783] = 10, -- Dalaran Apple Bowl
     [193965] = 10, -- Dalaran Swiss Wheel
@@ -16,7 +16,7 @@ local MaxGOCharges = {
     [193055] = -1, -- Gigantic Feast
     [192675] = -1, -- Fish Feast
     [192625] = -1, -- Great Feast
-    [194108] = -1  -- Ritual of Summoning
+    -- [194108] = -1  -- Ritual of Summoning WRONG ID
 }
 
 local XfacGOTable = {}
