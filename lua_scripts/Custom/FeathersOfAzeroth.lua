@@ -319,6 +319,7 @@ local function CheckZ(eventId, delay, repeats, player)
         player:RemoveEventById(eventId)
         ZCheckActive[player:GetGUIDLow()] = nil
         print("Event removed")
+		player:SetData("MountEvent", false)
         return
     end
     
@@ -527,7 +528,8 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         if not player:IsCasting() then
             player:CastSpell(player, intid, false)
             player:RegisterEvent(function(eventId, delay, repeats, player)
-                player:RegisterEvent(CheckZ, 200, 0)
+				player:SetData("MountEvent", true)
+				if not player:GetData("MountEvent") then player:RegisterEvent(CheckZ, 200, 0) end
             end, 3000, 1)
             print("Starting zone-based Z check")
             player:GossipComplete()
@@ -570,7 +572,8 @@ local function OnUseItem(event, player, item, target)
         player:CastSpell(player, standardmount[player:GetGUIDLow()], false)
         print("Standard mount for "..player:GetName().." is ".. standardmount[player:GetGUIDLow()])
         player:RegisterEvent(function(eventId, delay, repeats, player)
-            player:RegisterEvent(CheckZ, 200, 0)
+			player:SetData("MountEvent", true)
+			if not player:GetData("MountEvent") then player:RegisterEvent(CheckZ, 200, 0) end
         end, 3000, 1)
         print("Starting zone-based Z check")
     else
@@ -636,7 +639,8 @@ local function OnChangeZone(event, player, newZone, newArea)
                 for _, id in ipairs(BUFFIDS) do
                     if player:HasAura(id) and not ZCheckActive[player:GetGUIDLow()] then
                         ZCheckActive[player:GetGUIDLow()] = true
-                        player:RegisterEvent(CheckZ, 200, 0)
+						player:SetData("MountEvent", true)
+						if not player:GetData("MountEvent") then player:RegisterEvent(CheckZ, 200, 0) end
                         print("Starting zone-based Z check")
                     end
                 end
@@ -673,7 +677,8 @@ local function OnLoadScript()
             )   
             then
                 ZCheckActive[player:GetGUIDLow()] = true
-                player:RegisterEvent(CheckZ, 200, 0)
+				player:SetData("MountEvent", true)
+				if not player:GetData("MountEvent") then player:RegisterEvent(CheckZ, 200, 0) end
                 print("Starting zone-based Z check")
             end
         end
@@ -730,7 +735,8 @@ local function OnCommand(event, player, command)
             end
             player:CastSpell(player, spellId, false)
             player:RegisterEvent(function(eventId, delay, repeats, player)
-                player:RegisterEvent(CheckZ, 200, 0)
+				player:SetData("MountEvent", true)
+				if not player:GetData("MountEvent") then player:RegisterEvent(CheckZ, 200, 0) end
             end, 3000, 1)
             return false
         end
