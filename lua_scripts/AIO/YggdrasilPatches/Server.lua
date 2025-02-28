@@ -40,7 +40,7 @@ local function AIO_UI_FIX(event, player, command)
 	local guid = player:GetGUIDLow()
 	
 	if event == 3 then -- on login, check reward state
-	CharDBQueryAsync("SELECT data FROM character_custom_data WHERE guid = "..guid.." AND type = 99", function(result)
+		CharDBQueryAsync("SELECT data FROM character_custom_data WHERE guid = "..guid.." AND type = 99", function(result)
 			local player = GetPlayerByGUID(GetPlayerGUID(guid))
 			if result then
 				local data = result:GetString(0)
@@ -50,8 +50,6 @@ local function AIO_UI_FIX(event, player, command)
 				else
 					player:SetData("LvlRewardsDisabled", false)
 				end
-			else
-				player:SetData("LvlRewardsDisabled", false)
 			end
 		end)
 	elseif event == 4 or event == 25 then
