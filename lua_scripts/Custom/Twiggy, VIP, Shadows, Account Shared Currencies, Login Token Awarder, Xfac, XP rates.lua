@@ -1849,7 +1849,6 @@ local function OnPlayerMapChange(event, map, player)
                             end
 
                             -- Move the faction handling code inside the callback since we need the faction to be determined
-                            print("ICC Xfac - player "..player:GetName().." just entered map ID "..mapId.."! Instance faction: "..instanceId..": "..cachedFaction[instanceId])
                             for _, playersInInstances in pairs(GetPlayersInWorld()) do
                                 if playersInInstances:GetInstanceId() == instanceId then
                                     if cachedFaction[instanceId] == 1801 and playersInInstances:IsAlliance() then
