@@ -39,7 +39,8 @@ local function AIO_UI_FIX(event, player, command)
 	if not player then return end
 	local guid = player:GetGUIDLow()
 	
-	if event == 3 then -- on login, check reward state
+	if event == 28 then -- on login/map change, check reward state
+		if player:GetData("LvlRewardsChecked") then return end
 		CharDBQueryAsync("SELECT data FROM character_custom_data WHERE guid = "..guid.." AND type = 99", function(result)
 			local player = GetPlayerByGUID(GetPlayerGUID(guid))
 			if result then
@@ -50,6 +51,7 @@ local function AIO_UI_FIX(event, player, command)
 				else
 					player:SetData("LvlRewardsDisabled", false)
 				end
+				player:SetData("LvlRewardsChecked", true)
 			end
 		end)
 	elseif event == 4 or event == 25 then
@@ -137,9 +139,9 @@ end
 
 CharDBExecute("CREATE TABLE IF NOT EXISTS character_custom_data (guid int unsigned NOT NULL, type tinyint unsigned NOT NULL, time int unsigned NOT NULL, data blob NOT NULL, PRIMARY KEY (guid, type))")
 
-RegisterPlayerEvent(3, AIO_UI_FIX)
 RegisterPlayerEvent(4, AIO_UI_FIX)
 RegisterPlayerEvent(25, AIO_UI_FIX)
+RegisterPlayerEvent(28, AIO_UI_FIX)
 RegisterPlayerEvent(42, AIO_UI_FIX)
 RegisterServerEvent(30, OnAddonMessageReceived)
 RegisterPacketEvent(0x0B4, 5, CMSGAreaCodeTrigger)
