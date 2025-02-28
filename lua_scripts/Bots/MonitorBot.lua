@@ -200,17 +200,20 @@ local function CacheDataPoints()
 end
 
 local function CleanOldData()
-	local fortyEightHoursAgo = os.time() - (TruncateCutoff * 60 * 60)
+	local truncateTime = os.time() - (TruncateCutoff * 60 * 60)
 	local oneHourAgo = os.time() - (DeleteInterval * 60)
 
 	local query = [[
 	DELETE FROM statistics
-	WHERE param3 < ]] .. fortyEightHoursAgo .. [[
+	WHERE param3 < truncateTime
 	AND param3 NOT IN (
-		SELECT MAX(param3)
-		FROM statistics
-		WHERE param3 >= ]] .. oneHourAgo .. [[
-		GROUP BY event, DATE_FORMAT(FROM_UNIXTIME(param3), '%Y-%m-%d %H')
+		SELECT max_param3
+		FROM (
+			SELECT MAX(param3) AS max_param3
+			FROM statistics
+			WHERE param3 >= oneHourAgo
+			GROUP BY event, DATE_FORMAT(FROM_UNIXTIME(param3), '%Y-%m-%d %H')
+		) AS temp_max_param3
 	);
 	]]
 
