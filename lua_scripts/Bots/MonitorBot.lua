@@ -172,6 +172,7 @@ local function CacheDataPoints()
 	
 	if #values > 0 then
 		local query = "INSERT INTO statistics (event, param1, param2, param3) VALUES " .. table.concat(values, ",") .. ";"
+		if EnableDebug then ("[Eluna Server Logger]: Inserting query - "..query) end
 		CharDBExecute(query)
 	end
 
