@@ -21,13 +21,15 @@ local creatureCache = {
     [7] = {}  -- Boomkin form
 }
 
-local catCache = {}
-local bearCache = {}
-local birdCache = {}
-local travelCache = {}
-local owlCache = {}
-local treeCache = {}
-local aquaticCache = {}
+catCache = {}
+bearCache = {}
+birdCache = {}
+travelCache = {}
+owlCache = {}
+treeCache = {}
+aquaticCache = {}
+
+catCount, bearCount, birdCount, travelCount, owlCount, treeCount, aquaticCount = 0, 0, 0, 0, 0, 0, 0
 
 local repetitionCount = {}
 
@@ -43,7 +45,6 @@ local morphSelection7 = {}
 local ITEMS_PER_PAGE = 13
 
 local function CacheCreatures()
-	local catCount, bearCount, birdCount, travelCount, owlCount, treeCount, aquaticCount = 0, 0, 0, 0, 0, 0, 0
 
     WorldDBQueryAsync([[
        SELECT entry, name 
@@ -282,6 +283,7 @@ local function CacheCreatures()
 end
 
 local function LoadPlayerMorphs(player)
+    if isPlayerBot[player:GetName()] then return end
     if player:GetClass() ~= 11 then return end -- Only proceed for druids
     
     local guid = player:GetGUIDLow()
@@ -1060,7 +1062,8 @@ local function OnLogin(event, player)
 		
 		CharDBQueryAsync("SELECT id, form FROM character_morphs WHERE guid = "..guid.." AND active = 1", function(morphdb)
 			if morphdb then
-				player = GetPlayerByName(playername)
+				local player = GetPlayerByName(playername)
+				if not player then return end
 				repeat
 					local id = morphdb:GetUInt32(0)
 					local form = morphdb:GetUInt32(1)

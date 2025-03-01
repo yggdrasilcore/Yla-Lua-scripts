@@ -169,6 +169,7 @@ local function PushInitModule(eventid, delay, repeats)
 end
 
 local function AwaitInjection(event, player)
+    if isPlayerBot[player:GetName()] then return end
 	player:QueueWardenPayload()
 	player:SetData("ModuleInit", false)
     pushingModule[player:GetGUIDLow()] = true
@@ -182,6 +183,7 @@ local function SetReloadFlag(event, packet, player)
 end
 
 local function AwaitPacketInjection(event, packet, player)
+    if isPlayerBot[player:GetName()] then return end
     if player:GetData("JustReloaded") and player:GetData("JustReloaded") > os.time() and not pushingModule[player:GetGUIDLow()] then -- Inject only if both cancel logout AND set action bars called close to each other, and not currently injecting to player 
         player:QueueWardenPayload()
         player:SetData("ModuleInit", false)
