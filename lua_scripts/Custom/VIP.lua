@@ -47,7 +47,6 @@ local function CheckVIP(event, player)
 			local player = GetPlayerByName(name)
 			if result then
 				player:SetData("VIPTime", result:GetUInt32(0))
-				print("VIP found: "..player:GetName()..".")
 			else
 				player:SetData("VIPTime", 0)
 			end
