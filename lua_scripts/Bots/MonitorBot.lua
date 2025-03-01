@@ -12,7 +12,7 @@ local EnableDebug		= true		-- Enables console debug prints
 
 -- What events should we log?
 local LogWorldUpdate	= true		-- Logs avg world update diff per logging interval, plus high world update diffs
-local LogMapUpdate		= true		-- Logs high map update diffs
+local LogMapUpdate		= false		-- Logs high map update diffs. Currently causes crashes
 local LogAuctionHouse	= true		-- Buy, sell, expire, remove auction
 local LogMisc			= true		-- Weather, world triggers
 local LogCMD			= true		-- Logs Eluna reloads, certain GM commands, and count of GM and player commands
