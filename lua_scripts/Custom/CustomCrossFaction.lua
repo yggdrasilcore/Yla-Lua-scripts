@@ -128,7 +128,8 @@ local function OnPlayerMapChange(event, map, player)
             end
         end
     else
-        if player and not (
+		if not (player:GetFaction() == 1801 or player:GetFaction() == 1802) then return end
+        if not (
         (player:GetRace() == 1 and player:GetFaction() == 1) or -- Human
         (player:GetRace() == 2 and player:GetFaction() == 2) or -- Orc
         (player:GetRace() == 3 and player:GetFaction() == 3) or -- Dwarf
