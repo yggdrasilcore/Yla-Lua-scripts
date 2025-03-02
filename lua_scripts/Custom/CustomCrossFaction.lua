@@ -3,6 +3,8 @@
 -- Written by mostly nick :) for Yggdrasil WoW
 -------------------------------------------------------------------------------------------------------------------
 
+customCrossFaction = true
+
 local cachedFaction = {}
 
 local function OnPlayerMapChange(event, map, player)
