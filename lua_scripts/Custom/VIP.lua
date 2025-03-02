@@ -31,6 +31,7 @@ local function CheckVIPOnLoad()
             local player = GetPlayerByName(name)
             if player and vipTimeMap[accountIdMap[name]] then
                 player:SetData("VIPTime", vipTimeMap[accountIdMap[name]])
+				print("VIP found: "..player:GetName()..", acc "..player:GetAccountId()..". VIPTime: "..player:GetData("VIPTime"))
             elseif player then
                 player:SetData("VIPTime", 0)
             end
@@ -42,15 +43,19 @@ local function CheckVIP(event, player)
     if isPlayerBot[name] then return end
 	if not player:GetData("VIPTime") then
 		local name = player:GetName()
-		local GUIDLow = player:GetGUIDLow()
+		local acc = player:GetAccountId()
+		print("Fetching VIP time for "..name..", acc ".. acc)
 		AuthDBQueryAsync("SELECT viptime FROM accounts_vip WHERE account = " .. player:GetAccountId() .. ";", function(result)
 			local player = GetPlayerByName(name)
 			if result then
 				player:SetData("VIPTime", result:GetUInt32(0))
+				print("VIP found: "..player:GetName()..", acc "..acc..". VIPTime: "..player:GetData("VIPTime"))
 			else
 				player:SetData("VIPTime", 0)
 			end
 		end)
+	else
+		print("VIP Time for "..player:GetName().. " is "..player:GetData("VIPTime"))
 	end
 end
 
