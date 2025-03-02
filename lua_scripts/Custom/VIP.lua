@@ -40,23 +40,24 @@ local function CheckVIPOnLoad()
 end
 
 local function CheckVIP(event, player)
+	local name = player:GetName()
+	local acc = player:GetAccountId()
     if isPlayerBot[name] then return end
-	if not player:GetData("VIPTime") then
-		local name = player:GetName()
-		local acc = player:GetAccountId()
-		print("Fetching VIP time for "..name..", acc ".. acc)
-		AuthDBQueryAsync("SELECT viptime FROM accounts_vip WHERE account = " .. player:GetAccountId() .. ";", function(result)
-			local player = GetPlayerByName(name)
-			if result then
-				player:SetData("VIPTime", result:GetUInt32(0))
-				print("VIP found: "..player:GetName()..", acc "..acc..". VIPTime: "..player:GetData("VIPTime"))
-			else
-				player:SetData("VIPTime", 0)
-			end
-		end)
-	else
-		print("VIP Time for "..player:GetName().. " is "..player:GetData("VIPTime"))
+	if event == 28 and player:GetData("VIPTime") then
+		print("VIP Time for "..name.. " is "..player:GetData("VIPTime"))
+		return
 	end
+	
+	print("Fetching VIP time for "..name..", acc ".. acc)
+	AuthDBQueryAsync("SELECT viptime FROM accounts_vip WHERE account = " .. player:GetAccountId() .. ";", function(result)
+		local player = GetPlayerByName(name)
+		if result then
+			player:SetData("VIPTime", result:GetUInt32(0))
+		else
+			player:SetData("VIPTime", 0)
+		end
+		print("VIP Time for "..name.. " is "..player:GetData("VIPTime"))
+	end)
 end
 
 local function HandleVIPCommands(event, player, command)
@@ -108,5 +109,6 @@ local function HandleVIPCommands(event, player, command)
 end
 
 CheckVIPOnLoad() -- Sets players with VIP as active VIP on load/reload ELUNA
+RegisterPlayerEvent(3, CheckVIP)
 RegisterPlayerEvent(28, CheckVIP)
 RegisterPlayerEvent(42, HandleVIPCommands)
