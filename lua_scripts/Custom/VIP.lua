@@ -42,9 +42,9 @@ end
 local function CheckVIP(event, player)
 	local name = player:GetName()
 	local acc = player:GetAccountId()
-    if isPlayerBot[name] then return end
+    if isPlayerBot[name] then print("Skipping VIP check on bot "..name) return end
 	if event == 28 and player:GetData("VIPTime") then
-		print("VIP Time for "..name.. " is "..player:GetData("VIPTime"))
+		print("VIP Time - Map check for "..name.. ", VIP time is "..player:GetData("VIPTime"))
 		return
 	end
 	
@@ -56,7 +56,7 @@ local function CheckVIP(event, player)
 		else
 			player:SetData("VIPTime", 0)
 		end
-		print("VIP Time for "..name.. " is "..player:GetData("VIPTime"))
+		print("VIP Time - Login check for "..name.. ", VIP time is "..player:GetData("VIPTime"))
 	end)
 end
 
