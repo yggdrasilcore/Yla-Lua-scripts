@@ -57,7 +57,7 @@ local function XFacGO(event, go, player)
         GoSpawnToggle = true
         
     elseif event > 2 then -- On use, iterate count
-		if XFacMaps[map] then end
+		if XFacMaps[map] then
 			if MaxGOCharges[entry] > 0 and not GOCount[guid] then GOCount[guid] = 0 end -- Reload Eluna-proofing the objects to not last forever
 			
 			if GOCount[guid] then GOCount[guid] = GOCount[guid] + 1 end
