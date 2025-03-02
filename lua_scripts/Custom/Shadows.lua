@@ -300,7 +300,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
     local maxBotCount       = 2
     local maxVIPCount       = 4
     
-    if player:GetData("VIPTime") > os.time() then -- Increased bot limit for VIP
+    if player:GetData("VIPTime") and player:GetData("VIPTime") > os.time() then -- Increased bot limit for VIP
         maxBotCount = maxVIPCount
     end
     
