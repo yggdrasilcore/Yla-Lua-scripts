@@ -68,8 +68,11 @@ local function XFacGO(event, go, player)
 		local bots = go:GetPlayersInRange(10, 0, 1)
 		
 		if bots then
+			print("Possible bots found")
 			for _, bot in pairs(bots) do
+				print("bot name: "..bot:GetName())
 				if bot:GetAccountId() == player:GetAccountId() then
+					print("Bot confirmed!")
 					if go:GetEntry() == 192675 then -- Fish
 						bot:CastSpell(bot, 57397, true)
 					elseif go:GetEntry() == 192625 then -- Great
