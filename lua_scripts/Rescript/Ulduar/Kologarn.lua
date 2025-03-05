@@ -1,91 +1,49 @@
-local function LazerSpawn(event, creature)
-	
-	if creature:GetEntry() == 33802 then -- Sets original position to ensure lazers are in range of Kologarn and players
-		creature:NearTeleport(1767, -23, 448.80, 0)
-	else
-		creature:NearTeleport(1770, -28, 448.80, 0)
+local function killKologarn(event, player, kologarn)
+	if kologarn:GetEntry() == 32930 then
+		kologarn:RegisterEvent(function(e, d, r, kologarn)
+			local bridge = kologarn:GetNearestCreature(50, 34297)
+			if not bridge then print("Error finding bridge") return end
+			print("despawning kolo")
+			kologarn:DespawnOrUnsummon()
+			print("showing bridge")
+			bridge:SetDisplayId(kologarn:GetDisplayId())
+			print("making bridge invis")
+			bridge:AddAura(74490, bridge)
+		end, 10000)
 	end
-	
-    local kologarn = creature:GetNearestCreature(60, 32930) -- Find the nearest creature with entry ID 32930 (Kologarn), later used to find player
-
-    local playersInRange = kologarn:GetPlayersInRange(54, 1, 1) -- Get all players in range of Kologarn
-    
-    -- Initialize a variable to store the player farthest from Kologarn
-    local maxrangeplayer = nil
-    local maxDistance = 0
-    
-    -- Loop through all players in range to find the farthest one
-    for _, player in pairs(playersInRange) do
-        local distance = player:GetDistance(kologarn)
-        if distance > maxDistance then
-            maxDistance = distance
-            maxrangeplayer = player
-		end
-    end
-	
-	if maxrangeplayer == nil then maxrangeplayer = creature:GetNearestPlayer(30) end -- If no players in LOS of Kolagarn (happens if they stand on edge)
-	
-	if creature:GetEntry() == 33802 then -- Move lazers to farthest player
-		if maxrangeplayer:GetDistance(1771, -24, 448) < 23 and maxrangeplayer:GetX() < 1785 then
-			creature:NearTeleport(maxrangeplayer:GetX()-1, maxrangeplayer:GetY()-3, maxrangeplayer:GetZ(), maxrangeplayer:GetO())
-			creature:SetHomePosition(maxrangeplayer:GetX()-1, maxrangeplayer:GetY()-3, maxrangeplayer:GetZ(), maxrangeplayer:GetO())
-		else
-			creature:NearTeleport(maxrangeplayer:GetX(), maxrangeplayer:GetY(), maxrangeplayer:GetZ(), maxrangeplayer:GetO())
-			creature:SetHomePosition(maxrangeplayer:GetX(), maxrangeplayer:GetY(), maxrangeplayer:GetZ(), maxrangeplayer:GetO())
-		end
-	else
-		if maxrangeplayer:GetDistance(1771, -24, 448) < 23 and maxrangeplayer:GetX() < 1785 then
-			creature:NearTeleport(maxrangeplayer:GetX()+1, maxrangeplayer:GetY()+3, maxrangeplayer:GetZ(), maxrangeplayer:GetO())
-			creature:SetHomePosition(maxrangeplayer:GetX()+1, maxrangeplayer:GetY()+3, maxrangeplayer:GetZ(), maxrangeplayer:GetO())
-		else
-			creature:NearTeleport(maxrangeplayer:GetX(), maxrangeplayer:GetY(), maxrangeplayer:GetZ(), maxrangeplayer:GetO())
-			creature:SetHomePosition(maxrangeplayer:GetX(), maxrangeplayer:GetY(), maxrangeplayer:GetZ(), maxrangeplayer:GetO())
-		end
-	end
-	
-    if maxrangeplayer then  -- If a player is found, make the lazer follow the farthest player
-		creature:SetInCombatWith(maxrangeplayer)
-		creature:SetSpeed(0, 0.7)
-		creature:SetSpeed(1, 0.7)
-		
-		if creature:GetEntry() == 33802 then
-			creature:MoveFollow(maxrangeplayer, 1, 0.3)
-		else
-			creature:MoveFollow(maxrangeplayer, 1, -2.1)
-		end
-		
-		creature:RegisterEvent(function(eventId, delay, repeats, creature)
-			player = creature:GetNearestPlayer(50)
-			if player:GetDifficulty() == 1 then
-				creature:AddAura(63977, creature) -- 25-man eye AOE
-			else
-				creature:AddAura(63347, creature) -- 10-man eye AOE
-			end
-			
-			if creature:GetEntry() == 33802 then
-				creature:CastSpell(creature, 63702, true) -- Right beam
-			else
-				creature:CastSpell(creature, 63676, true) -- Left beam
-			end
-			
-			creature:RemoveEventById(eventId) -- Clean up event in case NPC janks out and stays inactive
-			
-		end, 20, 1)
-			
-    end
 end
 
-local function killKologarn(event, player, killed)
-    if killed:GetEntry() == 32930 then
-        killed:DespawnOrUnsummon()
-        
-        local bridge = player:SpawnCreature(34297, 1797.15, -24.4027, 448.741, 3.1935, 8)
-        
-        bridge:AddAura(74490, bridge)
-    end
+local function enterUlduar(event, player)
+	local map = player:GetMap()
+	if not (map:GetMapId() == 603) then return end
+	
+	local kologarn = player:GetNearestCreature(50000, 32930)
+	
+	if not kologarn then print("Error finding kologarn") return end
+	
+	print("kolo found")
+	
+	local bridge = kologarn:GetNearestCreature(50, 34297)
+	
+	if not bridge then print("Error finding bridge") return end
+	
+	print("bridge found")
+	
+	bridge:SetFaction(35)
+	
+	if kologarn:GetHealth() < 1 then
+		print("kolo dead")
+		
+		if (bridge:GetDisplayId() == kologarn:GetDisplayId()) then return end
+		
+		bridge:SetDisplayId(kologarn:GetDisplayId())
+	else
+		print("kolo not dead, hiding bridge")
+		bridge:SetDisplayId(15435)
+	end
 end
-RegisterPlayerEvent(7, killKologarn) -- Registers the permanent bridge event
 
--- Register the event for lazer NPCs
-RegisterCreatureEvent(33802, 5, LazerSpawn)
-RegisterCreatureEvent(33632, 5, LazerSpawn)
+RegisterPlayerEvent(7, killKologarn)
+RegisterPlayerEvent(28, enterUlduar)
+WorldDBExecute("REPLACE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (63342, 'spell_kologarn_focused_eyebeam');")
+WorldDBExecute("REPLACE INTO insert into `creature` (`guid`, `id1`, `id2`, `id3`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseMask`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `wander_distance`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`, `ScriptName`, `VerifiedBuild`, `CreateObject`, `Comment`) values('15001749','34297','0','0','603','0','0','3','1','0','1797.15','-24.4027','448.741','3.1935','604800','0','0','3625700','0','0','0','0','0','','0','0',NULL);")
