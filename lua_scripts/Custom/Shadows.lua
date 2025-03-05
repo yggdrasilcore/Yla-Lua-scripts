@@ -946,47 +946,43 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
 				end
 				
 				local laughterWords = {
-                    "haha", "hehe", "lol", "rofl", "lmao", "giggle", "chuckle", "funny", "humor",
-                    "hilarious", "amusing", "joke", "comedy", "laughing", "lmfao", "rotfl", "bahaha",
-                    "teehee", "witty", "hilarious", "punny", "jest", "uproarious", "sidesplitting",
-                    "howl", "cackle", "snicker", "smirk", "grin", "beam", "simper", "titter",
-                    "ha", "hah", "heh", "hee", "hihi", "huhu", "hoho", "he", "hi", "ho", "hu",
-                    "haa", "heee", "hiiii", "hoooo", "huuuu", "hahaha", "hehehe", "hihihi", "hohoho", "huhu",
-                    "hahahahaha", "hehehehehe", "hihihihihi", "hohohohoho", "huhu", "heehee", "heeheehee",
-                    "HA", "HAH", "HEH", "HEE", "HIHI", "HUHU", "HOHO", "HE", "HI", "HO", "HU",
-                    "HAA", "HEEE", "HIIII", "HOOOO", "HUUUUU", "HAHAHA", "HEHEHE", "HIHIHI", "HOHOHO", "HUHU",
-                    "HAHAHAHAHA", "HEHEHEHEHE", "HIHIHIHIHI", "HOHOHOHOHO", "HUHU", "HEEHEE", "HEEHEEHEE",
-				 "ahahaha", "ehehehe", "ihihih", "ohoho", "uhu", "ahehe", "aheehee", "ahuhu",
-				 "AH", "EHEH", "IHIH", "OHOH", "UHU", "AHEHE", "AHEEHEE", "AHUHU",
-				 "AHHAHA", "EHEHEH", "IHIHIH", "OHOHOH", "UHUHU", "AHEHEH", "AHEEHEEH", "AHUHUHU",
-				 "хих", "хохо", "хехе", "хаха", "хихихи", "хохохо", "хехехе", "хахаха",
-				 "хих", "хох", "хех", "хах", "хіхі", "хохо", "хехе", "хаха",
-				 "хіхіхі", "хохохо", "хехехе", "хахаха", "хіхіхіхі", "хохохохо", "хехехехе", "хахахаха"
+					"haha", "hehe", "lol", "rofl", "lmao", "giggle", "chuckle", "funny", "humor",
+					"hilarious", "amusing", "joke", "comedy", "laughing", "lmfao", "rotfl", "bahaha",
+					"teehee", "witty", "hilarious", "punny", "jest", "uproarious", "sidesplitting",
+					"howl", "cackle", "snicker", "smirk", "grin", "beam", "simper", "titter",
+					"ha", "hah", "heh", "hee", "hihi", "huhu", "hoho", "he", "hi", "ho", "hu",
+					"haa", "heee", "hiiii", "hoooo", "huuuu", "hahaha", "hehehe", "hihihi", "hohoho", "huhu",
+					"hahahahaha", "hehehehehe", "hihihihihi", "hohohohoho", "huhu", "heehee", "heeheehee",
+					"HA", "HAH", "HEH", "HEE", "HIHI", "HUHU", "HOHO", "HE", "HI", "HO", "HU",
+					"HAA", "HEEE", "HIIII", "HOOOO", "HUUUUU", "HAHAHA", "HEHEHE", "HIHIHI", "HOHOHO", "HUHU",
+					"HAHAHAHAHA", "HEHEHEHEHE", "HIHIHIHIHI", "HOHOHOHOHO", "HUHU", "HEEHEE", "HEEHEEHEE",
+					"ahahaha", "ehehehe", "ihihih", "ohoho", "uhu", "ahehe", "aheehee", "ahuhu",
+					"AH", "EHEH", "IHIH", "OHOH", "UHU", "AHEHE", "AHEEHEE", "AHUHU",
+					"AHHAHA", "EHEHEH", "IHIHIH", "OHOHOH", "UHUHU", "AHEHEH", "AHEEHEEH", "AHUHUHU"
+				}
 
-                }
-
-                local laughterResponses = {
-                    "That's funny!",
-                    "I'm glad you found that amusing!",
-                    "Haha, good one!",
-                    "You have a great sense of humor!",
-                    "That's hilarious!",
-                    "I needed that laugh!",
-                    "You're cracking me up!",
-                    "Stop, you're killing me!",
-                    "That really made me laugh.",
-                    "My stomach hurts from laughing!",
-                    "I can't stop laughing!",
-                    "You're so funny!",
-                    "Where do you come up with this stuff?",
-                    "I'm in stitches!",
-                    "That’s a knee-slapper!",
-                    "You always know how to make me laugh!",
-                    "I'm literally crying from laughter!",
-                    "That’s pure comedy gold!",
-                    "You’ve got me in tears!",
-                    "I haven't laughed this hard in ages!"
-                }
+				local laughterResponses = {
+					"That's funny!",
+					"I'm glad you found that amusing!",
+					"Haha, good one!",
+					"You have a great sense of humor!",
+					"That's hilarious!",
+					"I needed that laugh!",
+					"You're cracking me up!",
+					"Stop, you're killing me!",
+					"That really made me laugh.",
+					"My stomach hurts from laughing!",
+					"I can't stop laughing!",
+					"You're so funny!",
+					"Where do you come up with this stuff?",
+					"I'm in stitches!",
+					"That’s a knee-slapper!",
+					"You always know how to make me laugh!",
+					"I'm literally crying from laughter!",
+					"That’s pure comedy gold!",
+					"You’ve got me in tears!",
+					"I haven't laughed this hard in ages!"
+				}
 
 				local function extractLaughterKeywords(message)
 					local keywords = {}
