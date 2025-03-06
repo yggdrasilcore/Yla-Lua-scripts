@@ -107,19 +107,19 @@ local function CacheDataPoints()
 	end
 
 	for owner, count in pairs(event26Cache) do
-		table.insert(values, "('26', " .. owner .. ", " .. count .. ", " .. os.time() .. ")")
+		table.insert(values, "('26', " .. count .. ", " ..  tostring(owner) .. ", " .. os.time() .. ")")
 	end
 
 	for owner, count in pairs(event27Cache) do
-		table.insert(values, "('27', " .. owner .. ", " .. count .. ", " .. os.time() .. ")")
+		table.insert(values, "('27', " .. count .. ", " ..  tostring(owner) .. ", " .. os.time() .. ")")
 	end
 
 	for bidder, count in pairs(event28Cache) do
-		table.insert(values, "('28', " .. bidder .. ", " .. count .. ", " .. os.time() .. ")")
+		table.insert(values, "('28', " .. count .. ", " ..  tostring(bidder) .. ", " .. os.time() .. ")")
 	end
 
 	for owner, count in pairs(event29Cache) do
-		table.insert(values, "('29', " .. owner .. ", " .. count .. ", " .. os.time() .. ")")
+		table.insert(values, "('29', " .. count .. ", " ..  tostring(owner) .. ", " .. os.time() .. ")")
 	end
 
 	local total, maxSender, maxCount = 0, nil, 0
@@ -200,24 +200,22 @@ local function CacheDataPoints()
 end
 
 local function CleanOldData()
-	local truncateTime = os.time() - (TruncateCutoff * 60 * 60)
-	local oneHourAgo = os.time() - (DeleteInterval * 60)
-
-	local query = [[
-	DELETE FROM statistics
-	WHERE param3 < truncateTime
-	AND param3 NOT IN (
-		SELECT max_param3
-		FROM (
-			SELECT MAX(param3) AS max_param3
-			FROM statistics
-			WHERE param3 >= oneHourAgo
-			GROUP BY event, DATE_FORMAT(FROM_UNIXTIME(param3), '%Y-%m-%d %H')
-		) AS temp_max_param3
-	);
-	]]
-
-	CharDBExecute(query)
+    local truncateTime = os.time() - (TruncateCutoff * 60 * 60)
+    local oneHourAgo = os.time() - (DeleteInterval * 60)
+    local query = string.format([[
+    DELETE FROM statistics
+    WHERE param3 < %d
+    AND param3 NOT IN (
+        SELECT max_param3
+        FROM (
+            SELECT MAX(param3) AS max_param3
+            FROM statistics
+            WHERE param3 >= %d
+            GROUP BY event, DATE_FORMAT(FROM_UNIXTIME(param3), '%%Y-%%m-%%d %%H')
+        ) AS temp_max_param3
+    );
+    ]], truncateTime, oneHourAgo)
+    CharDBExecute(query)
 end
 
 -- Functions to handle registration data input
