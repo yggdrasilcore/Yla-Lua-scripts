@@ -13,6 +13,7 @@ local botCount          =   {}
 local botTeleTime       =   {}
 local botMasters        =   {}
 local botSummonTime     =   {}
+local dontKickTime	    =   {}
 local removalInProgress =   {}
 local lastTeleTime      =   {}
 local disallowedZones   =   {4298, 4197, 3628, 3666} -- Scarlet Enclave (DK start area), Wintergrasp, Halaa
@@ -527,6 +528,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
                 table.insert(botMasters[guid], player:GetName())
                 botSummonTime[guid] = os.time()
                 player:RunCommand(".playerbots bot add " .. selectedChar.name) -- Add bot
+				dontKickTime[selectedChar.name] = os.time() + 1
                 if not isPlayerBot[selectedChar.name] then
                     isPlayerBot[selectedChar.name] = name
                 elseif not (isPlayerBot[selectedChar.name] == name) then
@@ -654,6 +656,7 @@ local function Logout(event, player)
     activeBots[name]            = nil
     botCount[name]              = nil
     botMasters[guidlow]         = nil
+	dontKickTime[name]			= nil
 end
 
 
@@ -679,6 +682,7 @@ function UninviteGroupGUID(event, packet, player)
     local uninvitedPlayer = GetPlayerByGUID(guid)
     if uninvitedPlayer then
         if not logoutEvent[uninvitedPlayer:GetName()] then
+			if dontKickTime[uninvitedPlayer:GetName()] and dontKickTime[uninvitedPlayer:GetName()] > os.time() then return end
             logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
         end
     end
@@ -689,6 +693,7 @@ function UninviteGroup(event, packet, player)
     local uninvitedPlayer = GetPlayerByName(uninvitedPlayerName)
     if uninvitedPlayer then
         if not logoutEvent[uninvitedPlayer:GetName()] then
+			if dontKickTime[uninvitedPlayer:GetName()] and dontKickTime[uninvitedPlayer:GetName()] > os.time() then return end
             logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
         end
     end
@@ -698,6 +703,7 @@ local function LeaveGroup(event, group, guid, method, kicker, reason)
     local uninvitedPlayer = GetPlayerByGUID(guid)
     if uninvitedPlayer then
         if not logoutEvent[uninvitedPlayer:GetName()] then
+			if dontKickTime[uninvitedPlayer:GetName()] and dontKickTime[uninvitedPlayer:GetName()] > os.time() then return end
             logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
         end
     end
@@ -710,6 +716,7 @@ local function DisbandGroup(event, group)
             local player = GetPlayerByName(isPlayerBot[botName])
             if player and not logoutEvent[botName] then
                 logoutEvent[botName] = player:RegisterEvent(function(_, _, _, player)
+					if dontKickTime[botName] and dontKickTime[botName] > os.time() then return end
                     player:RunCommand(".playerbots bot remove " .. botName)
                     print("Removing "..botName.." from disbanded group")
                     logoutEvent[botName] = nil
