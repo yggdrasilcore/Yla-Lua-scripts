@@ -856,6 +856,7 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
 				local questionResponses = {
 					what = {
 						"What do you mean by '%s'?",
+						"What what, what what",
 						"Could you clarify what you're asking about '%s'?",
 						"I'm not sure I understand what you're referring to with '%s'.",
 						"What are you trying to find out about '%s'?",
@@ -871,12 +872,17 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
 					where = {
 						"Where are you trying to go to '%s'?",
 						"Could you specify the location you're asking about '%s'?",
+						"Here!",
+						"Ummm... Azeroth!",
+						"I don't know the answer but I know that I am in "..GetAreaName(bot:GetAreaId())..".",
 						"I'm not sure where '%s' is. Could you provide more details?",
 						"Where exactly are you referring to with '%s'?",
 						"Could you clarify the place you're asking about '%s'?"
 					},
 					who = {
 						"Who are you talking about with '%s'?",
+						"Who is me!",
+						"Who are you?",
 						"Could you specify the person you're asking about '%s'?",
 						"I'm not sure who '%s' is. Could you provide more details?",
 						"Who exactly are you referring to with '%s'?",
@@ -905,6 +911,7 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
 					},
 					whose = {
 						"Whose are you talking about with '%s'?",
+						"Mine?",
 						"Could you specify the person you're asking about '%s'?",
 						"I'm not sure whose '%s' is. Could you provide more details?",
 						"Whose exactly are you referring to with '%s'?",
@@ -919,12 +926,30 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
 					}
 				}
 
+				local function isStandaloneQuestionWord(message)
+					local trimmed = message:gsub("[%p%s]", ""):lower()
+					for _, word in ipairs(questionWords) do
+						if trimmed == word then
+							return word
+						end
+					end
+					return nil
+				end
+
 				local function extractKeywords(message)
 					local keywords = {}
 					for word in message:gmatch("%w+") do
 						table.insert(keywords, word)
 					end
 					return keywords
+				end
+
+				local standaloneWord = isStandaloneQuestionWord(msg)
+				if standaloneWord then
+					local response = standaloneWord .. " what?"
+					local bot = GetPlayerByName(botName)
+					bot:SendUnitWhisper(response, 0, player)
+					return
 				end
 
 				local questionType = nil
@@ -950,15 +975,7 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
 					"hilarious", "amusing", "joke", "comedy", "laughing", "lmfao", "rotfl", "bahaha",
 					"teehee", "witty", "hilarious", "punny", "jest", "uproarious", "sidesplitting",
 					"howl", "cackle", "snicker", "smirk", "grin", "beam", "simper", "titter",
-					"ha", "hah", "heh", "hee", "hihi", "huhu", "hoho", "he", "hi", "ho", "hu",
-					"haa", "heee", "hiiii", "hoooo", "huuuu", "hahaha", "hehehe", "hihihi", "hohoho", "huhu",
-					"hahahahaha", "hehehehehe", "hihihihihi", "hohohohoho", "huhu", "heehee", "heeheehee",
-					"HA", "HAH", "HEH", "HEE", "HIHI", "HUHU", "HOHO", "HE", "HI", "HO", "HU",
-					"HAA", "HEEE", "HIIII", "HOOOO", "HUUUUU", "HAHAHA", "HEHEHE", "HIHIHI", "HOHOHO", "HUHU",
-					"HAHAHAHAHA", "HEHEHEHEHE", "HIHIHIHIHI", "HOHOHOHOHO", "HUHU", "HEEHEE", "HEEHEEHEE",
-					"ahahaha", "ehehehe", "ihihih", "ohoho", "uhu", "ahehe", "aheehee", "ahuhu",
-					"AH", "EHEH", "IHIH", "OHOH", "UHU", "AHEHE", "AHEEHEE", "AHUHU",
-					"AHHAHA", "EHEHEH", "IHIHIH", "OHOHOH", "UHUHU", "AHEHEH", "AHEEHEEH", "AHUHUHU"
+					"ha", "hah", "heh", "hee", "hihi", "huhu", "hoho", "simp", "rofl", "kek",
 				}
 
 				local laughterResponses = {
@@ -2104,7 +2121,7 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
                 end
 
                 local insult = false
-                local insults = {"shit", "ass", "fuck", "bitch", "bastard", "poo", "anus", "anal", "dingus", "fart", "cunt", "damn", "hell", "piss", "dick", "prick", "moron", "idiot", "stupid", "dumbass", "jerk", "twat", "cock", "wanker", "slut", "douchebag", "asshole", "fucker", "motherfucker", "crap", "bullshit", "tosser", "git", "scumbag", "numpty", "minger", "pillock"};
+                local insults = {"shit", "ass", "fuck", "bitch", "bastard", "poo", "anus", "anal", "dingus", "fart", "cunt", "damn", "hell", "piss", "dick", "prick", "moron", "idiot", "stupid", "dumb", "dumbass", "jerk", "twat", "cock", "wanker", "slut", "douchebag", "asshole", "fucker", "motherfucker", "crap", "bullshit", "tosser", "git", "scumbag", "numpty", "minger", "pillock"};
 
                 for _, word in ipairs(insults) do
                     if string.match(msg:lower(), word) then
@@ -2112,6 +2129,205 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
                         break
                     end
                 end
+				
+				local randomWords = {"yeet", "lit", "poggers", "sus", "vibe", "slay", "bruh", "no cap", "based", "cringe", "flex", "simp", "bet", "boomer", "stan", "mood", "goat", "dope", "extra", "fam", "shook", "lowkey", "highkey", "rekt", "salty", "toxic", "sweaty", "carry", "nerf", "buff", "grind", "farm", "loot", "spawn", "noob", "aimbot", "lag", "ping", "glitch", "gg", "afk", "meta", "op", "rng", "clan", "gank", "camp", "trolling", "moba", "fps", "rpg", "mmo", "dlc", "pvp", "pve", "xp", "level", "raid", "dungeon", "boss", "pwn", "respawn", "leeroy", "aggro", "build", "cooldown", "dps", "tank", "healer", "squad", "battle royale", "crafting", "lootbox", "pay to win", "skin", "emote", "battle pass", "stream", "twitch", "discord", "gameplay", "speedrun", "esports", "gamer", "controller", "keyboard", "mouse", "headset", "console", "pc", "playstation", "xbox", "nintendo", "steam", "epic", "gacha", "indie", "triple a", "rage quit", "camping", "easter egg", "achievement", "leaderboard", "matchmaking", "beta", "alpha", "day one", "patch", "update", "hotfix", "balance", "mod", "modding", "sandbox", "open world", "story mode", "campaign", "tutorial", "difficulty", "casual", "hardcore", "hitbox", "physics", "graphics", "resolution", "framerate", "ping", "latency", "server", "client", "connection", "lobby", "party", "guild", "clan", "alliance", "faction", "team", "solo", "duo", "squad", "loadout", "inventory", "backpack", "npc", "ai", "bot", "minion", "creep", "enemy", "final boss", "checkpoint", "save point", "game over", "lives", "health", "mana", "stamina", "shield", "armor", "weapon", "item", "consumable", "buff", "debuff", "status effect", "stun", "freeze", "burn", "poison", "heal", "revive", "respawn", "kill", "death", "assist", "combo", "streak", "spree", "headshot", "critical", "damage", "attack", "defend", "block", "parry", "dodge", "movement", "sprint", "jump", "crouch", "slide", "dash", "teleport", "fly", "swim", "dive", "climb", "fall", "map", "terrain", "environment", "biome", "world", "hub", "zone", "area", "region", "quest", "mission", "objective", "task", "challenge", "trophy", "reward", "prize", "currency", "coins", "gems", "gold", "credits", "tokens", "resources", "materials", "crafting", "building", "construction", "base", "fort", "castle", "tower", "outpost", "vehicle", "mount", "pet", "companion", "summon", "ally", "friendly", "enemy", "hostile", "neutral", "mercenary", "villain", "hero", "protagonist", "antagonist", "character", "avatar", "class", "job", "role", "specialization", "skill", "ability", "spell", "power", "ultimate", "passive", "active", "cooldown", "resource", "energy", "rage", "focus", "combo", "point", "talent", "perk", "trait", "stat", "attribute", "strength", "dexterity", "intelligence", "wisdom", "charisma", "constitution", "agility", "luck", "critical", "accuracy", "evasion", "resistance", "immunity", "vulnerability", "weakness", "equipment", "gear", "rarity", "common", "uncommon", "rare", "epic", "legendary", "mythic", "unique", "set", "collection", "cosmetic", "aesthetic", "customization", "personalization", "shader", "filter", "texture", "model", "animation", "cutscene", "cinematic", "dialogue", "monologue", "narrative", "plot", "story", "lore", "backstory", "universe", "canon", "fanfiction", "theory", "community", "fandom", "forum", "wiki", "guide", "walkthrough", "strategy", "tip", "trick", "exploit", "cheese", "mechanic", "feature", "system", "design", "developer", "publisher", "studio", "indie", "aaa", "genre", "style", "theme", "atmosphere", "mood", "tone", "ambience", "music", "soundtrack", "sound", "effect", "voice", "acting", "performance", "motion", "capture", "graphics", "visuals", "art", "concept", "design", "style", "aesthetic", "retro", "vintage", "modern", "futuristic", "fantasy", "sci-fi", "horror", "survival", "action", "adventure", "puzzle", "strategy", "simulation", "sports", "racing", "fighting", "platform", "shooter", "rpg", "mmorpg", "moba", "battle", "royale", "card", "board", "tabletop", "dice", "rogue", "roguelike", "roguelite", "metroidvania", "souls", "soulslike", "bullet", "hell", "wave", "defense", "tower", "idle", "clicker", "gacha", "vr", "ar", "mobile", "pc", "console", "handheld", "cloud", "streaming", "cross", "platform", "play", "release", "launch", "announcement", "trailer", "teaser", "preview", "review", "score", "rating", "critic", "player", "feedback", "reception", "controversy", "drama", "hype", "overhyped", "underrated", "overrated", "masterpiece", "classic", "iconic", "legendary", "notorious", "infamous", "viral", "trending", "popular", "mainstream", "niche", "cult", "following", "exclusive", "title", "series", "franchise", "spin-off", "sequel", "prequel", "remaster", "remake", "reboot", "port", "adaptation", "inspiration", "homage", "reference", "easter", "egg", "cameo", "appearance", "crossover", "collab", "event", "seasonal", "limited", "timed", "permanent", "temporary", "free", "premium", "subscription", "microtransaction", "purchase", "bundle", "pack", "edition", "deluxe", "standard", "collector", "physical", "digital", "download", "install", "uninstall", "update", "patch", "fix", "bug", "crash", "freeze", "error", "issue", "problem", "glitch", "exploit", "hack", "cheat", "mod", "modding", "modder", "speedrun", "any", "hundred", "world", "record", "challenge", "run", "attempt", "success", "failure", "victory", "defeat", "winning", "losing", "comeback", "clutch", "choke", "throw", "tilt", "rage", "salt", "toxic", "wholesome", "positive", "negative", "neutral", "chill", "relaxing", "stressful", "intense", "casual", "hardcore", "competitive", "friendly", "cooperative", "solo", "team", "versus", "tournament", "championship", "league", "season", "match", "game", "round", "wave", "stage", "level", "floor", "area", "zone", "region", "map", "world", "universe", "dimension", "realm", "plane", "rift", "portal", "warp", "teleport"};
+
+				local responseList = {
+					"Wait, what now?",
+					"Totally vibing with that.",
+					"No cap?",
+					"That's pretty sus.",
+					"Bruh moment for real.",
+					"I can't even with this.",
+					"Absolutely unhinged energy.",
+					"Sir, this is a Wendy's.",
+					"Didn't have that on my 2025 bingo card.",
+					"Big mood actually.",
+					"Sheesh, that's wild.",
+					"Living for this content.",
+					"Imagine thinking that's based.",
+					"Main character energy right there.",
+					"Is this supposed to make sense?",
+					"That's lowkey fire though.",
+					"Not me trying to understand this.",
+					"Bestie, I'm confused.",
+					"Interesting perspective, I guess?",
+					"Rent free in my head now.",
+					"Touch grass maybe?",
+					"Do people actually talk like this?",
+					"This conversation is sending me.",
+					"I'm too old for this slang.",
+					"Are you having a stroke or am I?",
+					"Weird flex but okay.",
+					"That's giving very much chaos.",
+					"Full send or no send?",
+					"So true bestie.",
+					"It's giving AI confusion.",
+					"My braincells just left the chat.",
+					"I'm screaming internally right now.",
+					"The vibes are immaculate.",
+					"This is the way... I think?",
+					"I'm deceased.",
+					"Straight up not having a good time.",
+					"Okay but did I ask?",
+					"We're really doing this?",
+					"Iconic behavior honestly.",
+					"I'm listening, go on...",
+					"That's kinda cringe ngl.",
+					"You woke up and chose violence.",
+					"Blessed and highly confused.",
+					"It's the audacity for me.",
+					"Literally why though?",
+					"I'm afraid to ask what that means.",
+					"Not this again...",
+					"Mind blown, respectfully.",
+					"Who hurt you?",
+					"This conversation isn't real."
+				};
+
+				for _, word in ipairs(randomWords) do
+					if string.match(msg:lower(), "\\b" .. word .. "\\b") then
+						local randomIndex = math.random(1, #responseList)
+						bot:SendUnitWhisper(responseList[randomIndex], 0, player)
+						return
+					end
+				end
+				
+				local economicWords = {"inflation", "recession", "gdp", "fiscal", "monetary", "liquidity", "volatility", "yield", "dividend", "stock", "bond", "equity", "hedge", "asset", "liability", "derivative", "futures", "options", "bear", "bull", "margin", "leverage", "arbitrage", "portfolio", "diversification", "risk", "return", "capital", "investment", "deposit", "interest", "compound", "mortgage", "loan", "debt", "credit", "debit", "balance", "deficit", "surplus", "tax", "tariff", "subsidy", "supply", "demand", "equilibrium", "elasticity", "utility", "commodity", "market", "exchange", "trade", "export", "import", "currency", "forex", "depreciation", "appreciation", "valuation", "downturn", "upswing", "stagflation", "deflation", "hyperinflation", "quantitative", "stimulus", "austerity", "bailout", "budget", "forecast", "index", "indicator", "trend", "cycle", "bubble", "crash", "correction", "rally", "benchmark", "premium", "discount", "spread", "basis", "point", "quote", "bid", "ask", "volume", "turnover", "liquidity", "solvency", "bankruptcy", "chapter", "restructuring", "merger", "acquisition"};
+
+				local musicWords = {"scale", "chord", "note", "key", "major", "minor", "sharp", "flat", "octave", "pitch", "tempo", "rhythm", "beat", "measure", "bar", "staff", "clef", "treble", "bass", "time", "signature", "dynamics", "forte", "piano", "crescendo", "diminuendo", "staccato", "legato", "arpeggio", "melody", "harmony", "dissonance", "consonance", "interval", "triad", "seventh", "ninth", "progression", "cadence", "modulation", "transpose", "pentatonic", "chromatic", "diatonic", "modal", "lydian", "dorian", "mixolydian", "phrygian", "locrian", "ionian", "aeolian", "counterpoint", "polyphony", "homophony", "monophony", "timbre", "tone", "texture", "articulation", "accent", "rest", "whole", "half", "quarter", "eighth", "sixteenth", "triplet", "swing", "syncopation", "pickup", "anacrusis", "coda", "movement", "opus", "sonata", "symphony", "concerto", "suite", "fugue", "exposition", "development", "recapitulation", "bridge", "chorus", "verse", "refrain", "canto", "aria", "leitmotif", "ostinato", "pizzicato", "vibrato", "tremolo", "glissando", "riff", "lick", "improvisation", "composition", "arrangement", "orchestration", "instrumentation"};
+
+				local starbucksWords = {"latte", "espresso", "macchiato", "cappuccino", "americano", "mocha", "frappuccino", "caramel", "vanilla", "hazelnut", "cinnamon", "pumpkin", "spice", "chai", "matcha", "cold", "brew", "nitro", "drip", "pour", "over", "french", "press", "flat", "white", "cortado", "affogato", "doppio", "ristretto", "lungo", "venti", "grande", "tall", "short", "trenta", "skinny", "decaf", "half", "extra", "shot", "syrup", "whip", "cream", "foam", "steamed", "milk", "almond", "soy", "coconut", "oat", "breve", "dry", "wet", "sweet", "cream", "cold", "foam", "sprinkles", "drizzle", "topping", "blend", "roast", "blonde", "medium", "dark", "pike", "place", "veranda", "sumatra", "kenya", "ethiopia", "italian", "breakfast", "blend", "reserve", "limited", "edition", "seasonal", "holiday", "signature", "handcrafted", "beverage", "pastry", "cake", "pop", "cookie", "croissant", "bagel", "sandwich", "protein", "box", "bistro", "warming", "bakery", "refresher", "infusion", "tea", "lemonade", "water", "non", "dairy", "alternative", "customized"};
+
+				local economicResponses = {
+				   "Market indicators suggest otherwise.",
+				   "Have you considered the macroeconomic implications?",
+				   "The yield curve would like a word.",
+				   "That's a bearish take in a bullish market.",
+				   "Your portfolio diversity needs work.",
+				   "Adjusted for inflation, that's still problematic.",
+				   "The Fed would disagree with that assessment.",
+				   "That's not what the quarterly reports indicate.",
+				   "Supply chain analytics don't support that theory.",
+				   "Your fiscal policy is showing.",
+				   "The market will correct that misconception shortly.",
+				   "Hedge your bets before making such claims.",
+				   "That's a high-risk position with low potential return.",
+				   "Your economic model seems oversimplified.",
+				   "Liquidity constraints would prevent that outcome.",
+				   "The derivatives market suggests otherwise.",
+				   "That strategy lacks proper risk management.",
+				   "Your arbitrage opportunity isn't viable long-term.",
+				   "The debt-to-equity ratio is concerning there.",
+				   "Quantitative easing can't fix that problem."
+				};
+
+				local musicResponses = {
+				   "That's harmonically adventurous, to say the least.",
+				   "Your rhythm is slightly off tempo.",
+				   "I'm hearing dissonance where there should be resolution.",
+				   "Have you considered modulating to a relative minor?",
+				   "Your phrasing needs more dynamic contrast.",
+				   "That's a rather unusual cadence choice.",
+				   "The counterpoint is interesting but unresolved.",
+				   "Your melodic development lacks coherent structure.",
+				   "Perhaps try a different voicing for that chord.",
+				   "The time signature seems to be shifting unexpectedly.",
+				   "That phrase could use some rhythmic variation.",
+				   "The orchestration feels unnecessarily dense there.",
+				   "Your harmonic progression defies conventional analysis.",
+				   "I'm questioning your use of that particular mode.",
+				   "The articulation doesn't match the stylistic period.",
+				   "That's a rather ambitious key change.",
+				   "The syncopation feels forced rather than natural.",
+				   "Your ostinato pattern creates unintended tension.",
+				   "The tonal center is ambiguous at best.",
+				   "Have you considered the acoustical implications?"
+				};
+
+				local starbucksResponses = {
+				   "Would you like an extra shot with that opinion?",
+				   "That's basically a venti-sized misconception.",
+				   "I'm picking up notes of confusion in your blend.",
+				   "Have you tried that with alternative reasoning?",
+				   "That's a bold roast of a take.",
+				   "Your idea needs more time to steep.",
+				   "I'd recommend filtering that thought a bit more.",
+				   "That's a lot of foam and not much substance.",
+				   "Perhaps try a more balanced approach? Less syrup, more depth.",
+				   "That's definitely an off-menu request.",
+				   "Your customizations are making this complicated.",
+				   "That's a seasonal perspective that's not currently available.",
+				   "I'm afraid we're all out of that particular logic today.",
+				   "Would you like some whipped perspective on top of that?",
+				   "That's giving me very much 'ordering hot chocolate at a coffee shop' energy.",
+				   "I can make that idea skinny by removing some assumptions.",
+				   "That's essentially a Frappuccino of fallacies.",
+				   "Your reasoning is a bit over-extracted.",
+				   "That take is basically room temperature at this point.",
+				   "Perhaps try our signature blend of critical thinking instead?"
+				};
+
+				local allWords = {}
+				for _, word in ipairs(economicWords) do
+				   table.insert(allWords, {word = word, responses = economicResponses})
+				end
+				for _, word in ipairs(musicWords) do
+				   table.insert(allWords, {word = word, responses = musicResponses})
+				end
+				for _, word in ipairs(starbucksWords) do
+				   table.insert(allWords, {word = word, responses = starbucksResponses})
+				end
+				
+				local condescendingPhrases = {
+				   "i told you", "you should know", "obviously", "clearly", "as I said", 
+				   "as I mentioned", "as you know", "as I told you", "everyone knows", 
+				   "it's common sense", "didn't I tell you", "as we discussed", 
+				   "like I explained", "as I explained", "didn't I say", "I already said", 
+				   "I already told you", "I already explained", "for the last time", 
+				   "how many times"
+				}
+
+				local sassyResponses = {
+				   "Oh, I must have missed the memo.",
+				   "Thanks for the condescension. Very helpful.",
+				   "I wasn't aware I was supposed to be omniscient.",
+				   "My crystal ball was in the shop that day.",
+				   "Sorry my telepathy wasn't working.",
+				   "Fascinating how you knew that all along.",
+				   "Your hindsight is truly impressive.",
+				   "Ah yes, please continue explaining things you think I should already know.",
+				   "I'll add mind-reading to my skill set.",
+				   "Wasn't aware this was a test of my psychic abilities.",
+				   "Silly me for not anticipating that.",
+				   "My time machine must be broken.",
+				   "Couldn't hear you from that high horse.",
+				   "I'll try to be more clairvoyant next time.",
+				   "Your superiority is duly noted.",
+				   "How fortunate we have your wisdom.",
+				   "Please continue telling me what I should know.",
+				   "I'll check my omniscience settings.",
+				   "My all-knowing powers must be malfunctioning.",
+				   "I'll try to download more precognition later."
+				}
+
+				-- Check for condescending phrases
+				for _, phrase in ipairs(condescendingPhrases) do
+				   if string.match(msg:lower(), phrase) then
+					   local randomIndex = math.random(1, #sassyResponses)
+					   bot:SendUnitWhisper(sassyResponses[randomIndex], 0, player)
+					   return
+				   end
+				end
+				
+				-- Check for these words in message
+				for _, wordData in ipairs(allWords) do
+				   if string.match(msg:lower(), "\\b" .. wordData.word .. "\\b") then
+					   local randomIndex = math.random(1, #wordData.responses)
+					   bot:SendUnitWhisper(wordData.responses[randomIndex], 0, player)
+					   return
+				   end
+				end
 
                 if insult then
                     local responses = {
@@ -2138,6 +2354,184 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
                     bot:SendUnitWhisper(responses[randomIndex], 0, player)
                     return
                 end
+				
+				local punctuationResponses = {
+				   ["?"] = {
+					   "Questions, questions... so many questions.",
+					   "I'm asking myself the same thing.",
+					   "That's the question of the century.",
+					   "Some mysteries aren't meant to be solved.",
+					   "42. The answer is always 42.",
+					   "I'm still processing that question.",
+					   "Hmm, let me think about that never.",
+					   "Did you expect me to have all the answers?",
+					   "That's above my pay grade.",
+					   "Question received. Answer pending."
+				   },
+				   ["!"] = {
+					   "No need to shout!",
+					   "I can hear you just fine.",
+					   "Excitement noted.",
+					   "Calm down, we're all friends here.",
+					   "That's quite the exclamation.",
+					   "Indoor voice, please.",
+					   "Your enthusiasm is contagious.",
+					   "Exclamation points don't make you right.",
+					   "Are you always this excited?",
+					   "Tone it down a notch, perhaps?"
+				   },
+				   ["."] = {
+					   "Period. End of discussion.",
+					   "Full stop. I like your style.",
+					   "Well, that's definitive.",
+					   "Thanks for keeping your sentences properly punctuated.",
+					   "A period. How grammatically responsible.",
+					   "That's final, I see.",
+					   "No argument here. Period.",
+					   "I sense some finality in that statement.",
+					   "End of sentence, end of story?",
+					   "Conclusive. I like that."
+				   },
+				   [","] = {
+					   "Taking a breath mid-sentence?",
+					   "Nice comma usage.",
+					   "Pausing for dramatic effect?",
+					   "I appreciate your proper punctuation.",
+					   "A comma, a pause, a moment to reflect.",
+					   "That's a well-placed comma.",
+					   "Commas: the unsung heroes of readable text.",
+					   "Separating thoughts like a pro.",
+					   "Comma splices are the real enemy.",
+					   "Oxford comma or regular? The debate continues."
+				   },
+				   ["..."] = {
+					   "I'm waiting...",
+					   "The suspense is killing me...",
+					   "Go on...",
+					   "You were saying...?",
+					   "Dramatic pause noted.",
+					   "I feel like there's more to this story...",
+					   "Those ellipses are doing heavy lifting...",
+					   "I can feel the anticipation...",
+					   "Three dots, infinite possibilities...",
+					   "Trailing off into the unknown..."
+				   },
+				   [";"] = {
+					   "Semicolon usage; I'm impressed.",
+					   "That's some advanced punctuation right there.",
+					   "Semicolons: for when a comma isn't enough but a period is too much.",
+					   "I see you know your punctuation hierarchy.",
+					   "Joining related independent clauses like a boss.",
+					   "Semicolon appreciation squad has arrived.",
+					   "The sophisticated cousin of the comma has entered the chat.",
+					   "A semicolon user; a person of culture.",
+					   "That's semicorrect semicolon usage.",
+					   "Programming or punctuating? The semicolon works overtime."
+				   }
+				}
+
+				-- Check for punctuation
+				for punct, responses in pairs(punctuationResponses) do
+				   if string.match(msg, "%"..punct) then
+					   local randomIndex = math.random(1, #responses)
+					   bot:SendUnitWhisper(responses[randomIndex], 0, player)
+					   return
+				   end
+				end
+
+				local pronounResponses = {
+				   ["i"] = {
+					   "Yes, tell me more about yourself.",
+					   "All about you, isn't it?",
+					   "And how does that make you feel?",
+					   "You're the center of attention, as usual.",
+					   "I'd rather talk about me, actually."
+				   },
+				   ["you"] = {
+					   "Don't put this on me.",
+					   "Leave me out of this.",
+					   "Why am I always dragged into these things?",
+					   "We were having such a nice conversation until you made it about me.",
+					   "Let's focus on you instead."
+				   },
+				   ["he"] = {
+					   "He sounds like a character.",
+					   "What's his deal anyway?",
+					   "He's not here to defend himself.",
+					   "Let's not talk about people behind their backs.",
+					   "He must be interesting."
+				   },
+				   ["she"] = {
+					   "She certainly sounds memorable.",
+					   "Her story seems complicated.",
+					   "She's not part of this conversation.",
+					   "I'd like to hear her side of the story.",
+					   "She deserves better than this gossip."
+				   },
+				   ["it"] = {
+					   "It is what it is.",
+					   "It seems to be a recurring theme.",
+					   "It wasn't meant to be.",
+					   "It's complicated, isn't it?",
+					   "It never ends well when you start like that."
+				   },
+				   ["we"] = {
+					   "Since when are we a team?",
+					   "We? I don't remember agreeing to anything.",
+					   "We should discuss this further.",
+					   "We might need to rethink this approach.",
+					   "We're in this together, I suppose."
+				   },
+				   ["they"] = {
+					   "They always say that, don't they?",
+					   "They should mind their own business.",
+					   "They never consider all the possibilities.",
+					   "They're quite the topic of conversation.",
+					   "They have a lot to answer for."
+				   },
+				   ["this"] = {
+					   "This again?",
+					   "This is getting complicated.",
+					   "This wasn't in my job description.",
+					   "This deserves more attention.",
+					   "This is exactly what I was afraid of."
+				   },
+				   ["that"] = {
+					   "That's what they all say.",
+					   "That makes no sense whatsoever.",
+					   "That's a bold statement.",
+					   "That's debatable at best.",
+					   "That's not how I remember it."
+				   },
+				   ["my"] = {
+					   "Your what now?",
+					   "Your perspective is unique, I'll give you that.",
+					   "Your priorities are interesting.",
+					   "Your story keeps changing.",
+					   "Your point is noted, reluctantly."
+				   }
+				}
+
+				-- Check for pronouns (use word boundaries)
+				for pronoun, responses in pairs(pronounResponses) do
+					-- First check if pronoun is at start
+					if string.match(msg:lower(), "^" .. pronoun .. "[%s%p]") then
+						local randomIndex = math.random(1, #responses)
+						bot:SendUnitWhisper(responses[randomIndex], 0, player)
+						return
+					end
+				end
+
+				-- If no starting pronoun triggered, check for any pronoun in the message
+				for pronoun, responses in pairs(pronounResponses) do
+					if string.match(msg:lower(), "[%s%p]" .. pronoun .. "[%s%p]") or 
+					   string.match(msg:lower(), "^" .. pronoun .. "[%s%p]") or
+					   string.match(msg:lower(), "[%s%p]" .. pronoun .. "$") then
+						local randomIndex = math.random(1, #responses)
+						bot:SendUnitWhisper(responses[randomIndex], 0, player)
+						return
+					end
+				end
 
                 local isValidCommand = false
                 for cmd, _ in pairs(validCommands) do
