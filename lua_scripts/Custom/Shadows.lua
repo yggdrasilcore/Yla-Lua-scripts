@@ -632,6 +632,12 @@ local function Logout(event, player)
     local accountId = player:GetAccountId()
     local guidlow = player:GetGUIDLow()
     local name = player:GetName()
+	
+    isPlayerBot[name]           = nil
+    botsAvailable[accountId]    = nil
+    activeBots[name]            = nil
+    botCount[name]              = nil
+    botMasters[guidlow]         = nil
     
     -- Check if player is set as active anywhere in the table
     for botMaster, bots in pairs(activeBots) do
@@ -650,15 +656,7 @@ local function Logout(event, player)
             end
         end
     end
-
-    isPlayerBot[name]           = nil
-    botsAvailable[accountId]    = nil
-    activeBots[name]            = nil
-    botCount[name]              = nil
-    botMasters[guidlow]         = nil
-	dontKickTime[name]			= nil
 end
-
 
 function CheckActiveBots(eventid, delay, repeats, uninvitedPlayer)
     local uninvitedPlayerName = uninvitedPlayer:GetName()
