@@ -43,7 +43,7 @@ local function CheckVIP(event, player)
 	local name = player:GetName()
 	local acc = player:GetAccountId()
     if isPlayerBot[name] then print("Skipping VIP check on bot "..name) return end
-	if event == 28 and player:GetData("VIPTime") then
+	if player:GetData("VIPTime") then
 		print("VIP Time - Map check for "..name.. ", VIP time is "..player:GetData("VIPTime"))
 		return
 	end
@@ -51,6 +51,7 @@ local function CheckVIP(event, player)
 	print("Fetching VIP time for "..name..", acc ".. acc)
 	AuthDBQueryAsync("SELECT viptime FROM accounts_vip WHERE account = " .. player:GetAccountId() .. ";", function(result)
 		local player = GetPlayerByName(name)
+		if not player then return end
 		if result then
 			player:SetData("VIPTime", result:GetUInt32(0))
 		else
@@ -109,6 +110,5 @@ local function HandleVIPCommands(event, player, command)
 end
 
 CheckVIPOnLoad() -- Sets players with VIP as active VIP on load/reload ELUNA
-RegisterPlayerEvent(3, CheckVIP)
 RegisterPlayerEvent(28, CheckVIP)
 RegisterPlayerEvent(42, HandleVIPCommands)

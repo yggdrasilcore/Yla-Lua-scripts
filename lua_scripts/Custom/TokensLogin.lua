@@ -19,6 +19,7 @@ end
 
 local function TokensOnLogin(event, player)
    if isPlayerBot[player:GetName()] then return end
+   if player:GetData("LoginChecked") then return end
    local accountId = player:GetAccountId()
    local playerGUID = player:GetGUID()
    local GUIDLow = player:GetGUIDLow()
@@ -27,6 +28,8 @@ local function TokensOnLogin(event, player)
    
    CharDBQueryAsync("SELECT dp, vp FROM account_currencies WHERE id = " .. accountId, function(query)
        local player = GetPlayerByGUID(playerGUID)
+	   if not player then return end
+	   player:SetData("LoginChecked", true)
        if query then
            local dpValue = query:GetInt32(0)
            local vpValue = query:GetInt32(1)
@@ -60,7 +63,7 @@ end
 -- Token on login awarder event registrations
 ------------------------------------------------------------------------------------------------
 
-RegisterPlayerEvent(3, TokensOnLogin)
+RegisterPlayerEvent(28, TokensOnLogin)
 
 ------------------------------------------------------------------------------------------------
 -- End token on login awarder event registrations
