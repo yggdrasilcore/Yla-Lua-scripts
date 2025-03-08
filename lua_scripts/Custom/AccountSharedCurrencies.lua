@@ -38,12 +38,15 @@ local function InitializeAccountCurrencyOnEmptyTable(accountId)
 end
 
 local function SyncCurrencyOnLogin(player, accountId)
-	player:SetData("CurrencySynced", true)
 	local name = player:GetName()
     for _, currencyId in ipairs(currencyItemIDs) do
 		local playerCurrencyCount = player:GetItemCount(currencyId)
 		CharDBQueryAsync("SELECT count FROM accountwide_currency WHERE accountId = " .. accountId .. " AND currencyId = " .. currencyId, function(query)
 			local player = GetPlayerByName(name)
+			if not player then return end
+			player:SetData("CurrencySynced", true)
+			if player:GetData(currencyId) then return end
+			player:SetData(currencyId, true)
 			if query then accountCurrencyCount = query:GetUInt32(0) else accountCurrencyCount = 0 end
 
 			if playerCurrencyCount < accountCurrencyCount then
