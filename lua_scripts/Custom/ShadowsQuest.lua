@@ -189,7 +189,10 @@ local function ShadowsMap(event, player)
             player:SpawnCreature(SWIRL_ENTRY, twx, twy, z, facing + math.pi, 1, DespawnTimer)
             
             player:AddAura(SHACKLE_AURA, player)
-            player:AddAura(IMMUNE_ALL, player)
+            local playerImmunity = player:AddAura(IMMUNE_ALL, player)
+			if playerImmunity then
+				playerImmunity:SetDuration(180000)
+			end
             print("Scheduling first event")
             player:RegisterEvent(function(eventId, delay, repeats, player)
                 print("first event firing")
