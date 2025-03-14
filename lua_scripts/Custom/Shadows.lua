@@ -804,6 +804,19 @@ end
 
 local validCommands = buildCommandList()
 
+local function OnGroupChat(event, player, msg, Type, lang, group)
+    if msg == "repair" then
+        for _, groupMember in ipairs(group) do
+            if groupMember then
+                local groupMemberName = groupMember:GetName()
+                if groupMemberName and isPlayerBot[groupMemberName] then
+				groupMember:SendUnitWhisper("Repairing!", 0, player)
+                end
+            end
+        end
+    end
+end
+
 local function OnWhisper(event, player, msg, Type, lang, receiver)
     local receiverName = receiver:GetName()
     local playerName = player:GetName()
@@ -2691,6 +2704,7 @@ SetActiveBots()
 RegisterPlayerEvent(3, ShadowsLoginHook)
 RegisterPlayerEvent(4, Logout)
 RegisterPlayerEvent(19, OnWhisper)
+RegisterPlayerEvent(20, OnGroupChat)
 RegisterServerEvent(21, OnPlayerMapEnter)
 RegisterPlayerEvent(27, OnDisallowedZones)
 RegisterPlayerEvent(42, OnBotCommand)
