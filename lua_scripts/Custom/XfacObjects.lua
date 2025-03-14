@@ -34,6 +34,8 @@ local function XFacGO(event, go, player)
     local map = go:GetMapId()
 	
     if event == 1 then -- On update, check if event should be removed
+		if not customCrossFaction then return end
+
 		if not XFacMaps[map] then return end
     
         if not XfacGOTable[guid] then XfacGOTable[guid] = os.time() + 180 return end -- Reload Eluna-proofing the objects to not last forever
@@ -41,6 +43,8 @@ local function XFacGO(event, go, player)
         if XfacGOTable[guid] < os.time() then go:RegisterEvent(removeObject, 50) end
         
     elseif event == 2 then -- On player's spawn of object, replace with ownerless object
+		if not customCrossFaction then return end
+
 		if not XFacMaps[map] then return end
     
         if not GoSpawnToggle then return end
@@ -57,13 +61,6 @@ local function XFacGO(event, go, player)
         GoSpawnToggle = true
         
     elseif event > 2 then -- On use, iterate count
-		if XFacMaps[map] then
-			if MaxGOCharges[entry] > 0 and not GOCount[guid] then GOCount[guid] = 0 end -- Reload Eluna-proofing the objects to not last forever
-			
-			if GOCount[guid] then GOCount[guid] = GOCount[guid] + 1 end
-			
-			if GOCount[guid] and GOCount[guid] > MaxGOCharges[entry] then go:RegisterEvent(removeObject, 50) return end
-		end
 		
 		local bots = go:GetPlayersInRange(10, 0, 1)
 		
@@ -85,6 +82,16 @@ local function XFacGO(event, go, player)
 					end
 				end
 			end
+		end
+		
+		if not customCrossFaction then return end
+
+		if XFacMaps[map] then
+			if MaxGOCharges[entry] > 0 and not GOCount[guid] then GOCount[guid] = 0 end -- Reload Eluna-proofing the objects to not last forever
+			
+			if GOCount[guid] then GOCount[guid] = GOCount[guid] + 1 end
+			
+			if GOCount[guid] and GOCount[guid] > MaxGOCharges[entry] then go:RegisterEvent(removeObject, 50) return end
 		end
 	end
 end
