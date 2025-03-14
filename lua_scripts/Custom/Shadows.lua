@@ -1548,7 +1548,7 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
                         categoryState = "gearAdviceInProgress"
                     },
                     class_tips = {
-                        keywords = {"class", "spec", "talent", "ability", "skill", "rotation", "build", "playstyle", "role", "strategy"},
+                        keywords = {"class", "spec", "ability", "skill", "rotation", "build", "playstyle", "role", "strategy"},
                         initialResponses = {
                             "Need tips for your class?",
                             "Let's discuss your spec!",
