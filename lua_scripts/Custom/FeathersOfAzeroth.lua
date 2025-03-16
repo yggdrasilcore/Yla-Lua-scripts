@@ -712,29 +712,17 @@ local function OnCommand(event, player, command)
     end
 end
 
-local function OnX53(event, player, spell, skipCheck)
-    if spell:GetEntry() == 75973 then
-        local zoneId = player:GetZoneId()
-        local areaId = player:GetAreaId()
-        local mapId = player:GetMapId()
-        if not ZonesToCheckZ(player) then return true end
-		
-        if player:HasSpell(34091) then
+local function OnX53orInvincible(event, player, spell, skipCheck)
+	if not ZonesToCheckZ(player) then return true end
+	
+	if player:HasAura(75973) then -- x-53
+		player:RemoveAura(75973)
+		if player:HasSpell(34091) then
 			player:AddAura(75972, player)
-        elseif player:HasSpell(34090) then
+		elseif player:HasSpell(34090) then
 			player:AddAura(75957, player)        
 		end
-        return false
-    end
-end
-
-local function OnMountDismount(event, packet, player)
-    local zoneId = player:GetZoneId()
-    local areaId = player:GetAreaId()
-    local mapId = player:GetMapId()
-	if not ZonesToCheckZ(player) then return true end
-    
-    if player:HasAura(72282) then -- invincible
+	elseif player:HasAura(72282) then -- invincible
         if player:HasSpell(34091) then player:RemoveAura(72282) player:AddAura(72284, player)
         elseif player:HasSpell(34090) then player:RemoveAura(72282) player:AddAura(72283, player)
         end
@@ -745,11 +733,11 @@ OnLoadScript()
 WorldDBExecute("UPDATE item_template SET description = 'This item has the ability to wrap the wings of your flying mounts with the Feathers of Azeroth, permitting their use in Azeroth.' WHERE entry = 20739")
 CharDBExecute("CREATE TABLE IF NOT EXISTS character_flight (guid INT UNSIGNED NOT NULL, standardmount INT UNSIGNED, X FLOAT, Y FLOAT, Z FLOAT, O FLOAT, var1 INT UNSIGNED, var2 INT UNSIGNED, var3 INT UNSIGNED, PRIMARY KEY (guid))")
 RegisterPlayerEvent(3, LoadStandardMount)
-RegisterPlayerEvent(5, OnX53)
+RegisterSpellEvent(75973, 2, OnX53orInvincible)
+RegisterSpellEvent(72282, 2, OnX53orInvincible)
 RegisterPlayerEvent(27, CheckFlyableArea)
 RegisterPlayerEvent(28, OnNewMap)
 RegisterPlayerEvent(42, OnCommand)
 RegisterItemEvent(FeathersItem, 2, OnUseItem)
 RegisterPlayerGossipEvent(182746573, 2, OnGossipSelect)
-RegisterPacketEvent(0x516, 7, OnMountDismount) -- Set collision height (typically when mounting)
 RegisterPacketEvent(0x346, 5, OnMoveSetFly)

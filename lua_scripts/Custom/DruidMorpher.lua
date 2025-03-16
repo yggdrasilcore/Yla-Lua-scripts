@@ -985,7 +985,7 @@ local function Shapeshift(event, player, spell, skipCheck)
 	)
 	then
 		
-		playerName = player:GetName()
+		local playerName = player:GetName()
 		
 		local guid = player:GetGUIDLow()
 		local formId = formSelections[guid]
@@ -1110,7 +1110,7 @@ local function ReloadEluna(event)
 			
 			CharDBQueryAsync("SELECT id, form FROM character_morphs WHERE guid = "..guid.." AND active = 1", function(morphdb)
 				if morphdb then
-					player = GetPlayerByName(playername)
+					local player = GetPlayerByName(playername)
 					repeat
 						local id = morphdb:GetUInt32(0)
 						local form = morphdb:GetUInt32(1)
@@ -1200,8 +1200,10 @@ local function OnMapChange(event, player)
 end
 
 local function DBMMorph(event, player, command)
-    if command == "dbmmorph" and player:IsAlive() then
-		player:RegisterEvent(Morpher, 0)
+    if command == "dbmmorph" then
+		if player:IsAlive() then
+			player:RegisterEvent(Morpher, 0)
+		end
 		return false
     end
 end
@@ -1210,7 +1212,15 @@ CacheCreatures() -- Caching available creatures from world DB on script initiali
 
 RegisterPlayerEvent(3, OnLogin) 
 RegisterPlayerEvent(4, onLogout)
-RegisterPlayerEvent(5, Shapeshift) -- On spellcast shapeshifts, to initialize morph application
+RegisterSpellEvent(768, 2, Shapeshift)
+RegisterSpellEvent(9634, 2, Shapeshift)
+RegisterSpellEvent(5487, 2, Shapeshift)
+RegisterSpellEvent(783, 2, Shapeshift)
+RegisterSpellEvent(40120, 2, Shapeshift)
+RegisterSpellEvent(33943, 2, Shapeshift)
+RegisterSpellEvent(33891, 2, Shapeshift)
+RegisterSpellEvent(24858, 2, Shapeshift)
+RegisterSpellEvent(1066, 2, Shapeshift)
 RegisterPlayerEvent(7, OnKillCreature)
 RegisterPlayerEvent(28, OnMapChange)
 RegisterPlayerEvent(33, OnCombat)
