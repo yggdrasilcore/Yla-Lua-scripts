@@ -306,6 +306,20 @@ local function ApplyFrogFormTooltip(tooltip)
    tooltip:Show()
 end
 
+local function ModifyTooltip(tooltip)
+    for i = 1, tooltip:NumLines() do
+        local line = _G[tooltip:GetName().."TextLeft"..i]
+        if line and line:GetText() then
+            local text = line:GetText()
+            if text:find("absorbs damage for up to 15%% of the amount healed for 30 sec") then
+                local newText = text:gsub("15%%", "25%%")
+                line:SetText(newText)
+                tooltip:Show()
+            end
+        end
+    end
+end
+
 local function ModifySpellTooltip(tooltip)
    local name, _, spellId = GameTooltip:GetSpell()
    if spellId == 40405 then
@@ -436,6 +450,8 @@ end)
 -------------------------------------------------------------------
 
 GameTooltip:HookScript("OnTooltipSetSpell", ModifySpellTooltip)
+GameTooltip:HookScript("OnTooltipSetItem", ModifyTooltip)
+ItemRefTooltip:HookScript("OnTooltipSetItem", ModifyTooltip)
 
 -- Function to modify the tooltip contents
 local function ModifyCustomStoreTooltip(tooltip)
