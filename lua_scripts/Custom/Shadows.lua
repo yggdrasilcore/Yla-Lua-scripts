@@ -1722,7 +1722,7 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
                         categoryState = "petBattlesInProgress"
                     },
                     transmog_collections = {
-                        keywords = {"transmog", "collection", "appearance", "set", "gear", "weapon", "armor", "style", "outfit", "achievement"},
+                        keywords = {"transmog", "collection", "appearance", " set ", "gear", "weapon", "armor", "style", "outfit"},
                         initialResponses = {
                             "Need help with your transmog collection?",
                             "Let's talk about appearances!",
@@ -1731,7 +1731,7 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
                             "Let's discuss weapon styles!",
                             "What armor appearances are you missing?",
                             "What's your favorite outfit?",
-                            "Need help with transmog achievements?",
+                            "Need help with transmogs?",
                             "Any specific transmog questions?",
                             "What's your transmog collection goal?"
                         },
@@ -1923,7 +1923,6 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
                         conversationState = "socialInteractionsNext",
                         categoryState = "socialInteractionsInProgress"
                     },
-                    -- Add more categories as needed
                 }
 
                 local botWhisperState = bot:GetData("whisper")
