@@ -1,7 +1,7 @@
 -- HOR TACTICS
 
-function OnEnterHOR(event, player, map)
-	local LK = player:GetNearestCreature(2000, 36594, true)
+function OnEnterHOR(event, instance_data, map, player)
+	local LK = player:GetNearestCreature(4000, 36954)
 	
 	if LK then
 		local group = player:GetGroup()
@@ -12,7 +12,7 @@ function OnEnterHOR(event, player, map)
 	end
 end
 
-RegisterMapEvent(668, 2, OnEnterHOR)
+RegisterMapEvent(668, 4, OnEnterHOR)
 
 
 --- END HOR TACTICS
