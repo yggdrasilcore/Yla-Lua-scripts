@@ -6,4 +6,3 @@ services:
     env_file:
       - ygg_confs/worldserver.env
       - ygg_confs/eluna.env
-      - ygg_confs/transmog.env
