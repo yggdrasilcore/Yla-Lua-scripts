@@ -14,7 +14,7 @@ function OnEnterHOR(event, player)
 	end
 end
 
-RegisterPlayerEvent(28, OnEnterHor)
+RegisterPlayerEvent(28, OnEnterHOR)
 
 
 --- END HOR TACTICS
