@@ -1,6 +1,8 @@
 -- HOR TACTICS
 
-function OnEnterHOR(event, instance_data, map, player)
+function OnEnterHOR(event, player)
+	if not player:GetMapId() == 668 then return end
+	
 	local LK = player:GetNearestCreature(4000, 36954)
 	
 	if LK then
@@ -12,7 +14,7 @@ function OnEnterHOR(event, instance_data, map, player)
 	end
 end
 
-RegisterMapEvent(668, 4, OnEnterHOR)
+RegisterPlayerEvent(28, OnEnterHor)
 
 
 --- END HOR TACTICS
