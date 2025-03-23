@@ -10,12 +10,16 @@ function PrintGroupMembers()
    
    local groupType = IsInRaid() and "raid" or "party"
    local numMembers = GetNumGroupMembers()
-   local nameList = UnitName("player")
+   local nameList = ""
    
    for i = 1, numMembers do
        local unitID = groupType .. i
        if UnitExists(unitID) and not UnitIsUnit(unitID, "player") and not UnitIsConnected(unitID) then
-           nameList = nameList .. ", " .. UnitName(unitID)
+		   if nameList == "" then
+				nameList = nameList.."".. UnitName(unitID)
+		   else
+				nameList = nameList .. ", " .. UnitName(unitID)
+			end
        end
    end
    
