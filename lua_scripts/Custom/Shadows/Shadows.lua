@@ -2656,6 +2656,7 @@ local function OnBotCommand(event, player, command)
 				botMasters[guid] = {} 
 			end
 			
+			isPlayerBot[selectedChar] = name
 			player:SetData("BotCount", (player:GetData("BotCount") or 0) + 1)
 			table.insert(botMasters[guid], player:GetName())
             addCmdTimer[guid] = GetCurrTime()
