@@ -407,7 +407,7 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
 			player:RemoveItem(19322,20)
 			player:SetData("VIPTime", (os.time() + 31 * 24 * 60 * 60))
 			
-			AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. player:GetAccountId() .. ", " .. (os.time() + 21 * 24 * 60 * 60) .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+			AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. player:GetAccountId() .. ", " .. (os.time() + 31 * 24 * 60 * 60) .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
 			
 			VIPmenu(player, creature)
 		else 
