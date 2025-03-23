@@ -2679,7 +2679,24 @@ local function OnBotCommand(event, player, command)
 	
 	if command == "shadowslogin" then
 		if player:GetData("LoginTime") and (player:GetData("LoginTime") < os.time() + 5) then
-			player:SendAddonMessage("Shadows", "LOGINCHECK", 7, player)
+			local accountId = player:GetAccountId()
+			local name = player:GetName()
+			
+			CharDBQueryAsync("SELECT name FROM characters WHERE account = " .. accountId .. " AND name != '" .. name .. "'", function(query)
+				if query then
+					local characters = {}
+					repeat
+						local characterName = query:GetString(0)
+						table.insert(characters, characterName)
+					until not query:NextRow()
+					
+					local bots = table.concat(characters, ", ")
+					local player = GetPlayerByName(name)
+					if player then
+						player:SendAddonMessage("Shadows", bots, 7, player)
+					end
+				end
+			end)
 		end
 		return false
 	end
@@ -2691,11 +2708,7 @@ local function OnBotCommand(event, player, command)
 	   
 	    for botName in string.gmatch(bots, "([^,]+)") do
 		    botName = string.gsub(botName, "^%s*(.-)%s*$", "%1")
-		    if not (botName == player:GetName()) then 
-				if (accountIDbyCharName[botName] == player:GetAccountId()) then
-					table.insert(botNames, botName)
-				end
-			end
+			table.insert(botNames, botName)
 	    end
 		
 	   
