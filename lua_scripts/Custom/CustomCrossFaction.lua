@@ -15,7 +15,7 @@ local function OnPlayerMapChange(event, map, player)
 	if (mapId == 631 or mapId == 658 -- ICC and the Frozen Halls maps
 	or mapId == 632 or mapId == 668) -- The Frozen Halls maps
 	then
-		if not customCrossFaction then print("ICC change aborted") return end
+		if not customCrossFaction then return end
         if instanceId and instanceId > 0 then
             player:RegisterEvent(function(eventId, delay, repeats, player)
                 if not cachedFaction[instanceId] then
