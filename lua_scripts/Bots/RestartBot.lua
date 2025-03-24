@@ -23,7 +23,17 @@ end
 
 local function ScheduledRestart()
     RunCommand("server restart 900 Periodical restart. Will be back shortly.")
+	WorldDBExecute("UPDATE version SET cache_id = cache_id + 1;");
 end
+
+local function OnCommand(event, player, command)
+    if command:find("server restart") or command:find("server shutdown") then
+        WorldDBExecute("UPDATE version SET cache_id = cache_id + 1;")
+		player:SendBroadcastMessage("Invalidating caches.")
+    end
+end
+
+RegisterPlayerEvent(42, OnCommand)
 
 local timeUntilRestart = GetTimeUntilNextRestart()
 eventid = CreateLuaEvent(ScheduledRestart, timeUntilRestart * 1000, 1)
