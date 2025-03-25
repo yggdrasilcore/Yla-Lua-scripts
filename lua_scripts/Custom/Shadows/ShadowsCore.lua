@@ -228,6 +228,7 @@ local commandCategories = {
 }
 
 local function ShadowsHello(player)
+    player:GossipClearMenu()
     local accountId = player:GetAccountId()
     local guidlow = player:GetGUIDLow()
     local name = player:GetName()
@@ -807,6 +808,26 @@ local function buildCommandList()
 end
 
 local validCommands = buildCommandList()
+
+local function OnGroup(event, player, msg, Type, lang, group)
+    if msg ~= "repair" then return end
+    
+	player:RegisterEvent(function(e, d, r, player)
+		local playerName = player:GetName()
+		local group = player:GetGroup()
+		
+		local groupPlayers = group:GetMembers()
+		for _, groupMember in ipairs(groupPlayers) do
+		   local groupMemberName = groupMember:GetName()
+		   
+		   if activeBots[groupMemberName] then
+			   for _, botName in ipairs(activeBots[groupMemberName]) do
+				   GetPlayerByName(botName):SendUnitWhisper("Repairing!", 0, player)
+			   end
+		   end
+		end
+	end, 10)
+end
 
 local function OnWhisper(event, player, msg, Type, lang, receiver)
     local receiverName = receiver:GetName()
@@ -2788,6 +2809,7 @@ SetActiveBots()
 RegisterPlayerEvent(3, ShadowsLogin)
 RegisterPlayerEvent(4, Logout)
 RegisterPlayerEvent(19, OnWhisper)
+RegisterPlayerEvent(20, OnGroup)
 RegisterServerEvent(21, OnPlayerMapEnter)
 RegisterPlayerEvent(27, OnDisallowedZones)
 RegisterPlayerEvent(42, OnBotCommand)
