@@ -17,7 +17,7 @@ local vendorCD = 15 * 60 -- 15 minutes in seconds
 local VIPVendorCD = {}
 local VIPVendorDuration = 3 * 60 * 1000 -- VIP vendor lasts for 1 minute
 local timeMessage = 0
-local VIPtime = {}
+
 -- End VIP vars
 
 -- Twiggy Tables
@@ -28,20 +28,6 @@ local mailboxtime = {}
 
 -- End Twiggy tables
 
--- ----------------------------------------------------------------------------------------------
--- ACCOUNTWIDE CURRENCY CONFIG 
---
--- Hosted by Aldori15 on Github: https://github.com/Aldori15/azerothcore-lua-accountwide
--- Adapted to Yggdrasil WoW by mostly nick :)
--- ----------------------------------------------------------------------------------------------
-
-local currencyItemIDs = {
-    37742,  -- Activity Token 
-    20880,  -- Vote Token 
-    19322,  -- Community Token 
-}
-
--- End account-shared currencies tables
 
 -- Initiates VIP table if not already present
 AuthDBExecute("CREATE TABLE IF NOT EXISTS accounts_vip (ACCOUNT INT(6) NOT NULL PRIMARY KEY, VIPTIME INT(11) NOT NULL);")
@@ -166,7 +152,7 @@ local function mainMenu(player, creature)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_holy_prayerofshadowprotection:32:32:-22:0|tManage Shadows", 0, 8)
 	end
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_gem_diamond_07:32:32:-22:0|tExplore Yggdrasil's features", 0, 5)
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_arcane_teleportdarnassus:32:32:-22:0|tTeleport to mall", 0, 4)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_arcane_teleportdarnassus:32:32:-22:0|tTeleport to mall", 0, 4, false, "Are you sure you want to teleport to the mall?\n \nThis will induce a 30-minute teleport cooldown.")
     player:GossipSendMenu(12, creature, 60)
 end
 
