@@ -1722,6 +1722,8 @@ end
 -----------------------------------------------------------
 local addedButtonForShadows = false
 local SHADOWS_BUTTON_NUMBER = nil
+local shadowButtonName
+local shadowButton
 
 local function ShowShadowsSettingsPanel()
     -- Deactivate all other buttons
@@ -1737,6 +1739,7 @@ local function ShowShadowsSettingsPanel()
         child:Hide()
     end    
 
+     shadowButton:LockHighlight()  -- Lock highlight for this button
 	 if not _G["ShadowsSettingsFrame"] then
 		local frame = CreateFrame("Frame", "ShadowsSettingsFrame", InterfaceOptionsFramePanelContainer)
 		frame:SetAllPoints(InterfaceOptionsFramePanelContainer)
@@ -1804,7 +1807,6 @@ local function ShowShadowsSettingsPanel()
 	end
 end
 
-
 local function AddShadowsButtonToOptions()
     local highestButtonNumber = 0
     local lastButton = nil
@@ -1820,17 +1822,17 @@ local function AddShadowsButtonToOptions()
     -- Create new button with the next sequential number
     SHADOWS_BUTTON_NUMBER = highestButtonNumber + 1  -- Store globally
     local newButtonName = "InterfaceOptionsFrameCategoriesButton" .. SHADOWS_BUTTON_NUMBER
-    local newButton = CreateFrame("Button", newButtonName, InterfaceOptionsFrameCategories, "OptionsListButtonTemplate")
+    shadowButton = CreateFrame("Button", newButtonName, InterfaceOptionsFrameCategories, "OptionsListButtonTemplate")
     
-    newButton:SetText("Shadows")
-    newButton:SetWidth(lastButton:GetWidth())
-    newButton:SetHeight(lastButton:GetHeight())
-    newButton:SetPoint("TOP", lastButton, "BOTTOM", 7, 0) 
-    newButton:SetScript("OnClick", function()
+    shadowButton:SetText("Shadows")
+    shadowButton:SetWidth(lastButton:GetWidth())
+    shadowButton:SetHeight(lastButton:GetHeight())
+    shadowButton:SetPoint("TOP", lastButton, "BOTTOM", 7, 0) 
+    shadowButton:SetScript("OnClick", function()
         ShowShadowsSettingsPanel()
     end)
     
-    _G[newButton:GetName().."Text"]:SetJustifyH("LEFT")
+    _G[shadowButton:GetName().."Text"]:SetJustifyH("LEFT")
 end
 
 InterfaceOptionsFrameCategories:HookScript("OnShow", function(self)
@@ -1844,37 +1846,48 @@ InterfaceOptionsFrameTab2:HookScript("OnClick", function(self)
     local checkBox = _G["ShadowsBarCheckbox"]
     local keyBindButton = _G["ShadowsKeybindButton"]
     local resetButton = _G["ShadowsResetButton"]
-	local header	= _G["headerText"]
+    local header = _G["headerText"]
+    
+    -- Ensure shadowButton is accessible and unlock it
+    if shadowButton then
+        shadowButton:UnlockHighlight()  -- Unlock highlight
+    end
     
     if checkBox and keyBindButton and resetButton and header then
         checkBox:Hide()
         keyBindButton:Hide()
         resetButton:Hide()
-		header:Hide()
+        header:Hide()
     end
 end)
 
 for i = 1, 30 do
-	local button = _G["InterfaceOptionsFrameCategoriesButton" .. i]
-	if button then
-		button:HookScript("OnClick", function()
-			if button:GetText() ~= "Shadows" then
-				local checkBox = _G["ShadowsBarCheckbox"]
-				local keyBindButton = _G["ShadowsKeybindButton"]
-				local resetButton = _G["ShadowsResetButton"]
-				local header	= _G["headerText"]
+    local button = _G["InterfaceOptionsFrameCategoriesButton" .. i]
+    if button then
+        button:HookScript("OnClick", function()
+            if button:GetText() ~= "Shadows" then
+                local checkBox = _G["ShadowsBarCheckbox"]
+                local keyBindButton = _G["ShadowsKeybindButton"]
+                local resetButton = _G["ShadowsResetButton"]
+                local header = _G["headerText"]
+                
+                -- Ensure shadowButton is accessible, unlock and hide it
+                if shadowButton then
+                    shadowButton:UnlockHighlight()
+                end
                
-				if checkBox and keyBindButton and resetButton and header then
-					checkBox:Hide()
-					keyBindButton:Hide()
-					resetButton:Hide()
-					header:Hide()
-				end
-			end
-			button:LockHighlight()
-		end)
-	end
+                if checkBox and keyBindButton and resetButton and header then
+                    checkBox:Hide()
+                    keyBindButton:Hide()
+                    resetButton:Hide()
+                    header:Hide()
+                end
+            end
+            button:LockHighlight()  -- Lock the highlight for the clicked button
+        end)
+    end
 end
+
 
 ------------------------------------------------------
 -- Server communication
