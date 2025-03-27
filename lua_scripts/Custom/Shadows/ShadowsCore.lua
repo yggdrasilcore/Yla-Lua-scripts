@@ -434,8 +434,8 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
 		else
 			player:SendAraeTriggerMessage("Your shadow bar settings are loading, please try again in a few seconds.")
 			player:SendBroadcastMessage("Your shadow bar settings are loading, please try again in a few seconds.")
-			ShadowsHello(player)
 		end
+		ShadowsHello(player)
 	elseif intid >= 200 and intid < 299 then  -- Bot removal selection
         local selectedIndex = intid - 200
 
