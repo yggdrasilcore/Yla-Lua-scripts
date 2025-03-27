@@ -1721,67 +1721,89 @@ end
 -- Inteface options
 -----------------------------------------------------------
 local addedButtonForShadows = false
+local SHADOWS_BUTTON_NUMBER = nil
 
 local function ShowShadowsSettingsPanel()
+    -- Deactivate all other buttons
+    for i = 1, 30 do
+        local button = _G["InterfaceOptionsFrameCategoriesButton" .. i]
+        if button and button:GetText() ~= "Shadows" then
+            button:UnlockHighlight()
+        end
+    end
+
+    -- Hide all other panel children
     for _, child in ipairs({InterfaceOptionsFramePanelContainer:GetChildren()}) do
         child:Hide()
-    end	
-    if not _G["ShadowsSettingsFrame"] then
-        local frame = CreateFrame("Frame", "ShadowsSettingsFrame", InterfaceOptionsFramePanelContainer)
-        frame:SetAllPoints(InterfaceOptionsFramePanelContainer)
-        local checkBox = CreateFrame("CheckButton", "ShadowsBarCheckbox", frame, "InterfaceOptionsCheckButtonTemplate")
-        checkBox:SetPoint("TOPLEFT", 16, -16)
-        checkBox:SetText("Enable Shadows Bar")
+    end    
+
+	 if not _G["ShadowsSettingsFrame"] then
+		local frame = CreateFrame("Frame", "ShadowsSettingsFrame", InterfaceOptionsFramePanelContainer)
+		frame:SetAllPoints(InterfaceOptionsFramePanelContainer)
+
+		-- Add header text
+		local headerText = frame:CreateFontString("headerText", "ARTWORK", "GameFontNormalLarge")
+		headerText:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -16)
+		headerText:SetText("Shadows and Shadow Bar Settings")
+		
+		local checkBox = CreateFrame("CheckButton", "ShadowsBarCheckbox", frame, "InterfaceOptionsCheckButtonTemplate")
+		checkBox:SetPoint("TOPLEFT", 16, -40)  -- Adjusted position to make room for header
+		checkBox:SetText("Enable Shadows Bar")
 		if ShadowsBarStatus == "ENABLED" or ShadowsBarToggleStatus == "OPEN" then
 			checkBox:SetChecked(true)
 		end
 		if ShadowsBarStatus == "DISABLED" or ShadowsBarToggleStatus == "CLOSED" then
 			checkBox:SetChecked(false)
 		end
-        checkBox:SetScript("OnClick", function(self)
-            if not self:GetChecked() then
-                SendChatMessage(".shadowsbaroff", "GUILD")
-            else
-                SendChatMessage(".shadowsbaron", "GUILD")
+		checkBox:SetScript("OnClick", function(self)
+			if not self:GetChecked() then
+				SendChatMessage(".shadowsbaroff", "GUILD")
+			else
+				SendChatMessage(".shadowsbaron", "GUILD")
 			end
-        end)
-        local text = checkBox:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-        text:SetPoint("LEFT", checkBox, "RIGHT", 4, 0)
-        text:SetText("Automatically Open Shadows Bar If Grouped With Shadows")
+		end)
 
-        local keyBindButton = CreateFrame("Button", "ShadowsKeybindButton", frame, "UIPanelButtonTemplate")
-        keyBindButton:SetPoint("TOPLEFT", checkBox, "BOTTOMLEFT", 0, -10)
-        keyBindButton:SetWidth(230)
-        keyBindButton:SetHeight(30)
-        keyBindButton:SetText("Shadows Bar Keyboard Shortcuts")
-        keyBindButton:SetScript("OnClick", function()
+		local text = checkBox:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+		text:SetPoint("LEFT", checkBox, "RIGHT", 4, 0)
+		text:SetText("Automatically Open Shadows Bar If Grouped With Shadows")
+        text:SetTextColor(1, 1, 1)
+		
+		local keyBindButton = CreateFrame("Button", "ShadowsKeybindButton", frame, "UIPanelButtonTemplate")
+		keyBindButton:SetPoint("TOPLEFT", checkBox, "BOTTOMLEFT", 0, -10)
+		keyBindButton:SetWidth(230)
+		keyBindButton:SetHeight(30)
+		keyBindButton:SetText("Shadows Bar Keyboard Shortcuts")
+		keyBindButton:SetScript("OnClick", function()
 			SlashCmdList["SHADOWSHORTCUTS"]()
 		end)
-        local resetButton = CreateFrame("Button", "ShadowsResetButton", frame, "UIPanelButtonTemplate")
-        resetButton:SetPoint("TOPLEFT", keyBindButton, "BOTTOMLEFT", 0, -10)
-        resetButton:SetWidth(230)
-        resetButton:SetHeight(30)
-        resetButton:SetText("Reset Shadows Bar")
+
+		local resetButton = CreateFrame("Button", "ShadowsResetButton", frame, "UIPanelButtonTemplate")
+		resetButton:SetPoint("TOPLEFT", keyBindButton, "BOTTOMLEFT", 0, -10)
+		resetButton:SetWidth(230)
+		resetButton:SetHeight(30)
+		resetButton:SetText("Reset Shadows Bar")
 		resetButton:SetScript("OnClick", function()
 			BotControlBar:Hide()
 			SlashCmdList["BOTCONTROLBAR"]()
 		end)
-        frame.name = "Shadows"
+
+		frame.name = "Shadows"
 	else
-	   local frame = _G["ShadowsSettingsFrame"]
-	   frame:Show()
-	   
-	   local checkBox = _G["ShadowsBarCheckbox"]
-	   local keyBindButton = _G["ShadowsKeybindButton"]
-	   local resetButton = _G["ShadowsResetButton"]
-	   
-	   if checkBox then checkBox:Show() end
-	   if keyBindButton then keyBindButton:Show() end
-	   if resetButton then resetButton:Show() end
+		local frame = _G["ShadowsSettingsFrame"]
+		frame:Show()
+		
+		local checkBox = _G["ShadowsBarCheckbox"]
+		local keyBindButton = _G["ShadowsKeybindButton"]
+		local resetButton = _G["ShadowsResetButton"]
+		local header	= _G["headerText"]
+		
+		if checkBox and not checkBox:IsVisible() then checkBox:Show() end
+		if keyBindButton and not keyBindButton:IsVisible()  then keyBindButton:Show() end
+		if resetButton and not resetButton:IsVisible()  then resetButton:Show() end
+		if header and not header:IsVisible()  then header:Show() end
 	end
 end
 
-local SHADOWS_BUTTON_NUMBER = nil
 
 local function AddShadowsButtonToOptions()
     local highestButtonNumber = 0
@@ -1821,32 +1843,36 @@ InterfaceOptionsFrameTab2:HookScript("OnClick", function(self)
     local checkBox = _G["ShadowsBarCheckbox"]
     local keyBindButton = _G["ShadowsKeybindButton"]
     local resetButton = _G["ShadowsResetButton"]
+	local header	= _G["headerText"]
     
-    if checkBox and keyBindButton and resetButton then
+    if checkBox and keyBindButton and resetButton and header then
         checkBox:Hide()
         keyBindButton:Hide()
         resetButton:Hide()
+		header:Hide()
     end
 end)
 
 for i = 1, 30 do
-   local button = _G["InterfaceOptionsFrameCategoriesButton" .. i]
-   if button then
-       button:HookScript("OnClick", function()
-           if button:GetText() ~= "Shadows" then
-               local checkBox = _G["ShadowsBarCheckbox"]
-               local keyBindButton = _G["ShadowsKeybindButton"]
-               local resetButton = _G["ShadowsResetButton"]
+	local button = _G["InterfaceOptionsFrameCategoriesButton" .. i]
+	if button then
+		button:HookScript("OnClick", function()
+			if button:GetText() ~= "Shadows" then
+				local checkBox = _G["ShadowsBarCheckbox"]
+				local keyBindButton = _G["ShadowsKeybindButton"]
+				local resetButton = _G["ShadowsResetButton"]
+				local header	= _G["headerText"]
                
-               if checkBox and keyBindButton and resetButton then
-                   checkBox:Hide()
-                   keyBindButton:Hide()
-                   resetButton:Hide()
-               end
-           end
-		   button:LockHighlight()
-       end)
-   end
+				if checkBox and keyBindButton and resetButton and header then
+					checkBox:Hide()
+					keyBindButton:Hide()
+					resetButton:Hide()
+					header:Hide()
+				end
+			end
+			button:LockHighlight()
+		end)
+	end
 end
 
 ------------------------------------------------------

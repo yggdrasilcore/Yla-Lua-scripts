@@ -315,7 +315,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
     
     if intid == 2 then -- Settings main menu
        player:GossipClearMenu()
-       player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_gizmo_02:40:40:-24:0|tHow to use shadows\n \nBy reaching through the Twisting Nether, you are able to summon shadows of the other characters on your account.\n \nTo control and summon a shadow, it must be within ten levels of you.\n \nYour active shadows adjust to your faction.\n \nYou may control up to 2 shadows at a time, or 4 shadows at a time if you have VIP.\n \nSee below for how to control your shadows.\n \n", 0, 2)
+       player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_gizmo_02:40:40:-24:0|tHow to use shadows\n \nBy reaching through the Twisting Nether, you are able to summon shadows of the other characters on your account.\n \nTo control and summon a shadow, it must be within ten levels of you.\n \nYour active shadows adjust to your faction.\n \nYou may control up to 2 shadows at a time, or 4 shadows at a time if you have VIP.\n \nThe shadow bar offers quick access to most shadows features. See below for in-depth information on how to control your shadows.\n \n", 0, 2)
        
        -- Add main category options
        for _, category in pairs(commandCategories) do
