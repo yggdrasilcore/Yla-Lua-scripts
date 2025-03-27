@@ -276,6 +276,7 @@ local function ShadowsHello(player)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_unused2:40:40:-24:0|tSummon shadows", 0, 5, false, "Are you sure you want to summon your shadow(s) here?\n \nThis will induce a 30-minute summon cooldown.")
         player:GossipMenuAddItem(4, "|TInterface/PaperDollInfoFrame/UI-GearManager-Undo:40:40:-24:0|tRemove shadow", 0, 6)
     end
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_shadow_darksummoning:40:40:-24:0|tShadow bar settings", 0, 7)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:40:40:-24:0|tExit", 0, 1000)
     player:GossipSendMenu(12, player, 200)
 end
@@ -427,7 +428,15 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
         ShadowsHello(player)
     elseif intid == 6 then  -- Show list of active shadows to remove
         ListActiveShadows(player)
-    elseif intid >= 200 and intid < 299 then  -- Bot removal selection
+	elseif intid == 7 then
+		if player:GetData("ShadowBarStatusChecked") then
+			player:SendAddonMessage("ShadowsBar", "SETTINGS", 7, player)
+		else
+			player:SendAraeTriggerMessage("Your shadow bar settings are loading, please try again in a few seconds.")
+			player:SendBroadcastMessage("Your shadow bar settings are loading, please try again in a few seconds.")
+			ShadowsHello(player)
+		end
+	elseif intid >= 200 and intid < 299 then  -- Bot removal selection
         local selectedIndex = intid - 200
 
         if activeBots[name] and activeBots[name][selectedIndex] then
@@ -527,7 +536,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
     end
 end
 
-function SetActiveBots()
+function SetActiveVars()
     activeBots = {}
     local playersByAccount = {}
     local allGuids = {}
@@ -535,6 +544,7 @@ function SetActiveBots()
     -- Group players by their account ID and collect all GUIDs
     for _, player in pairs(GetPlayersInWorld()) do
         if player then
+			player:SetData("ShadowBarStatusChecked", true)
             local accountId = player:GetAccountId()
             if not playersByAccount[accountId] then
                 playersByAccount[accountId] = {}
@@ -554,7 +564,28 @@ function SetActiveBots()
 
     if #allGuids > 0 then
         local guidString = table.concat(allGuids, ",")
-        
+			
+	    CharDBQueryAsync(
+		    string.format("SELECT guid, data FROM character_custom_data WHERE guid IN (%s) AND type = 98", guidString),
+		    function(result)
+				if result then
+					repeat
+						local guid = result:GetUInt32(0)
+						local data = result:GetString(1)
+						if data == "ENABLED" then
+				 		    local player = GetPlayerByGUID(GetPlayerGUID(guid))
+				 		    if player then
+								player:SetData("ShadowsBarData", true)
+		  		 			else
+								player:SetData("ShadowsBarData", false)
+							end
+		 		 	    end
+		 		    until not result:NextRow()
+		 	    end
+		    end
+	    )
+		
+			
         CharDBQueryAsync(string.format(
             "SELECT guid, cooldown_end FROM character_cooldowns WHERE guid IN (%s) AND item_id = 0",
             guidString
@@ -607,44 +638,80 @@ function SetActiveBots()
 end
 
 local function ShadowsLogin(event, player) -- Lazy persistent storage solution. Could probably just use characters table directly. Initially wanted cache-persistent value attached to world but not possible in standard AC ELUNA
-    CharDBExecute("REPLACE INTO character_cooldowns (guid, item_id, cooldown_end) VALUES (" .. player:GetGUIDLow() .. ", 0, " .. os.time() .. ")");
-
+    local guid = player:GetGUIDLow()
     local name = player:GetName()
+	
+	CharDBExecute("REPLACE INTO character_cooldowns (guid, item_id, cooldown_end) VALUES (" .. guid .. ", 0, " .. os.time() .. ")");
 
     if isPlayerBot[name] then
+		
+		if player:HasAura(32113) then player:RemoveAura(32113) end
+		
         if not player:IsInGroup() then return end
-
+		
         local group = player:GetGroup()
-        if not group:IsLeader(player:GetGUID()) then return end
-
+		
         local masterName = isPlayerBot[name]
         local master
         if masterName then master = GetPlayerByName(masterName) end
-
+		
         if not master then return end
+		
+		if master:GetData("ShadowsBarData") then
+			master:SendAddonMessage("ShadowsBar", "ENABLED", 7, master)
+		else
+			master:SendAddonMessage("ShadowsBar", "DISABLED", 7, master)
+		end
+		
+        if not group:IsLeader(player:GetGUID()) then return end
+		
+		
         if player:IsInSameGroupWith(master) or player:IsInSameRaidWith(master) then
             group:SetLeader(master:GetGUID())
         end
     end
 
     if isPlayerBot[name] then return end
-
+	
     if not player:GetData("BotCount") or player:GetData("BotCount") < 0 then player:SetData("BotCount", 0) end
 
     if not activeBots[name] then  activeBots[name] = {}  end
 	
 	player:SetData("LoginTime", os.time())
+	
+	CharDBQueryAsync("SELECT data FROM character_custom_data WHERE guid = "..guid.." AND type = 98", function(result)
+		if result then
+			local data = result:GetString(0)
+			local player = GetPlayerByGUID(GetPlayerGUID(guid))
+			if not player then return end
+			if data == "ENABLED" then
+				player:SetData("ShadowsBarData", true)
+			else
+				player:SetData("ShadowsBarData", false)
+			end
+		end
+	end)
 end
 
-local function Logout(event, player)
+local function LogoutOrSave(event, player)
     local accountId = player:GetAccountId()
-    local guidlow = player:GetGUIDLow()
+    local guid = player:GetGUIDLow()
     local name = player:GetName()
+
+	if event == 4 or event == 25 then
+		if player:GetData("ShadowsBarData") then
+			CharDBExecute("REPLACE INTO character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'ENABLED')")
+		else
+			CharDBExecute("REPLACE INTO character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'DISABLED')")
+		end
+	end
 	
+	if event == 25 then return end
+
     isPlayerBot[name]           = nil
     botsAvailable[accountId]    = nil
     activeBots[name]            = nil
-    botMasters[guidlow]         = nil
+    botMasters[guid]         = nil
     
     -- Check if player is set as active anywhere in the table
     for botMaster, bots in pairs(activeBots) do
@@ -2722,6 +2789,36 @@ local function OnBotCommand(event, player, command)
 		end
 		return false
 	end
+	
+	if command == "shadowsbaron" then
+		player:SetData("ShadowsBarData", true)
+		player:SendBroadcastMessage("Automatic shadows bar enabled.")
+		return false
+	elseif command == "shadowsbaroff" then
+		player:SetData("ShadowsBarData", false)
+		player:SendBroadcastMessage("Automatic shadows bar disabled.")
+		return false
+	elseif command == "shadowsbarstatus" then
+		player:SetData("ShadowBarStatusChecked", true)
+		if not player:IsInGroup() then
+			if player:GetData("ShadowsBarData") then
+				player:SendAddonMessage("ShadowsBar", "OPEN", 7, player)
+			else
+				player:SendAddonMessage("ShadowsBar", "CLOSED", 7, player)
+			end
+		else
+			local group = player:GetGroup()
+			local groupPlayers = group:GetMembers()
+			for _, groupMember in ipairs(groupPlayers) do
+				local name = groupMember:GetName()
+				if isPlayerBot[name] == player:GetName() then
+					player:SendAddonMessage("ShadowsBar", "ENABLED", 7, player)
+					break
+				end
+			end
+		end
+		return false
+	end
 
 	if string.find(command, "attemptaddbot ") then
 
@@ -2805,9 +2902,10 @@ end
 
 
 
-SetActiveBots()
+SetActiveVars()
 RegisterPlayerEvent(3, ShadowsLogin)
-RegisterPlayerEvent(4, Logout)
+RegisterPlayerEvent(4, LogoutOrSave)
+RegisterPlayerEvent(25, LogoutOrSave)
 RegisterPlayerEvent(19, OnWhisper)
 RegisterPlayerEvent(20, OnGroup)
 RegisterServerEvent(21, OnPlayerMapEnter)
