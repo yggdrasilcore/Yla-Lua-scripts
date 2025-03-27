@@ -715,7 +715,7 @@ local function CreateBotControlBar()
             icon = "spell_holy_guardianspirit",
             dropdown = {
                 {text = "Release spirit", command = "release"},
-                {text = "Revive", command = "revive"}
+                {text = "Revive at spirit healer", command = "revive"}
             }
         }
     }
@@ -1887,7 +1887,6 @@ for i = 1, 30 do
         end)
     end
 end
-
 
 ------------------------------------------------------
 -- Server communication
