@@ -1837,7 +1837,6 @@ InterfaceOptionsFrameCategories:HookScript("OnShow", function(self)
     if not addedButtonForShadows then
         AddShadowsButtonToOptions()
         addedButtonForShadows = true
-        self:HookScript("OnShow", nil)  -- Unregister the hook
     end
 end)
 
