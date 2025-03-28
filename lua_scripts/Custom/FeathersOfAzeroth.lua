@@ -19,7 +19,8 @@ local BUFFIDS = {
 }
 
 -- ELEVATION BARRIERS
-local MAX_Z = 1000 -- Max Z in Kalimdor and Eastern Kingdoms unless zone/area exception
+local MAX_Z = 1700 -- Max Z in Kalimdor and Eastern Kingdoms unless zone/area exception
+local TELDRASSIL_MAX_Z = 1500
 local AZSHARACRATER_MAX_Z = 650
 local SILVERMOON_MAX_Z = 50
 local ISLEOFQD_MAX_Z = 81
@@ -556,6 +557,17 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
     end
 end
 
+local function CheckFlyableArea(event, player, zoneId, areaId)
+    if ZonesToCheckZ(player) then
+		if not event then checkMount(player) return end -- On script load, there's no event call, fire immediately
+		local d = 100 -- Else, default to a delay
+		if player:IsCasting() then d = 4000	end -- Set delay to at least 4 sec if player is casting during call (mounting in progress)
+        player:RegisterEvent(function(eventId, delay, repeats, player)
+			checkMount(player)
+        end, d, 1)
+    end
+end
+
 local function OnUseItem(event, player, item, target)
     if player:IsCasting() then
         return false
@@ -620,17 +632,6 @@ local function checkMount(player)
 			end
 		end
 	end
-end
-
-local function CheckFlyableArea(event, player, zoneId, areaId)
-    if ZonesToCheckZ(player) then
-		if not event then checkMount(player) return end -- On script load, there's no event call, fire immediately
-		local d = 100 -- Else, default to a delay
-		if player:IsCasting() then d = 4000	end -- Set delay to at least 4 sec if player is casting during call (mounting in progress)
-        player:RegisterEvent(function(eventId, delay, repeats, player)
-			checkMount(player)
-        end, d, 1)
-    end
 end
 
 local function LoadStandardMount(event, player)
