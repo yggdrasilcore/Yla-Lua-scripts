@@ -31,6 +31,8 @@ function ProcessGroupMembers()
 		end
 	end
 	
+	if nameList == "" then return end
+	
 	StaticPopupDialogs["SHADOWS_LOGIN_DIALOG"] = {
 		text = " \nWe see you have relogged in a shadows group.\n \n \nDo you want to log in your shadows?\n \n \nAvailable shadows: \n \n" .. nameList.."\n ",
 		button1 = "Yes",
