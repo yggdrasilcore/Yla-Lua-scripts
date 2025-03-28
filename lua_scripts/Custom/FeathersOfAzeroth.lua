@@ -557,6 +557,18 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
     end
 end
 
+local function checkMount(player)
+	for _, id in ipairs(BUFFIDS) do
+		if player:HasAura(id) then
+			if not player:GetData("MountEvent") then
+				player:SetData("MountEvent", true)
+				player:RegisterEvent(CheckZ, 200, 0)
+				print("[Feathers of Azeroth]: Starting zone-based Z check")
+			end
+		end
+	end
+end
+
 local function CheckFlyableArea(event, player, zoneId, areaId)
     if ZonesToCheckZ(player) then
 		if not event then checkMount(player) return end -- On script load, there's no event call, fire immediately
@@ -620,18 +632,6 @@ local function OnNewMap(event, player)
             end
         end, 100, 1)
     end
-end
-
-local function checkMount(player)
-	for _, id in ipairs(BUFFIDS) do
-		if player:HasAura(id) then
-			if not player:GetData("MountEvent") then
-				player:SetData("MountEvent", true)
-				player:RegisterEvent(CheckZ, 200, 0)
-				print("[Feathers of Azeroth]: Starting zone-based Z check")
-			end
-		end
-	end
 end
 
 local function LoadStandardMount(event, player)
