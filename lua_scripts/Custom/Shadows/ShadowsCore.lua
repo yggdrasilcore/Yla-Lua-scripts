@@ -885,13 +885,15 @@ local function OnGroup(event, player, msg, Type, lang, group)
 		
 		local groupPlayers = group:GetMembers()
 		for _, groupMember in ipairs(groupPlayers) do
-		   local groupMemberName = groupMember:GetName()
-		   
-		   if activeBots[groupMemberName] then
-			   for _, botName in ipairs(activeBots[groupMemberName]) do
-				   GetPlayerByName(botName):SendUnitWhisper("Repairing!", 0, player)
-			   end
-		   end
+			local groupMemberName = groupMember:GetName()
+		
+			if activeBots[groupMemberName] then
+				for _, botName in ipairs(activeBots[groupMemberName]) do
+					if player:GetAccountId() == GetPlayerByName(botName):GetAccountId() then
+						GetPlayerByName(botName):SendUnitWhisper("Repairing!", 0, player)
+					end
+				end
+			end
 		end
 	end, 10)
 end
