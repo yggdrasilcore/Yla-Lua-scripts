@@ -1,62 +1,59 @@
-
-local function SendBroadcastWithCheck(playerGUID, message, itemEntry, itemCount)
-    local player = GetPlayerByGUID(playerGUID)
-    if player then
-		local accountId = player:GetAccountId()
-        if itemEntry and itemCount then
-            player:AddItem(itemEntry, itemCount)
-			player:SendBroadcastMessage(message)
-			if itemEntry == 20880 then
-				print("Awarding Vote Tokens to Account ID: " .. accountId)  -- Debugging line
-				CharDBExecute("UPDATE account_currencies SET vp = 0 WHERE id = " .. accountId)
-			else
-				print("Awarding Community Tokens to Account ID: " .. accountId)  -- Debugging line
-				CharDBExecute("UPDATE account_currencies SET dp = 0 WHERE id = " .. accountId)
-			end
-        end
-    end
+local function SendBroadcastWithCheck(playerGUID, message, itemEntry, itemCount, acc)
+	local player = GetPlayerByGUID(playerGUID)
+	local oldCount = player:GetItemCount(itemEntry)
+	player:AddItem(itemEntry, itemCount)
+	
+	if not (player:GetItemCount(itemEntry) > oldCount) then
+		print("Failed to award currency "..itemEntry.." to player "..player:GetGUIDLow().." acc "..acc)
+		return -- Something went wrong - abort!
+	end
+	
+	player:SendBroadcastMessage(message)
+	print("Awarding currency "..itemEntry.." quantity "..itemCount.." to acc "..acc)
+	if itemEntry == 20880 then
+		CharDBExecute("UPDATE account_currencies SET vp = 0 WHERE id = " .. acc)
+	else
+		CharDBExecute("UPDATE account_currencies SET dp = 0 WHERE id = " .. acc)
+	end
 end
 
 local function TokensOnLogin(event, player)
-   if isPlayerBot[player:GetName()] then return end
-   if player:GetData("LoginChecked") then return end
-   local accountId = player:GetAccountId()
-   local playerGUID = player:GetGUID()
-   local GUIDLow = player:GetGUIDLow()
-   local communitymessage = false
-   local votemessage = false
+    if isPlayerBot[player:GetName()] then return end
+    if player:GetData("LoginChecked") then return end
+    local acc = player:GetAccountId()
+    local playerGUID = player:GetGUID()
+    local communitymessage = false
+    local votemessage = false
    
-   CharDBQueryAsync("SELECT dp, vp FROM account_currencies WHERE id = " .. accountId, function(query)
-       local player = GetPlayerByGUID(playerGUID)
-	   if not player then return end
-	   player:SetData("LoginChecked", true)
-       if query then
-           local dpValue = query:GetInt32(0)
-           local vpValue = query:GetInt32(1)
-           
-           if dpValue and dpValue > 0 then
-               local itemCount = dpValue
-               CreateLuaEvent(function() 
-                   SendBroadcastWithCheck(playerGUID, "You have been awarded " .. itemCount .. " Community Tokens. Thank you for supporting our community!", 19322, itemCount)
-               end, 3000, 1)
-               communitymessage = true
+    CharDBQueryAsync("SELECT dp, vp FROM account_currencies WHERE id = " .. acc, function(query)
+        local player = GetPlayerByGUID(playerGUID)
+ 	    if not player then return end
+ 	    player:SetData("LoginChecked", true)
+        if query then
+            local dpValue = query:GetInt32(0)
+            local vpValue = query:GetInt32(1)
+            
+            if dpValue and dpValue > 0 then
+                CreateLuaEvent(function() 
+                    SendBroadcastWithCheck(playerGUID, "You have been awarded " .. dpValue .. " Community Tokens. Thank you for supporting our community!", 19322, dpValue, acc)
+                end, 3000, 1)
+                communitymessage = true
+            end
+            
+            if vpValue and vpValue > 0 then
+                CreateLuaEvent(function() 
+                    SendBroadcastWithCheck(playerGUID, "You have been awarded " .. vpValue .. " Vote Tokens, which can be redeemed for XP boosts, transmogs, and vanity items. Thank you for your vote!", 20880, vpValue, acc)
+                end, 3000, 1)
+                votemessage = true
+            end
+            
+            if not (communitymessage or votemessage) then
+                player:SendBroadcastMessage("Please remember to vote on Yggdrasilwow.com. Vote Tokens can be redeemed for XP boosts, transmogs, and vanity items.")
            end
-           
-           if vpValue and vpValue > 0 then
-               local itemCount = vpValue
-               CreateLuaEvent(function() 
-                   SendBroadcastWithCheck(playerGUID, "You have been awarded " .. itemCount .. " Vote Tokens, which can be redeemed for XP boosts, transmogs, and vanity items. Thank you for your vote!", 20880, itemCount)
-               end, 3000, 1)
-               votemessage = true
-           end
-           
-           if not (communitymessage or votemessage) then
-               player:SendBroadcastMessage("Please remember to vote on Yggdrasilwow.com. Vote Tokens can be redeemed for XP boosts, transmogs, and vanity items.")
-           end
-       else
-           player:SendBroadcastMessage("Please remember to vote on Yggdrasilwow.com. Vote Tokens can be redeemed for XP boosts, transmogs, and vanity items.")
-       end
-   end)
+        else
+            player:SendBroadcastMessage("Please remember to vote on Yggdrasilwow.com. Vote Tokens can be redeemed for XP boosts, transmogs, and vanity items.")
+        end
+    end)
 end
 
 ------------------------------------------------------------------------------------------------
