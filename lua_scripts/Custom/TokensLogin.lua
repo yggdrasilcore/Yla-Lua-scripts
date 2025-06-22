@@ -12,8 +12,10 @@ local function SendBroadcastWithCheck(playerGUID, message, itemEntry, itemCount,
 	print("Awarding currency "..itemEntry.." quantity "..itemCount.." to acc "..acc)
 	if itemEntry == 20880 then
 		CharDBExecute("UPDATE account_currencies SET vp = 0 WHERE id = " .. acc)
+		player:SaveToDB()
 	else
 		CharDBExecute("UPDATE account_currencies SET dp = 0 WHERE id = " .. acc)
+		player:SaveToDB()
 	end
 end
 
@@ -49,8 +51,8 @@ local function TokensOnLogin(event, player)
             
             if not (communitymessage or votemessage) then
                 player:SendBroadcastMessage("Please remember to vote on Yggdrasilwow.com. Vote Tokens can be redeemed for XP boosts, transmogs, and vanity items.")
-           end
-        else
+			end
+		else
             player:SendBroadcastMessage("Please remember to vote on Yggdrasilwow.com. Vote Tokens can be redeemed for XP boosts, transmogs, and vanity items.")
         end
     end)
