@@ -1587,12 +1587,12 @@ SlashCmdList["SHADOWSHORTCUTS"] = function()
     ShadowShortcuts.configFrame:Show()
 end
 
-SLASH_SHADOWSHORTCUTS2 = "/shadow"
+SLASH_SHADOW1 = "/shadow"
 SlashCmdList["SHADOW"] = function()
    SendChatMessage(".shadowsmenu", "GUILD")
 end
 
-SLASH_SHADOWSHORTCUTS3 = "/shadows"
+SLASH_SHADOWS1 = "/shadows"
 SlashCmdList["SHADOWS"] = function()
    SendChatMessage(".shadowsmenu", "GUILD")
 end
