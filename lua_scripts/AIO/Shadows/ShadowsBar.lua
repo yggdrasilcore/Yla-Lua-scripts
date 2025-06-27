@@ -1587,6 +1587,16 @@ SlashCmdList["SHADOWSHORTCUTS"] = function()
     ShadowShortcuts.configFrame:Show()
 end
 
+SLASH_SHADOWSHORTCUTS2 = "/shadow"
+SlashCmdList["SHADOW"] = function()
+   SendChatMessage(".shadowsmenu", "GUILD")
+end
+
+SLASH_SHADOWSHORTCUTS3 = "/shadows"
+SlashCmdList["SHADOWS"] = function()
+   SendChatMessage(".shadowsmenu", "GUILD")
+end
+
 StaticPopupDialogs["SHADOWSHORTCUTS_KEYBIND"] = {
     text = "Press a key to bind to this button",
     button1 = "Cancel",
