@@ -28,7 +28,7 @@ local HighDiffLimit		= 200		-- Diff, in ms, to trigger independent update time l
 -- Truncate config
 local EnableTruncate	= true		-- Enable == true, disable == false
 local TruncateOnStartup	= false		-- Enable == true, disable == false
-local TruncateCutoff	= 48		-- How old the data should be to get truncated, in hours.
+local TruncateCutoff	= 90		-- How old the data should be to get truncated, in days.
 local DeleteInterval	= 60		-- How often to truncate old data, in hours. This leaves one entry per hour for all event types
 
 ----------------------------------------------------------------------------------------------------
@@ -200,7 +200,7 @@ local function CacheDataPoints()
 end
 
 local function CleanOldData()
-    local truncateTime = os.time() - (TruncateCutoff * 60 * 60)
+    local truncateTime = os.time() - (TruncateCutoff * 24 * 60 * 60)
     local oneHourAgo = os.time() - (DeleteInterval * 60)
     local query = string.format([[
     DELETE FROM statistics
