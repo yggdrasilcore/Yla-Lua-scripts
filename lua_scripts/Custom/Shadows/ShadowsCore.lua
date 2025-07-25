@@ -2,13 +2,13 @@
 -- Shdows Configs Start
 local BOT_TELE_VISUAL   = 64446
 local BotSummonCD       = 30 * 60 -- 30 minutes
-minShadowsLevel          = 15 -- Global var also referenced by Twiggy
+minShadowsLevel         = 15 -- Global var also referenced by Twiggy
 
 isPlayerBot		        =   {} -- Global table referenced in VIP script as well
+activeBots       		=   {}
 local addCmdTimer       =   {}
 local logoutEvent       =   {}
 local botsAvailable     =   {}
-local activeBots        =   {}
 local botTeleTime       =   {}
 local botMasters        =   {}
 local botSummonTime     =   {}
@@ -711,7 +711,7 @@ local function LogoutOrSave(event, player)
     isPlayerBot[name]           = nil
     botsAvailable[accountId]    = nil
     activeBots[name]            = nil
-    botMasters[guid]         = nil
+    botMasters[guid]            = nil
     
     -- Check if player is set as active anywhere in the table
     for botMaster, bots in pairs(activeBots) do

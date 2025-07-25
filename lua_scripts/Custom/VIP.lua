@@ -109,6 +109,27 @@ local function HandleVIPCommands(event, player, command)
     end
 end
 
+local function VIPBotRepairOnResurrect(event, bot)
+    local name = bot:GetName()
+    if not isPlayerBot[name] then return end -- Not playerbot - do not check for free repairs on ress
+    
+	-- Find bot's master
+    for botMasterName, bots in pairs(activeBots) do
+        for i, botName in ipairs(bots) do
+            if botName == name then
+				local botMaster = GetPlayerByName(botMasterName)
+				if not botMaster then return end
+				if not (botMaster:GetData("VIPTime") and botMaster:GetData("VIPTime") > os.time()) then
+					return -- No valid VIP, do not repair
+				end
+				bot:DurabilityRepairAll(false)
+				bot:SendUnitWhisper("Your Yggdrasil VIP subscription has repaired my gear.", 0, botMaster)
+            end
+        end
+    end
+end
+
 CheckVIPOnLoad() -- Sets players with VIP as active VIP on load/reload ELUNA
 RegisterPlayerEvent(28, CheckVIP)
+RegisterPlayerEvent(36, VIPBotRepairOnResurrect)
 RegisterPlayerEvent(42, HandleVIPCommands)
