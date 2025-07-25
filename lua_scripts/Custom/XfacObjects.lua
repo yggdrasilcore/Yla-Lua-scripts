@@ -67,14 +67,29 @@ local function XFacGO(event, go, player)
 				if bot:GetAccountId() == player:GetAccountId() then
 					if go:GetEntry() == 192675 then -- Fish
 						bot:CastSpell(bot, 57397, true)
+						bot:RegisterEvent(function(e, d, p, bot)
+							bot:AddAura(57399, bot)
+						end, 10000 * 2) -- *2 due to azerothcore registerevent halving timers
 					elseif go:GetEntry() == 192625 then -- Great
 						bot:CastSpell(bot, 57337, true)
+						bot:RegisterEvent(function(e, d, p, bot)
+							bot:AddAura(57294, bot)
+						end, 10000 * 2) -- *2 due to azerothcore registerevent halving timers
 					elseif go:GetEntry() == 193056 then -- Small
 						bot:CastSpell(bot, 58475, true)
+						bot:RegisterEvent(function(e, d, p, bot)
+							bot:AddAura(58479, bot)
+						end, 10000 * 2) -- *2 due to azerothcore registerevent halving timers
 					elseif go:GetEntry() == 195303 then -- Bountiful
 						bot:CastSpell(bot, 66477, true)
+						bot:RegisterEvent(function(e, d, p, bot)
+							bot:AddAura(66623, bot)
+						end, 10000 * 2) -- *2 due to azerothcore registerevent halving timers
 					elseif go:GetEntry() == 193055 then -- Gigantic
 						bot:CastSpell(bot, 58466, true)
+						bot:RegisterEvent(function(e, d, p, bot)
+							bot:AddAura(58468, bot)
+						end, 10000 * 2) -- *2 due to azerothcore registerevent halving timers
 					else -- Other food
 						bot:CastSpell(bot, 61829, true)
 					end
