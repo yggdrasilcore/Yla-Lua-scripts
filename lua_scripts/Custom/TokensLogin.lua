@@ -12,10 +12,20 @@ local function SendBroadcastWithCheck(playerGUID, message, itemEntry, itemCount,
 	print("Awarding currency "..itemEntry.." quantity "..itemCount.." to acc "..acc)
 	if itemEntry == 20880 then
 		CharDBExecute("UPDATE account_currencies SET vp = 0 WHERE id = " .. acc)
-		player:SaveToDB()
+		player:RegisterEvent(function(_, _, _, player)
+			if not player:GetData("CurrSave") then
+				player:SetData("CurrSave")
+				player:SaveToDB()
+			end
+		end, 1000)
 	else
 		CharDBExecute("UPDATE account_currencies SET dp = 0 WHERE id = " .. acc)
-		player:SaveToDB()
+		player:RegisterEvent(function(_, _, _, player)
+			if not player:GetData("CurrSave") then
+				player:SetData("CurrSave")
+				player:SaveToDB()
+			end
+		end, 1500)
 	end
 end
 
