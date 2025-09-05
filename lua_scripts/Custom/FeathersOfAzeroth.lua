@@ -4,7 +4,7 @@ local MOUNTS_PER_PAGE = 10
 local MOUNT_DATA = {}
 local MOUNT_ICONS = {}
 local standardmount = {}
-local BUFFIDS = {
+local FLYING_MOUNTS = {
     3363, 8153, 32235, 32239, 32240,
     32242, 32243, 32244, 32245, 32246, 32289, 32290, 32292, 32295, 32296, 32297, 32345,
     33943, 37015, 39798, 39800, 39801, 39802, 39803, 39910, 40120, 40192,
@@ -277,6 +277,13 @@ do
    end)
 end
 
+local function CanFly(player)
+	if player:GetMapId() == 530 or player:GetMapId() == 571 then return true end -- Flying in Outlands/Northrend always OK
+	
+	if (player:GetMapId() == 0 or player:GetMapId() == 1) and player:HasSpell(29118) then return true end -- Flying Azeroth OK if players have FoA
+end
+
+
 local function isPointInPolygon(x, y, polygon) -- Checks if player is within specified boundaries
     local odd = false
     local j = #polygon
@@ -316,7 +323,7 @@ local function CheckZ(eventId, delay, repeats, player)
   local canTeleport = player:IsWithinLoS(x, y, maxObjectZ)
   local mountId
   
-  for _, id in ipairs(BUFFIDS) do
+  for _, id in ipairs(FLYING_MOUNTS) do
       if player:HasAura(id) then
           mountId = (id)
       end
@@ -558,7 +565,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
 end
 
 local function checkMount(player)
-	for _, id in ipairs(BUFFIDS) do
+	for _, id in ipairs(FLYING_MOUNTS) do
 		if player:HasAura(id) then
 			if not player:GetData("MountEvent") then
 				player:SetData("MountEvent", true)
@@ -619,19 +626,21 @@ local function OnUseItem(event, player, item, target)
     return false
 end
 
-local function OnNewMap(event, player)
-    local zoneId = player:GetZoneId()
-   
-    if zoneId == 268 or ZonesToCheckZ(player) and not player:HasItem(20739) or 
-       player:GetInstanceId() > 0 or player:InBattleground() or player:GetMapId() == 573 then
-        player:RegisterEvent(function(eventId, delay, repeats, player)
-            for _, id in ipairs(BUFFIDS) do
-                if player:HasAura(id) then
-                    player:RemoveAura(id)
-                end
-            end
-        end, 100, 1)
-    end
+local function RemoveFlyingMount(eventId, delay, repeats, player)
+	if not player:IsMounted() then return end
+    
+	if CanFly(player) then return end
+	
+	for _, id in ipairs(FLYING_MOUNTS) do
+		if player:HasAura(id) then
+			player:RemoveAura(id)
+			break
+		end
+	end
+end
+
+local function OnMapChange(event, player)
+	player:RegisterEvent(RemoveFlyingMount, 500, 1)
 end
 
 local function LoadStandardMount(event, player)
@@ -651,7 +660,7 @@ local function OnLoadScript()
     
     local players = GetPlayersInWorld()
     for _, player in pairs(players) do
-        if player:HasItem(20739) then
+        if player:HasItem(FeathersItem) then
             table.insert(dbQueryTable, player:GetGUIDLow())
 			CheckFlyableArea(event, player, player:GetZoneId(), player:GetAreaId())
         end
@@ -680,16 +689,7 @@ local function OnMoveSetFly(event, packet, player)
         if player:GetGossipTextId(player) == 12 then
             player:GossipComplete()
         end
-        if player:GetInstanceId() > 0 or player:GetMapId() == 573 then
-            for _, id in ipairs(BUFFIDS) do
-                if player:HasAura(id) then
-                    if player:HasSpell(id) then
-                        player:RemoveAura(id)
-                        player:SendBroadcastMessage("You can't fly here!")
-                    end
-                end
-            end
-        end
+        RemoveFlyingMount(_, _, _, player)
     end
 end
 
@@ -699,10 +699,9 @@ local function OnCommand(event, player, command)
         return false
     end
 
-    for _, spellId in ipairs(BUFFIDS) do
+    for _, spellId in ipairs(FLYING_MOUNTS) do
         if command == tostring(spellId) then
             if player:IsCasting() or not player:HasSpell(spellId)
-            --or not player:HasItem(FeathersItem, 1, true)
             then
                 return false
             end
@@ -730,15 +729,25 @@ local function OnX53orInvincible(event, player, spell, skipCheck)
     end
 end
 
+local function OnCastFlyingMount(event, player, spell)
+	if CanFly(player) then return end
+	
+	player:SendNotification("You can't use that here.")
+	spell:Cancel()
+end
+
 OnLoadScript()
 WorldDBExecute("UPDATE item_template SET description = 'This item has the ability to wrap the wings of your flying mounts with the Feathers of Azeroth, permitting their use in Azeroth.' WHERE entry = 20739")
 CharDBExecute("CREATE TABLE IF NOT EXISTS character_flight (guid INT UNSIGNED NOT NULL, standardmount INT UNSIGNED, X FLOAT, Y FLOAT, Z FLOAT, O FLOAT, var1 INT UNSIGNED, var2 INT UNSIGNED, var3 INT UNSIGNED, PRIMARY KEY (guid))")
 RegisterPlayerEvent(3, LoadStandardMount)
-RegisterSpellEvent(75973, 2, OnX53orInvincible)
-RegisterSpellEvent(72282, 2, OnX53orInvincible)
 RegisterPlayerEvent(27, CheckFlyableArea)
-RegisterPlayerEvent(28, OnNewMap)
+RegisterPlayerEvent(28, OnMapChange)
 RegisterPlayerEvent(42, OnCommand)
 RegisterItemEvent(FeathersItem, 2, OnUseItem)
 RegisterPlayerGossipEvent(182746573, 2, OnGossipSelect)
 RegisterPacketEvent(0x346, 5, OnMoveSetFly)
+RegisterSpellEvent(75973, 2, OnX53orInvincible)
+RegisterSpellEvent(72282, 2, OnX53orInvincible)
+for _, spellId in ipairs(FLYING_MOUNTS) do
+    RegisterSpellEvent(spellId, 1, OnCastFlyingMount)
+end
