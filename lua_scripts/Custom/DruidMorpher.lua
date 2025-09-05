@@ -323,7 +323,7 @@ local function SavePlayerMorph(player, name, displayId, formIndex)
     if player:GetClass() ~= 11 then return end
     local guid = player:GetGUIDLow()
     local escapedName = string.gsub(name, "'", "''") -- Fixes crashes on Loque'Nahak and other NPCs with ' in name
-	CharDBExecute("INSERT INTO character_morphs (guid, name, id, form) VALUES ("..guid..", '"..escapedName.."', "..displayId..", "..formIndex..")")
+	CharDBExecute("REPLACE INTO character_morphs (guid, name, id, form) VALUES ("..guid..", '"..escapedName.."', "..displayId..", "..formIndex..")")
 end
 
 local function CountTotalMorphs(player)
