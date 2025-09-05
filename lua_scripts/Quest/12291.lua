@@ -5,7 +5,6 @@ local SPELL_BINDING_LIFE = 48809
 local bindingLifeCheck = {}
 
 local function RemoveBindingLife(event, packet, player)
-    print("Packet 0x2A5 processed")
     if not (player:GetAreaId() == FORGOTTENSHORE) then
         return
     end
