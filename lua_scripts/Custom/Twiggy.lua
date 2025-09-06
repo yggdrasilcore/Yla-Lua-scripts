@@ -2,7 +2,7 @@
 
 -- Start Mall TP vars
 local ITEM_ID = 37430 -- Old mall stone. Currently used as index for mall CD in DB
-local COOLDOWN = 3600 -- 1 hour cooldown in seconds
+local COOLDOWN = 30 * 60 -- 30 minutes
 local MallTeleCD = {}
 local MAP_ID = 37
 local X = 888.082
