@@ -21,11 +21,11 @@ local function onServerUpdate(event, diff)
         return  -- Do not track high diff during grace period
     end
     
-    if diff > 100 then
+    if diff > 300 then
         highDiffCount = highDiffCount + 1
     end
     
-    if highDiffCount >= 200 then
+    if highDiffCount >= 500 then
         print("ALERT! Diff: "..diff)
         
         -- Prepare alert message for Discord
