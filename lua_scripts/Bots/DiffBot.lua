@@ -44,12 +44,13 @@ local function onServerUpdate(event, diff)
 end
 
 local function onStartup(event)
-    local query = CharDBQuery("SELECT value FROM worldstates WHERE entry = 99999")
-    if query and query:GetUInt32(0) then
-        CharDBExecute("DELETE FROM worldstates WHERE entry = 99999")
-        return
-    end
-    SendToDiscord("Unscheduled worldserver restart detected! This is most likely a crash or a compose recreate without a gracefully shutdown!")
+	CharDBQueryAsync("SELECT value FROM worldstates WHERE entry = 99999", function(query)
+		if query and query:GetUInt32(0) then
+			CharDBExecute("DELETE FROM worldstates WHERE entry = 99999")
+			return
+		end
+		SendToDiscord("Unscheduled worldserver restart detected! This is most likely a crash or a compose recreate without a gracefully shutdown!")
+	end)
 end
 
 local function onShutdown(event)
