@@ -3,17 +3,14 @@
 ------------------------------------------------------------------------------------------------
 
 local EnableModule = true
-local AnnounceModule = false   -- Announce module on player login ?
 
 local StrictFactions = true  -- Disallow learning mounts from opposing faction
-local GM_LearnAllCmd = false  -- enable ".learn all mounts" command for GM (debug)
 
 ------------------------------------------------------------------------------------------------
 -- END CONFIG
 ------------------------------------------------------------------------------------------------
 
 if (not EnableModule) then return end
-local FILE_NAME = string.match(debug.getinfo(1,'S').source, "[^/\\]*.lua$")
 
 -- [spellID] = { ridingSkillRank, class, team+1, extraSkillId, extraSkillRank }
 -- list containts every single mount (396 total) in version 3.3.5.12340
@@ -437,78 +434,69 @@ local mount_listing = {
 --    [300] = 34091, -- Artisan Riding (300)
 --}
 
-local function OnLogin(event, player)
-    if (AnnounceModule and event) then
-        player:SendBroadcastMessage("This server is running the |cff4CFF00AccountMounts|r module.")
-    end
-
-    local pGUID = player:GetGUIDLow()
-    local pAccountId = player:GetAccountId()
-    local results = CharDBQuery("SELECT guid FROM characters WHERE account = "..pAccountId.." and guid <> "..pGUID)
-
-    local guids = {}
-    if (results) then
-        repeat
-            table.insert(guids, results:GetUInt32(0))
-        until not results:NextRow()
-    end
-
-    if (#guids > 0) then
-        local guidstr = guids[1]
-        for i = 2, #guids do
-            guidstr = guidstr .. ",".. guids[i]
-        end
-
-        results = CharDBQuery("SELECT DISTINCT spell FROM character_spell WHERE guid IN("..guidstr..")")
-        if (results) then
-            local skill = player:GetSkillValue(762)
-            local class = player:GetClass()
-            local team = player:GetTeam()
-            repeat
-                local spellId = results:GetUInt32(0)
-                local mount = mount_listing[spellId]
-                if (mount) then
-                    if ((skill >= mount[1]) and
-                    ((mount[2]==0) or (mount[2]==class)) and
-                    ((not StrictFactions) or (mount[3]==0) or (mount[3]==(team+1))) and
-                    ((mount[4]==0) or (mount[4]==148) or (mount[4]==149) or (mount[4]==150) or (mount[4]==152) or (mount[4]==533) or (mount[4]==554) or (player:GetSkillValue(mount[4]) >= mount[5]))) then
-                        if ((spellId == 61425) and (team == 2)) then -- if StrictFactions=false, have to check and replace traveler mammoth special case, to not spawn enemy vendors
-                            spellId = 61447
-                        elseif ((spellId == 61447) and (team == 1)) then
-                            spellId = 61425
-                        end
-                        if (not player:HasSpell(spellId)) then
-                            player:LearnSpell(spellId)
-                        end
-                    end
-                end
-            until not results:NextRow()
-        end
-    end
-end
-
-local function OnCommand(event, player, command)
-    if (GM_LearnAllCmd and (command:lower() == "learn all mounts") and (player:GetGMRank() >= 1)) then
-
-        player:LearnSpell(33388) -- Apprentince Riding (75)
-        player:LearnSpell(33391) -- Journeyman Riding (150)
-        player:LearnSpell(34090) -- Expert Riding (225)
-        player:LearnSpell(34091) -- Artisan Riding (300)
-        for k,_ in pairs(mount_listing) do
-            player:LearnSpell(k)
-        end
-        return false
-    end
+local function SyncAccountMounts(event, player)
+	local pGUID = player:GetGUIDLow()
+	local pAccountId = player:GetAccountId()
+	local playerName = player:GetName()
+	
+	CharDBQueryAsync("SELECT guid FROM characters WHERE account = "..pAccountId.." and guid <> "..pGUID, function(results)
+		local player = GetPlayerByName(playerName)
+		if not player then return end
+		
+		local guids = {}
+		if (results) then
+			repeat
+				table.insert(guids, results:GetUInt32(0))
+			until not results:NextRow()
+		end
+		
+		if (#guids > 0) then
+			local guidstr = guids[1]
+			for i = 2, #guids do
+				guidstr = guidstr .. ",".. guids[i]
+			end
+		   
+			CharDBQueryAsync("SELECT DISTINCT spell FROM character_spell WHERE guid IN("..guidstr..")", function(spellResults)
+				local player = GetPlayerByName(playerName)
+				if not player then return end
+				
+				if (spellResults) then
+					local skill = player:GetSkillValue(762)
+					local class = player:GetClass()
+					local team = player:GetTeam()
+					
+					repeat
+						local spellId = spellResults:GetUInt32(0)
+						local mount = mount_listing[spellId]
+						if (mount) then
+							if ((skill >= mount[1]) and
+							((mount[2]==0) or (mount[2]==class)) and
+							((not StrictFactions) or (mount[3]==0) or (mount[3]==(team+1))) and
+							((mount[4]==0) or (mount[4]==148) or (mount[4]==149) or (mount[4]==150) or (mount[4]==152) or (mount[4]==533) or (mount[4]==554) or (player:GetSkillValue(mount[4]) >= mount[5]))) then
+								if ((spellId == 61425) and (team == 2)) then
+									spellId = 61447
+								elseif ((spellId == 61447) and (team == 1)) then
+									spellId = 61425
+								end
+								if (not player:HasSpell(spellId)) then
+									player:LearnSpell(spellId)
+								end
+							end
+						end
+					until not spellResults:NextRow()
+				end
+			end)
+		end
+	end)
 end
 
 local function OnSendLearnedSpell(event, packet, player)
-  local  spellId = packet:ReadULong() -- spellId(SMSG_LEARNED_SPELL) / oldSpellId (SMSG_SUPERCEDED_SPELL)
+	local spellId = packet:ReadULong() -- spellId(SMSG_LEARNED_SPELL) / oldSpellId (SMSG_SUPERCEDED_SPELL)
     if(spellId == 33388 or spellId == 33391 or spellId == 34090 or spellId == 34091) then
-        player:RegisterEvent((function(_,_,_,p) OnLogin(nil, p) end), 100)
+        player:RegisterEvent((function(_,_,_,p) SyncAccountMounts(nil, p) end), 100)
     end
 end
 
-RegisterPlayerEvent(3, OnLogin)
-RegisterPlayerEvent(42, OnCommand)
+RegisterPlayerEvent(3, SyncAccountMounts)
 RegisterPacketEvent(299, 7, OnSendLearnedSpell) -- PACKET_EVENT_ON_PACKET_SEND (SMSG_LEARNED_SPELL)
 RegisterPacketEvent(300, 7, OnSendLearnedSpell) -- PACKET_EVENT_ON_PACKET_SEND (SMSG_SUPERCEDED_SPELL)
