@@ -1100,7 +1100,6 @@ local function CreateBotControlBar()
 										local passiveBtn = _G["BotControlBarButton10"]
 										local defensiveBtn = _G["BotControlBarButton9"]
 										if passiveBtn and defensiveBtn then
-											print("test 2 disable passive")
 											passiveBtn.state = false
 											passiveBtn.border:SetAlpha(0)
 											
