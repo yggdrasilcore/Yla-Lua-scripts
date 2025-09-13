@@ -120,6 +120,7 @@ local function VIPBotRepairOnResurrect(event, bot)
 				local botMaster = GetPlayerByName(botMasterName)
 				if not botMaster then return end
 				if not (botMaster:GetData("VIPTime") and botMaster:GetData("VIPTime") > os.time()) then
+					bot:SendUnitWhisper('My equipment has taken a 10% durability hit. Please repair my gear by whispering "repair" to me next to a repair vendor.', 0, botMaster)
 					return -- No valid VIP, do not repair
 				end
 				bot:DurabilityRepairAll(false)
