@@ -1,7 +1,7 @@
 
 -- Shdows Configs Start
 local BOT_TELE_VISUAL   = 64446
-local BotSummonCD       = 15 * 60 -- 15 minutes
+local BotSummonCD       = 10 * 60 -- 10 minutes
 minShadowsLevel         = 15 -- Global var also referenced by Twiggy
 
 isPlayerBot		        =   {} -- Global table referenced in VIP script as well
