@@ -39,6 +39,7 @@ function ProcessGroupMembers()
 		button2 = "No",
 		OnAccept = function()
 			SendChatMessage(".attemptaddbot "..nameList, "GUILD")
+			SendAddonMessage("ShadowsLoginShowBar", "SHOW_BAR", "GUILD")
 		end,
 		timeout = 0,
 		whileDead = true,

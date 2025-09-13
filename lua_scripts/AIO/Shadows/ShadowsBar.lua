@@ -40,33 +40,29 @@ local function CreateBotControlBar()
 		local scale = frame:GetEffectiveScale()
 		local left = frame:GetLeft()
 		local top = frame:GetTop()
-		local absX = left * scale
-		local absY = top * scale
 		
-		-- Store unscaled coordinates instead of scaled
+		-- Keep frame within screen bounds
+		local screenWidth = UIParent:GetWidth()
+		local screenHeight = UIParent:GetHeight()
+		local frameWidth = frame:GetWidth()
+		local frameHeight = frame:GetHeight()
+		
+		left = math.max(0, math.min(left, screenWidth - frameWidth))
+		top = math.max(frameHeight, math.min(top, screenHeight))
+		
+		if left ~= frame:GetLeft() or top ~= frame:GetTop() then
+			frame:ClearAllPoints()
+			frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
+		end
+		
 		BOT_BAR_SETTINGS.posX = left
 		BOT_BAR_SETTINGS.posY = top
 	end)
+
 	-- Store original aspect ratio
 	local originalWidth = 400
 	local originalHeight = 50
 	frame.originalAspectRatio = originalWidth / originalHeight
-	frame:SetSize(BOT_BAR_SETTINGS.width, originalHeight *  BOT_BAR_SETTINGS.scale)
-	
-	-- Center the frame initially
-	frame:ClearAllPoints()
-	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-
-	-- Get the current position of the centered frame
-	local centerX, centerY = frame:GetCenter()
-
-	-- Calculate the difference from the cached position
-	local diffX = BOT_BAR_SETTINGS.posX - centerX
-	local diffY = BOT_BAR_SETTINGS.posY - centerY
-
-	-- Move the frame by the calculated difference
-	frame:ClearAllPoints()
-	frame:SetPoint("CENTER", UIParent, "CENTER", diffX, diffY)
 	
     frame:SetBackdrop({
         bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
@@ -1469,9 +1465,25 @@ local function CreateBotControlBar()
         end
     end
 
-    frame:SetSize(BOT_BAR_SETTINGS.width, originalHeight *  BOT_BAR_SETTINGS.scale)
+	frame:SetSize(BOT_BAR_SETTINGS.width, originalHeight * BOT_BAR_SETTINGS.scale)
 	AdjustButtons(frame)
-	
+
+	frame:ClearAllPoints()
+	local screenWidth = UIParent:GetWidth()
+	local screenHeight = UIParent:GetHeight()
+	local frameWidth = frame:GetWidth()
+	local frameHeight = frame:GetHeight()
+
+	local clampedPosX = math.max(0, math.min(BOT_BAR_SETTINGS.posX, screenWidth - frameWidth))
+	local clampedPosY = math.max(frameHeight, math.min(BOT_BAR_SETTINGS.posY, screenHeight))
+
+	frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", clampedPosX, clampedPosY)
+
+	if clampedPosX ~= BOT_BAR_SETTINGS.posX or clampedPosY ~= BOT_BAR_SETTINGS.posY then
+		BOT_BAR_SETTINGS.posX = clampedPosX
+		BOT_BAR_SETTINGS.posY = clampedPosY
+	end
+
     return frame
 end
 
@@ -1594,7 +1606,6 @@ SLASH_SHADOWS1 = "/shadows"
 SlashCmdList["SHADOWS"] = function()
    SendChatMessage(".shadowsmenu", "GUILD")
 end
-
 StaticPopupDialogs["SHADOWSHORTCUTS_KEYBIND"] = {
     text = "Press a key to bind to this button",
     button1 = "Cancel",
@@ -1913,8 +1924,12 @@ local function onShadowsBarAddonMessage(self, event, prefix, message, channel, s
         elseif message and message:find("CLOSED") then
             ShadowsBarToggleStatus = "CLOSED"
         elseif message and message:find("SETTINGS") then
-			InterfaceOptionsFrame_Show()
-			ShowShadowsSettingsPanel()
+            InterfaceOptionsFrame_Show()
+            ShowShadowsSettingsPanel()
+        end
+	elseif prefix == "ShadowsLoginShowBar" then
+		if BotControlBar and (ShadowsBarToggleStatus == "ENABLED" or ShadowsBarToggleStatus  == "OPEN") then
+			BotControlBar:Show()
 		end
 	end
 end
