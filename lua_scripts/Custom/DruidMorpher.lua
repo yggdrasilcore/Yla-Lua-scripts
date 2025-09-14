@@ -41,6 +41,8 @@ local morphSelection4 = {}
 local morphSelection5 = {}
 local morphSelection6 = {}
 local morphSelection7 = {}
+local searchQueries = {} -- Store search queries by player GUID
+local searchResults = {} -- Store search results by player GUID
 
 local ITEMS_PER_PAGE = 13
 
@@ -487,16 +489,129 @@ local function OnKillCreature(event, player, creature)
 end
 
 local function ShowInitialGossipMenu(player)
-	player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_questionmark:32:32:-25:0|tHow does morphing work?", 0, 10)
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_catform:32:32:-25:0|tCat form", 0, 1)
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_racial_bearform:32:32:-25:0|tBear form", 0, 2)
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_travelform:32:32:-25:0|tTravel form", 0, 3)
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_flightform:32:32:-25:0|tFlight form", 0, 4)
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_treeoflife:32:32:-25:0|tTree form", 0, 5)
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_nature_forceofnature:32:32:-25:0|tBoomkin form", 0, 6)
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_aquaticform:32:32:-25:0|tAquatic form", 0, 7)
+    local guid = player:GetGUIDLow()
+    
+    -- Function to get active morph name
+    local function getActiveMorphName(formId)
+        local morphSelection = nil
+        if formId == 1 then morphSelection = morphSelection1[guid]
+        elseif formId == 2 then morphSelection = morphSelection2[guid]
+        elseif formId == 3 then morphSelection = morphSelection3[guid]
+        elseif formId == 4 then morphSelection = morphSelection4[guid]
+        elseif formId == 5 then morphSelection = morphSelection5[guid]
+        elseif formId == 6 then morphSelection = morphSelection6[guid]
+        elseif formId == 7 then morphSelection = morphSelection7[guid]
+        end
+        
+        if not morphSelection or morphSelection == 0 then
+            return "Default"
+        end
+        
+        -- Find the morph name
+        if creatureCache[guid] and creatureCache[guid][formId] then
+            for _, creature in ipairs(creatureCache[guid][formId]) do
+                if creature.displayId == morphSelection then
+                    return creature.name
+                end
+            end
+        end
+        return "Unknown"
+    end
+
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_questionmark:32:32:-25:0|tHow does morphing work?", 0, 10)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_spyglass_02:32:32:-25:0|tSearch morphs", 0, 11)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_catform:32:32:-25:0|tCat form: " .. getActiveMorphName(1), 0, 1)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_racial_bearform:32:32:-25:0|tBear form: " .. getActiveMorphName(2), 0, 2)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_travelform:32:32:-25:0|tTravel form: " .. getActiveMorphName(3), 0, 3)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_flightform:32:32:-25:0|tFlight form: " .. getActiveMorphName(4), 0, 4)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_treeoflife:32:32:-25:0|tTree form: " .. getActiveMorphName(5), 0, 5)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_nature_forceofnature:32:32:-25:0|tBoomkin form: " .. getActiveMorphName(6), 0, 6)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_aquaticform:32:32:-25:0|tAquatic form: " .. getActiveMorphName(7), 0, 7)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_nature_earthbind:32:32:-25:0|tRemove current morph", 0, 8)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/achievement_quests_completed_daily_08:32:32:-25:0|tMorph skill: "..CountTotalMorphs(player).."/"..MaxMorphSkill.."", 0, 9)
+    player:GossipSendMenu(12, player, 0)
+end
+
+local function SearchMorphs(player, searchTerm)
+    local guid = player:GetGUIDLow()
+    local results = {}
+    
+    if not creatureCache[guid] then
+        return results
+    end
+    
+    searchTerm = string.lower(searchTerm)
+    
+    -- Search through all forms
+    for formId = 1, 7 do
+        if creatureCache[guid][formId] then
+            for _, creature in ipairs(creatureCache[guid][formId]) do
+                local creatureName = string.lower(creature.name)
+                if string.find(creatureName, searchTerm) then
+                    table.insert(results, {
+                        name = creature.name,
+                        displayId = creature.displayId,
+                        formId = formId
+                    })
+                end
+            end
+        end
+    end
+    
+    return results
+end
+
+local function ShowSearchResults(player, page)
+    local guid = player:GetGUIDLow()
+    local results = searchResults[guid] or {}
+    
+    if #results == 0 then
+        player:SendAreaTriggerMessage("No morphs found matching your search!")
+        ShowInitialGossipMenu(player)
+        return
+    end
+    
+    -- Sort results alphabetically
+    table.sort(results, function(a, b)
+        return a.name < b.name
+    end)
+    
+    player:GossipClearMenu()
+    local startIndex = (page - 1) * ITEMS_PER_PAGE + 1
+    local endIndex = math.min(startIndex + ITEMS_PER_PAGE - 1, #results)
+    
+    local formTypes = {
+        [1] = "Cat", [2] = "Bear", [3] = "Travel", [4] = "Flight",
+        [5] = "Tree", [6] = "Boomkin", [7] = "Aquatic"
+    }
+    
+    local formIcons = {
+        [1] = "|TInterface/ICONS/ability_druid_catform:32:32:-25:0|t",
+        [2] = "|TInterface/ICONS/ability_racial_bearform:32:32:-25:0|t",
+        [3] = "|TInterface/ICONS/ability_druid_travelform:32:32:-25:0|t",
+        [4] = "|TInterface/ICONS/ability_druid_flightform:32:32:-25:0|t",
+        [5] = "|TInterface/ICONS/ability_druid_treeoflife:32:32:-25:0|t",
+        [6] = "|TInterface/ICONS/spell_nature_forceofnature:32:32:-25:0|t",
+        [7] = "|TInterface/ICONS/ability_druid_aquaticform:32:32:-25:0|t"
+    }
+    
+    for i = startIndex, endIndex do
+        local result = results[i]
+        local formType = formTypes[result.formId]
+        local icon = formIcons[result.formId]
+        player:GossipMenuAddItem(4, icon .. result.name .. " (" .. formType .. ")", 0, 300000 + result.displayId + (result.formId * 1000000))
+    end
+    
+    if page > 1 then
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_map_01:32:32:-25:0|tPrevious Page", 0, 400000 + page - 1)
+    end
+    
+    if endIndex < #results then
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_map_01:32:32:-25:0|tNext Page", 0, 400000 + page + 1)
+    end
+    
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_spyglass_02:32:32:-25:0|tNew search", 0, 11)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-25:0|tBack to main menu", 0, 2000000)
     player:GossipSendMenu(12, player, 0)
 end
 
@@ -560,8 +675,6 @@ local function ShowGossipPage(player, formId, page)
 end
 
 local function OnGossipSelect(event, player, object, sender, intid, code, menu_id)
-    --print("[Druid Morph Module]: OnGossipSelect called with intid:", intid) -- Debug --print
-	
 	if player:IsPvPFlagged() then player:SendAreaTriggerMessage("You can't use druid morphs while flagged for PvP.") return false end
 
     if intid == 10 then
@@ -630,7 +743,6 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
     elseif intid >= 100000 and intid < 200000 then
         local formId = formSelections[player:GetGUIDLow()]
         local displayId = intid - 100000 -- Converts gossip menu ID to display ID
-		--print("[Druid Morph Module]: Form ID: "..formId..". Display ID: "..displayId..".")
         local guid = player:GetGUIDLow()
         
 		if creatureCache[guid] and creatureCache[guid][formId] then
@@ -660,7 +772,6 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
 			CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection2[guid])
 		elseif formId == 3 and creatureCache[formId] then
 			morphSelection3[guid] = displayId
-			--print("Total entries for GUID " .. guid .. " in formId " .. formId .. ": " .. #creatureCache[guid][formId])
 
 			-- Existing logic for handling formId 3
 			if player:HasAura(783) then
@@ -733,13 +844,127 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         ShowInitialGossipMenu(player)  -- Back to main menu
     elseif intid == 9 then
 		ShowInitialGossipMenu(player)
+	elseif intid == 11 then -- Search morphs - request text input
+        player:GossipMenuAddItem(5, "Enter search term:", 0, 12, true) -- 5 = input box, true = text input
+        player:GossipSendMenu(12, player, 0)
+        
+    elseif intid == 12 then -- Process search input
+        if code and code ~= "" then
+            local guid = player:GetGUIDLow()
+            searchResults[guid] = SearchMorphs(player, code)
+            ShowSearchResults(player, 1)
+        else
+            player:SendAreaTriggerMessage("Please enter a search term!")
+            ShowInitialGossipMenu(player)
+        end
+        
+	elseif intid >= 1000000 and intid < 10000000 then -- Search result selection
+		local adjustedId = intid - 300000
+		local formId = math.floor(adjustedId / 1000000)
+		local displayId = adjustedId - (formId * 1000000)
+        local guid = player:GetGUIDLow()
+		
+		formSelections[guid] = formId
+		
+		local creatureName = "Unknown"
+		
+		-- Find creature name
+		if creatureCache[guid] and creatureCache[guid][formId] then
+			for _, creature in ipairs(creatureCache[guid][formId]) do
+				if creature.displayId == displayId then
+					creatureName = creature.name
+					break
+				end
+			end
+		end
+
+        if formId == 1 then
+            morphSelection1[guid] = displayId
+            player:SendBroadcastMessage("You have morphed your cat form into "..creatureName..".")
+            if player:HasAura(768) or player:HasAura(32356) or player:HasAura(3025) then
+                player:SetDisplayId(morphSelection1[guid])
+            end
+            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 1")
+            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection1[guid])
+        elseif formId == 2 then
+            morphSelection2[guid] = displayId
+            player:SendBroadcastMessage("You have morphed your bear form into "..creatureName..".")
+            if player:HasAura(9634) or player:HasAura(5487) then
+                player:SetDisplayId(morphSelection2[guid])
+            end
+            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 2")
+            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection2[guid])
+        elseif formId == 3 then
+            morphSelection3[guid] = displayId
+            if player:HasAura(783) then
+                player:SetDisplayId(morphSelection3[guid])
+                if #creatureCache[guid][formId] >= 50 then 
+                    player:SetSpeed(1, 1.9)
+                    player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 90%.")
+                elseif #creatureCache[guid][formId] >= 40 then 
+                    player:SetSpeed(1, 1.8)
+                    player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 80%.")
+                elseif #creatureCache[guid][formId] >= 30 then 
+                    player:SetSpeed(1, 1.7)
+                    player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 70%.")
+                elseif #creatureCache[guid][formId] >= 20 then 
+                    player:SetSpeed(1, 1.6)
+                    player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 60%.")
+                elseif #creatureCache[guid][formId] >= 10 then 
+                    player:SetSpeed(1, 1.5)
+                    player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 50%.")
+                else
+                    player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..".")
+                end
+            else
+                player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..".")
+			end
+            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 3")
+            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection3[guid])
+        elseif formId == 4 then
+            morphSelection4[guid] = displayId
+            player:SendBroadcastMessage("You have morphed your flight form into "..creatureName..".")
+            if player:HasAura(40120) or player:HasAura(33943) then
+                player:SetDisplayId(morphSelection4[guid])
+            end
+            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 4")
+            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection4[guid])
+        elseif formId == 5 then
+            morphSelection5[guid] = displayId
+            player:SendBroadcastMessage("You have morphed your tree form into "..creatureName..".")
+            if player:HasAura(33891) then
+                player:SetDisplayId(morphSelection5[guid])
+            end
+            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 5")
+            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection5[guid])
+        elseif formId == 6 then
+            morphSelection6[guid] = displayId
+            player:SendBroadcastMessage("You have morphed your boomkin form into "..creatureName..".")
+            if player:HasAura(24858) then 
+                player:SetDisplayId(morphSelection6[guid])
+            end
+            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 6")
+            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection6[guid])
+        elseif formId == 7 then
+            morphSelection7[guid] = displayId
+            player:SendBroadcastMessage("You have morphed your aquatic form into "..creatureName..".")
+            if player:HasAura(1066) then 
+                player:SetDisplayId(morphSelection7[guid])
+            end
+            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 7")
+            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection7[guid])
+        end
+        player:GossipComplete()
+        
+    elseif intid >= 400000 and intid < 500000 then -- Search pagination
+        local page = intid - 400000
+        ShowSearchResults(player, page)
 	else
 		ShowInitialGossipMenu(player)
-    end
+	end
 end
 
 local function OnGossipHello(event, player, object)
-    --print("[Druid Morph Module]: OnGossipHello called") -- Debug --print
     if player:GetClass() == 11 then -- Check if player is a druid
 		if player:IsPvPFlagged() then player:SendAreaTriggerMessage("You can't use druid morphs while flagged for PvP.") return false end
         player:GossipComplete()
@@ -830,7 +1055,6 @@ local function HideWeapon(eventId, delay, repeats, player)
 		
 		if (player:HasAura(768) or player:HasAura(32356) or player:HasAura(3025)) and (morphSelection1[guid] and (player:GetDisplayId() == morphSelection1[guid])) then
 			player:AddAura(InvisibleWeapon, player)
-			--print("[Druid Morph Module]: Weapon hidden!")
 		else
 			player:RemoveEventById(eventId)
 			repetitionCount[guid] = nil
@@ -838,11 +1062,9 @@ local function HideWeapon(eventId, delay, repeats, player)
 		
 		repetitionCount[guid] = (repetitionCount[guid] or 0) + 1
 		
-		--print(repetitionCount[guid])
 		if repetitionCount[guid] >= MAX_REPETITIONS then
 			player:RemoveEventById(eventId)
 			repetitionCount[guid] = nil
-			--print("[Druid Morph Module]: Removed hide weapon event for player: " .. player:GetName())
 		end
     else
 		RemoveEventById(eventId)
@@ -853,10 +1075,6 @@ local function Morpher(eventId, delay, repeats, player)
 	if player and player:GetClass() == 11 and player:HasItem(17890) and not player:IsPvPFlagged() and player:IsAlive() then
 		local guid = player:GetGUIDLow()
 		
-		--if player:HasAura(71561) or player:HasAura(71484) or player:HasAura(71560) or player:HasAura(71556) or player:HasAura(71485) or player:HasAura(71492) then 
-			--print("[Druid Morph Module]: DBW stopped morph for "..player:GetName())
-		
-		--else
 		if player:HasAura(3025) then -- Cat
 			if not morphSelection1[guid] then
 				local morphdb1 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 1") -- Load active morph status
@@ -866,7 +1084,6 @@ local function Morpher(eventId, delay, repeats, player)
 			end
 			if morphSelection1[guid] and morphSelection1[guid] > 0 then
 				player:SetDisplayId(morphSelection1[guid])
-				--print("[Druid Morph Module]: Morpher - Setting cat form of "..player:GetName().." to display ID "..morphSelection1[guid])
 				if player:IsInCombat() then
 					player:RegisterEvent(HideWeapon, InvisibleWeaponTimer, 1)
 				elseif not player:IsInCombat() then
@@ -883,7 +1100,6 @@ local function Morpher(eventId, delay, repeats, player)
 			if morphSelection2[guid] then
 				if morphSelection2[guid] > 0 then
 					player:SetDisplayId(morphSelection2[guid])
-					--print("[Druid Morph Module]: Morpher - Setting bear form of "..player:GetName().." to display ID "..morphSelection2[guid])
 				end
 			end
 		elseif player:HasAura(783) then -- Travel
@@ -891,7 +1107,6 @@ local function Morpher(eventId, delay, repeats, player)
 				local morphdb3 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 3") -- Load active morph status
 				if morphdb3 then 
 					morphSelection3[guid] = morphdb3:GetUInt32(0)
-					--print("[Druid Morph Module]: Morpher - Setting travel form of "..player:GetName().." to display ID "..morphSelection3[guid])
 				end
 			end
 			if morphSelection3[guid] then
@@ -920,7 +1135,6 @@ local function Morpher(eventId, delay, repeats, player)
 			if morphSelection4[guid] then
 				if morphSelection4[guid] > 0 then
 					player:SetDisplayId(morphSelection4[guid])
-					--print("[Druid Morph Module]: Morpher - Setting flight form of "..player:GetName().." to display ID "..morphSelection4[guid])
 				end
 			end
 		elseif player:HasAura(33891) then -- Tree
@@ -933,7 +1147,6 @@ local function Morpher(eventId, delay, repeats, player)
 			if morphSelection5[guid] then
 				if morphSelection5[guid] > 0 then
 					player:SetDisplayId(morphSelection5[guid])
-					--print("[Druid Morph Module]: Morpher - Setting tree form of "..player:GetName().." to display ID "..morphSelection5[guid])
 				end
 			end
 		elseif player:HasAura(24858) then -- Boomkin
@@ -946,7 +1159,6 @@ local function Morpher(eventId, delay, repeats, player)
 			if morphSelection6[guid] then
 				if morphSelection6[guid] > 0 then
 					player:SetDisplayId(morphSelection6[guid])
-					--print("[Druid Morph Module]: Morpher - Setting boomkin form of "..player:GetName().." to display ID "..morphSelection6[guid])
 				end
 			end
 		elseif player:HasAura(1066) then -- Aquatic
@@ -959,7 +1171,6 @@ local function Morpher(eventId, delay, repeats, player)
 			if morphSelection7[guid] then
 				if morphSelection7[guid] > 0 then
 					player:SetDisplayId(morphSelection7[guid])
-					--print("[Druid Morph Module]: Morpher - Setting aquatic form of "..player:GetName().." to display ID "..morphSelection7[guid])
 				end
 			end
 		end
@@ -995,42 +1206,26 @@ local function Shapeshift(event, player, spell, skipCheck)
 
         if spellId == 768 and morphSelection1[guid] then
             formId = 1 -- Cat Form
-			--print("[Druid Morph Module]: Shifter - Cat shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection1[guid])
 			player:RegisterEvent(Morpher, MorphApplicationDelay, MorphRepeats)
         elseif (spellId == 9634 or spellId == 5487) and morphSelection2[guid] then
             formId = 2 -- Bear Form
-			--print("[Druid Morph Module]: Shifter - Bear shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection2[guid])
 			player:RegisterEvent(Morpher, MorphApplicationDelay, MorphRepeats)
         elseif spellId == 783 and morphSelection3[guid] then
             formId = 3 -- Travel Form
-			--print("[Druid Morph Module]: Shifter - Travel shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection3[guid])
 			player:RegisterEvent(Morpher, MorphApplicationDelay, MorphRepeats)
         elseif (spellId == 40120 or spellId == 33943) and morphSelection4[guid] then
             formId = 4 -- Flight Form
-			--print("[Druid Morph Module]: Shifter - Flight shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection4[guid])
 			player:RegisterEvent(Morpher, MorphApplicationDelay, MorphRepeats)
         elseif spellId == 33891 and morphSelection5[guid] then
             formId = 5 -- Tree Form
-			--print("[Druid Morph Module]: Shifter - Tree shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection5[guid])
 			player:RegisterEvent(Morpher, MorphApplicationDelay, MorphRepeats)
         elseif spellId == 24858 and morphSelection6[guid] then
             formId = 6 -- Boomkin Form
-			--print("[Druid Morph Module]: Shifter - Boomkin shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection6[guid])
 			player:RegisterEvent(Morpher, MorphApplicationDelay, MorphRepeats)
         elseif spellId == 1066 and morphSelection7[guid] then
             formId = 7 -- Aquatic Form	
-			--print("[Druid Morph Module]: Shifter - Aquatic shapeshift called for player: " .. player:GetName().." with form ID "..formId.." and morph "..morphSelection7[guid])
 			player:RegisterEvent(Morpher, MorphApplicationDelay, MorphRepeats)
-        --elseif (spellId == 71561 or spellId == 71484 or spellId == 71560 or spellId == 71556 or spellId == 71485 or spellId == 71492) then
-        --		 if (player:HasAura(768) or player:HasAura(32356) or player:HasAura(3025)) and morphSelection1[guid] then
-		--		player:RegisterEvent(DBWfix, DBWDelay, DBWRepeats)
-		--		--print("[Druid Morph Module]: DBW detected!")
-        --    elseif (player:HasAura(9634) or player:HasAura(5487)) and morphSelection2[guid] then
-		--		player:RegisterEvent(DBWfix, DBWDelay, DBWRepeats)
-		--		--print("[Druid Morph Module]: DBW detected!")
-        --    else
-        --        return
-        --    end
+
         else
             return
         end
@@ -1050,6 +1245,8 @@ local function onLogout(event, player) -- Clean up cache on logout
 		morphSelection5[guid] = nil 
 		morphSelection6[guid] = nil 
 		morphSelection7[guid] = nil
+		searchQueries[guid] = nil
+		searchResults[guid] = nil
 	end
 end
 
@@ -1182,7 +1379,6 @@ local function OnCombat(event, player, enemy)
 			end
 		end
 		if (not enemy or (enemy and not enemy:IsPvPFlagged())) and player:HasAura(3025) then
-			--print("Cat combat detected! Hiding weapon...")
 			local guid = player:GetGUIDLow()
 			player:RegisterEvent(HideWeapon, InvisibleWeaponTimer, 1) -- 0 repetitions = infinite
 		end
