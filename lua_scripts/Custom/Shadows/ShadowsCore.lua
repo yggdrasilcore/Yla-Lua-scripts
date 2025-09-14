@@ -647,6 +647,8 @@ local function ShadowsLogin(event, player) -- Lazy persistent storage solution. 
 		
 		if player:HasAura(32113) then player:RemoveAura(32113) end
 		
+		if (player:GetClass() == 11) and not player:HasAura(57857) then player:AddAura(57857, player) end -- Fixes Druid shadows stuck on Rebirth without mats
+		
         if not player:IsInGroup() then return end
 		
         local group = player:GetGroup()
