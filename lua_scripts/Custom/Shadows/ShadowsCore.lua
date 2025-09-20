@@ -234,7 +234,11 @@ local function ShadowsHello(player)
     local name = player:GetName()
     local maxBotCount       = 2
     local maxVIPCount       = 4
+	
+	-- Debugging Dryasis
     if not player:GetData("BotCount") then player:SetData("BotCount", 0) end
+    if not activeBots[name] then activeBots[name] = {} end
+	if not player:GetData("LoginTime") then player:SetData("LoginTime", os.time()) end
 	
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_gizmo_02:40:40:-24:0|tHow to use shadows", 0, 2)
         
@@ -678,7 +682,7 @@ local function ShadowsLogin(event, player) -- Lazy persistent storage solution. 
 	
     if not player:GetData("BotCount") or player:GetData("BotCount") < 0 then player:SetData("BotCount", 0) end
 
-    if not activeBots[name] then  activeBots[name] = {}  end
+    if not activeBots[name] then activeBots[name] = {} end
 	
 	player:SetData("LoginTime", os.time())
 	
