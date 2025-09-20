@@ -1,5 +1,4 @@
 local function OnLootBatteredHilt(event, packet, player)
-	print("------- Logging overhead of OnLootBatteredHilt")
 	player:RegisterEvent(function(e, d, r, player)
 		if player:HasItem(50380) and player:IsAlliance() then
 			player:RemoveItem(50380, 1)
