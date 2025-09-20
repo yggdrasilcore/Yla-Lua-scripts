@@ -4,9 +4,9 @@ local function OnLootBatteredHilt(event, packet, player)
 		if player:HasItem(50380) and player:IsAlliance() then
 			player:RemoveItem(50380, 1)
 			player:AddItem(50379, 1)
-		elseif player:HasItem(50739) and not player:IsAlliance() then
-			player:RemoveItem(50380, 1)
-			player:AddItem(50379, 1)
+		elseif player:HasItem(50379) and not player:IsAlliance() then
+			player:RemoveItem(50379, 1)
+			player:AddItem(50380, 1)
 		end
 	end, 1)
 end
