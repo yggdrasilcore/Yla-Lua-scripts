@@ -1,5 +1,6 @@
 local function OnLootBatteredHilt(event, packet, player)
 	player:RegisterEvent(function(e, d, r, player)
+		if not player then return end
 		if player:HasItem(50380) and player:IsAlliance() then
 			player:RemoveItem(50380, 1)
 			player:AddItem(50379, 1)
