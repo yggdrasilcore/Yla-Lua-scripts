@@ -234,7 +234,8 @@ local function ShadowsHello(player)
     local name = player:GetName()
     local maxBotCount       = 2
     local maxVIPCount       = 4
-    
+    if not player:GetData("BotCount") then player:SetData("BotCount", 0) end
+	
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_gizmo_02:40:40:-24:0|tHow to use shadows", 0, 2)
         
     if not botsAvailable[accountId] then
