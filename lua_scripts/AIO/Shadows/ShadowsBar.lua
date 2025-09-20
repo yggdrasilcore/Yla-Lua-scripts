@@ -17,18 +17,14 @@ local ShadowsBarToggleStatus = "ENABLED"
 AIO.AddSavedVar("BOT_BAR_SETTINGS")
 
 local function CreateBotControlBar()
-    -- local channel = GetNumRaidMembers() > 0 and "RAID" or GetNumPartyMembers() > 0 and "PARTY" or nil
-    -- SendChatMessage("reset botAI", channel)
-
 	local itemCache = {}
 	local lastUpdate = 0
-	local itemListFrame -- Reference to our frame
+	local itemListFrame
 	local isFleeActive = false
 	local isStayActive = false
 	local resetCombatButtons = false
 	local isPassiveActive = false
 	
-    -- Create the main frame
     local frame = CreateFrame("Frame", "BotControlBar", UIParent, "SecureHandlerStateTemplate")
 	
 	frame:EnableMouse(true)
@@ -41,7 +37,6 @@ local function CreateBotControlBar()
 		local left = frame:GetLeft()
 		local top = frame:GetTop()
 		
-		-- Keep frame within screen bounds
 		local screenWidth = UIParent:GetWidth()
 		local screenHeight = UIParent:GetHeight()
 		local frameWidth = frame:GetWidth()
@@ -59,7 +54,6 @@ local function CreateBotControlBar()
 		BOT_BAR_SETTINGS.posY = top
 	end)
 
-	-- Store original aspect ratio
 	local originalWidth = 400
 	local originalHeight = 50
 	frame.originalAspectRatio = originalWidth / originalHeight
@@ -72,7 +66,6 @@ local function CreateBotControlBar()
     })
     frame:SetBackdropColor(0, 0, 0, 0.8)
 	
-    -- Add resize handle
     local resizeHandle = CreateFrame("Button", nil, frame)
     resizeHandle:SetSize(16, 16)
     resizeHandle:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
@@ -83,7 +76,6 @@ local function CreateBotControlBar()
     resizeHandle:EnableMouse(true)
     resizeHandle:RegisterForDrag("LeftButton")
 
-    -- Resize functionality with aspect ratio preservation
     resizeHandle:SetScript("OnDragStart", function(self)
         frame:StartSizing("BOTTOMRIGHT")
         self:GetHighlightTexture():Hide()
@@ -103,7 +95,6 @@ local function CreateBotControlBar()
 		BOT_BAR_SETTINGS.scale = scale
 	end)
 
-    -- Update size while dragging to maintain aspect ratio and adjust buttons
     frame:SetScript("OnSizeChanged", function(self, width, height)
         if frame.resizing then
             local newHeight = width / frame.originalAspectRatio
@@ -112,12 +103,10 @@ local function CreateBotControlBar()
         end
     end)
 
-    -- Set minimum and maximum sizes (50% to 300% of original height)
     frame:SetResizable(true)
     frame:SetMinResize(originalWidth * 0.5, originalHeight * 0.5)
     frame:SetMaxResize(originalWidth * 3, originalHeight * 3)
 
-    -- Change cursor when hovering over resize handle
     resizeHandle:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
         GameTooltip:SetText("Resize", 1, 1, 1)
@@ -129,7 +118,6 @@ local function CreateBotControlBar()
         ResetCursor()
     end)
 
-    -- Create button groups
     local movementGroup = {
         {text = "Attack", icon = "ability_ghoulfrenzy", command = "attack"},
         {text = "Follow", icon = "Ability_Tracking", command = "follow"},
@@ -142,7 +130,6 @@ local function CreateBotControlBar()
         {text = "Passive", icon = "ability_seal", command = "flee"},
     }
 
-    -- Toggle buttons
     local toggleButtons = {
         {text = "Toggle Burst Mode", icon = "Ability_Shaman_Heroism", command = "boost", toggle = true, default = true},
         {text = "Toggle Food Between Fights", icon = "INV_Misc_Food_10", command = "food", toggle = true, default = true},
@@ -150,22 +137,18 @@ local function CreateBotControlBar()
         {text = "Toggle Shadows Menu", icon = "Spell_Shadow_AntiShadow", command = ".shadowsmenu", guild = true},
     }
 
-    -- Combine all buttons in display order
     local buttons = {}
     for _, btn in ipairs(movementGroup) do table.insert(buttons, btn) end
     for _, btn in ipairs(toggleButtons) do table.insert(buttons, btn) end
     for _, btn in ipairs(combatGroup) do table.insert(buttons, btn) end
 
-    -- Store group references
     frame.movementGroup = movementGroup
     frame.combatGroup = combatGroup
     frame.buttons = buttons
 
-    -- Variables for delayed command execution
     frame.delayedCommand = nil
     frame.delayTimer = 0
 	
-    -- Function to update tooltip for a button
     local function UpdateButtonTooltip(button)
         if GameTooltip:IsOwned(button) then
             GameTooltip:SetOwner(button, "ANCHOR_TOP")
@@ -179,13 +162,11 @@ local function CreateBotControlBar()
         end
     end
 
-    -- Function to check if shadows menu is open
     local function IsShadowsMenuOpen()
         if GossipFrame:IsShown() then
-            -- Check all GossipTitleButton children
-            for i = 1, 5 do  -- Using a safe upper limit
+            for i = 1, 5 do
                 local button = _G["GossipTitleButton"..i]
-                if not button then break end  -- No more buttons
+                if not button then break end
 
                 if button:IsVisible() and button:GetText() then
                     local text = button:GetText():lower()
@@ -203,26 +184,18 @@ local function CreateBotControlBar()
         return false
     end
 
-    -- Store the shadows menu button reference
     local shadowsMenuButton
 
-    -- Create initial buttons with default size
-    local buttonWidth = 36
-    local buttonHeight = 36
-    local spacing = 2
-
-    for i, btnInfo in ipairs(buttons) do
+    local function CreateButton(i, btnInfo, buttonWidth, buttonHeight, spacing)
         local button = CreateFrame("Button", "BotControlBarButton"..i, frame, "SecureActionButtonTemplate")
         button:SetSize(buttonWidth, buttonHeight)
         button:SetPoint("LEFT", frame, "LEFT", 10 + ((i-1) * (buttonWidth + spacing)), 0)
         button.info = btnInfo
 
-        -- Button texture
         button.icon = button:CreateTexture(nil, "ARTWORK")
         button.icon:SetAllPoints()
         button.icon:SetTexture("Interface\\Icons\\"..btnInfo.icon)
 
-        -- Button border for toggle/active state
         button.border = button:CreateTexture(nil, "OVERLAY")
         button.border:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
         button.border:SetBlendMode("ADD")
@@ -230,29 +203,6 @@ local function CreateBotControlBar()
         button.border:SetPoint("CENTER", button, "CENTER", 0, 1)
         button.border:SetSize(buttonWidth * 1.60, buttonHeight * 1.60)
 
-        -- Set initial state for toggles
-        if btnInfo.toggle then
-            button.state = btnInfo.default or false
-            button.border:SetAlpha(button.state and 1 or 0)
-        else
-            button.state = false
-        end
-
-        -- Set initial active states for movement and combat groups
-        if btnInfo.text == "Follow" then
-            button.state = true
-            button.border:SetAlpha(1)
-        elseif btnInfo.text == "Defensive" then
-            button.state = true
-            button.border:SetAlpha(1)
-        end
-
-        -- Store reference to shadows menu button
-        if btnInfo.text == "Toggle Shadows Menu" then
-            shadowsMenuButton = button
-        end
-
-        -- Button tooltip
         button:SetScript("OnEnter", function(self)
             GameTooltip:SetOwner(self, "ANCHOR_TOP")
             GameTooltip:SetText(self.info.text, 1, 1, 1)
@@ -265,43 +215,44 @@ local function CreateBotControlBar()
         end)
         button:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-        -- Button click handler
         button:SetScript("OnMouseDown", function(self)
-            self.icon:SetVertexColor(0.5, 0.5, 0.5) -- Darken when clicked
+            self.icon:SetVertexColor(0.5, 0.5, 0.5)
         end)
 
         button:SetScript("OnMouseUp", function(self)
-            self.icon:SetVertexColor(1, 1, 1) -- Restore color
+            self.icon:SetVertexColor(1, 1, 1)
         end)
 
+        return button
+    end
+
+    local function SetCombatButtonClickHandler(button)
         button:SetScript("OnClick", function(self, mouseButton)
-            -- Special handling for shadows menu button
-			if self.info.text == "Passive" then
-				isFleeActive = true
-				isPassiveActive = true
-				
-				local followBtn = _G["BotControlBarButton2"]
-				local stayBtn = _G["BotControlBarButton3"]
-				
-				if followBtn and stayBtn then
-					followBtn.state = true
-					followBtn.border:SetAlpha(1)
-					
-					stayBtn.state = false
-					stayBtn.border:SetAlpha(0)
-					
-					UpdateButtonTooltip(followBtn)
-					UpdateButtonTooltip(stayBtn)
-				end
-			end
+            if self.info.text == "Passive" then
+                isFleeActive = true
+                isPassiveActive = true
+                
+                local followBtn = _G["BotControlBarButton2"]
+                local stayBtn = _G["BotControlBarButton3"]
+                
+                if followBtn and stayBtn then
+                    followBtn.state = true
+                    followBtn.border:SetAlpha(1)
+                    
+                    stayBtn.state = false
+                    stayBtn.border:SetAlpha(0)
+                    
+                    UpdateButtonTooltip(followBtn)
+                    UpdateButtonTooltip(stayBtn)
+                end
+            end
+            
             if self.info.text == "Toggle Shadows Menu" then
                 if IsShadowsMenuOpen() then
-                    -- Close the gossip frame if shadows menu is open
                     CloseGossip()
                     self.state = false
                     self.border:SetAlpha(0)
                 else
-                    -- Send the command to open the menu
                     if self.info.guild then
                         SendChatMessage(self.info.command, "GUILD")
                     else
@@ -322,70 +273,6 @@ local function CreateBotControlBar()
 
             local channel = GetNumRaidMembers() > 0 and "RAID" or GetNumPartyMembers() > 0 and "PARTY" or nil
 
-            -- Check if passive is active and we're clicking a movement command
-            local passiveButton = _G["BotControlBarButton"..(tIndexOf(buttons, combatGroup[3]))]
-            local isPassiveActive = passiveButton and passiveButton.state
-
-			if isPassiveActive and tContains(movementGroup, self.info) then
-                if self.info.text == "Attack" then
-					if not UnitExists("target") then
-						UIErrorsFrame:AddMessage("You don't have a target.", 1.0, 1.0, 0.0, 1.0, 6)
-					else
-						local passiveBtn = _G["BotControlBarButton9"]
-						local defensiveBtn = _G["BotControlBarButton10"]
-						
-						if passiveBtn and defensiveBtn then
-							passiveBtn.state = false
-							passiveBtn.border:SetAlpha(0)
-							
-							defensiveBtn.state = true
-							defensiveBtn.border:SetAlpha(1)
-							
-							UpdateButtonTooltip(passiveBtn)
-							UpdateButtonTooltip(defensiveBtn)
-						end
-						SendChatMessage("follow", channel)
-						-- Create a temporary frame for delayed command
-						local delayFrame = CreateFrame("Frame")
-						delayFrame.timeElapsed = 0
-						delayFrame:SetScript("OnUpdate", function(self, elapsed)
-							self.timeElapsed = self.timeElapsed + elapsed
-							if self.timeElapsed >= 0.5 then  -- 500ms delay
-								self:SetScript("OnUpdate", nil)
-								self:Hide()
-								SendChatMessage("attack", channel)
-								local passiveBtn = _G["BotControlBarButton9"]
-								local defensiveBtn = _G["BotControlBarButton10"]
-								if passiveBtn and defensiveBtn then
-									passiveBtn.state = false
-									passiveBtn.border:SetAlpha(0)
-									
-									defensiveBtn.state = true
-									defensiveBtn.border:SetAlpha(1)
-									
-									UpdateButtonTooltip(passiveBtn)
-									UpdateButtonTooltip(defensiveBtn)
-								end
-							end
-						end)
-                    end
-					return
-                end
-				SendChatMessage(self.info.command, channel)
-				
-				-- Update movement group states
-				for _, btn in ipairs(movementGroup) do
-					local otherBtn = _G["BotControlBarButton"..(tIndexOf(buttons, btn))]
-					if otherBtn then
-						otherBtn.state = (otherBtn == self)
-						otherBtn.border:SetAlpha(otherBtn.state and 1 or 0)
-						UpdateButtonTooltip(otherBtn)
-					end
-				end
-				
-				return
-			end
-
             local function tIndexOf(table, item)
                 for i, value in ipairs(table) do
                     if value.text == item.text and value.icon == item.icon and value.command == item.command then
@@ -395,18 +282,79 @@ local function CreateBotControlBar()
                 return -1
             end
 
+            local passiveButton = _G["BotControlBarButton"..(tIndexOf(buttons, combatGroup[3]))]
+            local isPassiveActive = passiveButton and passiveButton.state
+
+            if isPassiveActive and tContains(movementGroup, self.info) then
+                if self.info.text == "Attack" then
+                    if not UnitExists("target") then
+                        UIErrorsFrame:AddMessage("You don't have a target.", 1.0, 1.0, 0.0, 1.0, 6)
+                    else
+                        local passiveBtn = _G["BotControlBarButton9"]
+                        local defensiveBtn = _G["BotControlBarButton10"]
+                        
+                        if passiveBtn and defensiveBtn then
+                            passiveBtn.state = false
+                            passiveBtn.border:SetAlpha(0)
+                            
+                            defensiveBtn.state = true
+                            defensiveBtn.border:SetAlpha(1)
+                            
+                            UpdateButtonTooltip(passiveBtn)
+                            UpdateButtonTooltip(defensiveBtn)
+                        end
+                        SendChatMessage("follow", channel)
+                        local delayFrame = CreateFrame("Frame")
+                        delayFrame.timeElapsed = 0
+                        delayFrame:SetScript("OnUpdate", function(self, elapsed)
+                            self.timeElapsed = self.timeElapsed + elapsed
+                            if self.timeElapsed >= 0.5 then
+                                self:SetScript("OnUpdate", nil)
+                                self:Hide()
+                                SendChatMessage("attack", channel)
+                                local passiveBtn = _G["BotControlBarButton9"]
+                                local defensiveBtn = _G["BotControlBarButton10"]
+                                if passiveBtn and defensiveBtn then
+                                    passiveBtn.state = false
+                                    passiveBtn.border:SetAlpha(0)
+                                    
+                                    defensiveBtn.state = true
+                                    defensiveBtn.border:SetAlpha(1)
+                                    
+                                    UpdateButtonTooltip(passiveBtn)
+                                    UpdateButtonTooltip(defensiveBtn)
+                                end
+                            end
+                        end)
+                    end
+                    return
+                end
+                SendChatMessage(self.info.command, channel)
+                
+                for _, btn in ipairs(movementGroup) do
+                    local otherBtn = _G["BotControlBarButton"..(tIndexOf(buttons, btn))]
+                    if otherBtn then
+                        otherBtn.state = (otherBtn == self)
+                        otherBtn.border:SetAlpha(otherBtn.state and 1 or 0)
+                        UpdateButtonTooltip(otherBtn)
+                    end
+                end
+                
+                return
+            end
+
             if tContains(movementGroup, self.info) then
                 local followBtn = _G["BotControlBarButton"..(tIndexOf(buttons, {text = "Follow", icon = "Ability_Tracking", command = "follow"}))]
                 local stayBtn = _G["BotControlBarButton"..(tIndexOf(buttons, {text = "Stay", icon = "spell_nature_timestop", command = "stay"}))]
                 local attackBtn = _G["BotControlBarButton"..(tIndexOf(buttons, {text = "Attack", icon = "ability_ghoulfrenzy", command = "attack"}))]
 
                 if self.info.text == "Attack" then
-					if not UnitExists("target") then
-						UIErrorsFrame:AddMessage("You don't have a target.", 1.0, 1.0, 0.0, 1.0, 6)
-					else
-						SendChatMessage(self.info.command, channel)
+                    if not UnitExists("target") then
+                        UIErrorsFrame:AddMessage("You don't have a target.", 1.0, 1.0, 0.0, 1.0, 6)
+                    else
+                        SendChatMessage(self.info.command, channel)
                     end
-					return
+                    return
                 end
 
                 if self.info.text == "Follow" then
@@ -414,36 +362,35 @@ local function CreateBotControlBar()
                     followBtn.border:SetAlpha(1)
                     stayBtn.state = false
                     stayBtn.border:SetAlpha(0)
-				elseif self.info.text == "Stay" then
-					stayBtn.state = true
-					stayBtn.border:SetAlpha(1)
-					followBtn.state = false
-					followBtn.border:SetAlpha(0)
-					if self.info.text == "Passive" then
-						isFleeActive = true
-						isPassiveActive = true
-						
-						local passiveBtn = _G["BotControlBarButton10"]
-						local defensiveBtn = _G["BotControlBarButton9"]
-						
-						if passiveBtn and defensiveBtn then
-							passiveBtn.state = false
-							passiveBtn.border:SetAlpha(0)
-							
-							defensiveBtn.state = true
-							defensiveBtn.border:SetAlpha(1)
-							
-							UpdateButtonTooltip(passiveBtn)
-							UpdateButtonTooltip(defensiveBtn)
-						end
-					end
-				end
+                elseif self.info.text == "Stay" then
+                    stayBtn.state = true
+                    stayBtn.border:SetAlpha(1)
+                    followBtn.state = false
+                    followBtn.border:SetAlpha(0)
+                    if self.info.text == "Passive" then
+                        isFleeActive = true
+                        isPassiveActive = true
+                        
+                        local passiveBtn = _G["BotControlBarButton10"]
+                        local defensiveBtn = _G["BotControlBarButton9"]
+                        
+                        if passiveBtn and defensiveBtn then
+                            passiveBtn.state = false
+                            passiveBtn.border:SetAlpha(0)
+                            
+                            defensiveBtn.state = true
+                            defensiveBtn.border:SetAlpha(1)
+                            
+                            UpdateButtonTooltip(passiveBtn)
+                            UpdateButtonTooltip(defensiveBtn)
+                        end
+                    end
+                end
 
                 UpdateButtonTooltip(followBtn)
                 UpdateButtonTooltip(stayBtn)
             end
 
-            -- Handle combat group
             if tContains(combatGroup, self.info) then
                 for _, btn in ipairs(combatGroup) do
                     local otherBtn = _G["BotControlBarButton"..(tIndexOf(buttons, btn))]
@@ -455,28 +402,40 @@ local function CreateBotControlBar()
                 end
                 self.state = true
                 self.border:SetAlpha(1)
-				if self.info.text == "Defensive" then
-					if isPassiveActive then
-						SendChatMessage("co -passive", channel)
-						SendChatMessage("nc -passive", channel)
-						isPassiveActive = false
-					else
-						SendChatMessage("nc -grind", channel)
-					end
-				else
-					SendChatMessage(self.info.command, channel)
-				end
+                if self.info.text == "Defensive" then
+                    if isPassiveActive then
+                        SendChatMessage("co -passive", channel)
+                        SendChatMessage("nc -passive", channel)
+                        isPassiveActive = false
+                    else
+                        SendChatMessage("nc -grind", channel)
+                    end
+                else
+                    SendChatMessage(self.info.command, channel)
+                end
                 UpdateButtonTooltip(self)
                 return
             end
 
-            -- Handle toggle buttons
             if self.info.toggle then
                 self.state = not self.state
 
-                if self.info.command == "boost" then
-                    local cmd = self.state and "co +boost" or "co -boost"
-                    SendChatMessage(cmd, channel)
+				if self.info.command == "boost" then
+					if self.state then
+						SendChatMessage("co +boost", channel)
+						if UnitFactionGroup("player") == "Horde" then
+							SendChatMessage("ns -2825", channel)
+						else
+							SendChatMessage("ss -32182", channel)
+						end
+					else
+						SendChatMessage("co -boost", channel)
+						if UnitFactionGroup("player") == "Horde" then
+							SendChatMessage("ns +2825", channel)
+						else
+							SendChatMessage("ss +32182", channel)
+						end
+					end
                 elseif self.info.command == "food" then
                     local cmd = self.state and "nc +food" or "nc -food"
                     SendChatMessage(cmd, channel)
@@ -485,11 +444,9 @@ local function CreateBotControlBar()
                     SendChatMessage(cmd, channel)
                 end
 
-                -- Update visual state
                 self.border:SetAlpha(self.state and 1 or 0)
                 UpdateButtonTooltip(self)
             else
-                -- Regular command
                 if channel then
                     for cmd in string.gmatch(self.info.command, "[^\n]+") do
                         SendChatMessage(cmd, channel)
@@ -499,9 +456,36 @@ local function CreateBotControlBar()
         end)
     end
 
-    -- OnUpdate handler for delayed commands
+    local buttonWidth = 36
+    local buttonHeight = 36
+    local spacing = 2
+
+    for i, btnInfo in ipairs(buttons) do
+        local button = CreateButton(i, btnInfo, buttonWidth, buttonHeight, spacing)
+
+        if btnInfo.toggle then
+            button.state = btnInfo.default or false
+            button.border:SetAlpha(button.state and 1 or 0)
+        else
+            button.state = false
+        end
+
+        if btnInfo.text == "Follow" then
+            button.state = true
+            button.border:SetAlpha(1)
+        elseif btnInfo.text == "Defensive" then
+            button.state = true
+            button.border:SetAlpha(1)
+        end
+
+        if btnInfo.text == "Toggle Shadows Menu" then
+            shadowsMenuButton = button
+        end
+
+        SetCombatButtonClickHandler(button)
+    end
+
     frame:SetScript("OnUpdate", function(self, elapsed)
-        -- Handle shadows menu check
         if shadowsMenuButton then
             local isOpen = IsShadowsMenuOpen()
             if isOpen ~= shadowsMenuButton.state then
@@ -511,16 +495,12 @@ local function CreateBotControlBar()
             end
         end
 
-        -- Handle delayed command
         if self.delayedCommand then
             self.delayTimer = self.delayTimer - elapsed
             if self.delayTimer <= 0 then
-                -- Send the delayed command
                 SendChatMessage(self.delayedCommand.command, self.delayedCommand.channel)
 
-                -- Set defensive mode active
                 if self.delayedCommand.defensiveButton then
-                    -- Clear all combat group states
                     for _, btn in ipairs(combatGroup) do
                         local otherBtn = _G["BotControlBarButton"..(tIndexOf(buttons, btn))]
                         if otherBtn then
@@ -530,19 +510,16 @@ local function CreateBotControlBar()
                         end
                     end
 
-                    -- Set defensive active
                     self.delayedCommand.defensiveButton.state = true
                     self.delayedCommand.defensiveButton.border:SetAlpha(1)
                     UpdateButtonTooltip(self.delayedCommand.defensiveButton)
                 end
 
-                -- Clear the delayed command
                 self.delayedCommand = nil
             end
         end
     end)
 
-    -- Helper functions for table operations
     function tContains(table, item)
         for _, value in pairs(table) do
             if value == item then return true end
@@ -567,17 +544,16 @@ local function CreateBotControlBar()
     closeButton:SetPushedTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Down")
     closeButton:SetHighlightTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Highlight")
 
-    -- Ensure textures are properly sized initially
     closeButton:GetNormalTexture():SetSize(24, 24)
     closeButton:GetPushedTexture():SetSize(24, 24)
     closeButton:GetHighlightTexture():SetSize(24, 24)
 
     closeButton:SetScript("OnClick", function()
-		if frame:IsVisible() then
-			frame:Hide()
-		else
-			frame:Show()
-		end
+        if frame:IsVisible() then
+            frame:Hide()
+        else
+            frame:Show()
+        end
     end)
 
     closeButton:SetScript("OnEnter", function(self)
@@ -590,7 +566,6 @@ local function CreateBotControlBar()
         GameTooltip:Hide()
     end)
 
-    -- Create the "Change mode" button
     frame.modeButton = CreateFrame("Button", "BotControlBarModeButton", frame, "SecureActionButtonTemplate")
     local modeButton = frame.modeButton
     modeButton:SetSize(18, 18)
@@ -601,12 +576,10 @@ local function CreateBotControlBar()
         command = "changemode"
     }
 
-    -- Button texture
     modeButton.icon = modeButton:CreateTexture(nil, "ARTWORK")
     modeButton.icon:SetAllPoints()
     modeButton.icon:SetTexture("Interface\\Icons\\"..modeButton.info.icon)
 
-    -- Button border
     modeButton.border = modeButton:CreateTexture(nil, "OVERLAY")
     modeButton.border:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
     modeButton.border:SetBlendMode("ADD")
@@ -615,7 +588,6 @@ local function CreateBotControlBar()
     modeButton.border:SetSize(20 * 1.50, 20 * 1.50)
     modeButton:SetFrameLevel(frame:GetFrameLevel() + 2)
 
-    -- Button tooltip
     modeButton:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_TOP")
         GameTooltip:SetText(self.info.text, 1, 1, 1)
@@ -623,7 +595,6 @@ local function CreateBotControlBar()
     end)
     modeButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    -- Button click handlers
     modeButton:SetScript("OnMouseDown", function(self)
         self.icon:SetVertexColor(0.5, 0.5, 0.5)
     end)
@@ -632,15 +603,12 @@ local function CreateBotControlBar()
         self.icon:SetVertexColor(1, 1, 1)
     end)
 
-    -- Track current mode
-    frame.currentMode = "combat" -- "combat" or "utility"
+    frame.currentMode = "combat"
 
-    -- Store original buttons for switching back
     frame.originalButtons = frame.buttons
     frame.originalMovementGroup = frame.movementGroup
     frame.originalCombatGroup = frame.combatGroup
 
-    -- Utility mode buttons
     local utilityButtons = {
         {
             text = "Use Objects",
@@ -715,10 +683,77 @@ local function CreateBotControlBar()
         }
     }
 
-    -- Function to switch between modes
+    local function HandleUtilityButtonAction(button)
+        if button.info.text == "Use Objects" then
+            local channel = GetNumRaidMembers() > 0 and "RAID" or GetNumPartyMembers() > 0 and "PARTY" or nil
+            SendChatMessage("los", channel)
+            
+            local frame = CreateFrame("Frame")
+            frame:RegisterEvent("CHAT_MSG_WHISPER")
+            frame:SetScript("OnEvent", function(self, event, msg, sender)
+                if msg:lower():match("spell") or msg:lower():match("item") then return end
+                local itemName = msg:match("%[(.-)%]")
+                if itemName then
+                    if not itemCache[itemName] then
+                        itemCache[itemName] = true
+                        lastUpdate = GetTime()
+                    end
+                end
+            end)
+
+            local timer = CreateFrame("Frame")
+            timer:SetScript("OnUpdate", function(self, elapsed)
+                if lastUpdate > 0 and (GetTime() - lastUpdate) >= 1 and next(itemCache) then
+                    ShowItemList()
+                    lastUpdate = 0
+                    frame:UnregisterEvent("CHAT_MSG_WHISPER")
+                end
+            end)
+        elseif button.info.text == "Train" then
+            if not UnitExists("target") then
+                UIErrorsFrame:AddMessage("You must have a trainer targeted.", 1.0, 1.0, 0.0, 1.0, 6)
+                return
+            end
+        elseif button.info.dropdown then
+            local dropdown = CreateFrame("Frame", "TempDropdown", UIParent, "UIDropDownMenuTemplate")
+            dropdown:SetPoint("TOP", button, "BOTTOM", 0, -5)
+
+            dropdown.button = button
+
+            UIDropDownMenu_Initialize(dropdown, function(self, level)
+                local info = UIDropDownMenu_CreateInfo()
+                for _, item in ipairs(dropdown.button.info.dropdown) do
+                    info.text = item.text
+                    info.func = function()
+                        local channel = GetNumRaidMembers() > 0 and "RAID" or GetNumPartyMembers() > 0 and "PARTY" or nil
+                        local skip = false
+                        if item.text == "Release spirit" then
+                            isStayActive = true
+                        elseif item.text == "Accept quests" then
+                            if not UnitExists("target") then
+                                UIErrorsFrame:AddMessage("You must have a quest giver targeted.", 1.0, 1.0, 0.0, 1.0, 6)
+                                skip = true
+                            end
+                        end
+                        if not skip then
+                            SendChatMessage(item.command, channel)
+                        end
+                        CloseDropDownMenus()
+                    end
+                    UIDropDownMenu_AddButton(info, level)
+                end
+            end)
+
+            dropdown:Hide()
+            ToggleDropDownMenu(1, nil, dropdown, button, 0, 0)
+        else
+            local channel = GetNumRaidMembers() > 0 and "RAID" or GetNumPartyMembers() > 0 and "PARTY" or nil
+            SendChatMessage(button.info.command, channel)
+        end
+    end
+
     local function SwitchMode()		
         if frame.currentMode == "combat" then
-            -- Store the current state of combat toggle buttons
             frame.previousCombatToggleStates = {}
             for _, btnInfo in ipairs(frame.originalButtons) do
                 if btnInfo.toggle then
@@ -729,7 +764,6 @@ local function CreateBotControlBar()
                 end
             end
 
-            -- Store the currently active button in movement and combat groups
             frame.previousCombatMovementActive = nil
             for _, btnInfo in ipairs(frame.movementGroup) do
                 local button = _G["BotControlBarButton"..(tIndexOf(frame.originalButtons, btnInfo))]
@@ -748,180 +782,72 @@ local function CreateBotControlBar()
                 end
             end
 
-            -- Switch to utility mode
             frame.currentMode = "utility"
-			modeButton.info = {
-				text = "Combat Mode",
-				icon = "Ability_DualWield",
-				command = "changemode"
-			}
-			modeButton.icon:SetTexture("Interface\\Icons\\"..modeButton.info.icon)
+            modeButton.info = {
+                text = "Combat Mode",
+                icon = "Ability_DualWield",
+                command = "changemode"
+            }
+            modeButton.icon:SetTexture("Interface\\Icons\\"..modeButton.info.icon)
 			
-            -- Hide original buttons
             for i = 1, #frame.originalButtons do
                 local button = _G["BotControlBarButton"..i]
                 if button then button:Hide() end
             end
 
-            -- Create utility buttons
             frame.buttons = utilityButtons
             for i, btnInfo in ipairs(utilityButtons) do
-                local button = _G["BotControlBarButton"..i] or
-                               CreateFrame("Button", "BotControlBarButton"..i, frame, "SecureActionButtonTemplate")
-                button:Show()
-                button:SetSize(36, 36)
-                button:SetPoint("LEFT", frame, "LEFT", 10 + ((i-1) * (36 + 2)), 0)
-                button.info = btnInfo
+                local button = _G["BotControlBarButton"..i]
+                if not button then
+                    button = CreateButton(i, btnInfo, 36, 36, 2)
+                else
+                    button:Show()
+                    button:SetSize(36, 36)
+                    button:SetPoint("LEFT", frame, "LEFT", 10 + ((i-1) * (36 + 2)), 0)
+                    button.info = btnInfo
+                    button.icon:SetTexture("Interface\\Icons\\"..btnInfo.icon)
+                    button.border:SetAlpha(0)
+                end
 
-                -- Button texture
-                button.icon = button.icon or button:CreateTexture(nil, "ARTWORK")
-                button.icon:SetAllPoints()
-                button.icon:SetTexture("Interface\\Icons\\"..btnInfo.icon)
-
-                -- Button border
-                button.border = button.border or button:CreateTexture(nil, "OVERLAY")
-                button.border:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
-                button.border:SetBlendMode("ADD")
-                button.border:SetAlpha(0)
-                button.border:SetPoint("CENTER", button, "CENTER", 0, 1)
-                button.border:SetSize(36 * 1.60, 36 * 1.60)
-
-                -- Button tooltip
-                button:SetScript("OnEnter", function(self)
-                    GameTooltip:SetOwner(self, "ANCHOR_TOP")
-                    GameTooltip:SetText(self.info.text, 1, 1, 1)
-                    GameTooltip:Show()
-                end)
-                button:SetScript("OnLeave", function() GameTooltip:Hide() end)
-
-                button:SetScript("OnMouseDown", function(self)
-                    self.icon:SetVertexColor(0.5, 0.5, 0.5)
-                end)
-
-                button:SetScript("OnMouseUp", function(self)
-                    self.icon:SetVertexColor(1, 1, 1)
-                end)
-				local function HandleUtilityButtonAction(button)
-					if button.info.text == "Use Objects" then
-						-- Send "los" command
-						local channel = GetNumRaidMembers() > 0 and "RAID" or GetNumPartyMembers() > 0 and "PARTY" or nil
-						SendChatMessage("los", channel)
-						-- Handle whispers and cache items
-						local frame = CreateFrame("Frame")
-						frame:RegisterEvent("CHAT_MSG_WHISPER")
-						frame:SetScript("OnEvent", function(self, event, msg, sender)
-							if msg:lower():match("spell") or msg:lower():match("item") then return end
-							local itemName = msg:match("%[(.-)%]") -- Gets whatever is between [ and ]
-							if itemName then
-								if not itemCache[itemName] then
-									itemCache[itemName] = true
-									lastUpdate = GetTime()
-								end
-							end
-						end)
-
-						-- Auto-show cached items 1 second after last update
-						local timer = CreateFrame("Frame")
-						timer:SetScript("OnUpdate", function(self, elapsed)
-							if lastUpdate > 0 and (GetTime() - lastUpdate) >= 1 and next(itemCache) then
-								ShowItemList()
-								lastUpdate = 0  -- Reset
-								frame:UnregisterEvent("CHAT_MSG_WHISPER")
-							end
-						end)
-					elseif button.info.text == "Train" then
-						if not UnitExists("target") then
-							UIErrorsFrame:AddMessage("You must have a trainer targeted.", 1.0, 1.0, 0.0, 1.0, 6)
-							return
-						end
-					elseif button.info.dropdown then
-						-- Create temporary dropdown menu
-						local dropdown = CreateFrame("Frame", "TempDropdown", UIParent, "UIDropDownMenuTemplate")
-						dropdown:SetPoint("TOP", button, "BOTTOM", 0, -5)
-
-						-- Store button reference in dropdown
-						dropdown.button = button
-
-						-- Initialize with our items
-						UIDropDownMenu_Initialize(dropdown, function(self, level)
-							local info = UIDropDownMenu_CreateInfo()
-							for _, item in ipairs(dropdown.button.info.dropdown) do
-								info.text = item.text
-								info.func = function()
-									local channel = GetNumRaidMembers() > 0 and "RAID" or GetNumPartyMembers() > 0 and "PARTY" or nil
-									local skip = false
-									if item.text == "Release spirit" then
-										isStayActive = true
-									elseif item.text == "Accept quests" then
-										if not UnitExists("target") then
-											UIErrorsFrame:AddMessage("You must have a quest giver targeted.", 1.0, 1.0, 0.0, 1.0, 6)
-											skip = true
-										end
-									end
-									if not skip then
-										SendChatMessage(item.command, channel)
-									end
-									CloseDropDownMenus()
-								end
-								UIDropDownMenu_AddButton(info, level)
-							end
-						end)
-
-						dropdown:Hide()
-
-						-- Show the menu
-						ToggleDropDownMenu(1, nil, dropdown, button, 0, 0)
-					else
-						-- Regular command
-						local channel = GetNumRaidMembers() > 0 and "RAID" or GetNumPartyMembers() > 0 and "PARTY" or nil
-						SendChatMessage(button.info.command, channel)
-					end
-				end
                 button:SetScript("OnClick", function(self)
-					if isFleeActive then
-						-- Reset bot AI
-						local channel = GetNumRaidMembers() > 0 and "RAID" or GetNumPartyMembers() > 0 and "PARTY" or nil
+                    if isFleeActive then
+                        local channel = GetNumRaidMembers() > 0 and "RAID" or GetNumPartyMembers() > 0 and "PARTY" or nil
                         SendChatMessage("reset botAI", channel)
 						
-						-- Create a timer to call the function after 1 second
-						local fleeTimer = CreateFrame("Frame")
-						fleeTimer.timeElapsed = 0
-						fleeTimer:SetScript("OnUpdate", function(self, elapsed)
-							self.timeElapsed = self.timeElapsed + elapsed
-							if self.timeElapsed >= 1 then
-								HandleUtilityButtonAction(self.buttonRef)
-								isFleeActive = false
-								isPassiveActive = false
-								resetCombatButtons = true
-								self:SetScript("OnUpdate", nil)
-							end
-						end)
-						fleeTimer.buttonRef = self -- Store reference to the button
-					else
-						HandleUtilityButtonAction(self)
-					end
-				end)
+                        local fleeTimer = CreateFrame("Frame")
+                        fleeTimer.timeElapsed = 0
+                        fleeTimer:SetScript("OnUpdate", function(self, elapsed)
+                            self.timeElapsed = self.timeElapsed + elapsed
+                            if self.timeElapsed >= 1 then
+                                HandleUtilityButtonAction(self.buttonRef)
+                                isFleeActive = false
+                                isPassiveActive = false
+                                resetCombatButtons = true
+                                self:SetScript("OnUpdate", nil)
+                            end
+                        end)
+                        fleeTimer.buttonRef = self
+                    else
+                        HandleUtilityButtonAction(self)
+                    end
+                end)
             end
 
-            -- Hide any extra buttons
             for i = #utilityButtons + 1, #frame.originalButtons do
                 local button = _G["BotControlBarButton"..i]
                 if button then button:Hide() end
             end
 
-            -- Adjust buttons for new count
             AdjustButtons(frame)
         else
-            -- Switch back to combat mode
             frame.currentMode = "combat"
-			modeButton.info = {
-				text = "Utility Mode",
-				icon = "Spell_Shadow_Teleport",
-				command = "changemode"
-			}
-			modeButton.icon:SetTexture("Interface\\Icons\\"..modeButton.info.icon)
+            modeButton.info = {
+                text = "Utility Mode",
+                icon = "Spell_Shadow_Teleport",
+                command = "changemode"
+            }
+            modeButton.icon:SetTexture("Interface\\Icons\\"..modeButton.info.icon)
 
-            -- Hide utility buttons
             for i = 1, #utilityButtons do
                 local button = _G["BotControlBarButton"..i]
                 if button then
@@ -932,332 +858,81 @@ local function CreateBotControlBar()
                 end
             end
 
-            -- Restore original buttons
             frame.buttons = frame.originalButtons
             frame.movementGroup = frame.originalMovementGroup
             frame.combatGroup = frame.originalCombatGroup
 
-            -- Recreate combat buttons
             for i, btnInfo in ipairs(frame.originalButtons) do
-                local button = _G["BotControlBarButton"..i] or
-                             CreateFrame("Button", "BotControlBarButton"..i, frame, "SecureActionButtonTemplate")
-                button:Show()
-                button:SetSize(36, 36)
-                button:SetPoint("LEFT", frame, "LEFT", 10 + ((i-1) * (36 + 2)), 0)
-                button.info = btnInfo
-
-                -- Button texture
-                button.icon = button.icon or button:CreateTexture(nil, "ARTWORK")
-                button.icon:SetAllPoints()
-                button.icon:SetTexture("Interface\\Icons\\"..btnInfo.icon)
-
-                -- Button border for toggle/active state
-                button.border = button.border or button:CreateTexture(nil, "OVERLAY")
-                button.border:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
-                button.border:SetBlendMode("ADD")
-                button.border:SetAlpha(0)
-                button.border:SetPoint("CENTER", button, "CENTER", 0, 1)
-                button.border:SetSize(36 * 1.60, 36 * 1.60)
-
-                -- Set initial state for toggles
-				if resetCombatButtons then
-					button.state = btnInfo.default or false
-					button.border:SetAlpha(button.state and 1 or 0)
-					if isStayActive then
-						if btnInfo.text == "Stay" then
-							button.state = true
-							button.border:SetAlpha(1)
-						end
-					else
-						if btnInfo.text == "Follow" then
-							button.state = true
-							button.border:SetAlpha(1)
-						end
-					end
-					if btnInfo.text == "Defensive" then
-						button.state = true
-						button.border:SetAlpha(1)
-					end
+                local button = _G["BotControlBarButton"..i]
+                if not button then
+                    button = CreateButton(i, btnInfo, 36, 36, 2)
+                    SetCombatButtonClickHandler(button)
                 else
-					if btnInfo.toggle then
-						button.state = btnInfo.default or false
-						-- Restore previous state if available
-						if frame.previousCombatToggleStates and frame.previousCombatToggleStates[btnInfo.text] ~= nil then
-							button.state = frame.previousCombatToggleStates[btnInfo.text]
-						end
-						button.border:SetAlpha(button.state and 1 or 0)
-					else
-						button.state = false
-					end
-
-					-- Restore active state for movement group
-					if frame.previousCombatMovementActive and btnInfo.text == frame.previousCombatMovementActive and tContains(frame.movementGroup, btnInfo) then
-						button.state = true
-						button.border:SetAlpha(1)
-					end
-
-					-- Restore active state for combat group
-					if frame.previousCombatCombatActive and btnInfo.text == frame.previousCombatCombatActive and tContains(frame.combatGroup, btnInfo) then
-						button.state = true
-						button.border:SetAlpha(1)
-					end
+                    button:Show()
+                    button:SetSize(36, 36)
+                    button:SetPoint("LEFT", frame, "LEFT", 10 + ((i-1) * (36 + 2)), 0)
+                    button.info = btnInfo
+                    button.icon:SetTexture("Interface\\Icons\\"..btnInfo.icon)
                 end
 
-                -- Button tooltip
-                button:SetScript("OnEnter", function(self)
-                    GameTooltip:SetOwner(self, "ANCHOR_TOP")
-                    GameTooltip:SetText(self.info.text, 1, 1, 1)
-                    if self.info.toggle then
-                        GameTooltip:AddLine(self.state and "|cFF00FF00Enabled|r" or "|cFFFF0000Disabled|r", 1, 1, 1)
-                    elseif self.state then
-                        GameTooltip:AddLine("|cFF00FF00Active|r", 1, 1, 1)
-                    end
-                    GameTooltip:Show()
-                end)
-                button:SetScript("OnLeave", function() GameTooltip:Hide() end)
-
-                -- Button click handler
-                button:SetScript("OnMouseDown", function(self)
-                    self.icon:SetVertexColor(0.5, 0.5, 0.5) -- Darken when clicked
-                end)
-
-                button:SetScript("OnMouseUp", function(self)
-                    self.icon:SetVertexColor(1, 1, 1) -- Restore color
-                end)
-
-                button:SetScript("OnClick", function(self, mouseButton)
-                    -- Special handling for shadows menu button
-					if self.info.text == "Passive" then
-						isFleeActive = true
-						isPassiveActive = true
-						
-						local followBtn = _G["BotControlBarButton2"]
-						local stayBtn = _G["BotControlBarButton3"]
-						
-						if followBtn and stayBtn then
-							followBtn.state = true
-							followBtn.border:SetAlpha(1)
-							
-							stayBtn.state = false
-							stayBtn.border:SetAlpha(0)
-							
-							UpdateButtonTooltip(followBtn)
-							UpdateButtonTooltip(stayBtn)
-						end
-					end
-                    if self.info.text == "Toggle Shadows Menu" then
-                        if IsShadowsMenuOpen() then
-                            -- Close the gossip frame if shadows menu is open
-                            CloseGossip()
-                            self.state = false
-                            self.border:SetAlpha(0)
-                        else
-                            -- Send the command to open the menu
-                            if self.info.guild then
-                                SendChatMessage(self.info.command, "GUILD")
-                            else
-                                local channel = GetNumRaidMembers() > 0 and "RAID" or GetNumPartyMembers() > 0 and "PARTY" or nil
-                                SendChatMessage(self.info.command, channel)
-                            end
-                            self.state = true
-                            self.border:SetAlpha(1)
+                SetCombatButtonClickHandler(button)
+				
+				if resetCombatButtons then
+                    button.state = btnInfo.default or false
+                    button.border:SetAlpha(button.state and 1 or 0)
+                    if isStayActive then
+                        if btnInfo.text == "Stay" then
+                            button.state = true
+                            button.border:SetAlpha(1)
                         end
-                        UpdateButtonTooltip(self)
-                        return
-                    end
-
-                    if self.info.guild then
-                        SendChatMessage(self.info.command, "GUILD")
-                        return
-                    end
-
-                    local channel = GetNumRaidMembers() > 0 and "RAID" or GetNumPartyMembers() > 0 and "PARTY" or nil
-
-                    -- Check if passive is active and we're clicking a movement command
-                    local passiveButton = _G["BotControlBarButton"..(tIndexOf(buttons, combatGroup[3]))]
-                    local isPassiveActive = passiveButton and passiveButton.state
-
-					if isPassiveActive and tContains(movementGroup, self.info) then
-						if self.info.text == "Attack" then
-							if not UnitExists("target") then
-								UIErrorsFrame:AddMessage("You don't have a target.", 1.0, 1.0, 0.0, 1.0, 6)
-							else
-								
-								SendChatMessage("follow", channel)
-								-- Create a temporary frame for delayed command
-								local delayFrame = CreateFrame("Frame")
-								delayFrame.timeElapsed = 0
-								delayFrame:SetScript("OnUpdate", function(self, elapsed)
-									self.timeElapsed = self.timeElapsed + elapsed
-									if self.timeElapsed >= 0.5 then  -- 500ms delay
-										self:SetScript("OnUpdate", nil)
-										self:Hide()
-										SendChatMessage("attack", channel)
-										local passiveBtn = _G["BotControlBarButton10"]
-										local defensiveBtn = _G["BotControlBarButton9"]
-										if passiveBtn and defensiveBtn then
-											passiveBtn.state = false
-											passiveBtn.border:SetAlpha(0)
-											
-											defensiveBtn.state = true
-											defensiveBtn.border:SetAlpha(1)
-											
-											UpdateButtonTooltip(passiveBtn)
-											UpdateButtonTooltip(defensiveBtn)
-										end
-									end
-								end)
-								delayFrame.info = self.info  -- Store the info reference
-							end
-							return
-						end
-						SendChatMessage(self.info.command, channel)
-						
-						-- Update movement group states
-						for _, btn in ipairs(movementGroup) do
-							local otherBtn = _G["BotControlBarButton"..(tIndexOf(buttons, btn))]
-							if otherBtn then
-								otherBtn.state = (otherBtn == self)
-								otherBtn.border:SetAlpha(otherBtn.state and 1 or 0)
-								UpdateButtonTooltip(otherBtn)
-							end
-						end
-						
-						return
-					end
-
-                    local function tIndexOf(table, item)
-                        for i, value in ipairs(table) do
-                            if value.text == item.text and value.icon == item.icon and value.command == item.command then
-                                return i
-                            end
-                        end
-                        return -1
-                    end
-
-                    if tContains(movementGroup, self.info) then
-                        local followBtn = _G["BotControlBarButton"..(tIndexOf(buttons, {text = "Follow", icon = "Ability_Tracking", command = "follow"}))]
-                        local stayBtn = _G["BotControlBarButton"..(tIndexOf(buttons, {text = "Stay", icon = "spell_nature_timestop", command = "stay"}))]
-                        local attackBtn = _G["BotControlBarButton"..(tIndexOf(buttons, {text = "Attack", icon = "ability_ghoulfrenzy", command = "attack"}))]
-
-                        if self.info.text == "Attack" then
-							if not UnitExists("target") then
-								UIErrorsFrame:AddMessage("You don't have a target.", 1.0, 1.0, 0.0, 1.0, 6)
-							else
-								SendChatMessage(self.info.command, channel)
-							end
-							return
-                        end
-
-                        if self.info.text == "Follow" then
-                            followBtn.state = true
-                            followBtn.border:SetAlpha(1)
-                            stayBtn.state = false
-                            stayBtn.border:SetAlpha(0)
-                        elseif self.info.text == "Stay" then
-                            stayBtn.state = true
-                            stayBtn.border:SetAlpha(1)
-                            followBtn.state = false
-                            followBtn.border:SetAlpha(0)
-							if self.info.text == "Passive" then
-								isFleeActive = true
-								isPassiveActive = true
-								
-								local passiveBtn = _G["BotControlBarButton10"]
-								local defensiveBtn = _G["BotControlBarButton9"]
-								
-								if passiveBtn and defensiveBtn then
-									passiveBtn.state = false
-									passiveBtn.border:SetAlpha(0)
-									
-									defensiveBtn.state = true
-									defensiveBtn.border:SetAlpha(1)
-									
-									UpdateButtonTooltip(passiveBtn)
-									UpdateButtonTooltip(defensiveBtn)
-								end
-							end
-                        end
-
-                        UpdateButtonTooltip(followBtn)
-                        UpdateButtonTooltip(stayBtn)
-                    end
-
-                    -- Handle combat group
-                    if tContains(combatGroup, self.info) then
-                        for _, btn in ipairs(combatGroup) do
-                            local otherBtn = _G["BotControlBarButton"..(tIndexOf(buttons, btn))]
-                            if otherBtn then
-                                otherBtn.state = false
-                                otherBtn.border:SetAlpha(0)
-                                UpdateButtonTooltip(otherBtn)
-                            end
-                        end
-						self.state = true
-						self.border:SetAlpha(1)
-						if self.info.text == "Defensive" then
-							if isPassiveActive then
-								SendChatMessage("co -passive", channel)
-								SendChatMessage("nc -passive", channel)
-								isPassiveActive = false
-							else
-								SendChatMessage("nc -grind", channel)
-							end
-						else
-							SendChatMessage(self.info.command, channel)
-						end
-						UpdateButtonTooltip(self)
-						return
-                    end
-
-                    -- Handle toggle buttons
-                    if self.info.toggle then
-                        self.state = not self.state
-
-                        if self.info.command == "boost" then
-                            local cmd = self.state and "co +boost" or "co -boost"
-                            SendChatMessage(cmd, channel)
-                        elseif self.info.command == "food" then
-                            local cmd = self.state and "nc +food" or "nc -food"
-                            SendChatMessage(cmd, channel)
-                        elseif self.info.command == "healer dps" then
-                            local cmd = self.state and "co +healer dps" or "co -healer dps"
-                            SendChatMessage(cmd, channel)
-                        end
-
-                        -- Update visual state
-                        self.border:SetAlpha(self.state and 1 or 0)
-                        UpdateButtonTooltip(self)
                     else
-                        -- Regular command
-                        if channel then
-                            for cmd in string.gmatch(self.info.command, "[^\n]+") do
-                                SendChatMessage(cmd, channel)
-                            end
+                        if btnInfo.text == "Follow" then
+                            button.state = true
+                            button.border:SetAlpha(1)
                         end
                     end
-                end)
+                    if btnInfo.text == "Defensive" then
+                        button.state = true
+                        button.border:SetAlpha(1)
+                    end
+                else
+                    if btnInfo.toggle then
+                        button.state = btnInfo.default or false
+                        if frame.previousCombatToggleStates and frame.previousCombatToggleStates[btnInfo.text] ~= nil then
+                            button.state = frame.previousCombatToggleStates[btnInfo.text]
+                        end
+                        button.border:SetAlpha(button.state and 1 or 0)
+                    else
+                        button.state = false
+                    end
+
+                    if frame.previousCombatMovementActive and btnInfo.text == frame.previousCombatMovementActive and tContains(frame.movementGroup, btnInfo) then
+                        button.state = true
+                        button.border:SetAlpha(1)
+                    end
+
+                    if frame.previousCombatCombatActive and btnInfo.text == frame.previousCombatCombatActive and tContains(frame.combatGroup, btnInfo) then
+                        button.state = true
+                        button.border:SetAlpha(1)
+                    end
+                end
             end
 
-            -- Hide any extra buttons
             for i = #frame.originalButtons + 1, #utilityButtons do
                 local button = _G["BotControlBarButton"..i]
                 if button then button:Hide() end
             end
 
-            -- Adjust buttons for original count
             AdjustButtons(frame)
         end
     end
 
     modeButton:SetScript("OnClick", SwitchMode)
 
-    -- Modify the AdjustButtons function to handle the mode button
     function AdjustButtons(f)
         local currentWidth, currentHeight = f:GetSize()
         local scale = currentHeight / originalHeight
 
-        -- Calculate button size and spacing based on scale
         local buttonWidth = 36 * scale
         local buttonHeight = 36 * scale
         local spacing = 2 * scale
@@ -1266,26 +941,21 @@ local function CreateBotControlBar()
         local modeButtonSize = 18 * scale
         local rightMargin = (20 * scale)
 
-        -- Calculate available width for buttons (total width minus margins)
         local availableWidth = currentWidth - leftMargin - rightMargin
 
-        -- Calculate how many buttons can fit with current sizing
         local totalButtonsWidth = (#f.buttons * buttonWidth) + ((#f.buttons - 1) * spacing)
 
-        -- If buttons don't fit, reduce their size proportionally
         if totalButtonsWidth > availableWidth then
             local maxButtonWidth = (availableWidth - ((#f.buttons - 1) * spacing)) / #f.buttons
             buttonWidth = math.max(20 * scale, maxButtonWidth)
         end
 
-        -- Adjust all control buttons
         for i, btnInfo in ipairs(f.buttons) do
             local button = _G["BotControlBarButton"..i]
             if button then
                 button:SetSize(buttonWidth, buttonHeight)
                 button:SetPoint("LEFT", f, "LEFT", leftMargin + ((i-1) * (buttonWidth + spacing)), 0)
 
-                -- Update button border size (50% larger than button)
                 if button.border then
                     local borderWidth = buttonWidth * 1.60
                     local borderHeight = buttonHeight * 1.60
@@ -1295,23 +965,19 @@ local function CreateBotControlBar()
             end
         end
 
-        -- Adjust close button (fixed position at top-right)
         if f.closeButton then
             f.closeButton:SetSize(closeButtonSize, closeButtonSize)
             f.closeButton:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, 0)
 
-            -- Update close button textures to match new size
             f.closeButton:GetNormalTexture():SetSize(closeButtonSize, closeButtonSize)
             f.closeButton:GetPushedTexture():SetSize(closeButtonSize, closeButtonSize)
             f.closeButton:GetHighlightTexture():SetSize(closeButtonSize, closeButtonSize)
         end
 
-        -- Adjust mode button (below close button)
         if f.modeButton then
             f.modeButton:SetSize(modeButtonSize, modeButtonSize)
             f.modeButton:SetPoint("TOPRIGHT", f, "TOPRIGHT", (-3 * scale), (-25 * scale))
 
-            -- Update mode button border size (50% larger than button)
             if f.modeButton.border then
                 local borderWidth = modeButtonSize * 1.50
                 local borderHeight = modeButtonSize * 1.50
@@ -1323,7 +989,6 @@ local function CreateBotControlBar()
 
 	function ShowItemList()
 		if not itemListFrame then
-			-- Main frame
 			itemListFrame = CreateFrame("Frame", "ShadowItemListFrame", UIParent)
 			itemListFrame:SetSize(220, 300)
 			itemListFrame:SetPoint("CENTER")
@@ -1339,38 +1004,33 @@ local function CreateBotControlBar()
 			})
 			itemListFrame:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
 
-			-- Title text
 			local title = itemListFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 			title:SetPoint("TOP", 0, -12)
 			title:SetText("Choose object to use")
 
-			-- Scroll frame (manual implementation for WotLK)
 			local scrollFrame = CreateFrame("ScrollFrame", nil, itemListFrame)
 			scrollFrame:SetPoint("TOPLEFT", 10, -30)
-			scrollFrame:SetPoint("BOTTOMRIGHT", -10, 10) -- Adjusted to make room for scrollbar
+			scrollFrame:SetPoint("BOTTOMRIGHT", -10, 10)
 
 			local scrollChild = CreateFrame("Frame")
 			scrollChild:SetWidth(200)
 			scrollFrame:SetScrollChild(scrollChild)
 
-			-- Scroll bar - using proper template with all functionality
 			local scrollBar = CreateFrame("Slider", nil, scrollFrame, "UIPanelScrollBarTemplate")
 			scrollBar:SetPoint("TOPLEFT", scrollFrame, "TOPRIGHT", -12, -16)
 			scrollBar:SetPoint("BOTTOMLEFT", scrollFrame, "BOTTOMRIGHT", -12, 16)
 			scrollBar:SetWidth(16)
 			scrollBar:SetMinMaxValues(0, 0)
-			scrollBar:SetValueStep(20) -- One item step
+			scrollBar:SetValueStep(20)
 			scrollBar:SetValue(0)
-			scrollBar.scrollStep = 20 -- One item step
+			scrollBar.scrollStep = 20
 			scrollBar:SetScript("OnValueChanged", function(self, value)
 				scrollFrame:SetVerticalScroll(value)
 			end)
 
-			-- Proper scroll bar thumb texture (the draggable indicator)
 			local thumbTexture = scrollBar:GetThumbTexture()
 			thumbTexture:SetHeight(16)
 
-			-- Mouse wheel support
 			scrollFrame:EnableMouseWheel(true)
 			scrollFrame:SetScript("OnMouseWheel", function(self, delta)
 				local current = scrollBar:GetValue()
@@ -1378,42 +1038,36 @@ local function CreateBotControlBar()
 				scrollBar:SetValue(newValue)
 			end)
 
-			-- Store references
 			itemListFrame.scrollFrame = scrollFrame
 			itemListFrame.scrollChild = scrollChild
 			itemListFrame.scrollBar = scrollBar
 			itemListFrame.buttons = {}
 
-			-- Draggable window
 			itemListFrame:SetMovable(true)
 			itemListFrame:EnableMouse(true)
 			itemListFrame:RegisterForDrag("LeftButton")
 			itemListFrame:SetScript("OnDragStart", function(self) self:StartMoving() end)
 			itemListFrame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
 
-			-- Exit button
 			local exitButton = CreateFrame("Button", nil, itemListFrame, "UIPanelCloseButton")
 			exitButton:SetPoint("TOPRIGHT", 2, 0)
 			exitButton:SetScript("OnClick", function()
 				itemListFrame:Hide()
 			end)
 
-			-- Handle ESC key to close the frame
 			tinsert(UISpecialFrames, "ShadowItemListFrame")
 		end
 
-		-- Clear previous items
 		for _, btn in ipairs(itemListFrame.buttons) do
 			btn:Hide()
 		end
 		wipe(itemListFrame.buttons)
 
-		-- Convert itemCache to a sorted table
 		local itemList = {}
 		for link in pairs(itemCache) do
 			table.insert(itemList, link)
 		end
-		table.sort(itemList)  -- Sort the item list alphabetically
+		table.sort(itemList)
 
 		local yOffset = 0
 		for _, link in ipairs(itemList) do
@@ -1436,25 +1090,21 @@ local function CreateBotControlBar()
 			yOffset = yOffset + 20
 		end
 
-		-- Update scroll
 		itemListFrame.scrollChild:SetHeight(yOffset)
 		local scrollRange = max(0, yOffset - itemListFrame.scrollFrame:GetHeight())
 		itemListFrame.scrollBar:SetMinMaxValues(0, scrollRange)
 		itemListFrame.scrollBar:SetValue(0)
 
-		-- Disable scrollbar if the content fits within the current view
 		if scrollRange == 0 then
-			itemListFrame.scrollBar:Hide()  -- Hide the scroll bar
+			itemListFrame.scrollBar:Hide()
 		else
-			itemListFrame.scrollBar:Show()  -- Show the scroll bar if the content is larger than the view
+			itemListFrame.scrollBar:Show()
 		end
 
-		-- Clear cache
 		wipe(itemCache)
 		itemListFrame:Show()
 	end
 
-    -- Slash command to show/hide
     SLASH_BOTCONTROLBAR1 = "/botbar"
     SlashCmdList["BOTCONTROLBAR"] = function()
         if frame:IsShown() then
