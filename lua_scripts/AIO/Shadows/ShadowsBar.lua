@@ -423,18 +423,12 @@ local function CreateBotControlBar()
 				if self.info.command == "boost" then
 					if self.state then
 						SendChatMessage("co +boost", channel)
-						if UnitFactionGroup("player") == "Horde" then
-							SendChatMessage("ns -2825", channel)
-						else
-							SendChatMessage("ss -32182", channel)
-						end
+						SendChatMessage("ns -2825", channel)
+						SendChatMessage("ss -32182", channel)
 					else
 						SendChatMessage("co -boost", channel)
-						if UnitFactionGroup("player") == "Horde" then
-							SendChatMessage("ns +2825", channel)
-						else
-							SendChatMessage("ss +32182", channel)
-						end
+						SendChatMessage("ns +2825", channel)
+						SendChatMessage("ss +32182", channel)
 					end
                 elseif self.info.command == "food" then
                     local cmd = self.state and "nc +food" or "nc -food"
