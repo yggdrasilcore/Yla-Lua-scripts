@@ -2608,7 +2608,7 @@ end
 
 local function AHBot_Cmd(event, player, command)
 	if not player then return end
-	if command:find("ah") then
+	if command:sub(1, 2) == "ah" then
 		if player:GetGMRank() < 1 then
 			player:SendBroadcastMessage("You don't have access to this command.")
 			return false
