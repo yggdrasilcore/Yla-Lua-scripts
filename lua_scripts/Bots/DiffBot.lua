@@ -44,20 +44,20 @@ local function onServerUpdate(event, diff)
 end
 
 local function onStartup(event)
-	CharDBQueryAsync("SELECT value FROM worldstates WHERE entry = 99999", function(query)
-		if query and query:GetUInt32(0) then
-			CharDBExecute("DELETE FROM worldstates WHERE entry = 99999")
-			return
-		end
-		SendToDiscord("Unscheduled worldserver restart detected! This is most likely a crash or a compose recreate without a gracefully shutdown!")
-	end)
+    CharDBQueryAsync("SELECT value FROM acore_eluna.persistent_storage WHERE entry = 'dirty_shutdown'", function(query)
+        if query and query:GetString(0) == "1" then
+            CharDBExecute("DELETE FROM acore_eluna.persistent_storage WHERE entry = 'dirty_shutdown'")
+            return
+        end
+        SendToDiscord("Unscheduled worldserver restart detected! This is most likely a crash or a compose recreate without a gracefully shutdown!")
+    end)
 end
 
 local function onShutdown(event)
-    if event == 11 then -- Start shutdown
-        CharDBExecute("INSERT INTO worldstates (entry, value, comment) VALUES (99999, 1, 'Worldserver gracefully shut down')")
-    elseif event == 12 then -- Cancel shutdown
-        CharDBExecute("DELETE FROM worldstates WHERE entry = 99999")
+    if event == 11 then
+        CharDBExecute("INSERT INTO acore_eluna.persistent_storage (entry, value, comment) VALUES ('dirty_shutdown', '1', 'Worldserver not gracefully shut down')")
+    elseif event == 12 then
+        CharDBExecute("DELETE FROM acore_eluna.persistent_storage WHERE entry = 'dirty_shutdown'")
     end
 end
 
