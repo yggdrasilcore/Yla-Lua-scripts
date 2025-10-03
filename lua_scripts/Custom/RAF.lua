@@ -1314,8 +1314,8 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
 			else
 				player:SendBroadcastMessage("You have no referrals.")
 			end
-			return false
 		end)
+		return false
 	end
 
     if (cmd == "rafreferee" and param) or (cmd == "rafrefer" and param) or (cmd == "refer" and param) then
