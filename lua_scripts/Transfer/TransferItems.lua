@@ -238,7 +238,7 @@ local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 i
                 player:RegisterEvent(function(_,_,_,player)
                     player:SendAreaTriggerMessage("|cFFA64DFFWelcome to Yggdrasil, "..name.."!\nPlease check your mail to retrieve your items. As a part of your arrival, you will be able to customize your character from next logout.|t")
                     player:SendBroadcastMessage("|cFFA64DFFWelcome to Yggdrasil, "..name.."!\nPlease check your mail to retrieve your items. As a part of your arrival, you will be able to customize your character from next logout.|t")
-                end, 1000, 1)
+                end, 10000, 1)
             end
         end)
     end
