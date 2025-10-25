@@ -3022,25 +3022,21 @@ local function CreateBotControlBar()
                         end
                     end
                     
-                    local excludeFelguard = (pet.spellId == 30146 and not hasMasterDemo)
+                    local excludeFelguard = (pet.strategy == "felguard" and not hasMasterDemo)
                     if excludeFelguard then
                         print("This shadow cannot summon Felguard.")
                         return
                     end
                     
-                    local cmd = "ss -" .. pet.spellId
-                    for j, other in ipairs(pets) do
-                        if i ~= j then
-                            if other.spellId == 30146 and not hasMasterDemo then
-                            else
-                                cmd = cmd .. ",+" .. other.spellId
-                            end
+                    local cmd = "co +" .. pet.strategy
+                    for _, other in ipairs(pet.others) do
+                        if other == "felguard" and not hasMasterDemo then
+                        else
+                            cmd = cmd .. ",-" .. other
                         end
                     end
                     SendThrottledChatMessage(cmd, "WHISPER", nil, targetName)
-                    local summonCmd = "cast Summon " .. pet.name
-                    SendThrottledChatMessage(summonCmd, "WHISPER", nil, targetName)
-                    print("Shadow " , targetName , " has enabled " , pet.name)
+                    print("Shadow " .. targetName .. " has enabled " .. pet.name)
                 end)
             end)
 
