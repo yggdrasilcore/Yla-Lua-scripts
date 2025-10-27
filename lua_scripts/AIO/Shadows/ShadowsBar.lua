@@ -36,7 +36,7 @@ local function ShowShadowsSettingsPanel()
 		headerText:SetText("Shadows and Shadow Bar Settings")
 		
 		local checkBox = CreateFrame("CheckButton", "ShadowsBarCheckbox", frame, "InterfaceOptionsCheckButtonTemplate")
-		checkBox:SetPoint("TOPLEFT", 16, -40)  -- Adjusted position to make room for header
+		checkBox:SetPoint("TOPLEFT", 16, -40)
 		checkBox:SetText("Enable Shadows Bar")
 		if ShadowsBarStatus == "ENABLED" or ShadowsBarToggleStatus == "OPEN" then
 			checkBox:SetChecked(true)
@@ -83,6 +83,8 @@ local function ShowShadowsSettingsPanel()
 		resetShadowsButton:SetText("Reset Shadows Settings")
 		resetShadowsButton:SetScript("OnClick", function()
             local channel = GetNumRaidMembers() > 0 and "RAID" or GetNumPartyMembers() > 0 and "PARTY" or nil
+            SendChatMessage("co +chat", channel)
+            SendChatMessage("nc +chat", channel)
             SendChatMessage("reset botAI", channel)
 		end)
 
@@ -94,11 +96,13 @@ local function ShowShadowsSettingsPanel()
 		local checkBox = _G["ShadowsBarCheckbox"]
 		local keyBindButton = _G["ShadowsKeybindButton"]
 		local resetButton = _G["ShadowsResetButton"]
+		local resetShadowsButton = _G["ResetBotAIButton"]
 		local header	= _G["headerText"]
 		
 		if checkBox and not checkBox:IsVisible() then checkBox:Show() end
 		if keyBindButton and not keyBindButton:IsVisible()  then keyBindButton:Show() end
 		if resetButton and not resetButton:IsVisible()  then resetButton:Show() end
+		if resetShadowsButton and not resetShadowsButton:IsVisible() then resetShadowsButton:Show() end
 		if header and not header:IsVisible()  then header:Show() end
 	end
 end
@@ -142,6 +146,7 @@ InterfaceOptionsFrameTab2:HookScript("OnClick", function(self)
     local checkBox = _G["ShadowsBarCheckbox"]
     local keyBindButton = _G["ShadowsKeybindButton"]
     local resetButton = _G["ShadowsResetButton"]
+    local resetShadowsButton = _G["ResetBotAIButton"]
     local header = _G["headerText"]
     
     -- Ensure shadowButton is accessible and unlock it
@@ -153,6 +158,7 @@ InterfaceOptionsFrameTab2:HookScript("OnClick", function(self)
         checkBox:Hide()
         keyBindButton:Hide()
         resetButton:Hide()
+        resetShadowsButton:Hide()
         header:Hide()
     end
 end)
@@ -165,6 +171,7 @@ for i = 1, 30 do
                 local checkBox = _G["ShadowsBarCheckbox"]
                 local keyBindButton = _G["ShadowsKeybindButton"]
                 local resetButton = _G["ShadowsResetButton"]
+                local resetShadowsButton = _G["ResetBotAIButton"]
                 local header = _G["headerText"]
                 
                 -- Ensure shadowButton is accessible, unlock and hide it
@@ -176,6 +183,7 @@ for i = 1, 30 do
                     checkBox:Hide()
                     keyBindButton:Hide()
                     resetButton:Hide()
+                    resetShadowsButton:Hide()
                     header:Hide()
                 end
             end
@@ -183,7 +191,6 @@ for i = 1, 30 do
         end)
     end
 end
-
 
 BOT_BAR_SETTINGS = BOT_BAR_SETTINGS or {
     posX = 0,
@@ -791,19 +798,26 @@ local function CreateBotControlBar()
             }
         },
         {
-            text = "Repair",
-            icon = "Trade_BlackSmithing",
-            command = "repair"
-        },
-        {
-            text = "Talk to NPC",
+            text = "NPC Interaction",
             icon = "achievement_character_human_male",
-            command = "talk"
+            dropdown = {
+                {text = "Talk to NPC", command = "talk", requiresTarget = true},
+                {text = "Repair", command = "repair", requiresTarget = true, requiresRepairVendor = true},
+                {text = "Train", command = "trainer learn", requiresTarget = true, requiresTrainer = true}
+            }
         },
         {
-            text = "Train",
-            icon = "Spell_Holy_ReviveChampion",
-            command = "trainer learn"
+            text = "Summon",
+            icon = "Spell_Shadow_Teleport",
+            command = ".shadowsmenu",
+            guild = true,
+            clickGossip = true
+        },
+        {
+            text = "Mute Shadows",
+            icon = "Spell_Holy_Silence",
+            toggle = true,
+            command = "co -chat\nnc -chat"
         },
         {
             text = "Quest",
@@ -871,25 +885,28 @@ local function CreateBotControlBar()
                     self:SetScript("OnUpdate", nil)
                 end
             end)
-        elseif button.info.text == "Train" then
-            if not UnitExists("target") then
-                UIErrorsFrame:AddMessage("You must have a trainer targeted.", 1.0, 1.0, 0.0, 1.0, 6)
-                return
+        elseif button.info.text == "Summon" then
+            SendChatMessage(".shadowsmenu", "GUILD")
+            local delayFrame = CreateFrame("Frame")
+            delayFrame.timeElapsed = 0
+            delayFrame:SetScript("OnUpdate", function(self, elapsed)
+                self.timeElapsed = self.timeElapsed + elapsed
+                if self.timeElapsed >= 0.5 then
+                    self:SetScript("OnUpdate", nil)
+                    if GossipTitleButton3 then
+                        GossipTitleButton3:Click()
+                    end
+                end
+            end)
+        elseif button.info.text == "Mute/Unmute Shadows" then
+            button.state = not button.state
+            button.border:SetAlpha(button.state and 1 or 0)
+            local channel = GetNumRaidMembers() > 0 and "RAID" or GetNumPartyMembers() > 0 and "PARTY" or nil
+            local chatCmd = button.state and "co -chat\nnc -chat" or "co +chat\nnc +chat"
+            for cmd in string.gmatch(chatCmd, "[^\n]+") do
+                SendThrottledChatMessage(cmd, channel)
             end
-        elseif button.info.text == "Talk to NPC" then
-            if not UnitExists("target") then
-                UIErrorsFrame:AddMessage("You must have a target.", 1.0, 1.0, 0.0, 1.0, 6)
-                return
-            end
-        elseif button.info.text == "Repair" then
-            if not UnitExists("target") then
-                UIErrorsFrame:AddMessage("You must be trading with a repair vendor.", 1.0, 1.0, 0.0, 1.0, 6)
-                return
-            end
-            if not CanMerchantRepair() then
-                UIErrorsFrame:AddMessage("Cannot repair at this vendor.", 1.0, 1.0, 0.0, 1.0, 6)
-                return
-            end
+            UpdateButtonTooltip(button)
         elseif button.info.dropdown then
             local dropdown = CreateFrame("Frame", "TempDropdown", UIParent, "UIDropDownMenuTemplate")
             dropdown:SetPoint("TOP", button, "BOTTOM", 0, -5)
@@ -905,6 +922,16 @@ local function CreateBotControlBar()
                         local skip = false
                         if item.text == "Release spirit" then
                             isStayActive = true
+                        elseif item.requiresTarget and not UnitExists("target") then
+                            local errorMsg = "You must have a target."
+                            if item.requiresTrainer then
+                                errorMsg = "You must have a trainer targeted."
+                            end
+                            UIErrorsFrame:AddMessage(errorMsg, 1.0, 1.0, 0.0, 1.0, 6)
+                            skip = true
+                        elseif item.requiresRepairVendor and not CanMerchantRepair() then
+                            UIErrorsFrame:AddMessage("Cannot repair at this vendor.", 1.0, 1.0, 0.0, 1.0, 6)
+                            skip = true
                         elseif item.text == "Accept quests" then
                             if not UnitExists("target") then
                                 UIErrorsFrame:AddMessage("You must have a quest giver targeted.", 1.0, 1.0, 0.0, 1.0, 6)
@@ -1041,26 +1068,7 @@ local function CreateBotControlBar()
                 end
 
                 button:SetScript("OnClick", function(self)
-                    if isFleeActive then
-                        local channel = GetNumRaidMembers() > 0 and "RAID" or GetNumPartyMembers() > 0 and "PARTY" or nil
-                        SendThrottledChatMessage("reset botAI", channel)
-						
-                        local fleeTimer = CreateFrame("Frame")
-                        fleeTimer.timeElapsed = 0
-                        fleeTimer:SetScript("OnUpdate", function(self, elapsed)
-                            self.timeElapsed = self.timeElapsed + elapsed
-                            if self.timeElapsed >= 1 then
-                                HandleUtilityButtonAction(self.buttonRef)
-                                isFleeActive = false
-                                isPassiveActive = false
-                                resetCombatButtons = true
-                                self:SetScript("OnUpdate", nil)
-                            end
-                        end)
-                        fleeTimer.buttonRef = self
-                    else
-                        HandleUtilityButtonAction(self)
-                    end
+                    HandleUtilityButtonAction(self)
                 end)
             end
 
