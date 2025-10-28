@@ -17,43 +17,54 @@ end
 local function TargetPriorityTrash(event, player, _)
 	if not (player:GetMapId() == 668) then return end
 	
-	local group = player:GetGroup() if not group then return end
-
-	local prioTarget
-	
-	local priest = player:GetNearestCreature(100, 38175)
-	if priest and priest:IsTargetableForAttack() and not prioTarget then prioTarget = priest end 
-	
-	local mage = player:GetNearestCreature(100, 38172)
-	if mage and mage:IsTargetableForAttack() and not prioTarget then prioTarget = mage end
-	
-	local rogue = player:GetNearestCreature(100, 38177)
-	if rogue and rogue:IsTargetableForAttack() and not prioTarget then prioTarget = rogue end
-	
-	local hunter = player:GetNearestCreature(100, 38173)
-	if hunter and hunter:IsTargetableForAttack() and not prioTarget then prioTarget = hunter end
-	
-	local knight = player:GetNearestCreature(100, 38176)
-	if knight and knight:IsTargetableForAttack() and not prioTarget then prioTarget = knight end
-	
-	local general = player:GetNearestCreature(50, 36723)
-	if general then
-		if general:IsInCombat() then
-			local reflection = general:GetNearestCreature(50, 37068)
-			if reflection then
-				prioTarget = reflection
+	player:RegisterEvent(function(e,d,r, player)
+		local group = player:GetGroup() 
+		if not group then return end
+		
+		local prioTarget
+		
+		local priorityIds = {38175, 38172, 38177, 38173, 38176}
+		
+		for i, creatureId in ipairs(priorityIds) do
+			if not prioTarget then
+				local creatures = player:GetCreaturesInRange(300, creatureId)
+				
+				for _, creature in ipairs(creatures) do
+					if creature:IsTargetableForAttack() then
+						prioTarget = creature
+						break
+					end
+				end
 			end
 		end
-	else
-		local reflection = player:GetNearestCreature(50, 37068)
-		if reflection then
-			prioTarget = reflection
-		end
-	end
 		
-	if prioTarget then
-		group:SetTargetIcon(7, prioTarget:GetGUID(), player:GetGUID())
-	end
+		local general = player:GetNearestCreature(300, 36723)
+		if general then
+			if general:IsInCombat() then
+				local reflections = general:GetCreaturesInRange(300, 37068)
+				for _, reflection in ipairs(reflections) do
+					if reflection:IsTargetableForAttack() then
+						prioTarget = reflection
+						break
+					end
+				end
+			end
+		else
+			local reflections = player:GetCreaturesInRange(300, 37068)
+			for _, reflection in ipairs(reflections) do
+				if reflection:IsTargetableForAttack() then
+					prioTarget = reflection
+					break
+				end
+			end
+		end
+			
+		if prioTarget then
+			if prioTarget:GetData("SkullSet") then return end
+			prioTarget:SetData("SkullSet", true)
+			group:SetTargetIcon(7, prioTarget:GetGUID(), player:GetGUID())
+		end
+	end, 500, 1)
 end
 
 RegisterPlayerEvent(7, TargetPriorityTrash) 	-- On kill creature
@@ -112,7 +123,7 @@ function OnSindyCombat(event, player, enemy)
     if enemy and enemy:GetEntry() == 36853 then
 		if not enemy:GetData("SindyEventOn") then
 			enemy:SetData("SindyEventOn", true)
-			enemy:RegisterEvent(CombatCheck, 1000, 0)
+			enemy:RegisterEvent(CombatCheck, 500, 0)
 		end
     end
 end
@@ -122,7 +133,7 @@ RegisterPlayerEvent(33, OnSindyCombat)
 -- END SINDY TOMB TWEAK
 
 -- START RAID ICONS SHADOW HANDLING
-
+ 
 local function RemoveRaidIconsOnDeath(event, obj1, player)
 	if event == 8 and not isPlayerBot[player:GetName()] then return end -- Ensures we don't process player death twice as this is in event 7 (packet) anyway
 	
