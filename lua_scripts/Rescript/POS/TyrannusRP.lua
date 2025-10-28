@@ -7,7 +7,7 @@ local function POSCombatEnd(event, player)
             if Tyrannus and Rimefang and not Rimefang:HasAura(46598) then
                 Tyrannus:CastSpell(Rimefang, 46598, true)
             end
-		end, 5000, 1)
+		end, 2500, 1)
     end
 end
 
@@ -46,7 +46,7 @@ local function POSCombat(event, player, enemy)
 				end
 			end
 			
-		end, 7000, 1)
+		end, 3500, 1)
 	end
 end
 

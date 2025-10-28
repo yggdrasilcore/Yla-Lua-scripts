@@ -1,6 +1,6 @@
 function OnSpawn(event, creature)
     creature:SetReactState(0)
-    creature:RegisterEvent(CheckForEnemies, 1000, 0)
+    creature:RegisterEvent(CheckForEnemies, 500, 0)
 end
 
 function CheckForEnemies(eventId, delay, repeats, creature)

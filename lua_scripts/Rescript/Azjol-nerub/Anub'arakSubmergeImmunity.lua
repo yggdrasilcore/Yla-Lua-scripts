@@ -2,7 +2,7 @@ local ANUB_ID = 29120
 local CHECK_INTERVAL = 200 -- 200 ms
 local RANGE = 50 -- 50 yards
 local AURA_ID = 29230
-local AURA_DURATION = 45 -- 30 seconds
+local AURA_DURATION = 22.5
 
 local playerTimers = {}
 local creatureHPThresholds = {75, 50, 25}

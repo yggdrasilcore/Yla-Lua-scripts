@@ -421,7 +421,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
                             local name = player:GetName()
                             bot:RegisterEvent(function(eventId, delay, repeats, bot) 
                                 bot:CastSpell(bot, BOT_TELE_VISUAL, true)
-                            end, 500, 1)
+                            end, 250, 1)
                         end
                     end
                 end

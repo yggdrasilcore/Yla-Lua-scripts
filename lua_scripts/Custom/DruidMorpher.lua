@@ -1,11 +1,11 @@
 --VARIABLES
 local ITEM_ID = 17890 -- On-use trigger item
-local MorphApplicationDelay = 15-- Delay in MS, if too fast it will throw off the shapeshift
+local MorphApplicationDelay = 10 -- Delay in MS, if too fast it will throw off the shapeshift
 local MorphRepeats = 1 -- In case too fast, try again after a short delay (optional, 1 = only one attempt)
 local DBWDelay = 25 -- Delay in DBW proc failsafe
 local DBWRepeats = 30100/DBWDelay -- Loops reapplication of morph over the duration of DBW, ie. just over 30 sec. I had this set to 1 previously but it caused issues with certain cat abilities
 local InvisibleWeapon = 58976 -- Low-impact disarm spell to correct weapon visibility on cat morphs, applied every 3 sec
-local InvisibleWeaponTimer = 800 -- Duration of disarm
+local InvisibleWeaponTimer = 400 -- Duration of disarm
 local MAX_REPETITIONS = 1 -- Number of times cat form disarm is applied per spell cast (20 covers about 10 seconds of hidden weapon). (Possibly temporarily set to 1 to reduce loan?)
 local MorphReqRare = 100 -- Skill required to claim morph forms of elites
 local MorphReqElite = 50 -- Skill required to claim morph forms of elites
@@ -1391,7 +1391,7 @@ local function OnMapChange(event, player)
 	or player:HasAura(9634)	or player:HasAura(5487)
 	or player:HasAura(783) or player:HasAura(33891)
 	or player:HasAura(24858) or player:HasAura(1066)) then
-		player:RegisterEvent(Morpher, 100, 1)
+		player:RegisterEvent(Morpher, 50, 1)
 	end
 end
 

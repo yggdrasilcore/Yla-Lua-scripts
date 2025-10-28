@@ -19,7 +19,7 @@ local function OnUpdateArea(event, player, oldArea, newArea)
 			CarrionWastesEvent[player:GetName()] = nil
 		end
 		
-        CarrionWastesEvent[player:GetName()] = player:RegisterEvent(CheckPlayerBuff, CHECK_INTERVAL * 1000, 60) -- This triggers event 2, check for tank buff. Time-limited to 15 min (tank buff duration)
+        CarrionWastesEvent[player:GetName()] = player:RegisterEvent(CheckPlayerBuff, CHECK_INTERVAL * 500, 60) -- This triggers event 2, check for tank buff. Time-limited to 15 min (tank buff duration)
     elseif oldArea == AREA_CARRION_WASTES then
         player:RemoveEventById(CarrionWastesEvent[player:GetName()]) -- If player leaves area, stop event
 		CarrionWastesEvent[player:GetName()] = nil

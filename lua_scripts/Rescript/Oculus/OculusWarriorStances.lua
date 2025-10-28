@@ -21,7 +21,7 @@ local function OnUseDragonEssence(event, player, item, target)
             if player and not (player:HasAura(2457) or player:HasAura(71) or player:HasAura(2458)) then
                 player:AddAura(cachedAura, player)  -- Reapply the cached aura
             end
-        end, 5000, 1)
+        end, 2500, 1)
     end
 end
 

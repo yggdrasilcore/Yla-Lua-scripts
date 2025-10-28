@@ -592,7 +592,7 @@ local function OnPetAddedToWorld(event, player, pet)
 				pet:SetDisplayId(morph30[guid])
 				pet:RemoveEventById(eventId)
 			end
-		end, 20, 4)
+		end, 10, 4)
 	end
 end
 

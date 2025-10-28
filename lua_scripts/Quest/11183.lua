@@ -31,7 +31,7 @@ local function origZelSpawn(event, creature)
         end, 0, 1)
         zelfrax:RegisterEvent(function(eventId, delay, repeats, creature)
             creature:SendUnitYell("All who venture here belong to me, including you!", 0)
-        end, 5000, 1)
+        end, 2500, 1)
         zelfrax:RegisterEvent(function(eventId, delay, repeats, creature)
             creature:MoveStop()
             creature:MoveIdle()
@@ -39,18 +39,18 @@ local function origZelSpawn(event, creature)
             creature:SetHover(false)
             creature:MoveTo(1, DEST_X, DEST_Y, DEST_Z)
             creature:SetHomePosition(DEST_X, DEST_Y, DEST_Z, SPAWN_O)
-        end, 6000, 1)
+        end, 3000, 1)
         
         zelfrax:RegisterEvent(function(eventId, delay, repeats, creature)
             creature:RemoveAura(AURA_ID)
-        end, 6150, 1)
+        end, 3150, 1)
 
         zelfrax:RegisterEvent(function(eventId, delay, repeats, creature)
             local aggroTarget = creature:GetVictim()
             if aggroTarget and aggroTarget:IsPlayer() then
                 creature:MoveChase(aggroTarget)
             end
-        end, 6150, 10)
+        end, 3150, 10)
     end
 end
 

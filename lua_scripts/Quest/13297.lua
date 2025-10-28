@@ -24,7 +24,7 @@ local function OnSpawn(event, creature)
 				creature:NearTeleport(6766 + math.random(-2, 2), 1584 + math.random(-2, 2), 389, 6.2)
 			end
 			creature:RemoveEvents()
-		end, 3000, 1)
+		end, 1500, 1)
     end
 end
 

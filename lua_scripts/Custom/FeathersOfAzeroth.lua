@@ -556,7 +556,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
             player:CastSpell(player, intid, false)
             player:RegisterEvent(function(eventId, delay, repeats, player)
 				CheckFlyableArea(event, player, player:GetZoneId(), player:GetAreaId())
-            end, 3000, 1)
+            end, 1500, 1)
             player:GossipComplete()
         else
             player:SendBroadcastMessage("You can't use this item while casting!") 
@@ -569,7 +569,7 @@ local function checkMount(player)
 		if player:HasAura(id) then
 			if not player:GetData("MountEvent") then
 				player:SetData("MountEvent", true)
-				player:RegisterEvent(CheckZ, 200, 0)
+				player:RegisterEvent(CheckZ, 100, 0)
 				print("[Feathers of Azeroth]: Starting zone-based Z check")
 			end
 		end
@@ -579,7 +579,7 @@ end
 local function CheckFlyableArea(event, player, zoneId, areaId)
     if ZonesToCheckZ(player) then
 		if not event then checkMount(player) return end -- On script load, there's no event call, fire immediately
-		local d = 100 -- Else, default to a delay
+		local d = 50 -- Else, default to a delay
 		if player:IsCasting() then d = 4000	end -- Set delay to at least 4 sec if player is casting during call (mounting in progress)
         player:RegisterEvent(function(eventId, delay, repeats, player)
 			checkMount(player)
@@ -640,7 +640,7 @@ local function RemoveFlyingMount(eventId, delay, repeats, player)
 end
 
 local function OnMapChange(event, player)
-	player:RegisterEvent(RemoveFlyingMount, 500, 1)
+	player:RegisterEvent(RemoveFlyingMount, 250, 1)
 end
 
 local function LoadStandardMount(event, player)

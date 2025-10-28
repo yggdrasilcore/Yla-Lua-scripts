@@ -597,7 +597,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
                 player:EmoteState(66)
                 player:RegisterEvent(function(eventId, delay, repeats, player) -- Hack to fix non-updating item display IDs
                     player:EmoteState(0)
-                end, 1, 10)
+                end, 10, 1)
                 break
             end
         end
@@ -1493,7 +1493,7 @@ local function OnRepair(event, packet, player)
                     if player then
                         player:SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * ITEM_SLOT_MULTIPLIER), fentry)
                     end
-                end, 100, 1)
+                end, 50, 1)
             end
         end
     end

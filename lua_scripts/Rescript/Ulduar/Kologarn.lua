@@ -9,7 +9,7 @@ local function killKologarn(event, player, kologarn)
 			bridge:SetDisplayId(kologarn:GetDisplayId())
 			print("making bridge invis")
 			bridge:AddAura(74490, bridge)
-		end, 10000)
+		end, 5000)
 	end
 end
 

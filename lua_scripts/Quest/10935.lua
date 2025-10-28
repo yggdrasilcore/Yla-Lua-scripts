@@ -37,7 +37,7 @@ local function Spawn22507(event, creature)
 			else
 				--print("22507 creature not found!")
 			end
-		end, 5000, 0)
+		end, 2500, 0)
 		
 		Jules = creature:GetNearestCreature(20, 22432)
         
@@ -77,9 +77,9 @@ local function Spawn22507(event, creature)
 						creature:SetRespawnDelay(30)
 						creature:DespawnOrUnsummon()
                         --print("Despawning Jules!")
-					end, 40000, 1)
+					end, 20000, 1)
 				end
-			end, 147*1000, 1)
+			end, 74*1000, 1)
 		end
 		
 	elseif count22507 == 1 then
@@ -114,7 +114,7 @@ local function Spawn22507(event, creature)
             else
                 RemoveEventById(eventId)
             end
-        end, 10000, 15)   
+        end, 5000, 15)   
     end
 end
 

@@ -9,7 +9,7 @@ local function OnSpellCast(event, caster, spell, skipCheck)
 	caster:SetFacingToObject(target)
 	caster:RegisterEvent(function(e, d, p, caster)
 		caster:SetReactState(2)
-	end, 5100 * 2) -- 2 as AzerothCore's RegisterEvent functionality halves the timer
+	end, 5100)
 	
 end
 

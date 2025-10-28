@@ -51,8 +51,8 @@ local function OnSpawn(event, creature)
                     end, 0, 1)
                 end
             end
-        end, 9000, 0)
-    end, 40000, 1)
+        end, 4500, 0)
+    end, 20000, 1)
 end
 
 RegisterCreatureEvent(37547, 5, OnSpawn)

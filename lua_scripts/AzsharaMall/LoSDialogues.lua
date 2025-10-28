@@ -67,7 +67,7 @@ local function PapaDialogue(event, papa, twiggy)
                 twiggy:SendUnitEmote("Papa Twig waves at Papa Twig.") 
                 twiggy:PerformEmote(3)
             end
-        end, 2000)
+        end, 1000)
         
     end
 end
@@ -93,7 +93,7 @@ local function MamaDialogue(event, mama, twiggy)
                 twiggy:SendUnitEmote("Twiggy waves at Mama Twig.") 
                 twiggy:PerformEmote(3)
             end
-        end, 3000)
+        end, 1500)
     end
 end
 
@@ -208,12 +208,12 @@ local function FlightTrainerDialogue(event, creature, who)
                     wep:SendUnitEmote(wepname.." violently strikes the air.")
                     wep:PerformEmote(35)
                 end
-            end, 16000)
+            end, 8000)
             creature:RegisterEvent(function(eventid, delay, repeats, creature)
                 creature:SendUnitSay("Haha, "..wepname.."! Always so violent!", 0)
                 creature:SendUnitEmote(creature:GetName().." laughs.")
                 creature:PerformEmote(11)
-            end, 27000)
+            end, 13500)
         end
     end
 end
@@ -304,8 +304,8 @@ local function Herb(event, creature, who)
                     c:SendUnitSay("And you're the meanest coworker I've ever had...", 0)
                     c:SendUnitEmote(c:GetName().." cries.")
                     c:PerformEmote(18)
-                end, 20000)
-            end, 10000)
+                end, 10000)
+            end, 5000)
         end
     end
 end
@@ -472,32 +472,32 @@ local function MorphScript(creature)
         apprentice:RegisterEvent(function(eventId, delay, repeats, apprentice)
             apprentice:CastSpell(apprentice, 61335, true)
             apprentice:SetDisplayId(selectedMorph.id)
-        end, 5000 * 2, 1)
+        end, 5000, 1)
 
         -- Apprentice response after 8 seconds
         apprentice:RegisterEvent(function(eventId, delay, repeats, apprentice)
             local response = APPRENTICE_RESPONSES[math.random(#APPRENTICE_RESPONSES)]
             apprentice:SendUnitSay(response, 0)
             apprentice:PerformEmote(1)
-        end, 8000 * 2, 1)
+        end, 8000, 1)
 
         -- Master's feedback after 10 seconds
         creature:RegisterEvent(function(eventId, delay, repeats, creature)
             local feedback = MASTER_FEEDBACK[math.random(#MASTER_FEEDBACK)]
             creature:SendUnitSay(feedback, 0)
             creature:PerformEmote(1)
-        end, 10000 * 2, 1)
+        end, 10000, 1)
         
         apprentice:RegisterEvent(function(eventId, delay, repeats, apprentice)
             apprentice:DeMorph()
-        end, 15000 * 2, 1)
+        end, 15000, 1)
         
         apprentice:RegisterEvent(function(eventId, delay, repeats, apprentice)
             apprentice:SendUnitSay("Ready for next task, master!", 0)
             apprentice:PerformEmote(2)
-        end, 20000 * 2, 1)
+        end, 20000, 1)
         
-    end, {50000, 200000}, 0)
+    end, {25000, 100000}, 0)
 end
 
 local function ObserverScript(creature)
@@ -515,7 +515,7 @@ local function ObserverScript(creature)
             creature:SendUnitSay("Woohoo!", 0)
         end
         creature:PerformEmote(4)
-    end, {60000, 190000}, 0)
+    end, {30000, 190000/2}, 0)
 end
 
 local function ApproachBear(event, creature, who)

@@ -1,6 +1,6 @@
 local WISP = 24465
-local MORPH_DELAY_MS = 1550
-local DEMORPH_DELAY_MS = 3*60*1000
+local MORPH_DELAY_MS = 1550/2
+local DEMORPH_DELAY_MS = 3*60*1000/2
 
 local function OnWispForm(event, player, item, target)
     if not player:GetNearestGameObject(5, 188416) then -- Player is too farm from Brazier, don't do anything

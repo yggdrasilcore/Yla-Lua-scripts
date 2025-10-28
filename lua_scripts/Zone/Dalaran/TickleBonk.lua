@@ -66,7 +66,7 @@ local function NormalBonkTime(eventId, delay, repeats)
                         npc:SetSpeed(1, 1.6)
                     end
                 end
-            end, 10000, 1)
+            end, 10000/2, 1)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
                 chosenPlayer = GetPlayerByName(targetplayer)
@@ -75,7 +75,7 @@ local function NormalBonkTime(eventId, delay, repeats)
                     npc:SendUnitEmote("Minigob Manabonk tickles ".. chosenPlayer:GetName()..".")
                     npc:SendUnitSay("Hee hee! Gotcha!", 0)
                 end
-            end, 12000, 1)
+            end, 12000/2, 1)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
                 chosenPlayer = GetPlayerByName(targetplayer)
@@ -83,7 +83,7 @@ local function NormalBonkTime(eventId, delay, repeats)
                     npc:EmoteState(11) -- laugh
                     npc:SetFaction(1194)
                 end
-            end, 12500, 1)
+            end, 12500/2, 1)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
                 chosenPlayer = GetPlayerByName(targetplayer)
@@ -93,7 +93,7 @@ local function NormalBonkTime(eventId, delay, repeats)
                     npc:SetSpeed(1, 1.6)
                     npc:MoveTo(1, npc:GetX()-5+math.random(3,7), npc:GetY()-5+math.random(3,7), npc:GetZ(), true)
                 end
-            end, 15000, 1)
+            end, 15000/2, 1)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
                 targetplayer = nil
@@ -101,13 +101,13 @@ local function NormalBonkTime(eventId, delay, repeats)
                     npc:CastSpell(npc, SPELL_ID_2)
                     npc:DespawnOrUnsummon(1000)
                 end
-            end, 21000, 1)
+            end, 21000/2, 1)
         end
     end
 
     -- Schedule next normal event
     local nextEventDelay = math.random(EVENT_INTERVAL_MIN, EVENT_INTERVAL_MAX)
-    CreateLuaEvent(NormalBonkTime, nextEventDelay, 1)
+    CreateLuaEvent(NormalBonkTime, nextEventDelay/2, 1)
 end
 
 -- Function to handle Halloween event logic
@@ -116,7 +116,7 @@ local function BonkTime(eventId, delay, repeats)
     -- Only proceed if we're in the Halloween period
     if not IsHalloweenPeriod() then
         -- Not halloween? Schedule normal bonk instead
-        CreateLuaEvent(NormalBonkTime, 1000, 1)  -- Start normal bonk after 1 second
+        CreateLuaEvent(NormalBonkTime, 1000/2, 1)  -- Start normal bonk after 1 second
         return
     end
 
@@ -153,7 +153,7 @@ local function BonkTime(eventId, delay, repeats)
                         npc:SetSpeed(1, 1.6)
                     end
                 end
-            end, 10000, 1)
+            end, 10000/2, 1)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
                 chosenPlayer = GetPlayerByName(targetplayer)
@@ -161,7 +161,7 @@ local function BonkTime(eventId, delay, repeats)
                     npc:SetRooted(true)
                     npc:SendUnitSay("Trick or treat!", 0)
                 end
-            end, 12000, 1)
+            end, 12000/2, 1)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
                 chosenPlayer = GetPlayerByName(targetplayer)
@@ -169,7 +169,7 @@ local function BonkTime(eventId, delay, repeats)
                     npc:EmoteState(11)
                     npc:SetFaction(679)
                 end
-            end, 12500, 1)
+            end, 12500/2, 1)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
                 chosenPlayer = GetPlayerByName(targetplayer)
@@ -179,7 +179,7 @@ local function BonkTime(eventId, delay, repeats)
                     npc:SetSpeed(1, 1.6)
                     npc:MoveTo(1, npc:GetX()-5+math.random(3,7), npc:GetY()-5+math.random(3,7), npc:GetZ(), true)
                 end
-            end, 15000, 1)
+            end, 15000/2, 1)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
                 targetplayer = nil
@@ -187,13 +187,13 @@ local function BonkTime(eventId, delay, repeats)
                     npc:CastSpell(npc, SPELL_ID_2)
                     npc:DespawnOrUnsummon(1000)
                 end
-            end, 21000, 1)
+            end, 21000/2, 1)
         end
     end
     
     -- Schedule next Halloween event
     local nextEventDelay = math.random(EVENT_INTERVAL_MIN, EVENT_INTERVAL_MAX)
-    CreateLuaEvent(BonkTime, nextEventDelay, 1)
+    CreateLuaEvent(BonkTime, nextEventDelay/2, 1)
 end
 
 local function OnEnterCombat(event, creature, target)
@@ -232,6 +232,6 @@ end
 
 -- Initial event setup
 local initialDelay = math.random(EVENT_INTERVAL_MIN, EVENT_INTERVAL_MAX)
-CreateLuaEvent(BonkTime, initialDelay, 1)
+CreateLuaEvent(BonkTime, initialDelay/2, 1)
 RegisterCreatureEvent(SPAWN_NPC_ID, 1, OnEnterCombat)
 RegisterCreatureEvent(SPAWN_NPC_ID, 2, OnLeaveCombat)

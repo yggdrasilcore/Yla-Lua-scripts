@@ -13,7 +13,7 @@ local function RaiseAllyCast(event, player, spell, skipCheck)
 		player:RegisterEvent(function(eventId, delay, repeats, player)
 			player:ResetSpellCooldown(61999)
 			player:RemoveEventById(eventId)
-		end, 1000, 1)
+		end, 500, 1)
 	end
 end
 
