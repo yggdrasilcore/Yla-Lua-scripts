@@ -1,7 +1,7 @@
 -- HOR TACTICS
 
-function OnEnterHOR(event, player)
-	if not player:GetMapId() == 668 then return end
+function DoNotTargetLK(event, player)
+	if not (player:GetMapId() == 668) then return end
 	
 	local LK = player:GetNearestCreature(4000, 36954)
 	
@@ -14,8 +14,51 @@ function OnEnterHOR(event, player)
 	end
 end
 
-RegisterPlayerEvent(28, OnEnterHOR)
+local function TargetPriorityTrash(event, player, _)
+	if not (player:GetMapId() == 668) then return end
+	
+	local group = player:GetGroup() if not group then return end
 
+	local prioTarget
+	
+	local priest = player:GetNearestCreature(100, 38175)
+	if priest and priest:IsTargetableForAttack() and not prioTarget then prioTarget = priest end 
+	
+	local mage = player:GetNearestCreature(100, 38172)
+	if mage and mage:IsTargetableForAttack() and not prioTarget then prioTarget = mage end
+	
+	local rogue = player:GetNearestCreature(100, 38177)
+	if rogue and rogue:IsTargetableForAttack() and not prioTarget then prioTarget = rogue end
+	
+	local hunter = player:GetNearestCreature(100, 38173)
+	if hunter and hunter:IsTargetableForAttack() and not prioTarget then prioTarget = hunter end
+	
+	local knight = player:GetNearestCreature(100, 38176)
+	if knight and knight:IsTargetableForAttack() and not prioTarget then prioTarget = knight end
+	
+	local general = player:GetNearestCreature(50, 36723)
+	if general then
+		if general:IsInCombat() then
+			local reflection = general:GetNearestCreature(50, 37068)
+			if reflection then
+				prioTarget = reflection
+			end
+		end
+	else
+		local reflection = player:GetNearestCreature(50, 37068)
+		if reflection then
+			prioTarget = reflection
+		end
+	end
+		
+	if prioTarget then
+		group:SetTargetIcon(7, prioTarget:GetGUID(), player:GetGUID())
+	end
+end
+
+RegisterPlayerEvent(7, TargetPriorityTrash) 	-- On kill creature
+RegisterPlayerEvent(28, DoNotTargetLK) 			-- On change map
+RegisterPlayerEvent(33, TargetPriorityTrash) 	-- On enter combat
 
 --- END HOR TACTICS
 
