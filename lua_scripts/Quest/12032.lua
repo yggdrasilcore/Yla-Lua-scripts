@@ -21,12 +21,12 @@ local function CompletionEvent(player)
 			oachanoa:RegisterEvent(function(eventId, delay, repeats, oachanoa) --First whisper
 				player = GetPlayerByName(oachanoaeventplayer)
 				oachanoa:SendUnitWhisper("Simply put, you must tell the tuskarr that they cannot run. If they do so, their spirits will be destroyed by the evil rising within Northrend.", 0, player)
-			end, 5000, 1)
+			end, 10000, 1)
 			
 			oachanoa:RegisterEvent(function(eventId, delay, repeats, oachanoa) --Second whisper
 				player = GetPlayerByName(oachanoaeventplayer)
 				oachanoa:SendUnitWhisper("Tell the mystic that his people are to stand and fight alongside the Horde and Alliance against the forces of Malygos and the Lich King.", 0, player)
-			end, 10500, 1)
+			end, 20500, 1)
 			
 			oachanoa:RegisterEvent(function(eventId, delay, repeats, oachanoa) --Last whisper
 				player = GetPlayerByName(oachanoaeventplayer)
@@ -37,14 +37,14 @@ local function CompletionEvent(player)
 					repeatcount = nil
 					player:AddAura(41273, player)
 				end
-			end, 16000, 1)
+			end, 31000, 1)
 			
 			oachanoa:RegisterEvent(function(eventId, delay, repeats, oachanoa)
 				oachanoa:NearTeleport(oachanoa:GetX(), oachanoa:GetY(), oachanoa:GetZ(), -5)
 				oachanoa:PerformEmote(374)
 				oachanoa:DespawnOrUnsummon(2300)
 				oachanoa:RemoveEvents()
-			end, 20000, 1)
+			end, 39000, 1)
 		end
     end
 end
@@ -66,7 +66,7 @@ local function PearloftheDepthsUse(event, go, player)
 
 		go:RegisterEvent(function(eventId, delay, repeats, go)
 			oachanoa = go:SpawnCreature(26648, 2272, 1665, 20, 0.23, 1, 90000)
-		end, 10000, 1)
+		end, 20000, 1)
 		
 		go:RegisterEvent(function(eventId, delay, repeats, go)
 			oachanoa = go:GetNearestCreature(400, 26648)
@@ -76,7 +76,7 @@ local function PearloftheDepthsUse(event, go, player)
 				oachanoa:MoveTo(99999, 2380.123, 1690.68, 40, false)
 				print("[Oacha'noa ELUNA]: Moving Oacha'noa to event area...")
 			end
-		end, 10020, 1)
+		end, 20020, 1)
 		
 		go:RegisterEvent(function(eventId, delay, repeats, go)
 			oachanoa = go:GetNearestCreature(200, 26648)
@@ -85,7 +85,7 @@ local function PearloftheDepthsUse(event, go, player)
 				oachanoa:PlayDistanceSound(11558)
 				oachanoa:SendUnitYell("Little "..oachanoaeventplayer..", why do you call me forth? Are you working with the trolls of this land? Have you come to kill me and take my power as your own?", 0)
 			end
-		end, 14000, 1)
+		end, 27000, 1)
 		
 		go:RegisterEvent(function(eventId, delay, repeats, go)
 			oachanoa = go:GetNearestCreature(200, 26648)
@@ -94,7 +94,7 @@ local function PearloftheDepthsUse(event, go, player)
 				oachanoa:PlayDistanceSound(11558)
 				oachanoa:SendUnitYell("I sense uncertainty in you, and I do not trust it whether you are with them, or not. If you wish my augury for the Kalu'ak, you will have to prove yourself first.", 0)
 			end
-		end, 18000, 1)
+		end, 36000, 1)
 		
 		go:RegisterEvent(function(eventId, delay, repeats, go)
 			oachanoa = go:GetNearestCreature(200, 26648)
@@ -121,7 +121,7 @@ local function PearloftheDepthsUse(event, go, player)
 					else 
 						repeatcount = repeatcount + 1
 					end
-				end, 1000, 15)
+				end, 2000, 15)
 				
 				player:RegisterEvent(function(eventId, delay, repeats, player)
 					if player:GetZ() > 53 then
@@ -133,7 +133,7 @@ local function PearloftheDepthsUse(event, go, player)
 						end
 					end
 					player:RemoveEventById(eventId)
-				end, 5000, 1)
+				end, 10000, 1)
 				
 				player:RegisterEvent(function(eventId, delay, repeats, player)
 					oachanoa = player:GetNearestCreature(200, 26648)
@@ -150,7 +150,7 @@ local function PearloftheDepthsUse(event, go, player)
 							oachanoa:NearTeleport(oachanoa:GetX(), oachanoa:GetY(), oachanoa:GetZ(), -5)
 							oachanoa:PerformEmote(374)
 							oachanoa:DespawnOrUnsummon(2300)
-						end, 5000, 1)
+						end, 10000, 1)
 						
 						oachanoaeventplayer = nil
 						oachanoaevent = nil
@@ -158,17 +158,17 @@ local function PearloftheDepthsUse(event, go, player)
 					end
 					
 					player:RemoveEventById(eventId)
-				end, 16100, 1)
+				end, 32100, 1)
 				
 			end
-		end, 24000, 1)
+		end, 47000, 1)
 			
 		go:RegisterEvent(function(eventId, delay, repeats, go) -- Resets cache, object and events for next player
 			oachanoaevent = nil
 			oachanoaeventplayer = nil
 			repeatcount = nil
 			go:RemoveEvents()
-		end, 62000, 1)
+		end, 124000, 1)
 	end
 	return false
 end

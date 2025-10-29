@@ -18,7 +18,7 @@ local function HandleQuestAccept(event, packet, player)
             if not Demolitionist then
                 player:CastSpell(player, 35679, false)
             end
-        end, 1500)
+        end, 3000)
     end
     
     if questId == 12671 then
@@ -29,7 +29,7 @@ local function HandleQuestAccept(event, packet, player)
                     FlyingMachine:AddAura(52255, FlyingMachine)
                 end
             end
-        end, 80000)
+        end, 155000)
     end
     
     if questId == 13081 then
@@ -57,20 +57,20 @@ local function HandleQuestAccept(event, packet, player)
         creature:RegisterEvent(function(eventId, delay, repeats, creature)
             creature:CastSpell(creature, 57676, false)
             creature:SendUnitSay("Hail. I could not help but overhear your conversation. Please allow me to lend some assistance.", 0)
-        end, 4000)
+        end, 8000)
 
         -- Schedule return to home position after 10 more seconds
         creature:RegisterEvent(function(eventId, delay, repeats, creature)
             creature:MoveTo(0, 6409, 422, 511,348, 0.62)
-        end, 13000)
+        end, 25000)
         
         creature:RegisterEvent(function(eventId, delay, repeats, creature)
             creature:MoveTo(0, 6410.75, 424.23, 511.28, 0.62)
-        end, 17000)
+        end, 33000)
         
         creature:RegisterEvent(function(eventId, delay, repeats, creature)
             eventActive3081 = false
-        end, 27000)
+        end, 45000)
     end
 end
 

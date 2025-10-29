@@ -23,7 +23,7 @@ local function AreaChange(event, player, oldArea, newArea)
     if newArea == 4859 then
         if not CorpseBoundsEvent[player:GetGUIDLow()] then
             CorpseBoundsEvent[player:GetGUIDLow()] = true
-            player:RegisterEvent(CheckLowZPlayers, 2500, 0)
+            player:RegisterEvent(CheckLowZPlayers, 5000, 0)
             print("Player entered the Frozen Throne! Starting periodical Z level checks...")
         end
     end

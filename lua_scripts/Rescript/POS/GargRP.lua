@@ -52,7 +52,7 @@ local function KillNearest(eventId, delay, repeats, creature)
 		nearestCreature5:DespawnOrUnsummon()
 	end
     creature:MoveTo(0, creature:GetX(), creature:GetY(), 580)
-    creature:RegisterEvent(FlyUpAndDespawn, 4500, 1)
+    creature:RegisterEvent(FlyUpAndDespawn, 9000, 1)
 end
 
 local function CheckPlayersAndSpawnNPCs()
@@ -82,7 +82,7 @@ local function CheckPlayersAndSpawnNPCs()
 					npc:SetReactState(0)
 					npc:SetHover(true)
 					npc:AddAura(29230, npc)
-					npc:RegisterEvent(KillNearest, 4500, 1)
+					npc:RegisterEvent(KillNearest, 9000, 1)
 					
 					local nearestCreature1 = npc:GetNearestCreature(100, 36765, 0, 0)
 					local nearestCreature2 = npc:GetNearestCreature(100, 36766, 0, 0)

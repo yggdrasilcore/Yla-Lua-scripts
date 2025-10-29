@@ -53,7 +53,7 @@ local function OnValkyrSpawn(event, player, pet)
             else
                 RemoveEventById(eventId)
             end
-        end, 500, 30)
+        end, 1000, 30)
     end
 end
 

@@ -4,7 +4,7 @@ end
 
 local function OnSpawn(event, creature)
     creature:DespawnOrUnsummon(45000)
-    creature:RegisterEvent(CastSpellPeriodically, 500, 45)
+    creature:RegisterEvent(CastSpellPeriodically, 1000, 45)
     if not creature:IsRooted() then
         creature:SetRooted()
     end

@@ -41,7 +41,7 @@ local function OnHome(event, creature)
        creature:PerformEmote(3)
        creature:MoveTo(0, 1157, 98, 371)
        TwiggyFlightActive = true
-    end, 30 * 1000 * 10)
+    end, 60 * 1000 * 10)
 end
 
 local function WorldDialogue(event, creature, who)
@@ -67,7 +67,7 @@ local function SandboxWarden(event, creature)
         creature:RegisterEvent(function(eventid, delay, repeats, creature)
             creature:SendUnitSay("I shall return to my post now.", 0)
             creature:MoveHome()
-        end, 10000)
+        end, 20000)
     end
 end
 
@@ -89,7 +89,7 @@ local function SandboxWardenLOS(event, creature, var)
                 creature:SetSpeed(1, 0.35)
                 creature:RegisterEvent(function(eventid, delay, repeats, creature)
                     creature:MoveTo(0, 881, 14.26, 346.87)
-                end, 5000)
+                end, 10000)
             end
         end
     end

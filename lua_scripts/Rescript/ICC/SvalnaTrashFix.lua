@@ -64,7 +64,7 @@ local function OnEnterCombat(event, player, enemy)
         if svalna then 
             if not svalna:GetData("SvalnaCheck") then
                 svalna:SetData("SvalnaCheck", true)
-                svalna:RegisterEvent(CheckSvalnaFlag, 1000, 0)  -- 2000ms = 2 seconds, 0 = repeat indefinitely
+                svalna:RegisterEvent(CheckSvalnaFlag, 2000, 0)  -- 2000ms = 2 seconds, 0 = repeat indefinitely
                 print("Starting Svalna check")
             end
         end
@@ -77,7 +77,7 @@ local function OnEnterCombat(event, player, enemy)
                 -- Register check event if not already registered
                 if not warlord:GetData("WarlordCheck") then
                     warlord:SetData("WarlordCheck", true)
-                    warlord:RegisterEvent(CheckWarlordDeath, 1000, 0)  -- 2000ms = 2 seconds, 0 = repeat indefinitely
+                    warlord:RegisterEvent(CheckWarlordDeath, 2000, 0)  -- 2000ms = 2 seconds, 0 = repeat indefinitely
                 end
             end
         end

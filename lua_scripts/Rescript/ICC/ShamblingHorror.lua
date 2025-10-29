@@ -25,7 +25,7 @@ local function OnNPCSpawn(event, creature)
     creature:SetFlag(UNIT_FIELD_FLAGS, 0x00000002)
 	print("[NPC]: Shambling Horror - Animation fix, immunity aura added!")
 	creature:RegisterEvent(Crawl, 20, 1)
-	creature:RegisterEvent(RemoveImmunity, 2100, 1)
+	creature:RegisterEvent(RemoveImmunity, 4200, 1)
 end
 
 local function OnReset(event, creature)

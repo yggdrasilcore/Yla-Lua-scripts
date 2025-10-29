@@ -1,7 +1,7 @@
 local BOREAN_ANIMAL_BLOOD = 46221
 local SPELL_TO_CAST = 63471
 local CHECK_DURATION = 180
-local CHECK_FREQUENCY = 500 -- Check once per second
+local CHECK_FREQUENCY = 1000 -- Check once per second
 
 local playersWithEvents = {}
 
@@ -37,7 +37,7 @@ local function OnKillCreature(event, killer, killed)
         if not playersWithEvents[playerGuid] then
             local eventId = killer:RegisterEvent(function(eventId, delay, repeats)
                 CheckPlayerInWater(eventId, delay, repeats, playerGuid)
-            end, CHECK_FREQUENCY, CHECK_DURATION)
+            end, 1000, CHECK_DURATION)
             playersWithEvents[playerGuid] = eventId
             --print("Animal killed in Borean Tundra registered!")
         end

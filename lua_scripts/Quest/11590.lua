@@ -56,10 +56,10 @@ local function ArcaneBinder(event, player, item, target)
                     -- Stop the periodic check
                     RemoveEventById(eventId())
                 end
-            end, CHECK_INTERVAL * 500, 0)
+            end, CHECK_INTERVAL * 1000, 0)
         end
         player:RemoveEventById(eventId)
-    end, CONVERSION_DELAY * 500, 1)
+    end, CONVERSION_DELAY * 1000, 1)
 end
 
 local function OnCreatureSpawn(event, creature)

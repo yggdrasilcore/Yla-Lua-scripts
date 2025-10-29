@@ -21,7 +21,7 @@ local function resetChase(eventId, delay, repeats, creature)
     creature:MoveClear(true)
     creature:RegisterEvent(function(eventId, delay, repeats, creature)
         creature:MoveHome()
-    end, 1000 * 1.5)
+    end, 1000 * 3)
 end
 
 local function startChase(eventId, delay, repeats, creature)
@@ -61,8 +61,8 @@ local function startChase(eventId, delay, repeats, creature)
         end
         
         creature:MoveFollow(target, 0.1, 0)
-        creature:RegisterEvent(resetChase, 5000 * 1.5)
-        target:RegisterEvent(startChase, 6000 * 1.5)
+        creature:RegisterEvent(resetChase, 5000 * 3)
+        target:RegisterEvent(startChase, 6000 * 3)
     end
 end
 
@@ -99,12 +99,12 @@ local function OnSchoolSpawn(event, creature, _)
     local entry = creature:GetEntry()
     
     if entry == 231980 then
-        creature:RegisterEvent(startChase, 500, 1)
+        creature:RegisterEvent(startChase, 1000, 1)
     elseif entry == 110003 then
         if event == 27 then
             local chaser = creature:GetNearestCreature(100, 231980)
             if chaser then
-                chaser:RegisterEvent(startChase, 500, 1)
+                chaser:RegisterEvent(startChase, 1000, 1)
                 creature:SetData("chaseActive", true)
             end
         end
@@ -113,7 +113,7 @@ local function OnSchoolSpawn(event, creature, _)
         local random_entry = math.random(231980, 231989)
         local random_target = creature:GetNearestCreature(100, random_entry)
         creature:RegisterEvent(teacherChase, 1, 1)
-        creature:RegisterEvent(teacherChase, 15000, 0)
+        creature:RegisterEvent(teacherChase, 30000, 0)
     end
     if event == 5 then
         local baseX, baseY, baseZ, baseOrientation = 789, 165, 272, 4.87

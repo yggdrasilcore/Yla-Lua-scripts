@@ -102,7 +102,7 @@ local function EnterCombat(event, player, enemy)
             player:SetData("isInBossFight", true)    
             if not TimedCBCheckTable[player:GetGUIDLow()] then
                 TimedCBCheckTable[player:GetGUIDLow()] = true
-                player:RegisterEvent(TimedCBCheck, 15000, 0)
+                player:RegisterEvent(TimedCBCheck, 30000, 0)
             end
         end
     end

@@ -9,7 +9,7 @@ local function UseRockFalcon(event, player, item, target)
         player:RemoveItem(34102, 1) --Removes fjord grub
         player:RegisterEvent(function(eventId, delay, repeats, player)
             player:AddItem(34120, 1) -- Fjord Hawk quest item
-        end, 1500, 1) -- Takes about 3 sec for bird to return
+        end, 3000, 1) -- Takes about 3 sec for bird to return
         player:SetData("lastHawkTime", os.time() + 10)
     end
 end
