@@ -6,6 +6,9 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
     local muradin = brann:GetNearestCreature(100, 29593)
     local magni = brann:GetNearestCreature(100, 30411)
 	
+    muradin:RemoveEvents()
+    magni:RemoveEvents()
+        
     brann:RegisterEvent(function(eventId, delay, repeats, creature)
         creature:SendUnitSay("By all the gods... it can't be... Muradin?", 0)
         creature:PerformEmote(5)
@@ -68,12 +71,16 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
     currentDelay = currentDelay + 1000
 	
 	magni:RegisterEvent(function(eventId, delay, repeats, creature)
+		if creature:GetData("dialogueProcessed") == 1 then return end
+		creature:SetData("dialogueProcessed", 1)
 		creature:SendUnitYell("Look, Lagnus, I consider you a capable man, but my patience is wearing thin. I know that Muradin is here, can you point me to him or not?", 0)
 		creature:SetRooted(false)
 	end, currentDelay, 1)
     currentDelay = currentDelay + 1000
 
 	magni:RegisterEvent(function(eventId, delay, repeats, creature)
+		if creature:GetData("dialogueProcessed2") == 1 then return end
+		creature:SetData("dialogueProcessed2", 1)
 		creature:SetSpeed(1, 1.6)
 		creature:MoveTo(1, 6696.5, -298.78, 989.33)
     end, currentDelay, 1)
@@ -87,6 +94,8 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
     currentDelay = currentDelay + 11000
 
     magni:RegisterEvent(function(eventId, delay, repeats, creature)
+		if creature:GetData("dialogueProcessed3") == 1 then return end
+		creature:SetData("dialogueProcessed3", 1)
         creature:SendUnitYell("Brother! There you are! I can barely believe my eyes... you're alive!", 0)
         creature:NearTeleport(creature:GetX(), creature:GetY(), creature:GetZ(), 3.44)
 		
@@ -105,6 +114,8 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
     currentDelay = currentDelay + 6000*0.61
 
     magni:RegisterEvent(function(eventId, delay, repeats, creature)
+		if creature:GetData("dialogueProcessed4") == 1 then return end
+		creature:SetData("dialogueProcessed4", 1)
         creature:SendUnitSay("It's so good to see you again, Muradin. And what's this I heard about you being a King in your own right now? The Bronzebeards were always destined to greatness.", 0)
     end, currentDelay, 1)
     currentDelay = currentDelay + 7000
@@ -115,6 +126,8 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
     currentDelay = currentDelay + 6000
 
     magni:RegisterEvent(function(eventId, delay, repeats, creature)
+		if creature:GetData("dialogueProcessed5") == 1 then return end
+		creature:SetData("dialogueProcessed5", 1)
         creature:SendUnitSay("So it seems! And you haven't lost any muscle yourself. Do you remember anything of what happened, Muradin? Fate as turned ill in your absence.", 0)
     end, currentDelay, 1)
     currentDelay = currentDelay + 7000
@@ -133,6 +146,8 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
     currentDelay = currentDelay + 3000
 
     magni:RegisterEvent(function(eventId, delay, repeats, creature)
+		if creature:GetData("dialogueProcessed6") == 1 then return end
+		creature:SetData("dialogueProcessed6", 1)
         creature:SendUnitSay("He's not the boy of your memories anymore, Muradin. He's become something else entirely.", 0)
     end, currentDelay, 1)
     currentDelay = currentDelay + 7000*0.61
@@ -153,6 +168,8 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
     currentDelay = currentDelay + 7000
 
     magni:RegisterEvent(function(eventId, delay, repeats, creature)
+		if creature:GetData("dialogueProcessed7") == 1 then return end
+		creature:SetData("dialogueProcessed7", 1)
         creature:SendUnitSay("Are you sure Muradin? I just got you back after years of thinking you were dead. I do not want to lose you again.", 0)
     end, currentDelay, 1)
     currentDelay = currentDelay + 9000*0.61
@@ -163,6 +180,8 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
     currentDelay = currentDelay + 5000*0.61
 
     magni:RegisterEvent(function(eventId, delay, repeats, creature)
+		if creature:GetData("dialogueProcessed8") == 1 then return end
+		creature:SetData("dialogueProcessed8", 1)
         creature:SendUnitSay("So be it then. I have to return to my people, brothers. Come back to me in one piece.", 0)
     end, currentDelay, 1)
     currentDelay = currentDelay + 7000*0.61
@@ -196,6 +215,8 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
     currentDelay = currentDelay + 100*0.61
 	
     magni:RegisterEvent(function(eventId, delay, repeats, creature)
+		if creature:GetData("dialogueProcessed9") == 1 then return end
+		creature:SetData("dialogueProcessed9", 1)
 		creature:SetSpeed(1, 0.4)
         creature:MoveTo(1,6733,-285,990)
     end, currentDelay, 1)
@@ -227,7 +248,10 @@ local function SpawnAndMoveBrann(eventId, delay, repeats, player)
     local muradin = player:SpawnCreature(29593, 6652, -310, 989.38, 0, 3, 200000)
     muradin:SetSpeed(1, 0.5)
     muradin:MoveTo(1, 6691, -300.9, 989.38)
-	
+    
+    local oldMagni = brann:GetNearestCreature(100, 30411)
+	if oldMagni then oldMagni:DespawnOrUnsummon() end
+    
     local magni = player:SpawnCreature(30411, 6710.89, -278.15, 956.42, 0, 3, 200000)
 	magni:SetRooted(true)
 	
@@ -239,23 +263,26 @@ local function SpawnAndMoveBrann(eventId, delay, repeats, player)
 	player:SetPhaseMask(4)
 end
 
--- Event when a player enters a new zone/area
 local function OnPlayerUpdateZone(event, player, newZone, newArea)
-    if newArea == 4428 and not eventActive then -- Check if the player is in area 4428
-        print("Player is in area 4428")
-        if player:HasQuest(12973) then -- Check if the player has quest ID 12973
-            print("Player has quest ID 12973")
-            local Brann = player:GetNearestCreature(20, 30107) -- Get Brann within 20 yards
-            local FlyingMachine = player:GetNearestCreature(20, 30134) -- Get FlyingMachine within 20 yards
-            if Brann and FlyingMachine then -- If both Brann and FlyingMachine are present
-                print("Both Brann and FlyingMachine are present")
-                -- Schedule the spawn of Brann after 9 seconds
+    if newArea == 4428 and not eventActive then
+        if player:HasQuest(12973) then
+            local Brann = player:GetNearestCreature(20, 30107)
+            local FlyingMachine = player:GetNearestCreature(20, 30134)
+            if Brann and FlyingMachine then
                 player:RegisterEvent(SpawnAndMoveBrann, 6600, 1)
-                print("Scheduled Brann to spawn in 6 seconds")
 				eventActive = true
             end
         end
     end
 end
 
-RegisterPlayerEvent(27, OnPlayerUpdateZone) -- Register the function to be triggered on zone/area update
+RegisterPlayerEvent(27, OnPlayerUpdateZone)
+
+local function OnCommand(event, player, command)
+    if player:HasQuest(12973) and command == "startbrann" then
+        player:RegisterEvent(SpawnAndMoveBrann, 1, 1)
+        player:SendBroadcastMessage("Brann event started manually")
+        return false
+    end
+end
+RegisterPlayerEvent(42, OnCommand)
