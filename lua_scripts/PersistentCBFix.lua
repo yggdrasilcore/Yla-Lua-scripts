@@ -7,7 +7,7 @@ local function OnKillCreature(event, killer, killed)
         return
     end
     
-    print("Player "..killer:GetName().." just killed "..killed:GetName().."!")
+    print("Player "..killer:GetName().." just killed "..killed:GetName()..", checking if we need to clear combat!")
     
     -- Check all nearby creatures in combat within 500 yards
     local nearbyCreatures = killer:GetCreaturesInRange(500)
@@ -18,14 +18,11 @@ local function OnKillCreature(event, killer, killed)
         for _, creature in pairs(nearbyCreatures) do
             if creature:IsInCombat() and (creature:IsAlive() or creature:GetHealth() > 0) then
                 local threatList = creature:GetThreatList()
-                print(string.format("Debug: Checking %s threat list", creature:GetName()))
                 
                 if threatList then
                     for _, threatInfo in pairs(threatList) do
                         local threatStr = tostring(threatInfo)
                         if threatStr:find("Player:") then
-                            print(string.format("Found player threat on %s: %s", 
-                                creature:GetName(), threatStr))
                             playerThreatFound = true
                             break
                         end
@@ -43,7 +40,7 @@ local function OnKillCreature(event, killer, killed)
     if not playerThreatFound then
         -- Clear killer's combat
         if killer:IsInCombat() then
-            print("Killer "..killer:GetName().." has no valid threat entries! Clearing combat...")
+            print("Killer "..killer:GetName().." has no valid threat entries! Clearing combat of player, group and pets...")
             killer:SetData("cbstoptime", os.time())
             killer:RunCommand("combatstop")
         end
@@ -52,7 +49,6 @@ local function OnKillCreature(event, killer, killed)
         if nearbyPlayers then
             for _, player in pairs(nearbyPlayers) do
                 if player:IsInCombat() then
-                    print("Player "..player:GetName().." has no valid threat entries! Clearing combat...")
                     player:SetData("cbstoptime", os.time())
                     player:RunCommand("combatstop")
                 end
@@ -63,7 +59,6 @@ local function OnKillCreature(event, killer, killed)
         if nearbyCreatures then
             for _, creature in pairs(nearbyCreatures) do
                 if creature:IsInCombat() and creature:GetOwner() and creature:GetOwner():ToPlayer() then
-                    print("Clearing combat for player "..creature:GetOwner():GetName().."'s creature: "..creature:GetName())
                     creature:ClearInCombat()
                 end
             end

@@ -82,7 +82,6 @@ end
 
 local function AccountWideCurrency(event, player)
     if isPlayerBot[player:GetName()] then 
-        print("[AccountCurrency] AccountWideCurrency: Skipping bot player " .. player:GetName())
         return 
     end
     
