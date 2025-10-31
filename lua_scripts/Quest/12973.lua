@@ -279,10 +279,15 @@ end
 RegisterPlayerEvent(27, OnPlayerUpdateZone)
 
 local function OnCommand(event, player, command)
-    if player:HasQuest(12973) and command == "startbrann" then
-        player:RegisterEvent(SpawnAndMoveBrann, 1, 1)
-        player:SendBroadcastMessage("Brann event started manually")
-        return false
+    if player then
+        if command == "startbrann" then
+            if player:HasQuest(12973) then
+                player:RegisterEvent(SpawnAndMoveBrann, 1, 1)
+                player:SendBroadcastMessage("Brann event started manually")
+                return false
+            end
+        end
     end
 end
+
 RegisterPlayerEvent(42, OnCommand)
