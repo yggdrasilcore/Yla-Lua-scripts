@@ -57,7 +57,7 @@ end
 
 local function CheckPlayersAndSpawnNPCs()
     for playerName, _ in pairs(PLAYERS_ON_MAP) do
-        player = GetPlayerByName(playerName)
+        local player = GetPlayerByName(playerName)
         if player then
             local instance = player:GetInstanceId()
             local x, y, z = player:GetLocation()

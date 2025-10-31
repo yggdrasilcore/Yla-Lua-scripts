@@ -24,7 +24,7 @@ local function SendAnniversary(event, player, command)
     CharDBQueryAsync("SELECT guid FROM characters WHERE name = '"..playername.."'", 
     function(query)
         print("query done")
-        player = GetPlayerByName(sender)
+        local player = GetPlayerByName(sender)
         if not query then
             player:SendBroadcastMessage("Error: Player not found in database.")
             return
@@ -57,7 +57,7 @@ local function OnPacketReceive(event, packet, player)
 
     CharDBQueryAsync("SELECT itemEntry FROM item_instance WHERE guid = "..itemLowGuid, function(result)
         if result then
-            player = GetPlayerByName(name)
+            local player = GetPlayerByName(name)
             local itemEntry = result:GetUInt32(0)
             print("Real Item ID: " .. itemEntry)
             

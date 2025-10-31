@@ -402,7 +402,7 @@ local function ClaimBonuses(player)
                         ClaimStatus4[GUIDLow] = ", claim now!" 
                     end
                 end
-                player = GetPlayerByName(name)
+                local player = GetPlayerByName(name)
                 player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tFirst referral reward:\n \nStatus: "..CompletionStatus0[GUIDLow]..""..ClaimStatus0[GUIDLow].."\n \nContains: 5 Community Tokens\n \n ", 1, 40)
                 player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_01:32:32:-22:0|tReward box 1:\n \nRequirement: ".. RewardTier1 .." referrals.\nStatus: "..CompletionStatus1[GUIDLow]..""..ClaimStatus1[GUIDLow].."\n \nContains:\n- Rotface and Festergut's Acidic Blood\n- Unobtainable Vanilla mounts\n- Fishing Chair\n- 60 Emblems of Frost\n \n ", 1, 41)
                 player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_02:32:32:-22:0|tReward box 2:\n \nRequirement: ".. RewardTier2 .." referrals.\nStatus: "..CompletionStatus2[GUIDLow]..""..ClaimStatus2[GUIDLow].."\n \nContains:\n- X-53 Touring Rocket\n- Hard-to-get mounts\n- ToC trinkets and cloaks\n- 95 Emblems of Frost\n \n ", 1, 42)

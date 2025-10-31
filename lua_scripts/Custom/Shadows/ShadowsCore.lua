@@ -672,7 +672,6 @@ local function ShadowsLogin(event, player) -- Lazy persistent storage solution. 
 		
         if not group:IsLeader(player:GetGUID()) then return end
 		
-		
         if player:IsInSameGroupWith(master) or player:IsInSameRaidWith(master) then
             group:SetLeader(master:GetGUID())
         end

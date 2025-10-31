@@ -30,7 +30,7 @@ local function OnValkyrSpawn(event, player, pet)
         
         pet:RegisterEvent(function(eventId, delay, repeats, pet)
             if pet then
-                player = GetPlayerByName(name)
+                local player = GetPlayerByName(name)
                 local attackTime = ValkyrAttack[name] or 0
                 local followTime = ValkyrFollow[name] or 0
 
