@@ -25,10 +25,6 @@ local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 i
                         type = type
                     })
                     
-                    if type < 50 and count > 0 then -- Only get item info from inventory/currency/equipment items, to not fail on titles etc.
-                        print("Found item " .. GetItemLink(itemid)) -- Log items we're processing to ensure we can reconcile SQLs and items sent to player
-                    end
-                    
                 until not result:NextRow()
         
                 local player = GetPlayerByGUID(guid)
@@ -83,40 +79,40 @@ local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 i
 
                     if i == 1 then 
                         p1, c1 = mailItem.itemid, mailItem.count
-                        print("p1: " .. p1 .. ", c1: " .. c1)
+                        --print("p1: " .. p1 .. ", c1: " .. c1)
                     elseif i == 2 then 
                         p2, c2 = mailItem.itemid, mailItem.count
-                        print("p2: " .. p2 .. ", c2: " .. c2)
+                        --print("p2: " .. p2 .. ", c2: " .. c2)
                     elseif i == 3 then 
                         p3, c3 = mailItem.itemid, mailItem.count
-                        print("p3: " .. p3 .. ", c3: " .. c3)
+                        --print("p3: " .. p3 .. ", c3: " .. c3)
                     elseif i == 4 then 
                         p4, c4 = mailItem.itemid, mailItem.count
-                        print("p4: " .. p4 .. ", c4: " .. c4)
+                        --print("p4: " .. p4 .. ", c4: " .. c4)
                     elseif i == 5 then 
                         p5, c5 = mailItem.itemid, mailItem.count
-                        print("p5: " .. p5 .. ", c5: " .. c5)
+                        --print("p5: " .. p5 .. ", c5: " .. c5)
                     elseif i == 6 then 
                         p6, c6 = mailItem.itemid, mailItem.count
-                        print("p6: " .. p6 .. ", c6: " .. c6)
+                        --print("p6: " .. p6 .. ", c6: " .. c6)
                     elseif i == 7 then 
                         p7, c7 = mailItem.itemid, mailItem.count
-                        print("p7: " .. p7 .. ", c7: " .. c7)
+                        --print("p7: " .. p7 .. ", c7: " .. c7)
                     elseif i == 8 then 
                         p8, c8 = mailItem.itemid, mailItem.count
-                        print("p8: " .. p8 .. ", c8: " .. c8)
+                        --print("p8: " .. p8 .. ", c8: " .. c8)
                     elseif i == 9 then 
                         p9, c9 = mailItem.itemid, mailItem.count
-                        print("p9: " .. p9 .. ", c9: " .. c9)
+                        --print("p9: " .. p9 .. ", c9: " .. c9)
                     elseif i == 10 then 
                         p10, c10 = mailItem.itemid, mailItem.count
-                        print("p10: " .. p10 .. ", c10: " .. c10)
+                        --print("p10: " .. p10 .. ", c10: " .. c10)
                     elseif i == 11 then 
                         p11, c11 = mailItem.itemid, mailItem.count
-                        print("p11: " .. p11 .. ", c11: " .. c11)
+                        --print("p11: " .. p11 .. ", c11: " .. c11)
                     elseif i == 12 then 
                         p12, c12 = mailItem.itemid, mailItem.count
-                        print("p12: " .. p12 .. ", c12: " .. c12)
+                        --print("p12: " .. p12 .. ", c12: " .. c12)
                     end
 
                     table.remove(mailItems, 1)
