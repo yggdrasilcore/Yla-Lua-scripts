@@ -24,7 +24,7 @@ local timeMessage = 0
 local cacheChoice = {}
 local intIdChoice = {}
 local tickleCount = {}
-local mailboxtime = {}
+mailboxtime = {}
 
 -- End Twiggy tables
 

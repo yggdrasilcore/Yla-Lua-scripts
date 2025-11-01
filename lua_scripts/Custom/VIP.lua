@@ -62,9 +62,17 @@ local function CheckVIP(event, player)
 end
 
 
-local function VIPBotRepairOnResurrect(event, bot)
-    local name = bot:GetName()
-    if not isPlayerBot[name] then return end -- Not playerbot - do not check for free repairs on ress
+local function VIPBotRepairOnResurrect(event, player)
+    local name = player:GetName()
+    if not isPlayerBot[name] then
+        print("dead no bot ress")
+        if (player:GetData("VIPTime") and player:GetData("VIPTime") > os.time()) then
+            player:SendBroadcastMessage("Your Yggdrasil VIP subscription has repaired your gear.")
+            return -- No valid VIP, do not repair
+        end
+    end
+    
+    local bot = player
     
 	-- Find bot's master
     for botMasterName, bots in pairs(activeBots) do
@@ -85,11 +93,18 @@ end
 
 local function VIPGMCommands(event, player, command)
 	if not player then return end
-    if player:GetGMRank() == 0 then
-        return
-    end
+    if player:GetGMRank() == 0 then return end
     
     local cmd = command:lower()
+    
+    if command == "vip" then
+        player:SendBroadcastMessage("Welcome to Yggdrasil's VIP GM commands.")
+        player:SendBroadcastMessage("These commands are only visible and available to GMs. Syntax:")
+        player:SendBroadcastMessage("|-- .vip status")
+        player:SendBroadcastMessage("|-- .vip add")
+        player:SendBroadcastMessage("|-- .vip remove")
+        return false
+    end
     
     local addMatch = cmd:match("^vip add (%S+) (%d+)$")
     local addSingleMatch = cmd:match("^vip add (%d+)$")
@@ -528,28 +543,43 @@ local function VIPGMCommands(event, player, command)
     return
 end
 
-local function VIPCommands(event, player, command)
-    if not command:lower():find("^vip") then
-        return
-    end
-	
+local function CheckVIPCmd(player)
     if not (player:GetData("VIPTime") and player:GetData("VIPTime") > os.time()) then
-        player:SendBroadcastMessage("You don't have an active Yggdrasil VIP subscription.")
+        player:SendBroadcastMessage("You don't have an active Yggdrasil VIP subscription. Talk to Twiggy to active VIP today.")
         return false
     end
+    return true
+end
 
+local function VIPCommands(event, player, command)
     local cmd = command:lower()
-    
-    if cmd == "vip repair" then
+    if cmd == "vip" and player:GetGMRank() == 0 then
+        if not CheckVIPCmd(player) then return false end
+        
+        local vipTime = player:GetData("VIPTime") or 0
+        local currentTime = os.time()
+        
+        if vipTime > currentTime then
+            local remainingTime = vipTime - currentTime
+            local days = math.floor(remainingTime / 86400)
+            local hours = math.floor((remainingTime % 86400) / 3600)
+            local minutes = math.floor((remainingTime % 3600) / 60)
+            
+            player:SendBroadcastMessage("Your Yggdrasil VIP is active.")
+            player:SendBroadcastMessage("Time remaining: " .. days .. " days, " .. hours .. " hours, " .. minutes .. " minutes")
+        end
+        
+        return false
+    elseif (cmd == "vip repair" or cmd == "repair") then
+        if not CheckVIPCmd(player) then return false end
         player:DurabilityRepairAll(false, 0, false)
         player:SendBroadcastMessage("All items have been repaired.")
         return false
         
     elseif cmd == "vip mail" then
-
+        if not CheckVIPCmd(player) then return false end
         local guid = player:GetGUIDLow()
         local currentTime = os.time()
-
         if not mailboxtime[guid] then 
             mailboxtime[guid] = 0
         end
@@ -567,11 +597,13 @@ local function VIPCommands(event, player, command)
         return false
         
     elseif cmd == "vip bank" then
+        if not CheckVIPCmd(player) then return false end
         player:SendShowBank(player)
         return false
         
     elseif cmd == "vip xp" then
-		player:RunCommand("xpchangemenu "..os.time())
+        if not CheckVIPCmd(player) then return false end
+        player:RunCommand("xpchangemenu "..os.time())
         return false
     end
 end
