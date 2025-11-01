@@ -21,19 +21,21 @@ local function GetTimeUntilNextRestart()
     return nextWednesday - currentTime
 end
 
+local function IsFirstWeekOfEvenMonth()
+    local currentDate = os.date("*t", os.time())
+    return currentDate.day <= 7 and currentDate.month % 2 == 0
+end
+
+function UpdateClientCache()
+    WorldDBExecute("UPDATE version SET cache_id = cache_id + 1;")
+end
+
 local function ScheduledRestart()
     RunCommand("server restart 900 Periodical restart. Will be back shortly.")
-	WorldDBExecute("UPDATE version SET cache_id = cache_id + 1;");
-end
-
-local function OnCommand(event, player, command)
-    if command:find("server restart") or command:find("server shutdown") then
-        WorldDBExecute("UPDATE version SET cache_id = cache_id + 1;")
-		player:SendBroadcastMessage("Invalidating caches.")
+    if IsFirstWeekOfEvenMonth() then
+        UpdateClientCache()
     end
 end
-
-RegisterPlayerEvent(42, OnCommand)
 
 local timeUntilRestart = GetTimeUntilNextRestart()
 eventid = CreateLuaEvent(ScheduledRestart, timeUntilRestart * 1000, 1)
