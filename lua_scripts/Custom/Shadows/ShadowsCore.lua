@@ -2918,6 +2918,47 @@ local function OnDisallowedZones(event, player, newZone, newArea)
     end
 end
 
+local function OnGroupChangeLeader(event, packet, player)
+    if not player:IsInGroup() then return end
+    
+    local group = player:GetGroup()
+    
+    for _, player in ipairs (group:GetMembers()) do
+        local name = player:GetName()
+        
+        if isPlayerBot[name] then        
+        
+            local masterName = isPlayerBot[name]
+            local master
+            
+            if masterName then master = GetPlayerByName(masterName) end
+
+            if not master then return end
+            if group:IsLeader(player:GetGUID()) then
+                if player:IsInSameGroupWith(master) or player:IsInSameRaidWith(master) then
+                    
+                    player:RegisterEvent(function(e, d, r, player)
+                        local group = player:GetGroup()
+                        if not group then return end
+                        
+                        local name = player:GetName()
+                        
+                        local masterName = isPlayerBot[name]
+                        local master
+                        
+                        if masterName then master = GetPlayerByName(masterName) end
+            
+                        group:SetLeader(master:GetGUID())
+                        
+                    end, 1000)
+                    
+                    break
+                end
+            end
+        end
+    end
+end
+
 SetActiveVars()
 RegisterPlayerEvent(3, ShadowsLogin)
 RegisterPlayerEvent(4, LogoutOrSave)
@@ -2936,3 +2977,4 @@ RegisterPacketEvent(0x0C7, 5, PacketTeleDelay)
 RegisterPacketEvent(0x0C9, 5, PacketMoveDelay)
 RegisterPacketEvent(0x0CA, 5, PacketMoveDelay)
 RegisterPacketEvent(0x0CB, 5, PacketMoveDelay)
+RegisterPacketEvent(0x079, 7, OnGroupChangeLeader)
