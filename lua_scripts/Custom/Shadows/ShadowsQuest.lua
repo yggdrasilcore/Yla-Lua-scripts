@@ -131,13 +131,10 @@ local function ShadowsMap(event, player)
 			if playerImmunity then
 				playerImmunity:SetDuration(180000)
 			end
-            print("Scheduling first event")
             player:RegisterEvent(function(eventId, delay, repeats, player)
-                print("first event firing")
                 local shadowSpeak = player:GetNearestCreature(50, SHADOW_ENTRY)
                 shadowSpeak:SendUnitSay("Help us, "..player:GetName().."! We are shadows of your characters and have been trapped in time by the Black Dragonflight! Quickly, instruct us to break these chains and fight back!", 0)
                 player:RegisterEvent(function(eventId, delay, repeats, player)
-                    print("firing defend call")
                     player:SendAreaTriggerMessage("Instruct your shadows to defend themselves! Say \"formation shield\"!")
                     player:SendBroadcastMessage("Instruct your shadows to defend themselves! Say \"formation shield\"!")
                 end, 5000)
@@ -172,8 +169,8 @@ local function Talk(event, player, msg, Type, lang)
             local shadowSpeak = player:GetNearestCreature(50, SHADOW_ENTRY)
             shadowSpeak:SendUnitSay("Great! Now instruct us to attack our captor!", 0)
             player:RegisterEvent(function(eventId, delay, repeats, player)
-                player:SendAreaTriggerMessage("Say \"Attack\" to make your shadows attack the captor!")
-                player:SendBroadcastMessage("Say \"Attack\" to make your shadows attack the captor!")
+                player:SendAreaTriggerMessage("Say \"attack\" to make your shadows attack the captor!")
+                player:SendBroadcastMessage("Say \"attack\" to make your shadows attack the captor!")
                 eventState = 1
             end, 2000, 1)
         end, 5000, 1)
@@ -234,23 +231,25 @@ local function Talk(event, player, msg, Type, lang)
                 end, 10000, 1)
                 
                 player:RegisterEvent(function(eventId, delay, repeats, player)
+                    player:RemoveItem(QUEST_ITEM, 1)
+                    player:RemoveItem(TELEPORT_ITEM, 1)
+                    player:RewardQuest(QUEST_ID)
+                    shadowsEvent = os.time()
+                    
                     local shadows = player:GetCreaturesInRange(50, SHADOW_ENTRY)
                     for _, shadow in pairs(shadows) do
                         shadow:CastSpell(shadow, 32783, false)
-                        player:RemoveItem(QUEST_ITEM, 1)
-                        player:RemoveItem(TELEPORT_ITEM, 1)
-                        --player:SetQuestStatus(QUEST_ID, 6)
-                        player:RewardQuest(QUEST_ID)
-                        shadowsEvent = os.time()
+                        print("shadows just cast 32783")
                     end
                 end, 12000, 1)
                 
                 local swirl = player:GetCreaturesInRange(50, SWIRL_ENTRY)[1]
                 if swirl then
-                    swirl:DespawnOrUnsummon(5000)
+                    swirl:DespawnOrUnsummon(13000)
                 end
                 
                 player:RegisterEvent(function(eventId, delay, repeats, player)
+                    print("teleporting player home")
                     eventState = 0
                     if locationChar == player:GetGUIDLow() then
                         player:Teleport(oldMap, oldX, oldY, oldZ, oldO)
