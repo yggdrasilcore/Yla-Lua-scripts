@@ -277,6 +277,7 @@ local function OnLevelUp(event, player, oldLevel)
     if (player:GetClass() == 6 and oldLevel == dkLimit - 1) or
     (player:GetClass() ~= 6 and oldLevel == minLevel - 1)
     and not (player:GetQuestStatus(QUEST_ID) == 6)
+    and not player:HasItem(TELEPORT_ITEM, 1)
     then
         player:AddItem(39163, 1)
         player:SendBroadcastMessage("You hear mysterious whispers echo in the horizon... An unknown item from the void appears!")
@@ -284,8 +285,11 @@ local function OnLevelUp(event, player, oldLevel)
 end
 
 local function OnLogin(event, player)
-    if player:GetLevel() < minLevel then
-        return
+    if player:GetClass() == 6 and player:GetLevel() < dkLimit then return end
+    if player:GetLevel() < minLevel then return end
+    
+    if player:HasQuest(QUEST_ID) and player:HasItem(TELEPORT_ITEM, 1) and player:HasItem(QUEST_ITEM, 1) then
+        player:RemoveItem(QUEST_ITEM, 1)
     end
     if player:HasQuest(QUEST_ID) and not player:HasItem(TELEPORT_ITEM, 1) then
         player:AddItem(TELEPORT_ITEM, 1)
