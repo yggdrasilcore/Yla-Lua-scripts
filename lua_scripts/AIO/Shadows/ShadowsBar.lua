@@ -76,19 +76,23 @@ local function ShowShadowsSettingsPanel()
 			SlashCmdList["BOTCONTROLBAR"]()
 		end)
 
-		local resetShadowsButton = CreateFrame("Button", "ResetBotAIButton", frame, "UIPanelButtonTemplate")
-		resetShadowsButton:SetPoint("TOPLEFT", resetButton, "BOTTOMLEFT", 0, -10)
-		resetShadowsButton:SetWidth(230)
-		resetShadowsButton:SetHeight(30)
-		resetShadowsButton:SetText("Reset Shadows Settings")
-		resetShadowsButton:SetScript("OnClick", function()
+        local resetShadowsButton = CreateFrame("Button", "ResetBotAIButton", frame, "UIPanelButtonTemplate")
+        resetShadowsButton:SetPoint("TOPLEFT", resetButton, "BOTTOMLEFT", 0, -10)
+        resetShadowsButton:SetWidth(230)
+        resetShadowsButton:SetHeight(30)
+        resetShadowsButton:SetText("Reset Shadows Settings")
+        resetShadowsButton:SetScript("OnClick", function()
+            local names = {}
+            for name, _ in pairs(cachedNames) do
+                table.insert(names, name)
+            end
+            local namesString = table.concat(names, " ")
+            SendChatMessage(".unmuteshadow " .. namesString, "GUILD")
+            
             local channel = GetNumRaidMembers() > 0 and "RAID" or GetNumPartyMembers() > 0 and "PARTY" or nil
-            SendChatMessage("co +chat", channel)
-            SendChatMessage("nc +chat", channel)
             SendChatMessage("reset botAI", channel)
-		end)
-
-		frame.name = "Shadows"
+        end)
+        frame.name = "Shadows"
 	else
 		local frame = _G["ShadowsSettingsFrame"]
 		frame:Show()
@@ -814,10 +818,12 @@ local function CreateBotControlBar()
             clickGossip = true
         },
         {
-            text = "Mute Shadows",
+            text = "Shadows Chatter",
             icon = "Spell_Holy_Silence",
             toggle = true,
-            command = "co -chat\nnc -chat"
+            default = true,
+            command = ".muteshadow",
+            guild = true
         },
         {
             text = "Quest",
@@ -898,14 +904,26 @@ local function CreateBotControlBar()
                     end
                 end
             end)
-        elseif button.info.text == "Mute/Unmute Shadows" then
+        elseif button.info.text == "Shadows Chatter" then
             button.state = not button.state
             button.border:SetAlpha(button.state and 1 or 0)
-            local channel = GetNumRaidMembers() > 0 and "RAID" or GetNumPartyMembers() > 0 and "PARTY" or nil
-            local chatCmd = button.state and "co -chat\nnc -chat" or "co +chat\nnc +chat"
-            for cmd in string.gmatch(chatCmd, "[^\n]+") do
-                SendThrottledChatMessage(cmd, channel)
+            
+            local names = {}
+            for name, _ in pairs(cachedNames) do
+                table.insert(names, name)
             end
+            
+            local namesString = table.concat(names, " ")
+            local cmd
+            if button.state then
+                cmd = ".unmuteshadow " .. namesString
+                print("Unmuted: " .. namesString)
+            else
+                cmd = ".muteshadow " .. namesString
+                print("Muted: " .. namesString)
+            end
+            SendChatMessage(cmd, "GUILD")
+            
             UpdateButtonTooltip(button)
         elseif button.info.dropdown then
             local dropdown = CreateFrame("Frame", "TempDropdown", UIParent, "UIDropDownMenuTemplate")
@@ -1066,10 +1084,26 @@ local function CreateBotControlBar()
                     button.border:SetAlpha(0)
                     button.state = false
                 end
-
+                
+                if btnInfo.toggle then
+                    button.state = btnInfo.default or false
+                    button.border:SetAlpha(button.state and 1 or 0)
+                end
+    
                 button:SetScript("OnClick", function(self)
                     HandleUtilityButtonAction(self)
                 end)
+            end
+
+            for i, btnInfo in ipairs(utilityButtons) do
+                local button = _G["BotControlBarButton"..i]
+                if btnInfo.toggle then
+                    button.state = btnInfo.default or false
+                    if frame.previousUtilityToggleStates and frame.previousUtilityToggleStates[btnInfo.text] ~= nil then
+                        button.state = frame.previousUtilityToggleStates[btnInfo.text]
+                    end
+                    button.border:SetAlpha(button.state and 1 or 0)
+                end
             end
 
             for i = #utilityButtons + 1, #frame.originalButtons do
@@ -1079,6 +1113,15 @@ local function CreateBotControlBar()
 
             AdjustButtons(frame)
         else
+            frame.previousUtilityToggleStates = {}
+            for _, btnInfo in ipairs(utilityButtons) do
+                if btnInfo.toggle then
+                    local button = _G["BotControlBarButton"..(tIndexOf(utilityButtons, btnInfo))]
+                    if button then
+                        frame.previousUtilityToggleStates[btnInfo.text] = button.state
+                    end
+                end
+            end
             frame.currentMode = "combat"
             modeButton.info = {
                 text = "Utility Mode",
