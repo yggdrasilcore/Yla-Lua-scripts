@@ -1,8 +1,12 @@
 
--- Shdows Configs Start
+-- Shadows Configs Start
+
+maxBotCount = 4
+maxVIPCount = 9
+minShadowsLevel = 15 -- Global var also referenced by Twiggy
+
 local BOT_TELE_VISUAL   = 64446
 local BotSummonCD       = 10 * 60 -- 10 minutes
-minShadowsLevel         = 15 -- Global var also referenced by Twiggy
 
 isPlayerBot		        =   {} -- Global table referenced in VIP script as well
 activeBots       		=   {}
@@ -232,10 +236,8 @@ local function ShadowsHello(player)
     local accountId = player:GetAccountId()
     local guidlow = player:GetGUIDLow()
     local name = player:GetName()
-    local maxBotCount       = 2
-    local maxVIPCount       = 4
-	
-	-- Debugging Dryasis
+	local maxBotsForPlayer = maxBotCount
+
     if not player:GetData("BotCount") then player:SetData("BotCount", 0) end
     if not activeBots[name] then activeBots[name] = {} end
 	if not player:GetData("LoginTime") then player:SetData("LoginTime", os.time()) end
@@ -271,10 +273,10 @@ local function ShadowsHello(player)
     end
 
     if player:GetData("VIPTime") and player:GetData("VIPTime") > os.time() then -- Increased bot limit for VIP
-        maxBotCount = maxVIPCount
+        maxBotsForPlayer = maxVIPCount
     end
     
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAdd shadow (" .. player:GetData("BotCount") .. "/"..maxBotCount..")", 0, 10)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAdd shadow (" .. player:GetData("BotCount") .. "/"..maxBotsForPlayer..")", 0, 10)
     if player:GetData("BotCount") > 0 then
         --player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_hunter_improvedtracking:40:40:-24:0|tCommand follow", 0, 3)
         --player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_ghoulfrenzy:40:40:-24:0|tCommand attack", 0, 4)
@@ -311,16 +313,15 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
     local accountId = player:GetAccountId()
     local guid = player:GetGUIDLow()
     local name = player:GetName()
-    local maxBotCount       = 2
-    local maxVIPCount       = 4
+	local maxBotsForPlayer = maxBotCount
     
     if player:GetData("VIPTime") and player:GetData("VIPTime") > os.time() then -- Increased bot limit for VIP
-        maxBotCount = maxVIPCount
+        maxBotsForPlayer = maxVIPCount
     end
     
     if intid == 2 then -- Settings main menu
        player:GossipClearMenu()
-       player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_gizmo_02:40:40:-24:0|tHow to use shadows\n \nBy reaching through the Twisting Nether, you are able to summon shadows of the other characters on your account.\n \nTo control and summon a shadow, it must be within ten levels of you.\n \nYour active shadows adjust to your faction.\n \nYou may control up to 2 shadows at a time, or 4 shadows at a time if you have VIP.\n \nThe shadow bar offers quick access to most shadows features. See below for in-depth information on how to control your shadows.\n \n", 0, 2)
+       player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_gizmo_02:40:40:-24:0|tHow to use shadows\n \nBy reaching through the Twisting Nether, you are able to summon shadows of the other characters on your account.\n \nTo control and summon a shadow, it must be within ten levels of you.\n \nYour active shadows adjust to your faction.\n \nYou may control up to "..maxBotCount.." shadows at a time, or "..maxVIPCount.." shadows at a time if you have VIP.\n \nThe shadow bar offers quick access to most shadows features. See below for in-depth information on how to control your shadows.\n \n", 0, 2)
        
        -- Add main category options
        for _, category in pairs(commandCategories) do
@@ -509,7 +510,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
             ShadowsHello(player)
             return
         end
-        if player:GetData("BotCount") < maxBotCount then
+        if player:GetData("BotCount") < maxBotsForPlayer then
             local selectedIndex = intid - 100
             if addCmdTimer[guid] and not (GetCurrTime() - addCmdTimer[guid] > 300) then
                 player:SendAreaTriggerMessage("You can't add shadows that fast!")
@@ -2766,6 +2767,12 @@ local function OnBotCommand(event, player, command)
 			player:SetData("BotCount", (player:GetData("BotCount") or 0) + 1)
 			table.insert(botMasters[guid], player:GetName())
             addCmdTimer[guid] = GetCurrTime()
+			if player:GetData("BotCount") > 4 then 
+				local shadowsGroup = player:GetGroup()
+				if shadowsGroup then 
+					shadowsGroup:ConvertToRaid()
+				end
+			end
             return true
         end
 		
@@ -2842,6 +2849,7 @@ local function OnBotCommand(event, player, command)
 
 	    local bots = string.match(command, "attemptaddbot (.+)$")
 	    local botNames = {}
+		local maxBotsForPlayer = maxBotCount
 	   
 	    for botName in string.gmatch(bots, "([^,]+)") do
 		    botName = string.gsub(botName, "^%s*(.-)%s*$", "%1")
@@ -2850,14 +2858,12 @@ local function OnBotCommand(event, player, command)
 		
 	   
 	   if player:IsInGroup() then
-		   local maxBotCount = 2
-		   local maxVIPCount = 4
 		   
 		   if player:GetData("VIPTime") and player:GetData("VIPTime") > os.time() then
-			   maxBotCount = maxVIPCount
+				maxBotsForPlayer = maxVIPCount
 		   end
 		   
-		   if #botNames > maxBotCount then
+		   if #botNames > maxBotsForPlayer then
 			   player:SendBroadcastMessage("We could not log in your shadows as the total shadows in your group exceeds your limit of "..maxBotCount..".")
 			   return false
 		   end

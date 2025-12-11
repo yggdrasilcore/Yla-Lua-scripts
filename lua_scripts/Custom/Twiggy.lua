@@ -341,7 +341,7 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
 	elseif intId == 2 then
 		VIPmenu(player, creature)
 	elseif intId == 19 then
-		player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tWhy should I get VIP?\n \nAs VIP, Twiggy can provide you with free repairs, free XP rate changes on all your characters, banking, portable VIP mailbox, the auction house, and a vendor to sell your accumulated items anywhere you are.\n \nYou can also access your bank, portable VIP mailbox, repair your items, and change your XP through commands .vip bank, .vip mail, vip. repair, and .vip xp.\n \nFurthermore, you can control up to 4 shadows with VIP, and your shadows will repair automatically on resurrecting, as opposed to 2 shadows and manual repairs.\n \n ",  0, 19)
+		player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tWhy should I get VIP?\n \nAs VIP, Twiggy can provide you with free repairs, free XP rate changes on all your characters, banking, portable VIP mailbox, the auction house, and a vendor to sell your accumulated items anywhere you are.\n \nYou can also access your bank, portable VIP mailbox, repair your items, and change your XP through commands .vip bank, .vip mail, vip. repair, and .vip xp.\n \nFurthermore, you can control up to "..maxVIPCount.." shadows with VIP, and your shadows will repair automatically on resurrecting, as opposed to "..maxBotCount.." shadows and manual repairs.\n \n ",  0, 19)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 2)
         player:GossipSendMenu(12, creature, 60)
 	elseif intId == 20 then
