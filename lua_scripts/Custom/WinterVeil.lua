@@ -23,9 +23,12 @@ local function OnUseItem(event, player, item, target)
    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_gift_01:32:32:-22:0|tGreetings, "..player:GetName().."!\n \nYggdrasil's Grandfather Winter has a few gifts you can choose between. Which gift would you like to receive?\n \n ", 0, 10)
    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_drink_11:32:32:-22:0|tSap of Yggdrasil\n \nRestores 3% of your health and mana per second for 25 sec. Binds to account. Can be consumed infinitely.\n \n ", 0, 1, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_drink_11:32:32:-22:0|tSap of Yggdrasil")
    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_frostemblem_01:32:32:-22:0|t100 Emblems of Frost\n \nPurchase gear, Primordial Saronite and more with Emblems of Frost.\n \n ", 0, 2, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_misc_frostemblem_01:32:32:-22:0|t100 Emblems of Frost")
-   player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|t25 Community Tokens\n \nCan be spent on VIP and vanity objects at the mall.\n \n ", 0, 3, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|t25 Community Tokens")
    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_fishingchair:32:32:-22:0|tFishing Chair\n \nRelax in Azeroth on a brand new reclined Fishing Chair.\n \n ", 0, 4, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_fishingchair:32:32:-22:0|tFishing Chair")
-   player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_gem_sapphire_01:32:32:-22:0|tFrost Wyrm Mount\n \nThis is a 280% Frost Wyrm mount. It requires Artisan Riding.\n \n ", 0, 5, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_misc_gem_sapphire_01:32:32:-22:0|tFrost Wyrm Mount")
+   player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_coin_01:32:32:-22:0|t100 Gold\n \nA generous gift of gold to help you on your adventures.\n \n ", 0, 6, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_misc_coin_01:32:32:-22:0|t100 Gold")
+   player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_potion_76:32:32:-22:0|tTwiggy's Tonic\n \nAn infinitely reusable 500 haste potion. Tastes a little like mulled wine.\n \n ", 0, 7, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_drink_24_wrath:32:32:-22:0|tTwiggy's Tonic")
+   player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_scroll_05:32:32:-22:0|tTwiggy's Scroll of Wisdom\n \nGive you and your party infinite scroll buffs.\n \n ", 0, 8, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_scroll_05:32:32:-22:0|tTwiggy's Scroll of Wisdom")
+   player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_helmet_67:32:32:-22:0|tSet of Red Winter Clothing\n \nJoin the ranks of one of Grandfather Winter's elves and goblins with a suitable outfit.\n \n ", 0, 9, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_shirt_red_01:32:32:-22:0|tSet of Red Winter Clothing")
+   player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_helmet_68:32:32:-22:0|tSet of Green Winter Clothing\n \nJoin the ranks of one of Grandfather Winter's elves and goblins with a suitable outfit.\n \n ", 0, 11, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_shirt_green_01:32:32:-22:0|tSet of Green Winter Clothing")
    player:GossipSendMenu(12, player, 1035980)
    return false
 end
@@ -36,9 +39,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_gift_01:32:32:-22:0|tGreetings, "..player:GetName().."!\n \nYggdrasil's Grandfather Winter has a few gifts you can choose between. Which gift would you like to receive?\n \n ", 0, 10)
        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_drink_11:32:32:-22:0|tSap of Yggdrasil\n \nRestores 3% of your health and mana per second for 25 sec. Binds to account. Can be consumed infinitely.\n \n ", 0, 1, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_drink_11:32:32:-22:0|tSap of Yggdrasil")
        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_frostemblem_01:32:32:-22:0|t100 Emblems of Frost\n \nPurchase gear, Primordial Saronite and more with Emblems of Frost.\n \n ", 0, 2, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_misc_frostemblem_01:32:32:-22:0|t100 Emblems of Frost")
-       player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|t25 Community Tokens\n \nCan be spent on VIP and vanity objects at the mall. Claimable from level 40 and only once per account.\n \n ", 0, 3, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|t25 Community Tokens")
        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_fishingchair:32:32:-22:0|tFishing Chair\n \nRelax in Azeroth on a brand new reclined Fishing Chair.\n \n ", 0, 4, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_fishingchair:32:32:-22:0|tFishing Chair")
-       player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_gem_sapphire_01:32:32:-22:0|tFrost Wyrm Mount\n \nThis is a 280% Frost Wyrm mount. It requires Artisan Riding.\n \n ", 0, 5, false, "Are you sure you want to select the following Winter Veil gift?\n\nThis will consume your wish list.\n \n|TInterface/ICONS/inv_misc_gem_sapphire_01:32:32:-22:0|tFrost Wyrm Mount")
        player:GossipSendMenu(12, player, 1035980)
        return false
    elseif intid == 1 then
@@ -52,25 +53,6 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
        end
        player:AddItem(49426, 100)
        player:RemoveItem(christmasGiftID, 1)
-   elseif intid == 3 then
-       if (player:GetLevel() < 40) then
-           player:SendAreaTriggerMessage("You must be at least level 40 to claim this present!")
-           player:GossipComplete()
-           return false
-       end
-       local name = player:GetName()
-       local currentDate = tonumber(os.date("%m%d"))
-       local accguid = player:GetAccountId()
-       CharDBQueryAsync(string.format("SELECT guid FROM character_gift_events WHERE guid = %d AND event = 'AccountVeil2024'", accguid), function(result)
-           local player = GetPlayerByName(name)
-           if not result then
-               player:AddItem(19322, 25)
-               player:RemoveItem(christmasGiftID, 1)
-               CharDBExecute(string.format("INSERT INTO character_gift_events (guid, event, awarded, date) VALUES (%d, 'AccountVeil2024', 1, '%s')", accguid, os.date("%Y-%m-%d %H:%M:%S")))
-           else
-               player:SendAreaTriggerMessage("This present can only be claimed once per account.")
-           end
-       end)
    elseif intid == 4 then
        if player:HasItem(33223, 1, true) then
            player:SendAreaTriggerMessage("You already have this item!")
@@ -79,25 +61,86 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
        end
        player:AddItem(33223, 1)
        player:RemoveItem(christmasGiftID, 1)
-   elseif intid == 5 then
-       if player:HasSpell(51960) then
-           player:SendAreaTriggerMessage("You already have this mount!")
-           player:GossipComplete()
-           return false
-       end
-       if player:IsDead() then
-           player:SendAreaTriggerMessage("You cannot accept this gift right now")
-           player:GossipComplete()
-           return false
-       end
+   elseif intid == 6 then
+       player:ModifyMoney(1000000)
+       player:RemoveItem(christmasGiftID, 1)
+   elseif intid == 7 then
        if player:GetLevel() < 70 then
            player:SendAreaTriggerMessage("You must be at least level 70 to receive this gift.")
            player:GossipComplete()
            return false
        end
-       player:LearnSpell(51960)
-       if player:HasSpell(51960) then -- In case learn spell fails
+       if player:HasItem(23578, 1, true) then
+           player:SendAreaTriggerMessage("You already have this item!")
+           player:GossipComplete()
+           return false
+       end
+       player:AddItem(23578, 1)
+       player:RemoveItem(christmasGiftID, 1)
+   elseif intid == 8 then
+       if player:GetLevel() < 70 then
+           player:SendAreaTriggerMessage("You must be at least level 70 to receive this gift.")
+           player:GossipComplete()
+           return false
+       end
+       if player:HasItem(41415, 1, true) then
+           player:SendAreaTriggerMessage("You already have this item!")
+           player:GossipComplete()
+           return false
+       end
+       player:AddItem(41415, 1)
+       player:RemoveItem(christmasGiftID, 1)
+   elseif intid == 9 then
+       if player:HasItem(21524, 1, true) or player:HasItem(34085, 1, true) then
+           player:SendAreaTriggerMessage("You already have this item!")
+           player:GossipComplete()
+           return false
+       end
+       local item1Added = player:AddItem(21524, 1)
+       local item2Added = player:AddItem(34085, 1)
+       
+       if item1Added and item2Added then
            player:RemoveItem(christmasGiftID, 1)
+       elseif item1Added and not item2Added then
+           player:RemoveItem(21524, 1)
+           player:SendBroadcastMessage("Your bags are full!")
+           player:GossipComplete()
+           return false
+       elseif not item1Added and item2Added then
+           player:RemoveItem(34085, 1)
+           player:SendBroadcastMessage("Your bags are full!")
+           player:GossipComplete()
+           return false
+       else
+           player:SendBroadcastMessage("Your bags are full!")
+           player:GossipComplete()
+           return false
+       end
+   elseif intid == 11 then
+       if player:HasItem(21525, 1, true) or player:HasItem(34087, 1, true) then
+           player:SendAreaTriggerMessage("You already have this item!")
+           player:GossipComplete()
+           return false
+       end
+       local item1Added = player:AddItem(21525, 1)
+       local item2Added = player:AddItem(34087, 1)
+       
+       if item1Added and item2Added then
+           player:RemoveItem(christmasGiftID, 1)
+       elseif item1Added and not item2Added then
+           player:RemoveItem(21525, 1)
+           player:SendBroadcastMessage("Your bags are full!")
+           player:GossipComplete()
+           return false
+       elseif not item1Added and item2Added then
+           player:RemoveItem(34087, 1)
+           player:SendBroadcastMessage("Your bags are full!")
+           player:GossipComplete()
+           return false
+       else
+           player:SendBroadcastMessage("Your bags are full!")
+           player:GossipComplete()
+           return false
        end
    end
    player:GossipComplete()
@@ -105,20 +148,30 @@ end
 
 local function OnLogin(event, player)
     local name = player:GetName()
-    local currentDate = tonumber(os.date("%m%d"))
+    local currentYear = tonumber(os.date("%Y"))
+    local currentMonth = tonumber(os.date("%m"))
+    local currentDay = tonumber(os.date("%d"))
     
-    -- Check if date is between Dec 24 and Jan 2
-    if (currentDate >= 1224 and currentDate <= 1231) or (currentDate >= 101 and currentDate <= 102) then
+    local isInRange = false
+    if currentYear == 2025 then
+        if currentMonth == 12 and currentDay >= 13 then
+            isInRange = true
+        elseif currentMonth == 1 and currentDay <= 13 then
+            isInRange = true
+        end
+    end
+    
+    if isInRange then
         local guid = player:GetGUIDLow()
         
-        CharDBQueryAsync(string.format("SELECT guid FROM character_gift_events WHERE guid = %d AND event = 'Veil2024'", guid), function(result)
+        CharDBQueryAsync(string.format("SELECT guid FROM character_gift_events WHERE guid = %d AND event = 'Veil2025'", guid), function(result)
             if not result then
                 local player = GetPlayerByName(name)
                 if not player:HasItem(41404, 1, true) then
                     player:AddItem(41404, 1)
                 end
                 if player:HasItem(41404, 1) then
-                    CharDBExecute(string.format("INSERT INTO character_gift_events (guid, event, awarded, date) VALUES (%d, 'Veil2024', 1, '%s')", guid, os.date("%Y-%m-%d %H:%M:%S")))
+                    CharDBExecute(string.format("INSERT INTO character_gift_events (guid, event, awarded, date) VALUES (%d, 'Veil2025', 1, '%s')", guid, os.date("%Y-%m-%d %H:%M:%S")))
                 end
             end
         end)
