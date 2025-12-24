@@ -2454,8 +2454,11 @@ local function CreateBotControlBar()
             btn.text:SetText(text)
             btn.text:SetJustifyH("LEFT")
 
-            btn:SetScript("OnClick", onClick)
-
+			btn:SetScript("OnClick", function()
+				AIO.Handle("ShadowsCache", "RequestCache")
+				onClick()
+			end)
+    
             btn:SetScript("OnEnter", function(self)
                 self.text:SetTextColor(1, 1, 1)
             end)
@@ -3705,11 +3708,12 @@ end)
 
 local ShadowsCacheHandlers = AIO.AddHandlers("ShadowsCache", {})
 function ShadowsCacheHandlers.LoadCache(player, data)
+    cachedNames = {}
     for name, class in pairs(data) do
-        if not cachedNames[name] then
-            cachedNames[name] = class
-        end
+        cachedNames[name] = class
+        -- print("Cached ", name, " as class ", class)
     end
+    -- print("Done caching shadows names and classes.")
 end
 
 function GetClassByName(name)
