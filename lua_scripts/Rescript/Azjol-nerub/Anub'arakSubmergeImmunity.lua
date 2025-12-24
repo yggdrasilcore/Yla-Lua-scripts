@@ -1,51 +1,51 @@
-local ANUB_ID = 29120
-local CHECK_INTERVAL = 200 -- 200 ms
-local RANGE = 50 -- 50 yards
-local AURA_ID = 29230
-local AURA_DURATION = 45 -- 30 seconds
-
-local playerTimers = {}
-local creatureHPThresholds = {75, 50, 25}
-local creatureHPFlags = {}
-
-local function CheckCreatureHP(eventId, delay, repeats, player)
-    if not player:IsInWorld() or player:GetMapId() ~= 601 then 
-        player:RemoveEvents()
-        playerTimers[player:GetGUID()] = nil
-        return 
-    end
-
-    local creature = player:GetNearestCreature(RANGE, ANUB_ID)
-    if not creature then return end
+-- SUBMERGE
+local function OnCastSubmerge(event, caster, spell)
+	caster:SetReactState(0) -- Set passive to not have AI Interrupt emotes
 	
-    local guid = creature:GetGUIDLow()
-    local hpPct = creature:GetHealthPct()
-
-    for _, threshold in ipairs(creatureHPThresholds) do
-        if hpPct <= threshold and not creatureHPFlags[guid .. threshold] then
-            player:AddAura(AURA_ID, creature)
-            creatureHPFlags[guid .. threshold] = true
-
-            creature:RegisterEvent(function(eventId, delay, repeats, creature)
-                creature:RemoveAura(AURA_ID)
-				print("[Instance]: Azjol-Nerub: Aura removed!")
-            end, AURA_DURATION * 1000, 1)
-
-            print(string.format("[Instance]: Azjol-Nerub: Creature HP at or below %d%%. Aura applied.", threshold))
-        end
-    end
+	immunity = caster:AddAura(29230, caster)
+	if immunity then immunity:SetDuration(15000) end -- Ensure players can't channel dmg spells while submeringg
+	
+	caster:RemoveAura(53421) -- Reset submerge state to perform new emote
+	
+	caster:RegisterEvent(function(e, d, r, caster)
+		caster:PerformEmote(374) -- Submerge emote
+	end, 250)
+	
+	caster:RegisterEvent(function(e, d, r, caster)
+		caster:AddAura(53421, caster) -- Re-add submerge state
+	end, 1700)
+	
+	caster:RegisterEvent(function(e, d, r, caster) -- Ensures mob doesn't get stuck in passive on evade/wipe
+		if caster:IsInCombat() then return end
+		caster:SetReactState(2)
+	end, 500, 200)
 end
 
-local function AnubCombat(event, player, enemy)
-	if enemy and enemy:GetEntry() == ANUB_ID then
-        local playerGuid = player:GetGUID()
-		if not playerTimers[playerGuid] then
-			playerTimers[playerGuid] = true
-			player:RegisterEvent(CheckCreatureHP, CHECK_INTERVAL, 0)
-			print("[Instance]: Azjol-Nerub: Entered combat! Starting creature HP check.")
-		end
-	end
+RegisterSpellEvent(53421, 2, OnCastSubmerge) -- Submerge
+
+
+
+-- EMERGE
+local function OnCastEmerge(event, caster, spell)
+    if caster:HasAura(29230) then caster:RemoveAura(29230) end -- Reset immunity timer
+	
+	immunity = caster:AddAura(42716, caster)
+	if immunity then immunity:SetDuration(1000) end -- New immunity timer
+	
+	aura = caster:AddAura(42716, caster) -- Root
+	if aura then aura:SetDuration(1500) end -- Don't interrupt emote while performing it
+	
+	caster:CastSpell(caster, 68848, true) -- Interrupt self
+	
+	caster:RegisterEvent(function(e, d, r, caster)
+		caster:PerformEmote(449) -- Emerge emote, hammering to ensure it triggers (won't overlap client-side)
+	end, 50, 10)
+	
+	caster:RegisterEvent(function(e, d, r, caster)
+		caster:SetReactState(2) -- Emerge eote probably done by now
+	end, 1500)
 end
 
-RegisterPlayerEvent(33, AnubCombat)
+RegisterSpellEvent(53500, 2, OnCastEmerge) -- Emerge
+
 print("[Instance]: Azjol-Nerub: Anub'Arak instance fix loaded!")
