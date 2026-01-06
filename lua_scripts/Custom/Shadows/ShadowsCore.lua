@@ -507,7 +507,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
                 return
             end
         end
-        if WG_FightActive then
+        if (player:GetMapId() == 571) and (player:GetZoneId() == 4197) and WG_FightActive then
             player:GossipComplete()
             player:SendAreaTriggerMessage("You cannot use shadows during active Wintergasp battles.")
             return
@@ -2980,7 +2980,7 @@ local function ProcessWintergraspWorldstate(variableID, value)
             
             local allPlayers = GetPlayersInWorld()
             for _, player in pairs(allPlayers) do
-                if player:GetZoneId() == 4197 then
+                if (player:GetMapId() == 571) and (player:GetZoneId() == 4197) then
                     local playerName = player:GetName()
                     
                     if not isPlayerBot[playerName] then
