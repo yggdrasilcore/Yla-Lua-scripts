@@ -19,7 +19,9 @@ local botSummonTime     =   {}
 local dontKickTime	    =   {}
 local removalInProgress =   {}
 local lastTeleTime      =   {}
-local disallowedZones   =   {4298, 4197, 3628, 3666} -- Scarlet Enclave (DK start area), Wintergrasp, Halaa
+local disallowedZones   =   {4298}--, 4197, 3628, 3666} -- Scarlet Enclave (DK start area), Wintergrasp, Halaa
+
+WG_FightActive = false
 
 -- Shadows Configs End
 
@@ -504,6 +506,11 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
                 player:SendAreaTriggerMessage("You cannot use shadows in "..GetAreaName(player:GetAreaId())..".")
                 return
             end
+        end
+        if WG_FightActive then
+            player:GossipComplete()
+            player:SendAreaTriggerMessage("You cannot use shadows during active Wintergasp battles.")
+            return
         end
         if player:GetLevel() < minShadowsLevel then
             player:SendAreaTriggerMessage("You need to be at least level ".. minShadowsLevel .. " to use shadows!")
@@ -2964,6 +2971,82 @@ local function OnGroupChangeLeader(event, packet, player)
         end
     end
 end
+
+local function ProcessWintergraspWorldstate(variableID, value)
+    if variableID == 3801 then
+        if value == 0 then
+            WG_FightActive = true
+            print("[WG PACKET DEBUG] Fight status set to: true - Removing all shadows in Wintergrasp")
+            
+            local allPlayers = GetPlayersInWorld()
+            for _, player in pairs(allPlayers) do
+                if player:GetZoneId() == 4197 then
+                    local playerName = player:GetName()
+                    
+                    if not isPlayerBot[playerName] then
+                        local master = player
+                        
+                        if master and (master:GetData("BotCount") and master:GetData("BotCount") > 0) then
+                            print("[WG DEBUG] Fight is active, removing bots for master " .. master:GetName())
+                            
+                            local botsToRemove = {}
+                            if activeBots[master:GetName()] then
+                                for i, botName in ipairs(activeBots[master:GetName()]) do
+                                    table.insert(botsToRemove, botName)
+                                end
+                            end
+                            
+                            if #botsToRemove > 0 then
+                                print("[WG DEBUG] Removing " .. #botsToRemove .. " bots")
+                                for _, botName in ipairs(botsToRemove) do
+                                    local bot = GetPlayerByName(botName)
+                                    if bot then
+                                        bot:RemoveFromGroup()
+                                        master:RunCommand(".playerbots bot remove " .. botName)
+                                        print("[WG DEBUG] Removed bot: " .. botName)
+                                    end
+                                end
+                                master:SendBroadcastMessage("Shadows are not permitted during active Wintergrasp battles. Your shadows have logged off.")
+                                master:SendAreaTriggerMessage("Shadows are not permitted during active Wintergrasp battles. Your shadows have logged off.")
+                            end
+                        end
+                    end
+                end
+            end
+        else
+            WG_FightActive = false
+            print("[WG PACKET DEBUG] Fight status set to: false")
+        end
+    end
+end
+
+local function OnInitWorldStatesPacket(event, packet, player)
+    local mapID = packet:ReadLong()
+    local zoneID = packet:ReadLong()
+    local areaID = packet:ReadLong()
+    local worldstateCount = packet:ReadUShort()
+    
+    if mapID == 571 and areaID == 4197 then
+        print("[WG PACKET DEBUG] InitWorldStates for Wintergrasp - Player: " .. (player and player:GetName() or "unknown"))
+        
+        for i = 1, worldstateCount do
+            local variableID = packet:ReadLong()
+            local value = packet:ReadLong()
+            ProcessWintergraspWorldstate(variableID, value)
+        end
+    end
+end
+
+local function OnUpdateWorldStatePacket(event, packet, player)
+    if player and player:GetMapId() == 571 and player:GetAreaId() == 4197 then
+        local variableID = packet:ReadLong()
+        local value = packet:ReadLong()
+        ProcessWintergraspWorldstate(variableID, value)
+    end
+end
+
+RegisterPacketEvent(0x2C2, 7, OnInitWorldStatesPacket)
+RegisterPacketEvent(0x2C3, 7, OnUpdateWorldStatePacket)
 
 SetActiveVars()
 RegisterPlayerEvent(3, ShadowsLogin)
