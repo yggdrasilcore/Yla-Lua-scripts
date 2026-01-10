@@ -11,6 +11,9 @@ local MorphReqRare = 100 -- Skill required to claim morph forms of elites
 local MorphReqElite = 50 -- Skill required to claim morph forms of elites
 local MaxMorphSkill = 300 -- Max morphing skill cap, just used to reward players
 
+FastFlightMounts = {40192, 59976, 72808, 58615, 64927, 65439, 72807, 63956, 44317, -- 310% mounts
+44744, 63796, 3363, 69395, 32345, 60021, 67336, 63963, 37015, 49193, 60024, 71810} -- 310% mounts
+
 local creatureCache = {
     [1] = {}, -- Cat form
     [2] = {}, -- Bear form
@@ -145,6 +148,7 @@ local function CacheCreatures()
           OR name LIKE '%elk%' 
           OR name LIKE '%stag%' 
           OR name LIKE '%mammoth%' 
+          OR name LIKE '%elekk%' 
           OR name LIKE '%feathermoon%' 
           OR name LIKE '%hippogryph%' 
           OR name LIKE '%goat%' 
@@ -397,19 +401,6 @@ local function OnKillCreature(event, player, creature)
                     else
                         player:SendBroadcastMessage("You have released "..creatureName.."'s spirit and learned how to morph into their "..formType..".")
                     end
-					if cacheIndex == 3 then
-						if #creatureCache[guid][3] == 10 then 
-							player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 50%.")
-						elseif #creatureCache[guid][3] == 20 then 
-							player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 60%.")
-						elseif #creatureCache[guid][3] == 30 then 
-							player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 70%.")
-						elseif #creatureCache[guid][3] == 40 then 
-							player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 80%.")
-						elseif #creatureCache[guid][3] == 50 then 
-							player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 90%.")
-						end
-					end
                 end
             elseif creature:GetRank() == 2 or creature:GetRank() == 4 then -- Rares and rare elites
                 if CountTotalMorphs(player) < MorphReqRare then
@@ -422,19 +413,6 @@ local function OnKillCreature(event, player, creature)
                     else
                         player:SendBroadcastMessage("You have released "..creatureName.."'s spirit and learned how to morph into their "..formType..".")
                     end
-					if cacheIndex == 3 then
-						if #creatureCache[guid][3] == 10 then 
-							player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 50%.")
-						elseif #creatureCache[guid][3] == 20 then 
-							player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 60%.")
-						elseif #creatureCache[guid][3] == 30 then 
-							player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 70%.")
-						elseif #creatureCache[guid][3] == 40 then 
-							player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 80%.")
-						elseif #creatureCache[guid][3] == 50 then 
-							player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 90%.")
-						end
-					end
                 end
             elseif creature:GetRank() ~= 3 then -- Prevents learning boss display IDs as morphs as their models are usually huge
                 table.insert(creatureCache[guid][cacheIndex], {name = creatureName, displayId = displayId})
@@ -444,19 +422,6 @@ local function OnKillCreature(event, player, creature)
                 else
                     player:SendBroadcastMessage("You have released "..creatureName.."'s spirit and learned how to morph into their "..formType..".")
                 end
-				if cacheIndex == 3 then
-					if #creatureCache[guid][3] == 10 then 
-						player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 50%.")
-					elseif #creatureCache[guid][3] == 20 then 
-						player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 60%.")
-					elseif #creatureCache[guid][3] == 30 then 
-						player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 70%.")
-					elseif #creatureCache[guid][3] == 40 then 
-						player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 80%.")
-					elseif #creatureCache[guid][3] == 50 then 
-						player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to 90%.")
-					end
-				end
             end
         end
     end
@@ -477,10 +442,36 @@ local function OnKillCreature(event, player, creature)
         AddToPlayerCache(2, formTypes[2])
     elseif travelCache[entry] then
         AddToPlayerCache(3, formTypes[3])
+        
+        local playerFormCount = #creatureCache[guid][3]
+        if playerFormCount == 10 or playerFormCount == 20 or playerFormCount == 30 or playerFormCount == 40 or playerFormCount == 50 then
+            local speedIncrease = (playerFormCount + 40)
+            player:SendBroadcastMessage("Through your exquisite knowledge of travel forms, your travel form speed has increased to "..speedIncrease.."%.")
+        end
+        
     elseif birdCache[entry] then
         AddToPlayerCache(4, formTypes[4])
+        
+        local playerFormCount = #creatureCache[guid][4]
+        if playerFormCount == 60 or playerFormCount == 70 or playerFormCount == 80 or playerFormCount == 90 or playerFormCount == 100 then
+            
+            local baseSpeed = 150
+            if player:HasSpell(40120) then baseSpeed = 280 end
+            for _, fastMountId in ipairs(FastFlightMounts) do
+                if player:HasSpell(fastMountId) then
+                    baseSpeed = 310
+                    break
+                end
+            end
+            
+            local speedIncrease = baseSpeed + (tier * 5)
+            
+            local formName = player:HasSpell(40120) and "swift flight form" or "flight form"
+            player:SendBroadcastMessage("Through your exquisite knowledge of flight forms, your "..formName.." speed has increased to "..speedIncrease.."%.")
+        end
+        
     elseif treeCache[entry] then
-        AddToPlayerCache(5, formTypes[5])
+        AddToPlayerCache(5, formTypes [5])
     elseif owlCache[entry] then
         AddToPlayerCache(6, formTypes[6])
     elseif aquaticCache[entry] then
@@ -777,34 +768,50 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
 				player:SetDisplayId(morphSelection3[guid])
 				if player:HasAura(783) then
 					player:SetDisplayId(morphSelection3[guid])
-					if #creatureCache[guid][formId] >= 50 then 
-						player:SetSpeed(1, 1.9)
-						player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 90%.")
-					elseif #creatureCache[guid][formId] >= 40 then 
-						player:SetSpeed(1, 1.8)
-						player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 80%.")
-					elseif #creatureCache[guid][formId] >= 30 then 
-						player:SetSpeed(1, 1.7)
-						player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 70%.")
-					elseif #creatureCache[guid][formId] >= 20 then 
-						player:SetSpeed(1, 1.6)
-						player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 60%.")
-					elseif #creatureCache[guid][formId] >= 10 then 
-						player:SetSpeed(1, 1.5)
-						player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 50%.")
-					else
-						player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..".")
-					end
+                    local morphCount = #creatureCache[guid][formId]
+                    if morphCount >= 10 then
+                        local tier = math.min(math.floor(morphCount / 10), 5)
+                        local speed = 1.4 + (tier * 0.1)
+                        local speedPct = 40 + (tier * 10)
+                        player:SetSpeed(1, speed)
+                        player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now "..speedPct.."%.")
+                    else
+                        player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..".")
+                    end
 				end
 			end
 			CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 3")
 			CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection3[guid])
         elseif formId == 4 and creatureCache[formId] then
             morphSelection4[guid] = displayId
-            player:SendBroadcastMessage("You have morphed your flight form into "..creatureName..".")
 			if player:HasAura(40120) or player:HasAura(33943)  then
 				player:SetDisplayId(morphSelection4[guid])
 			end
+            
+            local formName = player:HasSpell(40120) and "swift flight form" or "flight form"
+            
+            if #creatureCache[guid][4] >= 5 then
+                local morphs = #creatureCache[guid][4]
+                local tier = math.min(math.floor(morphs / 5), 5)
+                local newSpeed = (player:GetSpeed(6)/7)+tier/100
+                player:SetSpeed(6, (player:GetSpeed(6)/7)+tier/100)
+                
+                local baseSpeed = 150
+                if player:HasSpell(40120) then baseSpeed = 280 end
+                for _, fastMountId in ipairs(FastFlightMounts) do
+                    if player:HasSpell(fastMountId) then
+                        baseSpeed = 310
+                        break
+                    end
+                end
+                
+                local speedIncrease = baseSpeed + (tier * 5)
+                
+                player:SendBroadcastMessage("You have morphed your "..formName.." into "..creatureName..". Your flight speed is now "..speedIncrease.."%.")
+            else
+                player:SendBroadcastMessage("You have morphed your "..formName.." into "..creatureName..".")
+            end
+         
 			CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 4")
 			CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection4[guid])
         elseif formId == 5 and creatureCache[formId] then
@@ -897,21 +904,13 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
             morphSelection3[guid] = displayId
             if player:HasAura(783) then
                 player:SetDisplayId(morphSelection3[guid])
-                if #creatureCache[guid][formId] >= 50 then 
-                    player:SetSpeed(1, 1.9)
-                    player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 90%.")
-                elseif #creatureCache[guid][formId] >= 40 then 
-                    player:SetSpeed(1, 1.8)
-                    player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 80%.")
-                elseif #creatureCache[guid][formId] >= 30 then 
-                    player:SetSpeed(1, 1.7)
-                    player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 70%.")
-                elseif #creatureCache[guid][formId] >= 20 then 
-                    player:SetSpeed(1, 1.6)
-                    player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 60%.")
-                elseif #creatureCache[guid][formId] >= 10 then 
-                    player:SetSpeed(1, 1.5)
-                    player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 50%.")
+                local morphCount = #creatureCache[guid][formId]
+                if morphCount >= 10 then
+                    local tier = math.min(math.floor(morphCount / 10), 5)
+                    local speed = 1.4 + (tier * 0.1)
+                    local speedPct = 40 + (tier * 10)
+                    player:SetSpeed(1, speed)
+                    player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now "..speedPct.."%.")
                 else
                     player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..".")
                 end
@@ -922,10 +921,34 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
             CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection3[guid])
         elseif formId == 4 then
             morphSelection4[guid] = displayId
-            player:SendBroadcastMessage("You have morphed your flight form into "..creatureName..".")
             if player:HasAura(40120) or player:HasAura(33943) then
                 player:SetDisplayId(morphSelection4[guid])
             end
+            
+            local formName = player:HasSpell(40120) and "swift flight form" or "flight form"
+            
+            if #creatureCache[guid][4] >= 5 then
+                local morphs = #creatureCache[guid][4]
+                local tier = math.min(math.floor(morphs / 5), 5)
+                local newSpeed = (player:GetSpeed(6)/7)+tier/100
+                player:SetSpeed(6, (player:GetSpeed(6)/7)+tier/100)
+                
+                local baseSpeed = 150
+                if player:HasSpell(40120) then baseSpeed = 280 end
+                for _, fastMountId in ipairs(FastFlightMounts) do
+                    if player:HasSpell(fastMountId) then
+                        baseSpeed = 310
+                        break
+                    end
+                end
+                
+                local speedIncrease = baseSpeed + (tier * 5)
+
+                player:SendBroadcastMessage("You have morphed your "..formName.." into "..creatureName..". Your flight speed is now "..speedIncrease.."%.")
+            else
+                player:SendBroadcastMessage("You have morphed your "..formName.." into "..creatureName..".")
+            end
+            
             CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 4")
             CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection4[guid])
         elseif formId == 5 then
@@ -1101,46 +1124,54 @@ local function Morpher(eventId, delay, repeats, player)
 					player:SetDisplayId(morphSelection2[guid])
 				end
 			end
-		elseif player:HasAura(783) then -- Travel
-			if not morphSelection3[guid] then
-				local morphdb3 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 3") -- Load active morph status
-				if morphdb3 then 
-					morphSelection3[guid] = morphdb3:GetUInt32(0)
-				end
-			end
-			if morphSelection3[guid] then
-				if morphSelection3[guid] > 0 then
-					player:SetDisplayId(morphSelection3[guid])
-                    if #creatureCache[guid][formId] >= 50 then
-                        player:SetSpeed(1, 1.9)
-                        player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 90%.")
-                    elseif #creatureCache[guid][formId] >= 40 then
-                        player:SetSpeed(1, 1.8)
-                        player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 80%.")
-                    elseif #creatureCache[guid][formId] >= 30 then
-                        player:SetSpeed(1, 1.7)
-                        player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 70%.")
-                    elseif #creatureCache[guid][formId] >= 20 then
-                        player:SetSpeed(1, 1.6)
-                        player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 60%.")
-                    elseif #creatureCache[guid][formId] >= 10 then
-                        player:SetSpeed(1, 1.5)
-                        player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 50%.")
-					end
-				end
-			end
-		elseif player:HasAura(40120) or player:HasAura(33943) then -- Fly
-			if not morphSelection4[guid] then
-				local morphdb4 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 4") -- Load active morph status
-				if morphdb4 then 
-					morphSelection4[guid] = morphdb4:GetUInt32(0)
-				end
-			end
-			if morphSelection4[guid] then
-				if morphSelection4[guid] > 0 then
-					player:SetDisplayId(morphSelection4[guid])
-				end
-			end
+        elseif player:HasAura(783) then -- Travel
+            if not morphSelection3[guid] then
+                local morphdb3 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 3")
+                if morphdb3 then 
+                    morphSelection3[guid] = morphdb3:GetUInt32(0)
+                end
+            end
+            if morphSelection3[guid] then
+                if morphSelection3[guid] > 0 then
+                    player:SetDisplayId(morphSelection3[guid])
+                    
+                    local creatureName = "Unknown"
+                    if creatureCache[guid] and creatureCache[guid][3] then
+                        for _, creature in ipairs(creatureCache[guid][3]) do
+                            if creature.displayId == morphSelection3[guid] then
+                                creatureName = creature.name
+                                break
+                            end
+                        end
+                    end
+                    
+                    local morphCount = #creatureCache[guid][3]
+                    if morphCount >= 10 then
+                        local tier = math.min(math.floor(morphCount / 10), 5)
+                        local speed = 1.4 + (tier * 0.1)
+                        local speedPct = 40 + (tier * 10)
+                        player:SetSpeed(1, speed)
+                    end
+                end
+            end
+        elseif player:HasAura(40120) or player:HasAura(33943) then -- Fly
+            if not morphSelection4[guid] then
+                local morphdb4 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 4")
+                if morphdb4 then 
+                    morphSelection4[guid] = morphdb4:GetUInt32(0)
+                end
+            end
+            if morphSelection4[guid] then
+                if morphSelection4[guid] > 0 then
+                    player:SetDisplayId(morphSelection4[guid])
+                    if #creatureCache[guid][4] >= 5 then
+                        local morphs = #creatureCache[guid][4]
+                        local tier = math.min(math.floor(morphs / 5), 5)
+                        local newSpeed = (player:GetSpeed(6)/7)+tier/100
+                        player:SetSpeed(6, newSpeed)
+                    end
+                end
+            end
 		elseif player:HasAura(33891) then -- Tree
 			if not morphSelection5[guid] then
 				local morphdb5 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 5") -- Load active morph status
