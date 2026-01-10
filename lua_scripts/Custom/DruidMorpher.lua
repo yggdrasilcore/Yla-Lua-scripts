@@ -773,7 +773,6 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
 		elseif formId == 3 and creatureCache[formId] then
 			morphSelection3[guid] = displayId
 
-			-- Existing logic for handling formId 3
 			if player:HasAura(783) then
 				player:SetDisplayId(morphSelection3[guid])
 				if player:HasAura(783) then
@@ -1112,16 +1111,21 @@ local function Morpher(eventId, delay, repeats, player)
 			if morphSelection3[guid] then
 				if morphSelection3[guid] > 0 then
 					player:SetDisplayId(morphSelection3[guid])
-					if #creatureCache[guid][3] >= 10 then 
-						player:SetSpeed(1, 1.5)
-					elseif #creatureCache[guid][3] >= 20 then 
-						player:SetSpeed(1, 1.6)
-					elseif #creatureCache[guid][3] >= 30 then 
-						player:SetSpeed(1, 1.7)
-					elseif #creatureCache[guid][3] >= 40 then 
-						player:SetSpeed(1, 1.8)
-					elseif #creatureCache[guid][3] >= 50 then 
-						player:SetSpeed(1, 1.9)
+                    if #creatureCache[guid][formId] >= 50 then
+                        player:SetSpeed(1, 1.9)
+                        player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 90%.")
+                    elseif #creatureCache[guid][formId] >= 40 then
+                        player:SetSpeed(1, 1.8)
+                        player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 80%.")
+                    elseif #creatureCache[guid][formId] >= 30 then
+                        player:SetSpeed(1, 1.7)
+                        player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 70%.")
+                    elseif #creatureCache[guid][formId] >= 20 then
+                        player:SetSpeed(1, 1.6)
+                        player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 60%.")
+                    elseif #creatureCache[guid][formId] >= 10 then
+                        player:SetSpeed(1, 1.5)
+                        player:SendBroadcastMessage("You have morphed your travel form into "..creatureName..". Your travel speed is now 50%.")
 					end
 				end
 			end
