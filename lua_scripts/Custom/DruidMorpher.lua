@@ -803,7 +803,15 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
             if #creatureCache[guid][4] >= 5 then
                 local morphs = #creatureCache[guid][4]
                 local tier = math.min(math.floor(morphs / 5), 5)
-                local flightSpeed = (player:GetSpeed(6)/7)+tier/100
+                local baseSpeed = 2.5
+                if player:HasSpell(40120) then baseSpeed = 3.8 end
+                for _, fastMountId in ipairs(FastFlightMounts) do
+                    if player:HasSpell(fastMountId) then
+                        baseSpeed = 4.1
+                        break
+                    end
+                end
+                local flightSpeed = baseSpeed + (tier * 0.05)
                 player:SetSpeed(6, flightSpeed)
                 
                 local baseSpeed = 150
@@ -955,7 +963,15 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
             if #creatureCache[guid][4] >= 5 then
                 local morphs = #creatureCache[guid][4]
                 local tier = math.min(math.floor(morphs / 5), 5)
-                local flightSpeed = (player:GetSpeed(6)/7)+tier/100
+                local baseSpeed = 2.5
+                if player:HasSpell(40120) then baseSpeed = 3.8 end
+                for _, fastMountId in ipairs(FastFlightMounts) do
+                    if player:HasSpell(fastMountId) then
+                        baseSpeed = 4.1
+                        break
+                    end
+                end
+                local flightSpeed = baseSpeed + (tier * 0.05)
                 player:SetSpeed(6, flightSpeed)
                 
                 local baseSpeed = 150
@@ -1204,7 +1220,15 @@ local function Morpher(eventId, delay, repeats, player)
                     if #creatureCache[guid][4] >= 5 then
                         local morphs = #creatureCache[guid][4]
                         local tier = math.min(math.floor(morphs / 5), 5)
-                        local flightSpeed = (player:GetSpeed(6)/7)+tier/100
+                        local baseSpeed = 2.5
+                        if player:HasSpell(40120) then baseSpeed = 3.8 end
+                        for _, fastMountId in ipairs(FastFlightMounts) do
+                            if player:HasSpell(fastMountId) then
+                                baseSpeed = 4.1
+                                break
+                            end
+                        end
+                        local flightSpeed = baseSpeed + (tier * 0.05)
                         player:SetSpeed(6, flightSpeed)
                     end
                 end
