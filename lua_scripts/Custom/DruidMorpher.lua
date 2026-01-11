@@ -859,7 +859,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
             
             if morphCount >= 5 then
                 local tier = math.min(math.floor(morphCount / 5), 8)
-                local aquaticSpeed = 1.5 + (tier * 0.05)
+                local aquaticSpeed = 1.5 + (tier * 0.05) * 0.75
                 local aquaticSpeedPct = 50 + (tier * 5)
                 player:SetSpeed(3, aquaticSpeed)
                 player:SendBroadcastMessage("You have morphed your aquatic form into "..creatureName..". Your aquatic speed is now "..aquaticSpeedPct.."%.")
@@ -1019,7 +1019,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
             
             if morphCount >= 5 then
                 local tier = math.min(math.floor(morphCount / 5), 8)
-                local aquaticSpeed = 1.5 + (tier * 0.05)
+                local aquaticSpeed = 1.5 + (tier * 0.05) * 0.75
                 local aquaticSpeedPct = 50 + (tier * 5)
                 player:SetSpeed(3, aquaticSpeed)
                 player:SendBroadcastMessage("You have morphed your aquatic form into "..creatureName..". Your aquatic speed is now "..speedPct.."%.")
@@ -1270,7 +1270,7 @@ local function Morpher(eventId, delay, repeats, player)
                     if #creatureCache[guid][7] >= 5 then
                         local morphs = #creatureCache[guid][7]
                         local tier = math.min(math.floor(morphs / 5), 8)
-                        local aquaticSpeed = 1.5 + (tier * 0.05)
+                        local aquaticSpeed = 1.5 + (tier * 0.05) * 0.75
                         player:SetSpeed(3, aquaticSpeed)
                     end
                 end
