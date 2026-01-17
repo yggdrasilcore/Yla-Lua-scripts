@@ -440,7 +440,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
 		if player:GetData("ShadowBarStatusChecked") then
 			player:SendAddonMessage("ShadowsBar", "SETTINGS", 7, player)
 		else
-			player:SendAraeTriggerMessage("Your shadow bar settings are loading, please try again in a few seconds.")
+			player:SendAreaTriggerMessage("Your shadow bar settings are loading, please try again in a few seconds.")
 			player:SendBroadcastMessage("Your shadow bar settings are loading, please try again in a few seconds.")
 		end
 		ShadowsHello(player)
