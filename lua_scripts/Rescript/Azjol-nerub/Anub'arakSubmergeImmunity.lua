@@ -36,6 +36,8 @@ local function OnCastEmerge(event, caster, spell)
 	if aura then aura:SetDuration(1500) end -- Don't interrupt emote while performing it
 	
 	caster:CastSpell(caster, 68848, true) -- Interrupt self
+    
+    if caster:HasAura(53456) then caster:RemoveAura(53456) end -- Remove impale aura
 	
 	caster:RegisterEvent(function(e, d, r, caster)
 		caster:PerformEmote(449) -- Emerge emote, hammering to ensure it triggers (won't overlap client-side)
