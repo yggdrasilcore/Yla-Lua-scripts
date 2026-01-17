@@ -4,7 +4,7 @@ local function CompleteSummonIfShadowNearby(event, player, spell, skipCheck)
     for _, bot in ipairs(playersInRange) do
         local botName = bot:GetName()
         if not isPlayerBot[botName] then return end
-        if not player:IsInSameGroupWith(bot) then return end
+        if not (player:IsInSameGroupWith(bot) or player:IsInSameRaidWith(bot)) then return end
         
 		local rootAura = bot:AddAura(32113, bot)
         rootAura:SetDuration(5000)
@@ -21,15 +21,16 @@ local function CompleteSummonIfShadowNearby(event, player, spell, skipCheck)
             
             local target = player:GetSelection()
             if not target then return end
+
+            local name = target:GetName()
+            if not isPlayerBot[name] then player:CastSpell(target, 7720, true) return end -- Summon normal player
+
+            local bot = target
+            if not (player:IsInSameGroupWith(bot) or player:IsInSameRaidWith(bot)) then player:SendBroadcastMessage("You can only summon shadows in your group.") return end
             
-            player:CastSpell(target, 7720, true) -- Ritual of Summoning completion spell
+            if bot:IsInCombat() then player:SendBroadcastMessage("You cannot summon a shadow while it is in combat.") return end
             
-            local targetName = target:GetName()
-            if not isPlayerBot[targetName] then return end
-            
-            if target:IsInCombat() then player:SendBroadcastMessage("You cannot summon a shadow while it is in combat.") return end
-            
-            target:Teleport(player:GetMapId(), player:GetX(), player:GetY(), player:GetZ(), player:GetO())
+            bot:Teleport(player:GetMapId(), player:GetX(), player:GetY(), player:GetZ(), player:GetO())
         end, 5000)
         
         break
@@ -37,6 +38,22 @@ local function CompleteSummonIfShadowNearby(event, player, spell, skipCheck)
 end
 
 RegisterSpellEvent(23598, 2, CompleteSummonIfShadowNearby)
+
+local function SummonShadows(event, player, spell, skipCheck)
+    local bot = player:GetSelection()
+    if not bot then return end
+            
+    local name = bot:GetName()
+    if not isPlayerBot[name] then return end
+
+    if not (player:IsInSameGroupWith(bot) or player:IsInSameRaidWith(bot)) then player:SendBroadcastMessage("You can only summon shadows in your group.") return end
+    
+    if bot:IsInCombat() then player:SendBroadcastMessage("You cannot summon a shadow while it is in combat.") return end
+    
+    bot:Teleport(player:GetMapId(), player:GetX(), player:GetY(), player:GetZ(), player:GetO())
+end
+
+RegisterSpellEvent(7720, 2, SummonShadows)
 
 local function OnCastRitualOfSummoning(event, portal)
     local FirstPlayerName
