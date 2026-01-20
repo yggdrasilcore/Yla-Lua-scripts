@@ -248,6 +248,21 @@ local function CreateBotControlBar()
             StaticPopup_Show("COMMAND_QUEUE_FULL")
         end
         
+        if not chatType or chatType == "RAID" or chatType == "PARTY" then
+            local numRaid = GetNumRaidMembers()
+            local numParty = GetNumPartyMembers()
+            
+            if numRaid == 0 and numParty == 0 then
+                return
+            end
+            
+            if numRaid > 0 then
+                chatType = "RAID"
+            elseif numParty > 0 then
+                chatType = "PARTY"
+            end
+        end
+        
         table.insert(messageQueue, {msg = message, type = chatType, lang = language, target = target})
         
         if not isProcessingQueue then
@@ -260,7 +275,7 @@ local function CreateBotControlBar()
                     return
                 end
                 
-                local currentTime = GetTime()  -- Move this inside OnUpdate
+                local currentTime = GetTime()
                 local delay = isThrottled and 2 or 0
                 if currentTime - lastSendTime >= delay then
                     local nextMessage = table.remove(messageQueue, 1)
