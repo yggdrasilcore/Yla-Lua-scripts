@@ -18,3 +18,11 @@ end
 for _, spellId in ipairs(SpellsUsingSoulShards) do
     RegisterSpellEvent(spellId, 2, OnSpellCast)
 end
+
+local function OnWarlockShadowEnterMap(event, player)
+    if player:GetClass() ~= 9 then return end
+    if not isPlayerBot[player:GetName()] then return end
+    if not player:HasItem(6265) then player:AddItem(6265, 1) end
+end
+
+RegisterPlayerEvent(28, OnWarlockShadowEnterMap)
