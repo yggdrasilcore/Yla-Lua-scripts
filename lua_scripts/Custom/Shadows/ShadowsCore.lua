@@ -21,7 +21,7 @@ local removalInProgress =   {}
 local lastTeleTime      =   {}
 local disallowedZones   =   {4298}--, 4197, 3628, 3666} -- Scarlet Enclave (DK start area), Wintergrasp, Halaa
 
-WG_FightActive = false
+WG_FightActive = nil
 
 -- Shadows Configs End
 
@@ -2972,11 +2972,73 @@ local function OnGroupChangeLeader(event, packet, player)
     end
 end
 
+local function InitializeWGState()
+    if WG_FightActive == nil then
+        CharDBQueryAsync("SELECT value FROM worldstates WHERE entry = 3801", function(query)
+            if query then
+                local value = query:GetUInt32(0)
+                WG_FightActive = (value == 1)
+            else
+                WG_FightActive = false
+            end
+        end)
+    end
+end
+
+InitializeWGState()
+
+local WG_DbCheckHistory = {}
+
+local function CheckWintergraspDatabase()
+    CharDBQueryAsync("SELECT value FROM worldstates WHERE entry = 3801", function(query)
+        if not query then return end
+        
+        local value = query:GetUInt32(0)
+        local dbFightActive = (value == 1)
+        local statesMatch = (dbFightActive == WG_FightActive)
+        
+        table.insert(WG_DbCheckHistory, {
+            timestamp = os.time(),
+            dbState = dbFightActive,
+            localState = WG_FightActive,
+            match = statesMatch
+        })
+        
+        if #WG_DbCheckHistory > 3 then
+            table.remove(WG_DbCheckHistory, 1)
+        end
+        
+        if #WG_DbCheckHistory >= 2 then
+            local consecutiveDeviations = 0
+            for i = #WG_DbCheckHistory, 1, -1 do
+                if not WG_DbCheckHistory[i].match then
+                    consecutiveDeviations = consecutiveDeviations + 1
+                else
+                    break
+                end
+            end
+            
+            if consecutiveDeviations >= 2 then
+                print(string.format("[WG DB CHECK] CORRECTION NEEDED! Updating WG_FightActive from %s to %s", 
+                    tostring(WG_FightActive), tostring(dbFightActive)))
+                
+                WG_FightActive = dbFightActive
+                
+                local statusText = dbFightActive and "true (fight active)" or "false (fight ended)"
+                print(string.format("[WG DB CHECK] Fight status corrected to: %s", statusText))
+                
+                WG_DbCheckHistory = {}
+            end
+        end
+    end)
+end
+
+CreateLuaEvent(CheckWintergraspDatabase, 60000, 0)
+
 local function ProcessWintergraspWorldstate(variableID, value)
     if variableID == 3801 then
         if value == 0 then
             WG_FightActive = true
-            print("[WG PACKET DEBUG] Fight status set to: true - Removing all shadows in Wintergrasp")
             
             local allPlayers = GetPlayersInWorld()
             for _, player in pairs(allPlayers) do
@@ -2987,7 +3049,6 @@ local function ProcessWintergraspWorldstate(variableID, value)
                         local master = player
                         
                         if master and (master:GetData("BotCount") and master:GetData("BotCount") > 0) then
-                            print("[WG DEBUG] Fight is active, removing bots for master " .. master:GetName())
                             
                             local botsToRemove = {}
                             if activeBots[master:GetName()] then
@@ -2997,13 +3058,11 @@ local function ProcessWintergraspWorldstate(variableID, value)
                             end
                             
                             if #botsToRemove > 0 then
-                                print("[WG DEBUG] Removing " .. #botsToRemove .. " bots")
                                 for _, botName in ipairs(botsToRemove) do
                                     local bot = GetPlayerByName(botName)
                                     if bot then
                                         bot:RemoveFromGroup()
                                         master:RunCommand(".playerbots bot remove " .. botName)
-                                        print("[WG DEBUG] Removed bot: " .. botName)
                                     end
                                 end
                                 master:SendBroadcastMessage("Shadows are not permitted during active Wintergrasp battles. Your shadows have logged off.")
@@ -3015,7 +3074,6 @@ local function ProcessWintergraspWorldstate(variableID, value)
             end
         else
             WG_FightActive = false
-            print("[WG PACKET DEBUG] Fight status set to: false")
         end
     end
 end
@@ -3027,8 +3085,7 @@ local function OnInitWorldStatesPacket(event, packet, player)
     local worldstateCount = packet:ReadUShort()
     
     if mapID == 571 and areaID == 4197 then
-        print("[WG PACKET DEBUG] InitWorldStates for Wintergrasp - Player: " .. (player and player:GetName() or "unknown"))
-        
+
         for i = 1, worldstateCount do
             local variableID = packet:ReadLong()
             local value = packet:ReadLong()
