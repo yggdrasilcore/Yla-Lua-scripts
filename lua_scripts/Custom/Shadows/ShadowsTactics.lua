@@ -202,3 +202,43 @@ RegisterPlayerEvent(3, RemoveShadowsGarfrostFrostProtection) -- On login, if sta
 RegisterPlayerEvent(34, RemoveShadowsGarfrostFrostProtection) -- Leave combat
 
 -- END POS TACTICS HACKS
+
+-- LK TACTICS
+
+local function CheckNecroticPlague(eventid, delay, repeats, lk) -- Make shadows dispell plague on p1->p2 transition
+    local hp = lk:GetHealthPct()
+    if lk:IsDead() or not lk:IsInCombat() or hp < 65 then
+        lk:SetData("NecroticCheckActive", nil)
+        RemoveEventById(eventid)
+        return
+    end
+    
+    
+    if hp >= 65 and hp <= 70 then
+        local players = lk:GetPlayersInRange(100)
+        local necroticAuras = {70337, 70338, 73785, 73786, 73787, 73912, 73913, 73914}
+        
+        for _, player in pairs(players) do
+            local name = player:GetName()
+            if isPlayerBot[name] then
+                for _, auraId in ipairs(necroticAuras) do
+                    if player:HasAura(auraId) then
+                        player:CastSpell(player, 66116, true)
+                        break
+                    end
+                end
+            end
+        end
+    end
+end
+
+local function OnLKCombat(event, player, enemy)
+    if enemy and enemy:GetEntry() == 36597 then
+        if not enemy:GetData("NecroticCheckActive") then
+            enemy:SetData("NecroticCheckActive", true)
+            enemy:RegisterEvent(CheckNecroticPlague, 1000, 0)
+        end
+    end
+end
+
+RegisterPlayerEvent(33, OnLKCombat)
