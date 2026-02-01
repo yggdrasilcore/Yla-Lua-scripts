@@ -10,7 +10,6 @@ local function RemoveImmunity(eventid, delay, repeats, creature)
     creature:RemoveFlag(UNIT_FIELD_FLAGS, 0x00000002)
     creature:RemoveAura(52165)
 	creature:ClearUnitState(1)
-	print("[NPC]: Shambling Horror - Animation fix, immunity aura removed!")
 end
 
 local function Crawl(eventid, delay, repeats, creature)
@@ -23,7 +22,6 @@ local function OnNPCSpawn(event, creature)
     local OBJECT_END = 0x0006
     local UNIT_FIELD_FLAGS = OBJECT_END + 0x0035
     creature:SetFlag(UNIT_FIELD_FLAGS, 0x00000002)
-	print("[NPC]: Shambling Horror - Animation fix, immunity aura added!")
 	creature:RegisterEvent(Crawl, 20, 1)
 	creature:RegisterEvent(RemoveImmunity, 4200, 1)
 end
@@ -58,6 +56,19 @@ local function OnUpdateAI(event, creature, diff)
     local shockwave_timer = creature:GetData("shockwave_timer")
     if not shockwave_timer or shockwave_timer <= diff then
         creature:CastSpell(creature:GetVictim(), SPELL_SHOCKWAVE, false)
+
+        -- Check if shadows should "stun" Shambling  Horror's cast
+        local playersNearby = creature:GetPlayersInRange(10)
+        for _, player in pairs(playersNearby) do
+            local name = player:GetName()
+            if isPlayerBot[name] then
+                creature:RegisterEvent(function(eventid, delay, repeats, creature)
+                    creature:AddAura(17308, creature) -- Some generic 2-sec stun spell
+                end, 500, 1)
+                break
+            end
+        end
+            
         creature:SetData("shockwave_timer", math.random(20000, 25000))
     else
         creature:SetData("shockwave_timer", shockwave_timer - diff)
