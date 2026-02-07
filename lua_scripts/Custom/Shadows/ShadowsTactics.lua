@@ -101,7 +101,7 @@ function CombatCheck(eventId, delay, repeats, sindragosa)
                             if currentTime - lastDamageTime >= 1.5 then
                                 local nearestTomb = player:GetNearestCreature(5, 36980, 0)
                                 if nearestTomb then
-                                    player:DealDamage(nearestTomb, nearestTomb:GetMaxHealth() * 0.02)
+                                    player:DealDamage(nearestTomb, nearestTomb:GetMaxHealth() * (math.random() * 0.01 + 0.015))
                                     player:SetData("LastTombDamage", currentTime)
                                 end
                             end
