@@ -81,11 +81,11 @@ local function OnAIOAntiCheatCommand(event, player, command)
         if arg == "M2Clip" then
 			-- Just log for now, to avoid false positives
         elseif arg == "SpeedHack" then
-            player:KickPlayer()
+			-- Just log for now, to avoid false positives
         elseif arg == "WaterWalkHack" then
             player:KickPlayer()
         elseif arg == "FlyHack" then
-            player:KickPlayer()
+			-- Just log for now, to avoid false positives
         elseif arg == "FlyPvPHack" then
             player:KickPlayer()
         end

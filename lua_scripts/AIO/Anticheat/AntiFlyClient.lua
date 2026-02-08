@@ -10,6 +10,12 @@ AntiFlyInstance:SetScript("OnUpdate", function(self, elapsed)
     self.timer = self.timer + elapsed
     if self.timer > 0.5 then
         self.timer = 0
+        
+        if UnitOnTaxi("player") or UnitUsingVehicle("player") then
+            self.failCount = 0
+            return
+        end
+        
         local isFlying = IsFlying() == 1
         if isFlying ~= self.lastFlyState then
             local _, instanceType = IsInInstance()
@@ -40,6 +46,11 @@ AntiFlyWorld:SetScript("OnUpdate", function(self, elapsed)
     self.timer = self.timer + elapsed
     if self.timer > 1 then
         self.timer = 0
+        
+        if UnitOnTaxi("player") or UnitUsingVehicle("player") then
+            self.failCount = 0
+            return
+        end
         
         local clientIsFlying = IsFlying() == 1
         local _, instanceType = IsInInstance()

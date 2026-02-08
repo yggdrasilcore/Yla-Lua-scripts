@@ -20,6 +20,11 @@ AntiWater:SetScript("OnUpdate", function(self, elapsed)
     if self.timer > 1 then
         self.timer = 0
         
+        if UnitOnTaxi("player") or UnitUsingVehicle("player") then
+            self.failCount = 0
+            return
+        end
+        
         if self.serverInWater ~= nil then
             local clientSwimming = IsSwimming() == 1
             
