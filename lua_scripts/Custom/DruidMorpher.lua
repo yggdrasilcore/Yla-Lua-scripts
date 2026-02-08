@@ -1199,11 +1199,13 @@ local function Morpher(eventId, delay, repeats, player)
                         end
                     end
                     
-                    local morphCount = #creatureCache[guid][3]
-                    if morphCount >= 10 then
-                        local tier = math.min(math.floor(morphCount / 10), 5)
-                        local travelSpeed = 1.4 + (tier * 0.1)
-                        player:SetSpeed(1, travelSpeed)
+                    if creatureCache[guid] and creatureCache[guid][3] then
+                        local morphCount = #creatureCache[guid][3]
+                        if morphCount >= 10 then
+                            local tier = math.min(math.floor(morphCount / 10), 5)
+                            local travelSpeed = 1.4 + (tier * 0.1)
+                            player:SetSpeed(1, travelSpeed)
+                        end
                     end
                 end
             end
@@ -1217,7 +1219,7 @@ local function Morpher(eventId, delay, repeats, player)
             if morphSelection4[guid] then
                 if morphSelection4[guid] > 0 then
                     player:SetDisplayId(morphSelection4[guid])
-                    if #creatureCache[guid][4] >= 5 then
+                    if creatureCache[guid] and creatureCache[guid][4] and #creatureCache[guid][4] >= 5 then
                         local morphs = #creatureCache[guid][4]
                         local tier = math.min(math.floor(morphs / 5), 5)
                         local baseSpeed = 2.5
@@ -1267,7 +1269,7 @@ local function Morpher(eventId, delay, repeats, player)
             if morphSelection7[guid] then
                 if morphSelection7[guid] > 0 then
                     player:SetDisplayId(morphSelection7[guid])
-                    if #creatureCache[guid][7] >= 5 then
+                    if creatureCache[guid] and creatureCache[guid][7] and #creatureCache[guid][7] >= 5 then
                         local morphs = #creatureCache[guid][7]
                         local tier = math.min(math.floor(morphs / 5), 8)
                         local aquaticSpeed = 1.5 + (tier * 0.05) * 0.75
