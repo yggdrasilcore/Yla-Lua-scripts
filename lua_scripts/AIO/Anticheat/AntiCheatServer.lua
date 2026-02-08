@@ -25,8 +25,8 @@ local function StartAntiClipCheck(player)
 					or gObject:GetName():lower():find("port"))
 				) then
 					local x, y, z = gObject:GetLocation()
-					--SendToDiscord("M2 object clipping detected. Offending player: "..player:GetName()..". Gobject ID: "..gObject:GetEntry()..". Name: "..gObject:GetName()..". Gobject state: "..gObject:GetGoState()..". Pos: "..string.format("%.2f, %.2f, %.2f", x, y, z)..". Map: "..gObject:GetMapId())
-					player:SendBroadcastMessage("Clonk!")
+					SendToDiscord("M2 object clipping detected. Offending player: "..player:GetName()..". Gobject ID: "..gObject:GetEntry()..". Name: "..gObject:GetName()..". Gobject state: "..gObject:GetGoState()..". Pos: "..string.format("%.2f, %.2f, %.2f", x, y, z)..". Map: "..gObject:GetMapId())
+					player:RunCommand(".AntiCheatAlert M2Clip")
 					break
 				end
 			end
@@ -72,10 +72,24 @@ local function StartElunaAnticheat(event, player)
 end
 
 local function OnAIOAntiCheatCommand(event, player, command)
-    local arg = command:match("%.AIO_AntiCheat%s+(%S+)")
-    if not arg then return end
+	if not player then return end
     
-	player:SendBroadcastMessage("Argument: " .. arg)
+    local arg = command:match("AntiCheatAlert%s+(%S+)")
+    if not arg then return false end
+ 
+	print("[Anticheat]: Player "..player:GetName().." caught exploiting cheat type "..arg.." at map "..player:GetMapId()..", XYZ "..player:GetX()..", "..player:GetY()..", "..player:GetZ()..". ")
+
+    if arg == "M2Clip" then
+		-- Just log this one for now, let anticheat module handle kick
+	elseif arg == "SpeedHack" then
+		-- Just log this one for now, let anticheat module handle kick
+	elseif arg == "WaterWalkHack" then
+		player:KickPlayer()
+	elseif arg == "FlyHack" then
+		player:KickPlayer()
+	elseif arg == "FlyPvPHack" then
+		player:KickPlayer()
+	end
     return false
 end
 

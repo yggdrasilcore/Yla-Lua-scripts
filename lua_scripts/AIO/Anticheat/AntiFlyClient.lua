@@ -15,8 +15,7 @@ AntiFlyInstance:SetScript("OnUpdate", function(self, elapsed)
             local _, instanceType = IsInInstance()
             local clientFlying = isFlying and "YES" or "NO"
             if isFlying and instanceType == "pvp" then
-                SendAddonMessage("AIO_AntiCheat", "FlyHackInInstance", "GUILD")
-                    --SendChatMessage(".anticheat_kick", "GUILD")
+                SendChatMessage(".AntiCheatAlert FlyPvPHack", "GUILD")
             end
             self.lastFlyState = isFlying
         end
@@ -52,7 +51,7 @@ AntiFlyWorld:SetScript("OnUpdate", function(self, elapsed)
             if clientIsFlying ~= self.serverFlyState then
                 self.failCount = self.failCount + 1
                 if self.failCount >= 3 then
-                    SendAddonMessage("AIO_AntiCheat", "FlyHackInWorld", "GUILD")
+					SendChatMessage(".AntiCheatAlert FlyHack", "GUILD")
                     self.failCount = 0
                 end
             else

@@ -29,7 +29,7 @@ AntiWater:SetScript("OnUpdate", function(self, elapsed)
             if self.serverInWater and not clientSwimming then
                 self.failCount = self.failCount + 1
                 if self.failCount >= 3 then
-                    SendAddonMessage("AIO_AntiCheat", "WaterWalkHack", "GUILD")
+					SendChatMessage(".AntiCheatAlert WaterWalkHack", "GUILD")
                     self.failCount = 0
                 end
             else

@@ -47,7 +47,7 @@ AntiSpeed:SetScript("OnUpdate", function(self, elapsed)
             if not matched then
                 self.failCount = self.failCount + 1
                 if self.failCount >= 3 then
-                    SendAddonMessage("AIO_AntiCheat", "SpeedHack", "GUILD")
+					SendChatMessage(".AntiCheatAlert SpeedHack", "GUILD")
                     self.failCount = 0
                 end
             else
