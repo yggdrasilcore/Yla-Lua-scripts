@@ -50,7 +50,7 @@ local function SendAntiCheatChecks(player)
         end
         player:SendAddonMessage("AIO_AntiCheat_Speed", table.concat(speeds, ","), 7, player)
         
-        player:SendAddonMessage("AIO_AntiCheat_Water", tostring(player:IsInWater()), 7, player)
+        player:SendAddonMessage("AIO_AntiCheat_Water", tostring(player:IsUnderWater()), 7, player)
     end, 1000, 0)
     
     player:SetData("SendAntiCheatChecks", eventId)
@@ -72,25 +72,23 @@ local function StartElunaAnticheat(event, player)
 end
 
 local function OnAIOAntiCheatCommand(event, player, command)
-	if not player then return end
-    
-    local arg = command:match("AntiCheatAlert%s+(%S+)")
-    if not arg then return false end
- 
-	print("[Anticheat]: Player "..player:GetName().." caught exploiting cheat type "..arg.." at map "..player:GetMapId()..", XYZ "..player:GetX()..", "..player:GetY()..", "..player:GetZ()..". ")
-
-    if arg == "M2Clip" then
-		-- Just log this one for now, let anticheat module handle kick
-	elseif arg == "SpeedHack" then
-		-- Just log this one for now, let anticheat module handle kick
-	elseif arg == "WaterWalkHack" then
-		player:KickPlayer()
-	elseif arg == "FlyHack" then
-		player:KickPlayer()
-	elseif arg == "FlyPvPHack" then
-		player:KickPlayer()
-	end
-    return false
+    if command:find("AntiCheatAlert") then
+		if not player then return end
+        local arg = command:match("AntiCheatAlert%s+(%S+)")
+        if not arg then return false end
+     
+        print("[Anticheat]: Player "..player:GetName().." caught exploiting cheat type "..arg.." at map "..player:GetMapId()..", XYZ "..player:GetX()..", "..player:GetY()..", "..player:GetZ()..". ")
+        if arg == "M2Clip" then
+        elseif arg == "SpeedHack" then
+        elseif arg == "WaterWalkHack" then
+            player:KickPlayer()
+        elseif arg == "FlyHack" then
+            player:KickPlayer()
+        elseif arg == "FlyPvPHack" then
+            player:KickPlayer()
+        end
+		return false
+    end
 end
 
 local function ReloadEluna(event)
