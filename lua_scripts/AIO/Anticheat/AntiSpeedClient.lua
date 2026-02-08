@@ -23,7 +23,7 @@ AntiSpeed:SetScript("OnUpdate", function(self, elapsed)
     if self.timer > 1 then
         self.timer = 0
         
-        if UnitOnTaxi("player") or UnitUsingVehicle("player") or UnitIsCharmed("player") or UnitIsControlling("player") then
+        if UnitOnTaxi("player") or UnitIsPossessed("player") or UnitUsingVehicle("player") or UnitIsCharmed("player") then
             self.failCount = 0
             return
         end
