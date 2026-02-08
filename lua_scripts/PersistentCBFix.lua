@@ -7,7 +7,7 @@ local function OnKillCreature(event, killer, killed)
         return
     end
     
-    print("Player "..killer:GetName().." just killed "..killed:GetName()..", checking if we need to clear combat!")
+    -- print("Player "..killer:GetName().." just killed "..killed:GetName()..", checking if we need to clear combat!")
     
     -- Check all nearby creatures in combat within 500 yards
     local nearbyCreatures = killer:GetCreaturesInRange(500)

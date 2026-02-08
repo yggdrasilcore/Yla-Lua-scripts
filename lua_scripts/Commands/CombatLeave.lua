@@ -52,13 +52,9 @@ end
 local TimedCBCheckTable = {}
 
 local function TimedCBCheck(eventid, delay, repeats, player)
-    if not player then 
-        print("TimedCBCheck: Player is nil")
-        return 
-    end
+    if not player then return end
     
     if not player:IsInCombat() then
-        print(string.format("Player %s no longer in combat, removing boss fight flag", player:GetName()))
         player:SetData("isInBossFight", nil)
         TimedCBCheckTable[player:GetGUIDLow()] = nil
         RemoveEventById(eventid)
@@ -72,23 +68,20 @@ local function TimedCBCheck(eventid, delay, repeats, player)
     
     for _, creature in pairs(creatures) do
         if creature:GetRank() > 1 and creature:IsInCombat() then
-            print(string.format("Combat check debug for "..player:GetName()..": Found boss rank creature %s in combat", creature:GetName()))
             hasBossInRange = true
             break
         end
     end
     
     if not hasBossInRange then
-        print(string.format("No boss in range for player %s, removing boss fight flag", player:GetName()))
         player:SetData("isInBossFight", nil)
         print("scheduling combat clear")
     end
     
     if player:GetInstanceId() and not hasBossInRange then
-        print(string.format("Player %s is in instance, clearing combat", player:GetName()))
+        print(string.format("Periodic Combat Clear - Player %s is in instance, clearing combat", player:GetName()))
         player:SetData("cbstoptime", os.time())
         player:RunCommand("combatstop")
-        print("clearing combat")
     end
 end
 
