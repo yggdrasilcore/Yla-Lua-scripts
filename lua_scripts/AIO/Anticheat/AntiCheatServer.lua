@@ -79,7 +79,9 @@ local function OnAIOAntiCheatCommand(event, player, command)
      
         print("[Anticheat]: Player "..player:GetName().." caught exploiting cheat type "..arg.." at map "..player:GetMapId()..", XYZ "..player:GetX()..", "..player:GetY()..", "..player:GetZ()..". ")
         if arg == "M2Clip" then
+			-- Just log for now, to avoid false positives
         elseif arg == "SpeedHack" then
+            player:KickPlayer()
         elseif arg == "WaterWalkHack" then
             player:KickPlayer()
         elseif arg == "FlyHack" then
