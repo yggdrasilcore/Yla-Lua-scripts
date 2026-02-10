@@ -77,6 +77,10 @@ local function GeneralZarithrian(eventId, delay, repeats, zarithrian)
         elseif player:GetName() == offTankName then
             offTank = player
         end
+        local victim = zarithrian:GetVictim()
+        if victim and victim == player and IsTank(player) then
+            player:AddAura(64556, player) -- Make shadow tanks immune to fear
+        end
     end
     
     -- Tank role inheritance if tanks die
