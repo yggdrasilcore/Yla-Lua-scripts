@@ -14,7 +14,7 @@ local function OnQuestComplete(event, player, quest)
 end
 
 local function OnKillCreature(event, player, killed)
-    if killed:GetEntry() == 36633 then return end
+    if killed:GetMaxHealth() < 500000 then return end
     if killed:IsDungeonBoss() or killed:IsWorldBoss() then
         
         local bossLevel = killed:GetLevel()
