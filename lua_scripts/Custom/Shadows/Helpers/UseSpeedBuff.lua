@@ -7,14 +7,14 @@ function UseSpeedBuff(player)
     local now = os.time()
     
     if player:HasSpell(55016) then
-        player:CastSpell(player, 54861, true)
+        player:CastSpell(player, 54861, true) -- Rocket boots
     elseif player:GetClass() == 4 then
-        player:CastSpell(player, 11305, true)
+        player:CastSpell(player, 11305, true) -- Rogue sprint
     elseif player:GetClass() == 11 and player:HasAura(768) then
-        player:CastSpell(player, 1850, true)
+        player:CastSpell(player, 1850, true) -- Cat dash
     elseif player:HasSpell(1953) then
         if not Blink[guid] or (now - Blink[guid]) >= 20 then
-            player:CastSpell(player, 1953, true)
+            player:CastSpell(player, 1953, true) -- Blink
             Blink[guid] = now
         end
     else
@@ -30,4 +30,8 @@ function UseSpeedBuff(player)
             DrumsOfSpeed[guid] = now
         end
     end
+end
+
+function UseRocketBoots(player)
+    player:CastSpell(player, 54861, true)
 end

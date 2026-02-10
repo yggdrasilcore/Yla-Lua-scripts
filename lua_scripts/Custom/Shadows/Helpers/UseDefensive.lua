@@ -53,10 +53,18 @@ function UseDefensive(player)
                 player:CastSpell(player, 61301, true) -- Riptide
             end
         else
-            player:CastSpell(player, 58753, true) -- Stoneskin Totem
-            player:CastSpell(player, 58739, true) -- Fire Resistance Totem
-            player:CastSpell(player, 58745, true) -- Frost Resistance Totem
-            player:CastSpell(player, 58749, true) -- Nature Resistance Totem
+            if not player:HasAura(58754) then
+                player:CastSpell(player, 58753, true) -- Stoneskin Totem
+            end
+            if not player:HasAura(58740) then
+                player:CastSpell(player, 58739, true) -- Fire Resistance Totem
+            end
+            if not player:HasAura(58744) then
+                player:CastSpell(player, 58745, true) -- Frost Resistance Totem
+            end
+            if not player:HasAura(58750) then
+                player:CastSpell(player, 58749, true) -- Nature Resistance Totem
+            end
         end
     elseif class == 8 then
         if not player:HasAura(43020) then

@@ -1,4 +1,4 @@
-function CalculateSpreadPositions(stackPos, spreadPos, numPlayers, spacing)
+function CalculateSpreadPositions(stackPos, spreadPos, numPlayers, spacing, minDistance)
     local positions = {}
     
     local dirX = spreadPos.x - stackPos.x
@@ -11,8 +11,6 @@ function CalculateSpreadPositions(stackPos, spreadPos, numPlayers, spacing)
     local perpY = dirX
     
     local objectWidth = 2.2 -- Roughly the width of a player
-    local totalWidth = (numPlayers - 1) * spacing * objectWidth
-    local minDistance = totalWidth / 2 + spacing
     
     for i = 1, numPlayers do
         local spreadOffset = ((i - 1) - (numPlayers - 1) / 2) * spacing * objectWidth

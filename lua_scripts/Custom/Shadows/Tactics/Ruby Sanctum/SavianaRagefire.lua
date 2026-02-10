@@ -47,10 +47,13 @@ local function SavianaRagefireLoop(eventId, delay, repeats, saviana)
     if bossInFlightPhase and #playersWithFlameBeacon > 0 then
         table.sort(playersWithFlameBeacon, function(a, b) return a:GetName() < b:GetName() end)
         
-        local positions = CalculateSpreadPositions(stackPos, spreadPos, #playersWithFlameBeacon, 6)
+        local positions = CalculateSpreadPositions(stackPos, spreadPos, #playersWithFlameBeacon, 6, 15)
         
         for i, player in ipairs(playersWithFlameBeacon) do
-            player:MoveTo(1, positions[i].x, positions[i].y, positions[i].z, true)
+            local map = player:GetMap()
+            local groundZ = map:GetHeight(positions[i].x, positions[i].y)
+            player:MoveTo(1, positions[i].x, positions[i].y, groundZ, true)
+            UseRocketBoots(player)
             UseDefensive(player)
         end
     end
@@ -70,36 +73,42 @@ local function SavianaRagefireLoop(eventId, delay, repeats, saviana)
         end
         
         for _, tank in ipairs(tanks) do
-            -- Check if this tank has highest threat among all players
-            local tankThreat = saviana:GetThreat(tank)
-            local hasHighestThreat = true
+            local victim = saviana:GetVictim()
+            local victimIsTank
+            if victim and victim:IsPlayer() and IsTank(victim) then victimIsTank = true end
             
-            for _, player in ipairs(validPlayers) do
-                if saviana:GetThreat(player) > tankThreat then
-                    hasHighestThreat = false
-                    break
-                end
-            end
-            
-            -- If no tank has highest threat, boost this tank's threat
-            if not hasHighestThreat then
-                local highestThreat = 0
+            if not victimIsTank then
+                -- Check if this tank has highest threat among all players
+                local tankThreat = saviana:GetThreat(tank)
+                local hasHighestThreat = true
+                
                 for _, player in ipairs(validPlayers) do
-                    local threat = saviana:GetThreat(player)
-                    if threat > highestThreat then
-                        highestThreat = threat
+                    if saviana:GetThreat(player) > tankThreat then
+                        hasHighestThreat = false
+                        break
                     end
                 end
-                local threatToAdd = highestThreat * 1.1 + math.random(-500, 500)
-                saviana:AddThreat(tank, threatToAdd)
+                
+                -- If no tank has highest threat, boost this tank's threat
+                if not hasHighestThreat then
+                    local highestThreat = 0
+                    for _, player in ipairs(validPlayers) do
+                        local threat = saviana:GetThreat(player)
+                        if threat > highestThreat then
+                            highestThreat = threat
+                        end
+                    end
+                    local threatToAdd = 10000 + math.random(-500, 500)
+                    saviana:AddThreat(tank, threatToAdd)
+                end
+            else
+                if tank == victim and not IsAtPos(saviana, 3150, 643, 5) then
+                    saviana:MoveTo(9999, 3150, 643, 79.4, true) -- Boss position failsafe
+                end
             end
             
             if saviana:IsCasting() then -- Flame Breath
                 UseDefensive(tank)
-                
-                if hasHighestThreat and not IsAtPos(saviana, 3150, 643, 5) then
-                    saviana:MoveTo(1, 3150, 643, 79.4, true) -- Boss position failsafe
-                end
             end
             
             -- Move tanks in front of boss, by water
