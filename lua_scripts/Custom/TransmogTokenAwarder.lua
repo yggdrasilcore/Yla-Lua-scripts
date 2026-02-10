@@ -14,7 +14,14 @@ local function OnQuestComplete(event, player, quest)
 end
 
 local function OnKillCreature(event, player, killed)
-    if killed:GetMaxHealth() < 500000 then return end
+    local HP_LIMIT = 80000
+    if killed:GetMaxHealth() < HP_LIMIT then return end
+    
+    local map = killed:GetMap()
+    if map and map:IsRaid() then HP_LIMIT = 500000 end
+    
+    if killed:GetMaxHealth() < HP_LIMIT then return end
+    
     if killed:IsDungeonBoss() or killed:IsWorldBoss() then
         
         local bossLevel = killed:GetLevel()
