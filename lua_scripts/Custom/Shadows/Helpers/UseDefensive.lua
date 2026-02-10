@@ -66,6 +66,7 @@ function UseDefensive(player)
         if player:HasSpell(19028) and not player:HasAura(19028) then
             player:CastSpell(player, 19028, true) -- Soul Link
         end
+        player:CastSpell(player, 47875, true) -- Fel Healthstone
     elseif class == 11 then
         if not player:HasAura(22812) then
             player:CastSpell(player, 22812, true) -- Barkskin

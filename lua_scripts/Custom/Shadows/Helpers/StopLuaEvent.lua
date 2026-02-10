@@ -1,4 +1,5 @@
-function StopLuaEvent(creature)
-    creature:RemoveEvents()
-    creature:SetData("EventActive", nil)
+function StopLuaEvent(unit)
+    unit:RemoveEvents()
+    unit:SetData("EventActive", nil)
+    unit:SetData("CombatTime", nil)
 end
