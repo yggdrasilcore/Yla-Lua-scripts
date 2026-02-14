@@ -155,6 +155,14 @@ InterfaceOptionsFrameCategories:HookScript("OnShow", function(self)
     end
 end)
 
+if InterfaceOptionsFrameCategories:IsShown() then
+    local button1 = _G["InterfaceOptionsFrameCategoriesButton1"]
+    if button1 and button1:IsVisible() and not addedButtonForShadows then
+        AddShadowsButtonToOptions()
+        addedButtonForShadows = true
+    end
+end
+
 InterfaceOptionsFrameTab2:HookScript("OnClick", function(self)
     local checkBox = _G["ShadowsBarCheckbox"]
     local keyBindButton = _G["ShadowsKeybindButton"]
