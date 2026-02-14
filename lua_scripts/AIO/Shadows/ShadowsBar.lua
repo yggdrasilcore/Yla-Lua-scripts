@@ -10,6 +10,8 @@ local addedButtonForShadows = false
 local SHADOWS_BUTTON_NUMBER = nil
 local shadowButtonName
 local shadowButton
+local ShadowsBarStatus = "ENABLED"
+local ShadowsBarToggleStatus = "ENABLED"
 
 local function ShowShadowsSettingsPanel()
     -- Deactivate all other buttons
@@ -103,7 +105,14 @@ local function ShowShadowsSettingsPanel()
 		local resetShadowsButton = _G["ResetBotAIButton"]
 		local header	= _G["headerText"]
 		
-		if checkBox and not checkBox:IsVisible() then checkBox:Show() end
+		if checkBox then
+			if ShadowsBarToggleStatus == "OPEN" then
+				checkBox:SetChecked(true)
+			else
+				checkBox:SetChecked(false)
+			end
+			if not checkBox:IsVisible() then checkBox:Show() end
+		end
 		if keyBindButton and not keyBindButton:IsVisible()  then keyBindButton:Show() end
 		if resetButton and not resetButton:IsVisible()  then resetButton:Show() end
 		if resetShadowsButton and not resetShadowsButton:IsVisible() then resetShadowsButton:Show() end
@@ -204,8 +213,6 @@ BOT_BAR_SETTINGS = BOT_BAR_SETTINGS or {
 	enabled = true,
 }
 
-local ShadowsBarStatus = "ENABLED"
-local ShadowsBarToggleStatus = "ENABLED"
 
 AIO.AddSavedVar("BOT_BAR_SETTINGS")
 
@@ -3726,9 +3733,7 @@ function ShadowsCacheHandlers.LoadCache(player, data)
     cachedNames = {}
     for name, class in pairs(data) do
         cachedNames[name] = class
-        -- print("Cached ", name, " as class ", class)
     end
-    -- print("Done caching shadows names and classes.")
 end
 
 function GetClassByName(name)

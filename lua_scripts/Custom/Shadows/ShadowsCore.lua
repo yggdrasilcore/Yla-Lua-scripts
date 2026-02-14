@@ -2841,11 +2841,20 @@ local function OnBotCommand(event, player, command)
 		else
 			local group = player:GetGroup()
 			local groupPlayers = group:GetMembers()
+			local foundBot = false
 			for _, groupMember in ipairs(groupPlayers) do
 				local name = groupMember:GetName()
-				if isPlayerBot[name] == player:GetName() then
+				if isPlayerBot[name] == player:GetName() and player:GetData("ShadowsBarData") then
 					player:SendAddonMessage("ShadowsBar", "ENABLED", 7, player)
+					foundBot = true
 					break
+				end
+			end
+			if not foundBot then
+				if player:GetData("ShadowsBarData") then
+					player:SendAddonMessage("ShadowsBar", "OPEN", 7, player)
+				else
+					player:SendAddonMessage("ShadowsBar", "CLOSED", 7, player)
 				end
 			end
 		end
