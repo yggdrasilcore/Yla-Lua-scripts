@@ -307,14 +307,26 @@ local function ApplyFrogFormTooltip(tooltip)
 end
 
 local function ModifyTooltip(tooltip)
-    for i = 1, tooltip:NumLines() do
-        local line = _G[tooltip:GetName().."TextLeft"..i]
-        if line and line:GetText() then
-            local text = line:GetText()
-            if text:find("absorbs damage for up to 15%% of the amount healed for 30 sec") then
-                local newText = text:gsub("15%%", "25%%")
-                line:SetText(newText)
-                tooltip:Show()
+    local itemName, itemLink = tooltip:GetItem()
+    
+    if itemLink then
+        local itemID = itemLink:match("item:(%d+)")
+        
+        for i = 1, tooltip:NumLines() do
+            local line = _G[tooltip:GetName().."TextLeft"..i]
+            if line and line:GetText() then
+                local text = line:GetText()
+                
+                if itemID == "45900" then
+                    local newText = text:gsub("15%%", "25%%")
+                    line:SetText(newText)
+                    tooltip:Show()
+                end
+                
+                if itemID == "42491" and text:find("The Banshee Queen shall have her revenge") then
+                    line:SetText("|cff00ff00Equip: Generates magical arrows when drawn. Does not use ammo.|r\n" .. text)
+                    tooltip:Show()
+                end
             end
         end
     end
