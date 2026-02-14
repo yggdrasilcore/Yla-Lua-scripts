@@ -431,7 +431,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
             end
             botTeleTime[accountId] = os.time() + (BotSummonCD)
         else
-            player:SendAreaTriggerMessage("Your shadows summon is on cooldown for " .. math.floor((botTeleTime[accountId] - os.time()) / 60) .." minutes.")
+            player:SendAreaTriggerMessage("Your shadows summon is on cooldown for " .. math.floor((botTeleTime[accountId] - os.time()) / 60) .. " minutes and " .. ((botTeleTime[accountId] - os.time()) % 60) .. " seconds.")
         end
         ShadowsHello(player)
     elseif intid == 6 then  -- Show list of active shadows to remove
