@@ -8,7 +8,8 @@ local HALION_INSIDE_ENTRY   = 40142
 local CONSUMPTION_ENTRY     = 40135
 local SHADOW_ORBS			= {40083, 40100, 40468, 40469}
 
-local TWILIGHT_PORTAL       = {202794, 202795, 202796}
+local TWILIGHT_PORTAL_OUTSIDE	= {202794, 202795}
+local TWILIGHT_PORTAL_INSIDE 	= 202796
 
 local COMBUSTION_AURA       = 74562
 local CONSUMPTION_AURA      = 74792
@@ -17,56 +18,15 @@ local TWILIGHT_REALM        = 74807
 local PULL_POS              = {3142.5, 534.3, 72.88}
 local ORB_CENTER_POS        = {3153.75, 533.19, 72.88}
 
-local AVERAGE_BOSS_DISTANCE        = 25
+local AVERAGE_BOSS_DISTANCE        = 20
 local AVERAGE_BOSS_DISTANCE_INSIDE = 20
-local SPREAD_FACTOR                = 12.5
+local SPREAD_FACTOR                = 12
 local SPREAD_FACTOR_INSIDE         = 5
 
 local PORTAL_DISTANCE              = 8
 local AOE_AVOIDANCE_DISTANCE       = 15
 
 local TICK_FREQUENCY        = 200
-
-local function GetAllBotsInInstance(instanceId)
-    local bots = {}
-    local allPlayers = GetPlayersInWorld()
-    for _, player in ipairs(allPlayers) do
-        if isPlayerBot[player:GetName()] then
-            local bot = GetPlayerByName(player:GetName())
-            if bot and bot:GetInstanceId() == instanceId and bot:IsInCombat() and bot:IsAlive() then
-                table.insert(bots, bot)
-            end
-        end
-    end
-    return bots
-end
-
-local function GetRoleArraysFromBots(bots)
-    local tanks = {}
-    local healers = {}
-    local melee = {}
-    local casters = {}
-    
-    for _, player in ipairs(bots) do
-        if IsTank(player) then
-            table.insert(tanks, player)
-        end
-        if player:HasHealSpec() then
-            table.insert(healers, player)
-        end
-        if player:HasMeleeSpec() then
-            table.insert(melee, player)
-        end
-        if player:HasCasterSpec() then
-            table.insert(casters, player)
-        end
-    end
-    
-    table.sort(tanks, function(a, b) return a:GetMaxHealth() > b:GetMaxHealth() end)
-    table.sort(healers, function(a, b) return a:GetMaxPower(0) > b:GetMaxPower(0) end)
-    
-    return tanks, healers, melee, casters
-end
 
 local function HalionInsideLoop(eventId, delay, repeats, player)
     if not player:HasAura(TWILIGHT_REALM) or not player:IsInCombat() then
@@ -112,27 +72,25 @@ local function HalionInsideLoop(eventId, delay, repeats, player)
             halionInside:AddThreat(player, 10000 + math.random(-500, 500))
             Taunt(player, halionInside, true)
         end
+
+		local nextCutterTime = halionInside:GetData("NextCutterTime")
+		local cutterEndPos = halionInside:GetData("CutterEndPos")
+		local ocX, ocY, ocZ = ORB_CENTER_POS[1], ORB_CENTER_POS[2], ORB_CENTER_POS[3]		
+		local shouldTrailOrb = false
+		
+		if not nextCutterTime then
+			shouldTrailOrb = true
+			halionInside:SetData("CutterActive", true)
+		elseif (nextCutterTime - os.time()) < 2 or (nextCutterTime - os.time()) > 24 then
+			halionInside:SetData("CutterEndPos", {x = player:GetX(), y = player:GetY()})
+			shouldTrailOrb = true
+			halionInside:SetData("CutterActive", true)
+		else
+			shouldTrailOrb = false
+			halionInside:SetData("CutterActive", false)
+		end
         
-        local combatStart = halionInside:GetData("CombatStart")
-        if not combatStart then
-            combatStart = os.time()
-            halionInside:SetData("CombatStart", combatStart)
-        end
-        
-        local combatTime = os.time() - combatStart
-        local shouldTrailOrb = false
-        
-        if combatTime >= 16 and combatTime < 26 then
-            shouldTrailOrb = true
-        elseif combatTime >= 26 then
-            local timeSinceFirst = combatTime - 16
-            local cycleTime = timeSinceFirst % 29
-            if cycleTime < 10 then
-                shouldTrailOrb = true
-            end
-        end
-        
-		if shouldTrailOrb then
+		if shouldTrailOrb then -- Trail cutter
 			local ocX, ocY, ocZ = ORB_CENTER_POS[1], ORB_CENTER_POS[2], ORB_CENTER_POS[3]
 			local shadowOrbs = {}
 			
@@ -175,8 +133,16 @@ local function HalionInsideLoop(eventId, delay, repeats, player)
 					end
 				end
 			end
-		else
-			local ocX, ocY, ocZ = ORB_CENTER_POS[1], ORB_CENTER_POS[2], ORB_CENTER_POS[3]
+		elseif cutterEndPos then
+		    local angleToEndPos = math.atan2(cutterEndPos.y - ocY, cutterEndPos.x - ocX)
+			local targetAngle = angleToEndPos - math.rad(30) -- 30 degree trail in front of nearest shadow orb
+			local targetX = ocX + (10 * math.cos(targetAngle))
+			local targetY = ocY + (10 * math.sin(targetAngle))
+			
+			if not IsAtPos(player, targetX, targetY, 2) then
+				player:MoveTo(1, targetX, targetY, ocZ, true)
+			end
+		else -- If no cutter spot found, just ensure we are close to center of circle
 			local px, py = player:GetLocation()
 			local distToCenter = math.sqrt((px - ocX)^2 + (py - ocY)^2)
 			if distToCenter < 7 or distToCenter > 13 then
@@ -192,31 +158,28 @@ local function HalionInsideLoop(eventId, delay, repeats, player)
         MoveForConsumption(player, halionInside, INSIDE_DANGER_NPCS)
         
         local targetPos = player:GetData("ConsumptionPos")
-    else
-        if not player:HasAura(CONSUMPTION_AURA) then
-            local INSIDE_DANGER_NPCS = {CONSUMPTION_ENTRY}
-            
-            local targetPos = player:GetData("HalionInsidePos")
-            
-            if targetPos then
-                
-                
-                local px, py, pz = player:GetLocation()
-                local currentPos = {x = px, y = py, z = pz}
-                
-                if halionInside and not IsPositionValidInSideArea(currentPos, halionInside, "left", AVERAGE_BOSS_DISTANCE_INSIDE, SPREAD_FACTOR_INSIDE, AOE_AVOIDANCE_DISTANCE, INSIDE_DANGER_NPCS) then
-                    if IsPositionValidInSideArea(targetPos, halionInside, "left", AVERAGE_BOSS_DISTANCE_INSIDE, SPREAD_FACTOR_INSIDE, AOE_AVOIDANCE_DISTANCE, INSIDE_DANGER_NPCS) then
-                        player:MoveTo(1, targetPos.x, targetPos.y, targetPos.z, true)
-                    else
-                        print("Inside player " .. player:GetName() .. " saved position also invalid, finding new position")
-                        FindAndMoveToInsidePosition(player, halionInside, INSIDE_DANGER_NPCS)
-                    end
-                end
-            else
-                FindAndMoveToInsidePosition(player, halionInside, INSIDE_DANGER_NPCS)
-            end
-        end
-    end
+    elseif not player:GetData("OutsideGroup") then
+		local INSIDE_DANGER_NPCS = {CONSUMPTION_ENTRY}
+		
+		local targetPos = player:GetData("HalionInsidePos")
+		
+		if targetPos then
+			
+			local px, py, pz = player:GetLocation()
+			local currentPos = {x = px, y = py, z = pz}
+			
+			if halionInside and not IsPositionValidInSideArea(currentPos, halionInside, "left", AVERAGE_BOSS_DISTANCE_INSIDE, SPREAD_FACTOR_INSIDE, AOE_AVOIDANCE_DISTANCE, INSIDE_DANGER_NPCS) then
+				if IsPositionValidInSideArea(targetPos, halionInside, "left", AVERAGE_BOSS_DISTANCE_INSIDE, SPREAD_FACTOR_INSIDE, AOE_AVOIDANCE_DISTANCE, INSIDE_DANGER_NPCS) then
+					player:MoveTo(1, targetPos.x, targetPos.y, targetPos.z, true)
+				else
+					print("Inside player " .. player:GetName() .. " saved position also invalid, finding new position")
+					FindAndMoveToInsidePosition(player, halionInside, INSIDE_DANGER_NPCS)
+				end
+			end
+		else
+			FindAndMoveToInsidePosition(player, halionInside, INSIDE_DANGER_NPCS)
+		end
+	end
     
     player:RegisterEvent(HalionInsideLoop, TICK_FREQUENCY, 1)
 end
@@ -228,8 +191,7 @@ local function HalionLoop(eventId, delay, repeats, halion)
         return
     end
     
-    local instanceId = halion:GetInstanceId()
-    local bots = GetAllBotsInInstance(instanceId)
+    local bots = GetAllBotsInInstance(halion)
     
     if #bots == 0 then StopLuaEvent(halion) return end
     
@@ -271,333 +233,314 @@ local function HalionLoop(eventId, delay, repeats, halion)
         end
     end
     
+	CheckIfPlayerNeedsDispel(halion)
+	
     for _, player in ipairs(bots) do
         DisableManualSpells(player)
         
         if not player:HasAura(TWILIGHT_REALM) then
-            if player:HasAura(COMBUSTION_AURA) then
+            if player:HasAura(COMBUSTION_AURA) then 
                 MoveForCombustion(player, halion, DANGER_NPCS)
-                
-                local targetPos = player:GetData("CombustionPos")
-                if targetPos then
-                    
-                end
             else
                 local isMainTankBot = (player == mainTank and mainTankIsBot)
                 local isOffTankBot = (player == offTank and offTankIsBot)
                 
-                if isOffTankBot and not player:HasAura(TWILIGHT_REALM) then
-                    if victim and victim ~= player then
-                        halion:AddThreat(player, 10000 + math.random(-500, 500))
-                        Taunt(player, halion, false)
-                    end
-                    if halion:GetData("CombatTime") < 5000 then
-                        local pullPos = {x = PULL_POS[1], y = PULL_POS[2], z = PULL_POS[3]}
-                        player:MoveTo(1, PULL_POS[1], PULL_POS[2], PULL_POS[3], true)
-                    
-                    elseif halion:GetData("CombatTime") < 8000 then
-                        local victim = halion:GetVictim()
-                        if victim then
-                            if IsAtPos(victim, ORB_CENTER_POS[1], ORB_CENTER_POS[2], 10) then
-                                if not IsAtPos(halion, ORB_CENTER_POS[1], ORB_CENTER_POS[2], 3) then
-                                    halion:MoveTo(1, ORB_CENTER_POS[1], ORB_CENTER_POS[2], ORB_CENTER_POS[3], true)
-                                end
-                            end
-                        end
-                    else
-                        local cachedPos = player:GetData("TankSafePos")
-                        local needsRecalc = false
-                        
-                        if cachedPos then
-                            local dangerNpcs = {}
-                            for _, entry in ipairs(DANGER_NPCS) do
-                                local npcs = player:GetCreaturesInRange(100, entry)
-                                for _, npc in ipairs(npcs) do
-                                    table.insert(dangerNpcs, npc)
-                                end
-                            end
-                            
-                            for _, danger in ipairs(dangerNpcs) do
-                                local dx, dy = danger:GetLocation()
-                                local distToDanger = math.sqrt((cachedPos.x - dx)^2 + (cachedPos.y - dy)^2)
-                                if distToDanger < AOE_AVOIDANCE_DISTANCE then
-                                    needsRecalc = true
-                                    break
-                                end
-                            end
-                        else
-                            needsRecalc = true
-                        end
-                        
-                        if needsRecalc then
-                            local dangerNpcs = {}
-                            for _, entry in ipairs(DANGER_NPCS) do
-                                local npcs = player:GetCreaturesInRange(100, entry)
-                                for _, npc in ipairs(npcs) do
-                                    table.insert(dangerNpcs, npc)
-                                end
-                            end
-                            
-                            local centerX, centerY, centerZ = ORB_CENTER_POS[1], ORB_CENTER_POS[2], ORB_CENTER_POS[3]
-                            
-                            local bestX, bestY, bestZ = PULL_POS[1], PULL_POS[2], PULL_POS[3]
-                            local bestDist = 999999
-                            
-                            for angle = 0, 350, 10 do
-                                local rad = math.rad(angle)
-                                local testX = centerX + (10 * math.cos(rad))
-                                local testY = centerY + (10 * math.sin(rad))
-                                
-                                local valid = true
-                                for _, danger in ipairs(dangerNpcs) do
-                                    local dx, dy = danger:GetLocation()
-                                    if math.sqrt((testX - dx)^2 + (testY - dy)^2) < AOE_AVOIDANCE_DISTANCE then
-                                        valid = false
-                                        break
-                                    end
-                                end
-                                
-                                if valid then
-                                    local dist = math.sqrt((testX - PULL_POS[1])^2 + (testY - PULL_POS[2])^2)
-                                    if dist < bestDist then
-                                        bestDist = dist
-                                        bestX, bestY, bestZ = testX, testY, centerZ
-                                    end
-                                end
-                            end
-                            
-                            player:SetData("TankSafePos", {x = bestX, y = bestY, z = bestZ})
-                            cachedPos = {x = bestX, y = bestY, z = bestZ}
-                        end
-                        
-                        if cachedPos then                            
-                            if not IsAtPos(player, cachedPos.x, cachedPos.y, 3) then
-                                player:MoveTo(1, cachedPos.x, cachedPos.y, cachedPos.z, true)
-                            end
-                        end
-                    end
-                end
-            end
+				if isOffTankBot and not player:HasAura(TWILIGHT_REALM) then
+					if victim and victim ~= player then
+						halion:AddThreat(player, 10000 + math.random(-500, 500))
+						Taunt(player, halion, false)
+					end
+					if halion:GetData("CombatTime") < 5000 then
+						player:MoveTo(1, PULL_POS[1], PULL_POS[2], PULL_POS[3], true)
+					else
+						local dangerNpcs = {}
+						for _, entry in ipairs(DANGER_NPCS) do
+							local npcs = player:GetCreaturesInRange(100, entry)
+							for _, npc in ipairs(npcs) do
+								table.insert(dangerNpcs, npc)
+							end
+						end
+						
+						local meteorNearby = false
+						local px, py = player:GetLocation()
+						for _, npc in ipairs(dangerNpcs) do
+							local nx, ny = npc:GetLocation()
+							local dist = math.sqrt((px - nx)^2 + (py - ny)^2)
+							if dist < 10 then
+								meteorNearby = true
+								break
+							end
+						end
+						
+						if meteorNearby then
+							if not player:HasAura(71635) then
+								player:AddAura(71635, player)
+							end
+							if not player:HasAura(71638) then
+								player:AddAura(71638, player)
+							end
+						end
+						
+						if not IsAtPos(player, PULL_POS[1], PULL_POS[2], 3) then
+							player:MoveTo(1, PULL_POS[1], PULL_POS[2], PULL_POS[3], true)
+						end
+					end
+				end
+			end
         end
     end
 
-    if halion:GetHealthPct() >= 75 or halion:GetHealthPct() < 50 then
-        local METEOR_NPCS = {}
-        for _, id in ipairs(METEOR_STRIKES_ENTRY) do
-            table.insert(METEOR_NPCS, id)
-        end
-        
-        local POSITION_DANGER_NPCS = {COMBUSTION_ENTRY}
-        for _, id in ipairs(METEOR_STRIKES_ENTRY) do
-            table.insert(POSITION_DANGER_NPCS, id)
-        end
-        
-        local tanks = {}
-        for _, player in ipairs(bots) do
-            if IsTank(player) then
-                table.insert(tanks, player)
-            end
-        end
-        table.sort(tanks, function(a, b) return a:GetMaxHealth() > b:GetMaxHealth() end)
-        
-        local leftMeteors = 0
-        local rightMeteors = 0
-        
-        local totalMeteors = 0
-        for _, entry in ipairs(METEOR_STRIKES_ENTRY) do
-            local meteors = halion:GetCreaturesInRange(100, entry)
-            totalMeteors = totalMeteors + #meteors
-            for _, meteor in ipairs(meteors) do
-                local mx, my = meteor:GetLocation()
-                local hx, hy = halion:GetLocation()
-                local angle = math.atan2(my - hy, mx - hx)
-                local facingAngle = halion:GetO()
-                local relativeAngle = angle - facingAngle
-                
-                while relativeAngle > math.pi do relativeAngle = relativeAngle - 2 * math.pi end
-                while relativeAngle < -math.pi do relativeAngle = relativeAngle + 2 * math.pi end
-                
-                if relativeAngle > math.pi / 4 and relativeAngle < 3 * math.pi / 4 then
-                    leftMeteors = leftMeteors + 1
-                elseif relativeAngle < -math.pi / 4 and relativeAngle > -3 * math.pi / 4 then
-                    rightMeteors = rightMeteors + 1
-                end
-            end
-        end
-        
-        local groupSide = leftMeteors <= rightMeteors and "left" or "right"
-        
-        local lastLeftMeteors = halion:GetData("LastLeftMeteors") or 0
-        local lastRightMeteors = halion:GetData("LastRightMeteors") or 0
-        
-        if leftMeteors ~= lastLeftMeteors or rightMeteors ~= lastRightMeteors then
-            print("Left meteors: " .. leftMeteors .. ", Right meteors: " .. rightMeteors .. ", Assigned side: " .. groupSide)
-            halion:SetData("LastLeftMeteors", leftMeteors)
-            halion:SetData("LastRightMeteors", rightMeteors)
-        end
-        
-        local currentMeteor40055 = {}
-        for _, entry in ipairs({40055}) do
-            local meteors = halion:GetCreaturesInRange(100, entry)
-            for _, meteor in ipairs(meteors) do
-                table.insert(currentMeteor40055, meteor:GetGUID())
-            end
-        end
-        
-        local lastMeteor40055 = halion:GetData("LastMeteor40055") or {}
-        local newMeteor40055 = false
-        
-        for _, guid in ipairs(currentMeteor40055) do
-            local found = false
-            for _, oldGuid in ipairs(lastMeteor40055) do
-                if guid == oldGuid then
-                    found = true
-                    break
-                end
-            end
-            if not found then
-                newMeteor40055 = true
-                break
-            end
-        end
-        
-        if newMeteor40055 then
-            print("NEW 40055 DETECTED - locking side assignment for 30s")
-            halion:SetData("SideAssignmentLocked", os.time() + 30)
-        end
-        
-        halion:SetData("LastMeteor40055", currentMeteor40055)
-        
-        for _, player in ipairs(bots) do
-            if not player:HasAura(TWILIGHT_REALM) then
-                if player ~= victim and player ~= tanks[2]
-                and not player:HasAura(COMBUSTION_AURA) and not player:HasAura(CONSUMPTION_AURA) then
-                    
-                    local px, py, pz = player:GetLocation()
-                    local currentPos = {x = px, y = py, z = pz}
-                    local isCurrentValid = IsPositionValidInSideArea(currentPos, halion, groupSide, AVERAGE_BOSS_DISTANCE, SPREAD_FACTOR, AOE_AVOIDANCE_DISTANCE, POSITION_DANGER_NPCS)
-                    
-                    local lastValid = player:GetData("LastPosValid")
-                    if lastValid ~= isCurrentValid then
-                        print(player:GetName() .. " position status: " .. (isCurrentValid and "SAFE" or "UNSAFE"))
-                        player:SetData("LastPosValid", isCurrentValid)
-                    end
-                    
-                    if not isCurrentValid then
-                        local behindWaypoint = player:GetData("BehindWaypoint")
-                        
-                        if behindWaypoint then
-                            if not IsAtPos(player, behindWaypoint.x, behindWaypoint.y, 3) then
-                                player:MoveTo(1, behindWaypoint.x, behindWaypoint.y, behindWaypoint.z, true)
-                            else
-                                player:SetData("BehindWaypoint", nil)
-                                local targetPos = player:GetData("HalionPos")
-                                if targetPos then
-                                    player:MoveTo(1, targetPos.x, targetPos.y, targetPos.z, true)
-                                end
-                            end
-                        else
-                            local targetPos = player:GetData("HalionPos")
-                            local needsReassign = false
-                            
-                            if targetPos then
-                                if not IsPositionValidInSideArea(targetPos, halion, groupSide, AVERAGE_BOSS_DISTANCE, SPREAD_FACTOR, AOE_AVOIDANCE_DISTANCE, POSITION_DANGER_NPCS) then
-                                    needsReassign = true
-                                else
-                                    local px, py, pz = player:GetLocation()
-                                    local hx, hy = halion:GetLocation()
-                                    local facing = halion:GetO()
-                                    
-                                    local pathCrossesDanger = false
-                                    local numSamples = 10
-                                    
-                                    for i = 1, numSamples do
-                                        local t = i / numSamples
-                                        local sampleX = px + t * (targetPos.x - px)
-                                        local sampleY = py + t * (targetPos.y - py)
-                                        
-                                        local angleToSample = math.atan2(sampleY - hy, sampleX - hx)
-                                        local relativeSample = angleToSample - facing
-                                        
-                                        while relativeSample > math.pi do relativeSample = relativeSample - 2 * math.pi end
-                                        while relativeSample < -math.pi do relativeSample = relativeSample + 2 * math.pi end
-                                        
-                                        if relativeSample >= -math.pi/4 and relativeSample <= math.pi/4 then
-                                            pathCrossesDanger = true
-                                            break
-                                        end
-                                        
-                                        local samplePos = {x = sampleX, y = sampleY, z = pz}
-                                        if not IsPositionValidInSideArea(samplePos, halion, groupSide, AVERAGE_BOSS_DISTANCE, SPREAD_FACTOR, AOE_AVOIDANCE_DISTANCE, POSITION_DANGER_NPCS) then
-                                            pathCrossesDanger = true
-                                            break
-                                        end
-                                    end
-                                    
-                                    if pathCrossesDanger then
-                                        needsReassign = true
-                                    else
-                                        player:MoveTo(1, targetPos.x, targetPos.y, targetPos.z, true)
-                                    end
-                                end
-                            else
-                                needsReassign = true
-                            end
-                            
-                            if needsReassign then
-                                HalionAssignPosition(player, halion, groupSide, METEOR_NPCS, POSITION_DANGER_NPCS)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
+	if halion:GetHealthPct() >= 75 or halion:GetHealthPct() < 50 then
+		local portalTransitionSafe = false
+		
+		if halion:GetHealthPct() < 50 then
+			local halionInside = nil
+			for _, p in ipairs(bots) do
+				if p:HasAura(TWILIGHT_REALM) then
+					halionInside = p:GetNearestCreature(100, HALION_INSIDE_ENTRY)
+					break
+				end
+			end
+			
+			if halionInside then
+				local cutterActive = halionInside:GetData("CutterActive") or false
+				portalTransitionSafe = not cutterActive
+			end
+		end
+		
+		local METEOR_NPCS = {}
+		for _, id in ipairs(METEOR_STRIKES_ENTRY) do
+			table.insert(METEOR_NPCS, id)
+		end
+		
+		local POSITION_DANGER_NPCS = {COMBUSTION_ENTRY}
+		for _, id in ipairs(METEOR_STRIKES_ENTRY) do
+			table.insert(POSITION_DANGER_NPCS, id)
+		end
+		
+		local tanks = {}
+		for _, player in ipairs(bots) do
+			if IsTank(player) then
+				table.insert(tanks, player)
+			end
+		end
+		table.sort(tanks, function(a, b) return a:GetMaxHealth() > b:GetMaxHealth() end)
+		
+		local leftMeteors = 0
+		local rightMeteors = 0
+		
+		local totalMeteors = 0
+		for _, entry in ipairs(METEOR_STRIKES_ENTRY) do
+			local meteors = halion:GetCreaturesInRange(100, entry)
+			totalMeteors = totalMeteors + #meteors
+			for _, meteor in ipairs(meteors) do
+				local mx, my = meteor:GetLocation()
+				local hx, hy = halion:GetLocation()
+				local angle = math.atan2(my - hy, mx - hx)
+				local facingAngle = halion:GetO()
+				local relativeAngle = angle - facingAngle
+				
+				while relativeAngle > math.pi do relativeAngle = relativeAngle - 2 * math.pi end
+				while relativeAngle < -math.pi do relativeAngle = relativeAngle + 2 * math.pi end
+				
+				if relativeAngle > math.pi / 4 and relativeAngle < 3 * math.pi / 4 then
+					leftMeteors = leftMeteors + 1
+				elseif relativeAngle < -math.pi / 4 and relativeAngle > -3 * math.pi / 4 then
+					rightMeteors = rightMeteors + 1
+				end
+			end
+		end
+		
+		local groupSide = leftMeteors <= rightMeteors and "left" or "right"
+		
+		local lastLeftMeteors = halion:GetData("LastLeftMeteors") or 0
+		local lastRightMeteors = halion:GetData("LastRightMeteors") or 0
+		
+		if leftMeteors ~= lastLeftMeteors or rightMeteors ~= lastRightMeteors then
+			print("Left meteors: " .. leftMeteors .. ", Right meteors: " .. rightMeteors .. ", Assigned side: " .. groupSide)
+			halion:SetData("LastLeftMeteors", leftMeteors)
+			halion:SetData("LastRightMeteors", rightMeteors)
+		end
+		
+		if totalMeteors == 0 then
+			groupSide = halion:GetData("LastValidGroupSide") or "left"
+		else
+			halion:SetData("LastValidGroupSide", groupSide)
+		end
 
-    if halion:GetHealthPct() < 75 and halion:GetHealthPct() >= 50 then
-        if not halion:GetData("PortalTransitionPrinted") then
-            print("=== PORTAL TRANSITION (75%-50%) ===")
-            print("MainTank: " .. (mainTank and mainTank:GetName() or "none") .. " (Bot: " .. tostring(mainTankIsBot) .. ")")
-            print("OffTank: " .. (offTank and offTank:GetName() or "none") .. " (Bot: " .. tostring(offTankIsBot) .. ")")
-            print("Healer2: " .. (healers[2] and healers[2]:GetName() or "none"))
-            halion:SetData("PortalTransitionPrinted", true)
-            
-            for _, player in ipairs(bots) do
-                if player == offTank or player == healers[2] then
-                    StartLuaEvent(player, HalionCheckInsideCombat)
-                    print("Started HalionCheckInsideCombat on " .. player:GetName())
-                end
-            end
-        end
-        
-        local nearestPortal = GetNearestObject(halion, "GameObject", TWILIGHT_PORTAL, 100)
-        
-        if nearestPortal then
-            local portalX, portalY, portalZ = nearestPortal:GetLocation()
-            local portalPos = {x = portalX, y = portalY, z = portalZ}
-            
-            for _, player in ipairs(bots) do
-                if player ~= offTank and player ~= healers[2]
-                and not player:HasAura(COMBUSTION_AURA) and not player:HasAura(CONSUMPTION_AURA) then
-                    if not player:HasAura(TWILIGHT_REALM) then
-                        print(player:GetName() .. " heading to portal")
-                        
-                        if not IsAtPos(player, portalX, portalY, PORTAL_DISTANCE) then
-                            player:MoveTo(1, portalX, portalY, portalZ, true)
-                        else
-                            StartLuaEvent(player, HalionInsideLoop)
-                            player:AddAura(TWILIGHT_REALM, player)
-                        end
-                    end
-                end
-            end
-        end
-    end
-    
+		local currentMeteor40055 = {}
+		for _, entry in ipairs({40055}) do
+			local meteors = halion:GetCreaturesInRange(100, entry)
+			for _, meteor in ipairs(meteors) do
+				table.insert(currentMeteor40055, meteor:GetGUID())
+			end
+		end
+		
+		local lastMeteor40055 = halion:GetData("LastMeteor40055") or {}
+		local newMeteor40055 = false
+		
+		for _, guid in ipairs(currentMeteor40055) do
+			local found = false
+			for _, oldGuid in ipairs(lastMeteor40055) do
+				if guid == oldGuid then
+					found = true
+					break
+				end
+			end
+			if not found then
+				newMeteor40055 = true
+				break
+			end
+		end
+		
+		if newMeteor40055 then
+			print("NEW 40055 DETECTED - locking side assignment for 30s")
+			halion:SetData("SideAssignmentLocked", os.time() + 30)
+		end
+		
+		halion:SetData("LastMeteor40055", currentMeteor40055)
+		
+		for _, player in ipairs(bots) do
+			if not player:HasAura(TWILIGHT_REALM) then
+				if player ~= victim and player ~= tanks[2]
+				and not player:HasAura(COMBUSTION_AURA) and not player:HasAura(CONSUMPTION_AURA)
+				and not (portalTransitionSafe and player:GetData("InsideGroup")) then
+					
+					local px, py, pz = player:GetLocation()
+					local currentPos = {x = px, y = py, z = pz}
+					local isCurrentValid = IsPositionValidInSideArea(currentPos, halion, groupSide, AVERAGE_BOSS_DISTANCE, SPREAD_FACTOR, AOE_AVOIDANCE_DISTANCE, POSITION_DANGER_NPCS)
+					
+					local lastValid = player:GetData("LastPosValid")
+					if lastValid ~= isCurrentValid then
+						print(player:GetName() .. " position status: " .. (isCurrentValid and "SAFE" or "UNSAFE"))
+						player:SetData("LastPosValid", isCurrentValid)
+					end
+					
+					if not isCurrentValid then
+						local behindWaypoint = player:GetData("BehindWaypoint")
+						
+						if behindWaypoint then
+							if not IsAtPos(player, behindWaypoint.x, behindWaypoint.y, 3) then
+								DisableSpellCast(player, 0.2)
+								player:MoveTo(1, behindWaypoint.x, behindWaypoint.y, behindWaypoint.z, true)
+							else
+								player:SetData("BehindWaypoint", nil)
+								local targetPos = player:GetData("HalionPos")
+								if targetPos then
+									DisableSpellCast(player, 0.2)
+									player:MoveTo(1, targetPos.x, targetPos.y, targetPos.z, true)
+								end
+							end
+						else
+							local targetPos = player:GetData("HalionPos")
+							local needsReassign = false
+							
+							if targetPos then
+								if not IsPositionValidInSideArea(targetPos, halion, groupSide, AVERAGE_BOSS_DISTANCE, SPREAD_FACTOR, AOE_AVOIDANCE_DISTANCE, POSITION_DANGER_NPCS) then
+									needsReassign = true
+								else
+									local px, py, pz = player:GetLocation()
+									local hx, hy = halion:GetLocation()
+									local facing = halion:GetO()
+									
+									local pathCrossesDanger = false
+									local numSamples = 10
+									
+									for i = 1, numSamples do
+										local t = i / numSamples
+										local sampleX = px + t * (targetPos.x - px)
+										local sampleY = py + t * (targetPos.y - py)
+										
+										local angleToSample = math.atan2(sampleY - hy, sampleX - hx)
+										local relativeSample = angleToSample - facing
+										
+										while relativeSample > math.pi do relativeSample = relativeSample - 2 * math.pi end
+										while relativeSample < -math.pi do relativeSample = relativeSample + 2 * math.pi end
+										
+										if relativeSample >= -math.pi/4 and relativeSample <= math.pi/4 then
+											pathCrossesDanger = true
+											break
+										end
+										
+										local samplePos = {x = sampleX, y = sampleY, z = pz}
+										if not IsPositionValidInSideArea(samplePos, halion, groupSide, AVERAGE_BOSS_DISTANCE, SPREAD_FACTOR, AOE_AVOIDANCE_DISTANCE, POSITION_DANGER_NPCS) then
+											pathCrossesDanger = true
+											break
+										end
+									end
+									
+									if pathCrossesDanger then
+										needsReassign = true
+									else
+										DisableSpellCast(player, 0.2)
+										player:MoveTo(1, targetPos.x, targetPos.y, targetPos.z, true)
+									end
+								end
+							else
+								needsReassign = true
+							end
+							
+							if needsReassign then
+								HalionAssignPosition(player, halion, groupSide, METEOR_NPCS, POSITION_DANGER_NPCS)
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+
+	if halion:GetHealthPct() < 75 and halion:GetHealthPct() >= 50 then
+		if not halion:GetData("PortalTransitionPrinted") then
+			print("=== PORTAL TRANSITION (75%-50%) ===")
+			print("MainTank: " .. (mainTank and mainTank:GetName() or "none") .. " (Bot: " .. tostring(mainTankIsBot) .. ")")
+			print("OffTank: " .. (offTank and offTank:GetName() or "none") .. " (Bot: " .. tostring(offTankIsBot) .. ")")
+			print("Healer2: " .. (healers[2] and healers[2]:GetName() or "none"))
+			halion:SetData("PortalTransitionPrinted", true)
+			
+			for _, player in ipairs(bots) do
+				if player == offTank or player == healers[2] then
+					player:SetData("HalionInsideCheckTime", os.time())
+					StartLuaEvent(player, HalionCheckInsideCombat)
+				end
+			end
+		end
+		
+		local allPlayers = GetPlayersInInstance(halion)
+		local tankInside = false
+		for _, player in ipairs(allPlayers) do
+			if IsTank(player) and player:HasAura(TWILIGHT_REALM) then
+				tankInside = true
+				break
+			end
+		end
+		
+		local nearestPortal = GetNearestObject(halion, "GameObject", TWILIGHT_PORTAL_OUTSIDE, 100)
+		
+		if nearestPortal and not halion:IsCasting() then
+			local portalX, portalY, portalZ = nearestPortal:GetLocation()
+			local portalPos = {x = portalX, y = portalY, z = portalZ}
+			
+			for _, player in ipairs(bots) do
+				if player ~= offTank and player ~= healers[2]
+				and not player:HasAura(COMBUSTION_AURA) and not player:HasAura(CONSUMPTION_AURA) then
+					if not player:HasAura(TWILIGHT_REALM) then                        
+						if not IsAtPos(player, portalX, portalY, PORTAL_DISTANCE) or (not IsTank(player) and not tankInside) then
+							player:MoveTo(1, portalX, portalY, portalZ, true)
+						else
+							StartLuaEvent(player, HalionInsideLoop)
+							player:AddAura(TWILIGHT_REALM, player)
+						end
+					end
+				end
+			end
+		end
+	end
+   
     if halion:GetHealthPct() < 50 then
         HandlePhase3Transition(halion, bots, mainTank, offTank, healers)
     end
-    
+	
     halion:RegisterEvent(HalionLoop, TICK_FREQUENCY, 1)
 end
 
@@ -615,7 +558,8 @@ local function HalionOnEnterCombat(event, player, halion)
         player:SetData("BehindWaypoint", nil)
         
         halion:SetData("CombatTime", 0)
-        
+		
+		ApplyHiddenBuffsToShadows(player)
         StartLuaEvent(halion, HalionLoop)
     end
 end
@@ -647,12 +591,10 @@ function HalionCheckInsideCombat(eventId, delay, repeats, player)
     end
     
     local lastAliveCount = halion:GetData("LastAliveCount") or aliveCount
-    if aliveCount < lastAliveCount then
-        print("DEATH DETECTED: " .. aliveCount .. " alive (was " .. lastAliveCount .. ")")
-    end
+	
     halion:GetData("LastAliveCount", aliveCount)
     
-    if not playersInside then
+    if not playersInside and (os.time() > player:GetData("HalionInsideCheckTime") + 20) then
         print("WIPE: No players inside during portal phase")
         player:CastSpell(player, 7, true)
         StopLuaEvent(player)
@@ -662,28 +604,54 @@ function HalionCheckInsideCombat(eventId, delay, repeats, player)
     player:RegisterEvent(HalionCheckInsideCombat, TICK_FREQUENCY, 1)
 end
 
+function CheckIfPlayerNeedsDispel(halion)
+	local allPlayers = GetPlayersInInstance(halion)
+	for _, player in ipairs(allPlayers) do
+		if not isPlayerBot[player:GetName()] then
+			if player:HasAura(COMBUSTION_AURA) or player:HasAura(CONSUMPTION_AURA) and (player:GetDistance(ORB_CENTER_POS[1], ORB_CENTER_POS[2], ORB_CENTER_POS[3]) > 40) then
+				local nearbyPlayers = player:GetPlayersInRange(40)
+				
+				for _, bot in ipairs(nearbyPlayers) do
+					if isPlayerBot[bot:GetName()] then
+						local class = bot:GetClass()
+						if class == 2 or class == 8 or class == 11 or class == 7 or class == 5 then
+							RemoveCurseOrMagic(bot, player)
+							break
+						end
+					end
+				end
+			end
+		end
+	end
+end
+
 function HalionAssignPosition(player, halion, targetSide, sideSelectionDangerNpcs, positionDangerNpcs)
     local savedSide = player:GetData("HalionSide")
     local needsSideSwitch = savedSide and savedSide ~= targetSide
     
     if needsSideSwitch then
         local sideAssignmentLocked = halion:GetData("SideAssignmentLocked") or 0
-        if os.time() < sideAssignmentLocked then
-            print("SIDE SWITCH BLOCKED: " .. player:GetName() .. " - side assignment locked for " .. (sideAssignmentLocked - os.time()) .. "s")
-            local validPos = GetRandomValidPositionInSideArea(halion, savedSide, AVERAGE_BOSS_DISTANCE, SPREAD_FACTOR, AOE_AVOIDANCE_DISTANCE, positionDangerNpcs)
-            if validPos then
-                player:SetData("HalionPos", validPos)
-                local px, py = player:GetLocation()
-                local dx = validPos.x - px
-                local dy = validPos.y - py
-                local distance = math.sqrt(dx*dx + dy*dy)
-                if distance > 30 then
-                    UseSpeedBuff(player)
-                end
-                player:MoveTo(1, validPos.x, validPos.y, validPos.z, true)
-            end
-            return
-        end
+		if os.time() < sideAssignmentLocked then
+			print("SIDE SWITCH BLOCKED: " .. player:GetName() .. " - side assignment locked for " .. (sideAssignmentLocked - os.time()) .. "s")
+			local savedPos = player:GetData("HalionPos")
+			local validPos = savedPos
+			
+			if not savedPos or not IsPositionValidInSideArea(savedPos, halion, savedSide, AVERAGE_BOSS_DISTANCE, SPREAD_FACTOR, AOE_AVOIDANCE_DISTANCE, positionDangerNpcs) then
+				validPos = GetRandomValidPositionInSideArea(halion, savedSide, AVERAGE_BOSS_DISTANCE, SPREAD_FACTOR, AOE_AVOIDANCE_DISTANCE, positionDangerNpcs)
+			end
+			
+			if validPos then
+				player:SetData("HalionPos", validPos)
+				local px, py = player:GetLocation()
+				local dx = validPos.x - px
+				local dy = validPos.y - py
+				local distance = math.sqrt(dx*dx + dy*dy)
+				if distance > 20 then UseSpeedBuff(player) end
+				DisableSpellCast(player, 0.2)
+				player:MoveTo(1, validPos.x, validPos.y, validPos.z, true)
+			end
+			return
+		end
         
         local meteorUnderBoss = halion:GetData("MeteorUnderBoss") or 0
         if os.time() < meteorUnderBoss then
@@ -695,9 +663,8 @@ function HalionAssignPosition(player, halion, targetSide, sideSelectionDangerNpc
                 local dx = validPos.x - px
                 local dy = validPos.y - py
                 local distance = math.sqrt(dx*dx + dy*dy)
-                if distance > 30 then
-                    UseSpeedBuff(player)
-                end
+                if distance > 20 then UseSpeedBuff(player) end
+				DisableSpellCast(player, 0.2)
                 player:MoveTo(1, validPos.x, validPos.y, validPos.z, true)
             end
             return
@@ -723,9 +690,8 @@ function HalionAssignPosition(player, halion, targetSide, sideSelectionDangerNpc
                             local dx = validPos.x - px
                             local dy = validPos.y - py
                             local distance = math.sqrt(dx*dx + dy*dy)
-                            if distance > 30 then
-                                UseSpeedBuff(player)
-                            end
+                            if distance > 20 then UseSpeedBuff(player) end
+							DisableSpellCast(player, 0.2)
                             player:MoveTo(1, validPos.x, validPos.y, validPos.z, true)
                         end
                         return
@@ -758,6 +724,7 @@ function HalionAssignPosition(player, halion, targetSide, sideSelectionDangerNpc
         player:SetData("BehindWaypoint", {x = behindX, y = behindY, z = hz})
         
         UseSpeedBuff(player)
+        DisableSpellCast(player, 0.2)
         player:MoveTo(1, behindX, behindY, hz, true)
         return
     end
@@ -800,6 +767,7 @@ function HalionAssignPosition(player, halion, targetSide, sideSelectionDangerNpc
             player:SetData("BehindWaypoint", {x = behindX, y = behindY, z = hz})
             
             UseSpeedBuff(player)
+			DisableSpellCast(player, 0.2)
             player:MoveTo(1, behindX, behindY, hz, true)
             return
         end
@@ -815,6 +783,7 @@ function HalionAssignPosition(player, halion, targetSide, sideSelectionDangerNpc
             UseSpeedBuff(player)
         end
         
+        DisableSpellCast(player, 0.2)
         player:MoveTo(1, validPos.x, validPos.y, validPos.z, true)
     end
 end
@@ -833,28 +802,15 @@ function MoveForCombustion(player, halion, dangerNpcEntries)
     local savedPos = player:GetData("CombustionPos")
     
     if savedPos then
-        local stillSafe = true
-        for _, danger in ipairs(dangerNpcs) do
-            local dx, dy = danger:GetLocation()
-            local distToDanger = math.sqrt((savedPos.x - dx)^2 + (savedPos.y - dy)^2)
-            if distToDanger < AOE_AVOIDANCE_DISTANCE then
-                stillSafe = false
-                break
-            end
+        if IsAtPos(player, savedPos.x, savedPos.y, 2) then
+            player:CastSpell(player, 4987, true)
+            player:SetData("CombustionPos", nil)
+        else
+            UseSpeedBuff(player)
+            DisableSpellCast(player, 0.2)
+            player:MoveTo(1, savedPos.x, savedPos.y, savedPos.z, true)
         end
-        
-        if stillSafe then
-            if IsAtPos(player, savedPos.x, savedPos.y, 2) then
-                player:CastSpell(player, 4987, true)
-                player:SetData("CombustionPos", nil)
-                player:SetData("LastTargetPos", nil)
-                player:SetData("StuckCheckPos", nil)
-                player:SetData("StuckCheckTicks", nil)
-            else
-                player:MoveTo(1, savedPos.x, savedPos.y, savedPos.z, true)
-            end
-            return
-        end
+        return
     end
     
     local bestX, bestY, bestZ = nil, nil, nil
@@ -888,84 +844,73 @@ function MoveForCombustion(player, halion, dangerNpcEntries)
     if bestX then
         player:SetData("CombustionPos", {x = bestX, y = bestY, z = bestZ})
         UseSpeedBuff(player)
-        DisableSpellCast(player, 2)
+        DisableSpellCast(player, 0.2)
         player:MoveTo(1, bestX, bestY, bestZ, true)
     end
 end
 
 function MoveForConsumption(player, halionInside, dangerNpcEntries)
-    local dangerNpcs = {}
-    for _, entry in ipairs(dangerNpcEntries) do
-        local npcs = player:GetCreaturesInRange(100, entry)
-        for _, npc in ipairs(npcs) do
-            table.insert(dangerNpcs, npc)
-        end
-    end
-    
     local ocX, ocY, ocZ = ORB_CENTER_POS[1], ORB_CENTER_POS[2], ORB_CENTER_POS[3]
     
     local savedPos = player:GetData("ConsumptionPos")
     
     if savedPos then
-        local stillSafe = true
-        for _, danger in ipairs(dangerNpcs) do
-            local dx, dy = danger:GetLocation()
-            local distToDanger = math.sqrt((savedPos.x - dx)^2 + (savedPos.y - dy)^2)
-            if distToDanger < AOE_AVOIDANCE_DISTANCE then
-                stillSafe = false
-                break
-            end
-        end
-        
-        if stillSafe then
-            if IsAtPos(player, savedPos.x, savedPos.y, 2) then
-                player:CastSpell(player, 4987, true)
-                player:SetData("ConsumptionPos", nil)
-                player:SetData("LastTargetPos", nil)
-                player:SetData("StuckCheckPos", nil)
-                player:SetData("StuckCheckTicks", nil)
-            else
-                DisableSpellCast(player, 2)
-                player:MoveTo(1, savedPos.x, savedPos.y, savedPos.z, true)
-            end
+        if IsAtPos(player, savedPos.x, savedPos.y, 2) then
+            player:CastSpell(player, 4987, true)
+            player:SetData("ConsumptionPos", nil)
+            player:SetData("LastTargetPos", nil)
+            player:SetData("StuckCheckPos", nil)
+            player:SetData("StuckCheckTicks", nil)
             return
         end
+        
+        DisableSpellCast(player, 0.2)
+        player:MoveTo(1, savedPos.x, savedPos.y, savedPos.z, true)
+        return
     end
+    
+    local insideTank = nil
+    local mainTank, offTank = IdentifyTanks(halionInside)
+    
+    if mainTank and mainTank:HasAura(TWILIGHT_REALM) then
+        insideTank = mainTank
+    elseif offTank and offTank:HasAura(TWILIGHT_REALM) then
+        insideTank = offTank
+    end
+    
+    if not insideTank then
+        print("No inside tank found for consumption movement")
+        return
+    end
+    
+    local hx, hy, hz = halionInside:GetLocation()
+    local tx, ty = insideTank:GetLocation()
+    local px, py, pz = player:GetLocation()
     
     local bestX, bestY, bestZ = nil, nil, nil
     local bestDist = 999999
-
-    local facingAngle = halionInside:GetO()
-    local px, py, pz = player:GetLocation()
-
-    for distance = 30, 50, 2 do
-        local testX = px + (distance * math.cos(facingAngle))
-        local testY = py + (distance * math.sin(facingAngle))
+    
+    for angle = 0, 350, 10 do
+        local rad = math.rad(angle)
+        local testX = hx + (40 * math.cos(rad))
+        local testY = hy + (40 * math.sin(rad))
         
-        local valid = true
-        for _, danger in ipairs(dangerNpcs) do
-            local dx, dy = danger:GetLocation()
-            local distToDanger = math.sqrt((testX - dx)^2 + (testY - dy)^2)
-            if distToDanger < AOE_AVOIDANCE_DISTANCE then
-                valid = false
-                break
-            end
-        end
+        local distToTank = math.sqrt((testX - tx)^2 + (testY - ty)^2)
         
-        if valid then
+        if math.abs(distToTank - 40) < 2 then
             local dist = math.sqrt((testX - px)^2 + (testY - py)^2)
             if dist < bestDist then
                 bestDist = dist
-                bestX, bestY, bestZ = testX, testY, pz
+                bestX, bestY, bestZ = testX, testY, hz
             end
         end
     end
     
     if bestX then
-        print("Consumption triggered for " .. player:GetName() .. " - Boss facing: " .. facingAngle .. " - Player location: (" .. px .. ", " .. py .. ", " .. pz .. ") - New location: (" .. bestX .. ", " .. bestY .. ", " .. bestZ .. ")")
+        print("Consumption triggered for " .. player:GetName() .. " - Moving to (" .. bestX .. ", " .. bestY .. ", " .. bestZ .. ")")
         player:SetData("ConsumptionPos", {x = bestX, y = bestY, z = bestZ})
         UseSpeedBuff(player)
-        DisableSpellCast(player, 2)
+        DisableSpellCast(player, 0.2)
         player:MoveTo(1, bestX, bestY, bestZ, true)
     else
         print("No valid consumption position found for " .. player:GetName())
@@ -987,8 +932,7 @@ function FindAndMoveToInsidePosition(player, halionInside, dangerNpcs)
         if distance > 30 then
             UseSpeedBuff(player)
         end
-        
-        print("Inside player " .. player:GetName() .. " moving to new position: (" .. validPos.x .. ", " .. validPos.y .. ", " .. validPos.z .. ")")
+        DisableSpellCast(player, 0.2)
         player:MoveTo(1, validPos.x, validPos.y, validPos.z, true)
     end
 end
@@ -996,6 +940,20 @@ end
 function HandlePhase3Transition(halion, bots, mainTank, offTank, healers)
     local mainTankIsBot = mainTank and isPlayerBot[mainTank:GetName()] or false
     local offTankIsBot = offTank and isPlayerBot[offTank:GetName()] or false
+    
+    local halionInside = nil
+    local cutterActive = false
+    for _, player in ipairs(bots) do
+        if player:HasAura(TWILIGHT_REALM) then
+            halionInside = player:GetNearestCreature(100, HALION_INSIDE_ENTRY)
+            if halionInside then
+                cutterActive = halionInside:GetData("CutterActive") or false
+                break
+            end
+        end
+    end
+    
+    if cutterActive then return end
     
     local nonTankHealers = {}
     for _, player in ipairs(bots) do
@@ -1055,39 +1013,90 @@ function HandlePhase3Transition(halion, bots, mainTank, offTank, healers)
         end
     end
     
-    local nearestPortal = GetNearestObject(halion, "GameObject", TWILIGHT_PORTAL, 100)
-    if nearestPortal then
-        local portalX, portalY, portalZ = nearestPortal:GetLocation()
-        local portalPos = {x = portalX, y = portalY, z = portalZ}
-        
+    if not halion:IsCasting() then
         for _, player in ipairs(bots) do
             if not player:HasAura(COMBUSTION_AURA) and not player:HasAura(CONSUMPTION_AURA) then
+                local nearestPortal = nil
+                
                 if player:GetData("OutsideGroup") and player:HasAura(TWILIGHT_REALM) then
-                    print(player:GetName() .. " needs to exit portal (assigned OUTSIDE, currently INSIDE)")
+                    nearestPortal = GetNearestObject(player, "GameObject", {TWILIGHT_PORTAL_INSIDE}, 100)
+                elseif player:GetData("InsideGroup") and not player:HasAura(TWILIGHT_REALM) then
+                    local portals = {}
+                    for _, entry in ipairs(TWILIGHT_PORTAL_OUTSIDE) do
+                        local foundPortals = player:GetGameObjectsInRange(100, entry)
+                        for _, p in ipairs(foundPortals) do
+                            table.insert(portals, p)
+                        end
+                    end
                     
-                    if not IsAtPos(player, portalX, portalY, PORTAL_DISTANCE) then
-                        player:AddAura(71638)
-                        player:MoveTo(1, portalX, portalY, portalZ, true)
-                    else
-                        player:RemoveAura(TWILIGHT_REALM)
-                        StopLuaEvent(player)
-                        player:SetData("HalionInsideLoopStarted", false)
+                    if #portals > 0 then
+                        local hx, hy = halion:GetLocation()
+                        local facing = halion:GetO()
+                        local bestPortal = nil
+                        local lowestDot = 999999
+                        
+                        for _, portal in ipairs(portals) do
+                            local px, py = portal:GetLocation()
+                            local dx, dy = px - hx, py - hy
+                            local dist = math.sqrt(dx*dx + dy*dy)
+                            local dotProduct = (dx * math.cos(facing) + dy * math.sin(facing)) / dist
+                            
+                            if dotProduct < lowestDot then
+                                lowestDot = dotProduct
+                                bestPortal = portal
+                            end
+                        end
+                        
+                        nearestPortal = bestPortal
                     end
                 end
-                if player:GetData("InsideGroup") and not player:HasAura(TWILIGHT_REALM) then
-                    print(player:GetName() .. " needs to enter portal (assigned INSIDE, currently OUTSIDE)")
+                
+                if nearestPortal then
+                    local portalX, portalY, portalZ = nearestPortal:GetLocation()
                     
-                    if not IsAtPos(player, portalX, portalY, PORTAL_DISTANCE) then
-                        player:AddAura(71638)
-                        player:MoveTo(1, portalX, portalY, portalZ, true)
-                    else
-                        player:AddAura(TWILIGHT_REALM, player)
-                        StartLuaEvent(player, HalionInsideLoop)
+                    if player:GetData("OutsideGroup") and player:HasAura(TWILIGHT_REALM) then
+                        print(player:GetName() .. " needs to exit portal (assigned OUTSIDE, currently INSIDE)")
+                        
+                        if not IsAtPos(player, portalX, portalY, PORTAL_DISTANCE) then
+                            local portalPos = {x = portalX, y = portalY, z = portalZ}
+                            local INSIDE_DANGER_NPCS = {CONSUMPTION_ENTRY}
+                            
+							player:AddAura(71635, player)
+							player:AddAura(71638, player)
+							player:MoveTo(1, portalX, portalY, portalZ, true)
+                        else
+                            player:RemoveAura(TWILIGHT_REALM)
+                            player:SetData("HalionInsideLoopStarted", false)
+                            StopLuaEvent(player)
+                        end
                     end
+                    
+					if player:GetData("InsideGroup") and not player:HasAura(TWILIGHT_REALM) then
+						print(player:GetName() .. " needs to enter portal (assigned INSIDE, currently OUTSIDE)")
+						
+						if not IsAtPos(player, portalX, portalY, PORTAL_DISTANCE) then
+							local portalPos = {x = portalX, y = portalY, z = portalZ}
+							local INSIDE_DANGER_NPCS = {CONSUMPTION_ENTRY}
+							
+							player:AddAura(71635, player)
+							player:AddAura(71638, player)
+							player:MoveTo(1, portalX, portalY, portalZ, true)
+						else
+							player:AddAura(TWILIGHT_REALM, player)
+							StartLuaEvent(player, HalionInsideLoop)
+						end
+					end
                 end
             end
         end
     end
 end
 
+local function OnCutterCast(event, caster, spell)
+    local halionInside = caster:GetNearestCreature(100, HALION_INSIDE_ENTRY)
+    if halionInside then
+        halionInside:SetData("NextCutterTime", os.time() + 29)
+	end
+end
 
+RegisterSpellEvent(74768, 2, OnCutterCast)
