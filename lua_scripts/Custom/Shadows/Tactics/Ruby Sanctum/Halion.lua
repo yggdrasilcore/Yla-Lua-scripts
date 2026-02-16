@@ -55,6 +55,10 @@ local function HalionInsideLoop(eventId, delay, repeats, player)
         insideTank = offTank
         insideTankIsBot = offTankIsBot
     end
+	
+	if IsTank(player) and (player:GetClass() == 11) and not player:HasAura(9634) then
+		player:AddAura(9634, player) -- Foolproof druid tanks that sometimes shift out of form mid-fight
+	end
     
     if insideTank and insideTankIsBot then
         if halionInside:IsCasting() and player == insideTank then
@@ -172,7 +176,7 @@ local function HalionInsideLoop(eventId, delay, repeats, player)
 				if IsPositionValidInSideArea(targetPos, halionInside, "left", AVERAGE_BOSS_DISTANCE_INSIDE, SPREAD_FACTOR_INSIDE, AOE_AVOIDANCE_DISTANCE, INSIDE_DANGER_NPCS) then
 					player:MoveTo(1, targetPos.x, targetPos.y, targetPos.z, true)
 				else
-					print("Inside player " .. player:GetName() .. " saved position also invalid, finding new position")
+					--print("Inside player " .. player:GetName() .. " saved position also invalid, finding new position")
 					FindAndMoveToInsidePosition(player, halionInside, INSIDE_DANGER_NPCS)
 				end
 			end
@@ -225,12 +229,16 @@ local function HalionLoop(eventId, delay, repeats, halion)
         end
     end
 
-    if victim then
+    if victim and victim:IsPlayer() then
         if IsAtPos(victim, ORB_CENTER_POS[1], ORB_CENTER_POS[2], 13) then
             if not IsAtPos(halion, ORB_CENTER_POS[1], ORB_CENTER_POS[2], 3) then
                 halion:MoveTo(1, ORB_CENTER_POS[1], ORB_CENTER_POS[2], ORB_CENTER_POS[3], true)
             end
         end
+	
+		if IsTank(victim) and (victim:GetClass() == 11) and not victim:HasAura(9634) then
+			victim:AddAura(9634, victim) -- Foolproof druid tanks that sometimes shift out of form mid-fight
+		end
     end
     
 	CheckIfPlayerNeedsDispel(halion)
@@ -357,7 +365,7 @@ local function HalionLoop(eventId, delay, repeats, halion)
 		local lastRightMeteors = halion:GetData("LastRightMeteors") or 0
 		
 		if leftMeteors ~= lastLeftMeteors or rightMeteors ~= lastRightMeteors then
-			print("Left meteors: " .. leftMeteors .. ", Right meteors: " .. rightMeteors .. ", Assigned side: " .. groupSide)
+			--print("Left meteors: " .. leftMeteors .. ", Right meteors: " .. rightMeteors .. ", Assigned side: " .. groupSide)
 			halion:SetData("LastLeftMeteors", leftMeteors)
 			halion:SetData("LastRightMeteors", rightMeteors)
 		end
@@ -394,7 +402,7 @@ local function HalionLoop(eventId, delay, repeats, halion)
 		end
 		
 		if newMeteor40055 then
-			print("NEW 40055 DETECTED - locking side assignment for 30s")
+			--print("NEW 40055 DETECTED - locking side assignment for 30s")
 			halion:SetData("SideAssignmentLocked", os.time() + 30)
 		end
 		
@@ -492,10 +500,10 @@ local function HalionLoop(eventId, delay, repeats, halion)
 
 	if halion:GetHealthPct() < 75 and halion:GetHealthPct() >= 50 then
 		if not halion:GetData("PortalTransitionPrinted") then
-			print("=== PORTAL TRANSITION (75%-50%) ===")
-			print("MainTank: " .. (mainTank and mainTank:GetName() or "none") .. " (Bot: " .. tostring(mainTankIsBot) .. ")")
-			print("OffTank: " .. (offTank and offTank:GetName() or "none") .. " (Bot: " .. tostring(offTankIsBot) .. ")")
-			print("Healer2: " .. (healers[2] and healers[2]:GetName() or "none"))
+			--print("=== PORTAL TRANSITION (75%-50%) ===")
+			--print("MainTank: " .. (mainTank and mainTank:GetName() or "none") .. " (Bot: " .. tostring(mainTankIsBot) .. ")")
+			--print("OffTank: " .. (offTank and offTank:GetName() or "none") .. " (Bot: " .. tostring(offTankIsBot) .. ")")
+			--print("Healer2: " .. (healers[2] and healers[2]:GetName() or "none"))
 			halion:SetData("PortalTransitionPrinted", true)
 			
 			for _, player in ipairs(bots) do
@@ -595,7 +603,7 @@ function HalionCheckInsideCombat(eventId, delay, repeats, player)
     halion:GetData("LastAliveCount", aliveCount)
     
     if not playersInside and (os.time() > player:GetData("HalionInsideCheckTime") + 20) then
-        print("WIPE: No players inside during portal phase")
+        --print("WIPE: No players inside during portal phase")
         player:CastSpell(player, 7, true)
         StopLuaEvent(player)
         return
@@ -632,7 +640,7 @@ function HalionAssignPosition(player, halion, targetSide, sideSelectionDangerNpc
     if needsSideSwitch then
         local sideAssignmentLocked = halion:GetData("SideAssignmentLocked") or 0
 		if os.time() < sideAssignmentLocked then
-			print("SIDE SWITCH BLOCKED: " .. player:GetName() .. " - side assignment locked for " .. (sideAssignmentLocked - os.time()) .. "s")
+			--print("SIDE SWITCH BLOCKED: " .. player:GetName() .. " - side assignment locked for " .. (sideAssignmentLocked - os.time()) .. "s")
 			local savedPos = player:GetData("HalionPos")
 			local validPos = savedPos
 			
@@ -655,7 +663,7 @@ function HalionAssignPosition(player, halion, targetSide, sideSelectionDangerNpc
         
         local meteorUnderBoss = halion:GetData("MeteorUnderBoss") or 0
         if os.time() < meteorUnderBoss then
-            print("SIDE SWITCH BLOCKED: " .. player:GetName() .. " - meteor under boss (blocked for " .. (meteorUnderBoss - os.time()) .. "s)")
+            --print("SIDE SWITCH BLOCKED: " .. player:GetName() .. " - meteor under boss (blocked for " .. (meteorUnderBoss - os.time()) .. "s)")
             local validPos = GetRandomValidPositionInSideArea(halion, savedSide, AVERAGE_BOSS_DISTANCE, SPREAD_FACTOR, AOE_AVOIDANCE_DISTANCE, positionDangerNpcs)
             if validPos then
                 player:SetData("HalionPos", validPos)
@@ -682,7 +690,7 @@ function HalionAssignPosition(player, halion, targetSide, sideSelectionDangerNpc
                     local distToHalion = math.sqrt((mx - hx)^2 + (my - hy)^2)
                     if distToHalion < 10 then
                         halion:SetData("MeteorUnderBoss", os.time() + 35)
-                        print("METEOR UNDER BOSS - blocking side switches for 35s")
+                        --print("METEOR UNDER BOSS - blocking side switches for 35s")
                         local validPos = GetRandomValidPositionInSideArea(halion, savedSide, AVERAGE_BOSS_DISTANCE, SPREAD_FACTOR, AOE_AVOIDANCE_DISTANCE, positionDangerNpcs)
                         if validPos then
                             player:SetData("HalionPos", validPos)
@@ -706,12 +714,12 @@ function HalionAssignPosition(player, halion, targetSide, sideSelectionDangerNpc
             local distToHalion = math.sqrt((mx - hx)^2 + (my - hy)^2)
             
             if distToHalion < 10 then
-                print("SIDE SWITCH BLOCKED: " .. player:GetName() .. " - only 1 meteor at " .. string.format("%.1f", distToHalion) .. " yds from boss (need 10+)")
+                --print("SIDE SWITCH BLOCKED: " .. player:GetName() .. " - only 1 meteor at " .. string.format("%.1f", distToHalion) .. " yds from boss (need 10+)")
                 return
             end
         end
         
-        print("SIDE SWITCH: " .. player:GetName() .. " switching from " .. savedSide .. " to " .. targetSide)
+        --print("SIDE SWITCH: " .. player:GetName() .. " switching from " .. savedSide .. " to " .. targetSide)
         local hx, hy, hz = halion:GetLocation()
         local facing = halion:GetO()
         local behindAngle = facing + math.pi
@@ -879,7 +887,7 @@ function MoveForConsumption(player, halionInside, dangerNpcEntries)
     end
     
     if not insideTank then
-        print("No inside tank found for consumption movement")
+        --print("No inside tank found for consumption movement")
         return
     end
     
@@ -907,13 +915,13 @@ function MoveForConsumption(player, halionInside, dangerNpcEntries)
     end
     
     if bestX then
-        print("Consumption triggered for " .. player:GetName() .. " - Moving to (" .. bestX .. ", " .. bestY .. ", " .. bestZ .. ")")
+        --print("Consumption triggered for " .. player:GetName() .. " - Moving to (" .. bestX .. ", " .. bestY .. ", " .. bestZ .. ")")
         player:SetData("ConsumptionPos", {x = bestX, y = bestY, z = bestZ})
         UseSpeedBuff(player)
         DisableSpellCast(player, 0.2)
         player:MoveTo(1, bestX, bestY, bestZ, true)
     else
-        print("No valid consumption position found for " .. player:GetName())
+        --print("No valid consumption position found for " .. player:GetName())
     end
 end
 
@@ -975,12 +983,12 @@ function HandlePhase3Transition(halion, bots, mainTank, offTank, healers)
             insideHP = insideHP + mainTank:GetMaxHealth()
             mainTank:SetData("InsideGroup", true)
             mainTank:SetData("OutsideGroup", false)
-            print("MainTank " .. mainTank:GetName() .. " assigned to INSIDE group (Bot: " .. tostring(mainTankIsBot) .. ")")
+            --print("MainTank " .. mainTank:GetName() .. " assigned to INSIDE group (Bot: " .. tostring(mainTankIsBot) .. ")")
         else
             outsideHP = outsideHP + mainTank:GetMaxHealth()
             mainTank:SetData("OutsideGroup", true)
             mainTank:SetData("InsideGroup", false)
-            print("MainTank " .. mainTank:GetName() .. " assigned to OUTSIDE group (Bot: " .. tostring(mainTankIsBot) .. ")")
+            --print("MainTank " .. mainTank:GetName() .. " assigned to OUTSIDE group (Bot: " .. tostring(mainTankIsBot) .. ")")
         end
     end
     
@@ -989,12 +997,12 @@ function HandlePhase3Transition(halion, bots, mainTank, offTank, healers)
             insideHP = insideHP + offTank:GetMaxHealth()
             offTank:SetData("InsideGroup", true)
             offTank:SetData("OutsideGroup", false)
-            print("OffTank " .. offTank:GetName() .. " assigned to INSIDE group (Bot: " .. tostring(offTankIsBot) .. ")")
+            --print("OffTank " .. offTank:GetName() .. " assigned to INSIDE group (Bot: " .. tostring(offTankIsBot) .. ")")
         else
             outsideHP = outsideHP + offTank:GetMaxHealth()
             offTank:SetData("OutsideGroup", true)
             offTank:SetData("InsideGroup", false)
-            print("OffTank " .. offTank:GetName() .. " assigned to OUTSIDE group (Bot: " .. tostring(offTankIsBot) .. ")")
+            --print("OffTank " .. offTank:GetName() .. " assigned to OUTSIDE group (Bot: " .. tostring(offTankIsBot) .. ")")
         end
     end
     
