@@ -161,14 +161,17 @@ function DisableManualSpells(player)
     end
     
     if #playerSpellsToRemove > 0 then
+        PrintInfo("[DisableManualSpells] Removing " .. #playerSpellsToRemove .. " spells from " .. playerName)
         local values = {}
         for _, spellId in ipairs(playerSpellsToRemove) do
-            table.insert(values, string.format("(%d, '%s', %d, 0, NULL)", guidLow, playerName, spellId))
+            table.insert(values, string.format("(%d, %d)", guidLow, spellId))
             player:RemoveSpell(spellId)
         end
         
-        CharDBExecute("REPLACE INTO acore_eluna.disable_shadows_dispels (guid, name, spell_id, is_pet, pet_name) VALUES " .. table.concat(values, ", "))
+        CharDBExecute("REPLACE INTO acore_eluna.disable_shadows_spells (guid, spell_id) VALUES " .. table.concat(values, ", "))
+        RemovedPlayerSpells[guidLow] = playerSpellsToRemove
         player:SetData("RemovedManualSpells", true)
+        PrintInfo("[DisableManualSpells] Cached and saved " .. #playerSpellsToRemove .. " spells for " .. playerName)
     end
 end
 
@@ -180,70 +183,134 @@ local function OnMapChange(event, player)
     player:SetData("RemovedManualSpells", false)
     
     local guidLow = player:GetGUIDLow()
+    local cachedSpells = RemovedPlayerSpells[guidLow]
+    
+    if cachedSpells then
+        PrintInfo("[OnMapChange] Re-learning " .. #cachedSpells .. " spells from cache for " .. player:GetName())
+        for _, spellId in ipairs(cachedSpells) do
+            if not player:HasSpell(spellId) then
+                player:LearnSpell(spellId)
+            end
+        end
+    else
+        PrintInfo("[OnMapChange] No cache found, querying DB for " .. player:GetName())
+        local guid = player:GetGUID()
+        CharDBQueryAsync(
+            string.format("SELECT spell_id FROM acore_eluna.disable_shadows_spells WHERE guid = %d", guidLow),
+            function(query)
+                local player = GetPlayerByGUID(guid)
+                if not player then return end
+                
+                if query then
+                    local spellsToLearn = {}
+                    repeat
+                        local spellId = query:GetUInt32(0)
+                        table.insert(spellsToLearn, spellId)
+                    until not query:NextRow()
+                    
+                    RemovedPlayerSpells[guidLow] = spellsToLearn
+                    PrintInfo("[OnMapChange] Found " .. #spellsToLearn .. " spells in DB for " .. player:GetName())
+                    
+                    for _, spellId in ipairs(spellsToLearn) do
+                        if not player:HasSpell(spellId) then
+                            player:LearnSpell(spellId)
+                        end
+                    end
+                end
+            end
+        )
+    end
+end
+
+local function OnLeaveCombat(event, player)
+    if not player then return end
+    
+    if not isPlayerBot[player:GetName()] then return end
+    
+    local guidLow = player:GetGUIDLow()
+    local cachedSpells = RemovedPlayerSpells[guidLow]
+    
+    if cachedSpells then
+        PrintInfo("[OnLeaveCombat] Re-learning " .. #cachedSpells .. " spells from cache for " .. player:GetName())
+        for _, spellId in ipairs(cachedSpells) do
+            if not player:HasSpell(spellId) then
+                player:LearnSpell(spellId)
+            end
+        end
+        player:SetData("RemovedManualSpells", false)
+    end
+end
+
+local function OnSave(event, player)
+    if not player then return end
+    
+    if not isPlayerBot[player:GetName()] then return end
+    
+    local guidLow = player:GetGUIDLow()
     local guid = player:GetGUID()
     
     CharDBQueryAsync(
-        string.format("SELECT spell_id FROM acore_eluna.disable_shadows_dispels WHERE guid = %d AND is_pet = 0", guidLow),
+        string.format("SELECT spell_id FROM acore_eluna.disable_shadows_spells WHERE guid = %d", guidLow),
         function(query)
             local player = GetPlayerByGUID(guid)
             if not player then return end
             
             if query then
-                local spellsToLearn = {}
+                local allKnown = true
+                local spellCount = 0
                 repeat
+                    spellCount = spellCount + 1
                     local spellId = query:GetUInt32(0)
-                    table.insert(spellsToLearn, spellId)
+                    if not player:HasSpell(spellId) then
+                        allKnown = false
+                        PrintInfo("[OnSave] Player " .. player:GetName() .. " missing spell " .. spellId)
+                        break
+                    end
                 until not query:NextRow()
                 
-                table.sort(spellsToLearn)
-                
-                local allLearned = true
-                for _, spellId in ipairs(spellsToLearn) do
-                    player:LearnSpell(spellId)
-                    if not player:HasSpell(spellId) then
-                        allLearned = false
-                    end
-                end
-                
-                if allLearned then
+                if allKnown then
+                    PrintInfo("[OnSave] All " .. spellCount .. " spells verified, clearing DB for " .. player:GetName())
                     CharDBExecute(string.format(
-                        "DELETE FROM acore_eluna.disable_shadows_dispels WHERE guid = %d AND is_pet = 0",
+                        "DELETE FROM acore_eluna.disable_shadows_spells WHERE guid = %d",
                         guidLow
                     ))
                     RemovedPlayerSpells[guidLow] = nil
+                else
+                    PrintInfo("[OnSave] Not all spells verified, keeping DB entries for " .. player:GetName())
                 end
             end
         end
     )
 end
 
-local function OnLeaveCombat(event, player)
-    local guidLow = player:GetGUIDLow()
-    
-    if player:GetData("RemovedManualSpells") then
-        local cachedSpells = RemovedPlayerSpells[guidLow]
-        if cachedSpells then
-            table.sort(cachedSpells)
-            
-            local allLearned = true
-            for _, spellId in ipairs(cachedSpells) do
-                player:LearnSpell(spellId)
-                if not player:HasSpell(spellId) then
-                    allLearned = false
-                end
-            end
-            
-            if allLearned then
-                CharDBExecute(string.format(
-                    "DELETE FROM acore_eluna.disable_shadows_dispels WHERE guid = %d AND is_pet = 0",
-                    guidLow
-                ))
-                RemovedPlayerSpells[guidLow] = nil
-                player:SetData("RemovedManualSpells", false)
-            end
+RegisterPlayerEvent(28, OnMapChange)
+RegisterPlayerEvent(4, OnLeaveCombat)
+RegisterPlayerEvent(34, OnLeaveCombat)
+RegisterPlayerEvent(25, OnSave)
+CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.disable_shadows_spells (`guid` INT UNSIGNED NOT NULL, `spell_id` INT UNSIGNED NOT NULL, PRIMARY KEY (`guid`, `spell_id`))")
+
+local function OnDisableSpellsCommand(event, player, command)
+    if command == "disablespells" and player:GetGMRank() > 0 then
+		
+        local target = player:GetSelection()
+        
+        if not target then
+            player:SendBroadcastMessage("No target selected")
+            return false
         end
+        
+        if target:ToPlayer() == nil then
+            player:SendBroadcastMessage("Target must be a player")
+            return false
+        end
+        
+        local targetPlayer = target:ToPlayer()
+        
+        DisableManualSpells(targetPlayer)
+        player:SendBroadcastMessage("DisableManualSpells executed on " .. targetPlayer:GetName())
+        
+        return false
     end
 end
 
-RegisterPlayerEvent(28, OnMapChange)
-RegisterPlayerEvent(34, OnLeaveCombat)
+RegisterPlayerEvent(42, OnDisableSpellsCommand)
