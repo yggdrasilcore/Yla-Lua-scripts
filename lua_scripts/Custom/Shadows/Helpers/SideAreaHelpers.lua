@@ -93,14 +93,22 @@ function IsPositionValidInSideArea(pos, creature, side, distance, offset, minAvo
 end
 
 function IsSafePosition(x, y, creature, npcId, minDistance, maxDistance)
-    local npcs = creature:GetCreaturesInRange(maxDistance or 100, npcId)
-    
-    for _, npc in ipairs(npcs) do
-        local npcX, npcY, npcZ = npc:GetLocation()
+    if type(npcId) == "number" then
+        local npcs = creature:GetCreaturesInRange(maxDistance or 100, npcId)
+        for _, npc in ipairs(npcs) do
+            local npcX, npcY, npcZ = npc:GetLocation()
+            local dx = x - npcX
+            local dy = y - npcY
+            local distance = math.sqrt(dx * dx + dy * dy)
+            if distance < minDistance then
+                return false
+            end
+        end
+    else
+        local npcX, npcY, npcZ = npcId:GetLocation()
         local dx = x - npcX
         local dy = y - npcY
         local distance = math.sqrt(dx * dx + dy * dy)
-        
         if distance < minDistance then
             return false
         end

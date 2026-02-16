@@ -1,8 +1,15 @@
 function IdentifyTanks(creature)
-    local players = creature:GetPlayersInRange(100)
     local map = creature:GetMap()
+    local instanceId = creature:GetInstanceId()
+    local allPlayers = map:GetPlayers()
     
-    -- Step 1: Check for real players with main/off tank roles
+    local players = {}
+    for _, player in ipairs(allPlayers) do
+        if player:GetInstanceId() == instanceId and player:IsAlive() and player:IsInCombat() then
+            table.insert(players, player)
+        end
+    end
+    
     local group = nil
     for _, player in ipairs(players) do
         group = player:GetGroup()
@@ -14,23 +21,19 @@ function IdentifyTanks(creature)
     
     if group then
         for _, player in ipairs(players) do
-            if player:IsAlive() and player:IsInCombat() and player:GetMapId() == creature:GetMapId() then
-                if IsMainTank(group, player) then
-                    realMainTank = player
-                elseif IsOffTank(group, player) then
-                    realOffTank = player
-                end
+            if IsMainTank(group, player) then
+                realMainTank = player
+            elseif IsOffTank(group, player) then
+                realOffTank = player
             end
         end
     end
     
     local mainTank, offTank = nil, nil
     
-    -- If both real tanks found, return them
     if realMainTank and realOffTank then
         mainTank, offTank = realMainTank, realOffTank
     else
-        -- Helper to get cached tank if still valid
         local function getCachedTank(dataKey)
             local tankName = creature:GetData(dataKey)
             if tankName then
@@ -39,17 +42,15 @@ function IdentifyTanks(creature)
                         return player
                     end
                 end
-                -- Cached tank no longer valid, clear it
                 creature:SetData(dataKey, nil)
             end
             return nil
         end
         
-        -- Helper to find best bot tank excluding certain players
         local function findBestBotTank(exclude1, exclude2)
             local botTanks = {}
             for _, player in ipairs(players) do
-                if player:IsAlive() and player:IsInCombat() and isPlayerBot[player:GetName()] and IsTank(player) then
+                if isPlayerBot[player:GetName()] and IsTank(player) then
                     if (not exclude1 or player:GetGUID() ~= exclude1:GetGUID()) and (not exclude2 or player:GetGUID() ~= exclude2:GetGUID()) then
                         table.insert(botTanks, player)
                     end
@@ -63,7 +64,6 @@ function IdentifyTanks(creature)
             return nil
         end
         
-        -- Step 3: Real main tank only
         if realMainTank and not realOffTank then
             local cachedOffTank = getCachedTank("CachedOffTank")
             if cachedOffTank then
@@ -80,7 +80,6 @@ function IdentifyTanks(creature)
                     mainTank, offTank = realMainTank, nil
                 end
             end
-        -- Step 4: Real off tank only
         elseif realOffTank and not realMainTank then
             local cachedMainTank = getCachedTank("CachedMainTank")
             if cachedMainTank then
@@ -98,17 +97,15 @@ function IdentifyTanks(creature)
                 end
             end
         else
-            -- Step 2: No real tanks, use cached bots or find new ones
             local cachedMainTank = getCachedTank("CachedMainTank")
             local cachedOffTank = getCachedTank("CachedOffTank")
             
             if cachedMainTank and cachedOffTank then
                 mainTank, offTank = cachedMainTank, cachedOffTank
             else
-                -- Need to find bot tanks
                 local botTanks = {}
                 for _, player in ipairs(players) do
-                    if player:IsAlive() and player:IsInCombat() and isPlayerBot[player:GetName()] and IsTank(player) then
+                    if isPlayerBot[player:GetName()] and IsTank(player) then
                         table.insert(botTanks, player)
                     end
                 end
@@ -135,21 +132,18 @@ function IdentifyTanks(creature)
         end
     end
     
-    -- Ensure main and off tank are not the same player
     if mainTank and offTank and mainTank:GetGUID() == offTank:GetGUID() then
         offTank = nil
         creature:SetData("CachedOffTank", nil)
     end
     
-    -- Track and print changes
     local lastMain = creature:GetData("LastAssignedMain")
     local lastOff = creature:GetData("LastAssignedOff")
     local currentMain = mainTank and mainTank:GetName() or nil
     local currentOff = offTank and offTank:GetName() or nil
     
     if currentMain ~= lastMain or currentOff ~= lastOff then
-        --print(string.format("[IdentifyTanks] Tanks assigned - Main: %s, Off: %s", currentMain or "none", currentOff or "none"))
-        -- Print disabled for production
+        print(string.format("[IdentifyTanks] Tanks assigned - Main: %s, Off: %s", currentMain or "none", currentOff or "none"))
         creature:SetData("LastAssignedMain", currentMain)
         creature:SetData("LastAssignedOff", currentOff)
     end
