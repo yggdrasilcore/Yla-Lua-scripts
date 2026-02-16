@@ -39,47 +39,32 @@ end
 
 local function OnGroupListSend(event, packet, player)
     local packetSize = packet:GetSize()
-    local offset = 0
     
-    if packetSize < 28 then
+    -- Rough estimate: ~20 bytes per player minimum (name + guid + flags)
+    -- Header is ~20 bytes, so 6 players = ~140 bytes minimum
+    if packetSize < 140 then
         return
     end
     
     local groupType = packet:ReadUByte()
-    offset = offset + 1
-    if offset > packetSize then return end
     
-    local slotGroup = packet:ReadUByte()
-    offset = offset + 1
-    if offset > packetSize then return end
-    
-    local slotFlags = packet:ReadUByte()
-    offset = offset + 1
-    if offset > packetSize then return end
-    
-    local slotRoles = packet:ReadUByte()
-    offset = offset + 1
-    if offset > packetSize then return end
-    
-    if groupType >= 16 then
-        if offset + 5 > packetSize then return end
-        local dungeonStatus = packet:ReadUByte()
-        offset = offset + 1
-        local dungeonId = packet:ReadULong()
-        offset = offset + 4
+    -- Only process normal party (0) and raid (2)
+    if groupType ~= 0 and groupType ~= 2 then
+        return
     end
     
-    if offset + 8 > packetSize then return end
+    local slotGroup = packet:ReadUByte()
+    local slotFlags = packet:ReadUByte()
+    local slotRoles = packet:ReadUByte()
+    
     local groupGuid = packet:ReadGUID()
-    offset = offset + 8
-    
-    if offset + 4 > packetSize then return end
     local counter = packet:ReadULong()
-    offset = offset + 4
-    
-    if offset + 4 > packetSize then return end
     local memberCount = packet:ReadULong()
-    offset = offset + 4
+    
+    -- Also check actual member count
+    if memberCount <= 6 then
+        return
+    end
     
     groupCache[tostring(groupGuid)] = {
         groupType = groupType,
@@ -111,31 +96,12 @@ local function OnGroupListSend(event, packet, player)
     end
     
     for i = 1, memberCount do
-        local nameLen = 1
-        local packetPos = packet:GetSize() - packet:GetSize()
         local name = packet:ReadString()
-        if offset + #name + 1 > packetSize then return end
-        offset = offset + #name + 1
-        
-        if offset + 8 > packetSize then return end
         local guid = packet:ReadGUID()
-        offset = offset + 8
-        
-        if offset + 1 > packetSize then return end
         local onlineState = packet:ReadUByte()
-        offset = offset + 1
-        
-        if offset + 1 > packetSize then return end
         local group = packet:ReadUByte()
-        offset = offset + 1
-        
-        if offset + 1 > packetSize then return end
         local flags = packet:ReadUByte()
-        offset = offset + 1
-        
-        if offset + 1 > packetSize then return end
         local roles = packet:ReadUByte()
-        offset = offset + 1
         
         cache.members[tostring(guid)] = {
             name = name,
@@ -160,54 +126,31 @@ local function OnGroupListSend(event, packet, player)
             OffTanks[key] = nil
         end
         
-        local hasRole = false
-        
         if HasFlag(flags, MEMBER_FLAG_ASSISTANT) then
             table.insert(cache.assistants, name)
-            hasRole = true
         end
         
         if HasFlag(flags, MEMBER_FLAG_MAINTANK) then
             table.insert(cache.mainTanks, name)
-            hasRole = true
         end
         
         if HasFlag(flags, MEMBER_FLAG_MAINASSIST) then
             table.insert(cache.mainAssists, name)
-            hasRole = true
         end
     end
     
-    if offset + 8 > packetSize then return end
     local leaderGuid = packet:ReadGUID()
-    offset = offset + 8
     cache.leaderGuid = tostring(leaderGuid)
     
     if memberCount > 0 then
-        if offset + 1 > packetSize then return end
         local lootMethod = packet:ReadUByte()
-        offset = offset + 1
-        
-        if offset + 8 > packetSize then return end
         local masterLooterGuid = packet:ReadGUID()
-        offset = offset + 8
         cache.masterLooterGuid = tostring(masterLooterGuid)
         
-        if offset + 1 > packetSize then return end
         local lootThreshold = packet:ReadUByte()
-        offset = offset + 1
-        
-        if offset + 1 > packetSize then return end
         local dungeonDifficulty = packet:ReadUByte()
-        offset = offset + 1
-        
-        if offset + 1 > packetSize then return end
         local raidDifficulty = packet:ReadUByte()
-        offset = offset + 1
-        
-        if offset + 1 > packetSize then return end
         local dynamicDifficulty = packet:ReadUByte()
-        offset = offset + 1
         
         cache.lootMethod = lootMethod
         cache.lootThreshold = lootThreshold
@@ -254,8 +197,6 @@ local function OnCheckRoleCommand(event, player, command)
 end
 
 RegisterPlayerEvent(42, OnCheckRoleCommand)
-
-local MEMBER_FLAG_ASSISTANT = 0x01
 
 local processedGroups = {}
 
