@@ -68,7 +68,6 @@ local function OnTalkToGreetingTwig(event, player, object)
 end 
 
 local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
-    print(intid)
     local currentRate = XPCache[player:GetGUIDLow()] or 1
     if intid == 11 then
     
