@@ -25,7 +25,7 @@ local function OnLadyDeathwhisperCombat(event, player, enemy)
     if enemy and enemy:GetEntry() == 36855 then
         if not enemy:GetData("EventActive") then
             enemy:SetData("EventActive", true)
-            enemy:RegisterEvent(LadyDeathwhisperLoop, 1000, 600)
+            enemy:RegisterEvent(LadyDeathwhisperLoop, 1500, 450)
         end
     end
 end
