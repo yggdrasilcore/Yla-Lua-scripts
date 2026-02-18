@@ -891,10 +891,6 @@ end
 
 local validCommands = buildCommandList()
 
-for cmd, _ in pairs(validCommands) do
-    print("validCommand: [" .. cmd .. "]")
-end
-
 local function OnGroup(event, player, msg, Type, lang, group)
     if msg ~= "repair" then return end
     
