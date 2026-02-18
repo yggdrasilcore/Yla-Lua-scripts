@@ -12,13 +12,17 @@ WorldDBQueryAsync([[
             WHEN gqi.ItemId = qt.RequiredItemId4 THEN qt.RequiredItemCount4
             WHEN gqi.ItemId = qt.RequiredItemId5 THEN qt.RequiredItemCount5
             WHEN gqi.ItemId = qt.RequiredItemId6 THEN qt.RequiredItemCount6
-        END AS RequiredCount
+        END AS RequiredCount,
+        got.Data3
     FROM quest_template qt
     INNER JOIN gameobject_questitem gqi
         ON gqi.ItemId IN (
             qt.RequiredItemId1, qt.RequiredItemId2, qt.RequiredItemId3,
             qt.RequiredItemId4, qt.RequiredItemId5, qt.RequiredItemId6
         )
+    INNER JOIN gameobject_template got
+        ON got.entry = gqi.GameObjectEntry
+        AND got.type = 3
     WHERE
         qt.RequiredItemId1 > 0 OR qt.RequiredItemId2 > 0 OR qt.RequiredItemId3 > 0 OR
         qt.RequiredItemId4 > 0 OR qt.RequiredItemId5 > 0 OR qt.RequiredItemId6 > 0
@@ -31,6 +35,7 @@ WorldDBQueryAsync([[
         local questId   = results:GetUInt32(1)
         local itemId    = results:GetUInt32(2)
         local itemCount = results:GetUInt32(3)
+        local data3     = results:GetUInt32(4)
 
         if not questItemGoCache[questId] then
             questItemGoCache[questId] = {}
@@ -41,6 +46,7 @@ WorldDBQueryAsync([[
             goEntry   = goEntry,
             itemId    = itemId,
             itemCount = itemCount,
+            data3     = data3,
         })
 
         cachedItems[itemId] = true
@@ -128,8 +134,10 @@ local function LootObject(eventId, delay, repeats, player, data)
         local countAfter = player:GetItemCount(data.itemId)
 
         if countAfter > countBefore then
-            local freshGO = player:GetNearestGameObject(20, data.goEntry)
-            if freshGO then freshGO:Despawn() end
+            if data.data3 == 1 then
+                local freshGO = player:GetNearestGameObject(20, data.goEntry)
+                if freshGO then freshGO:Despawn() end
+            end
         else
             local masterName = isPlayerBot[player:GetName()]
             local master = GetPlayerByName(masterName)
