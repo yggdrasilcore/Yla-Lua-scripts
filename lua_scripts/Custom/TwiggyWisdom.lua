@@ -46,6 +46,10 @@ local function CastOnGroup(player, spellId)
     if not group then
         -- Not in group, cast on self
         player:CastSpell(player, spellId, true)
+        local pet = player:GetPet()
+        if pet then
+            player:CastSpell(pet, spellId, true)
+        end
         return
     end
     
@@ -53,6 +57,10 @@ local function CastOnGroup(player, spellId)
     for _, member in ipairs(members) do
         if member and member:IsAlive() and member:IsInWorld() then
             player:CastSpell(member, spellId, true)
+            local pet = member:GetPet()
+            if pet then
+                player:CastSpell(pet, spellId, true)
+            end
         end
     end
 end
@@ -90,6 +98,10 @@ local function OnGossipSelect(event, player, item, sender, intid, code)
         (target:IsAlive() or target:GetLevel() >= 70))
         then
             player:CastSpell(target, SCROLL_SPELLS[intid], true)
+            local pet = target:GetPet()
+            if pet then
+                player:CastSpell(pet, SCROLL_SPELLS[intid], true)
+            end
             ShowScrollMenu(player, item, false)
         else
             player:SendBroadcastMessage("You can't use this item on this target.")
