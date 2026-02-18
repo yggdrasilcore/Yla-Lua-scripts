@@ -45,6 +45,7 @@ function ManageInsect(eventId, delay, repeats, player)
         local distance = insect:GetDistance(player)
         
         if distance > 1 then
+            insect:SetDisableGravity(true)
             insect:MoveTo(0, player:GetX(), player:GetY(), player:GetZ(), false)
         end
         
