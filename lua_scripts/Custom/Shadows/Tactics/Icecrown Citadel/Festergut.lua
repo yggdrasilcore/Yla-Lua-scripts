@@ -18,18 +18,26 @@ local function FestergutLoop(eventId, delay, repeats, festergut)
         return
     end
     
+    local anySporeActive = false
+    for _, player in ipairs(validPlayers) do
+        if player:HasAura(69278) or player:HasAura(69279) or player:HasAura(71221) then
+            anySporeActive = true
+            break
+        end
+    end
+    
+    if anySporeActive then
+        festergut:RegisterEvent(FestergutLoop, 200, 1)
+        return
+    end
+    
     for _, player in ipairs(validPlayers) do
         if not IsTank(player) then
-            local hasGasSpore = player:HasAura(69278) or player:HasAura(69279) or player:HasAura(71221)
-            local hasBlightedSpores = player:HasAura(69290) or player:HasAura(71222) or player:HasAura(73033) or player:HasAura(73034)
-            
-            if not hasGasSpore and not hasBlightedSpores then
-                if not IsInRearHalf(festergut, player) then
-                    local offsetX = math.random(-3, 3)
-                    local offsetY = math.random(-3, 3)
-                    local bx, by, bz = festergut:GetLocation()
-                    player:MoveTo(1, bx + offsetX, by + offsetY, bz, true)
-                end
+            if not IsInRearHalf(festergut, player) then
+                local offsetX = math.random(-3, 3)
+                local offsetY = math.random(-3, 3)
+                local bx, by, bz = festergut:GetLocation()
+                player:MoveTo(1, bx + offsetX, by + offsetY, bz, true)
             end
         end
     end
