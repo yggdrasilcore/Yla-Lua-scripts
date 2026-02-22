@@ -1,0 +1,56 @@
+local function SMSG_DESTROY_OBJECT(target, object, onDeath)
+    local packet = CreatePacket(0x0AA, 9)
+    packet:WriteGUID(object:GetGUID())
+    packet:WriteUByte(onDeath and 1 or 0)
+    target:SendPacket(packet)
+end
+
+
+local function onMapChanged(event, player)
+    if not player then return end
+
+    local function checkMap(eventId, delay, repeats, player)
+        if not isPlayerBot[player:GetName()] then return end
+
+        local storedMap = player:GetData("BotMap")
+        local currentMap = player:GetMapId()
+
+        if storedMap and storedMap ~= currentMap then
+            local players = GetPlayersInWorld()
+            for _, p in ipairs(players) do
+                if p:GetMapId() == storedMap then
+                    print(string.format("DESTROY: sending destroy for %s to %s (was on map %d)", player:GetName(), p:GetName(), storedMap))
+                    SMSG_DESTROY_OBJECT(p, player, false)
+                end
+            end
+        end
+
+        print(string.format("BOTMAP: %s map set to %d (was %s)", player:GetName(), currentMap, tostring(storedMap)))
+        player:SetData("BotMap", currentMap)
+    end
+
+    player:RegisterEvent(checkMap, 2000, 1, player)
+end
+
+local function onLogout(event, player)
+    if not player then return end
+    if not isPlayerBot[player:GetName()] then return end
+
+    local storedMap = player:GetData("BotMap")
+    if not storedMap then return end
+
+    local players = GetPlayersInWorld()
+    for _, p in ipairs(players) do
+        if p:GetMapId() == storedMap then
+            print(string.format("DESTROY: sending destroy for %s to %s (logout)", player:GetName(), p:GetName()))
+            SMSG_DESTROY_OBJECT(p, player, false)
+        end
+    end
+end
+
+RegisterPlayerEvent(28, onMapChanged)
+RegisterPlayerEvent(4, onLogout)
+
+for _, player in ipairs(GetPlayersInWorld()) do
+    onMapChanged(nil, player)
+end
