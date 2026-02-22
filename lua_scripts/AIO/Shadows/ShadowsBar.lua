@@ -2061,14 +2061,16 @@ local function CreateBotControlBar()
     end
 
     function ShowTalentManagementWindow(shadowName)
-        if talentFrame and talentFrame:IsShown() then
-            return
-        elseif talentFrame and not talentFrame:IsShown() then
-            talentFrame:Show()
-            return
+        if talentFrame then
+            if talentFrame.shadowName == shadowName and talentFrame:IsShown() then
+                return
+            end
+            talentFrame:Hide()
+            talentFrame = nil
         end
         
         talentFrame = CreateFrame("Frame", "ShadowTalentManagementFrame", UIParent)
+        talentFrame.shadowName = shadowName
         talentFrame:SetSize(400, 300)
         talentFrame:SetPoint("CENTER")
         talentFrame:SetFrameStrata("FULLSCREEN_DIALOG")
@@ -2091,12 +2093,6 @@ local function CreateBotControlBar()
         local title = talentFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
         title:SetPoint("TOP", 0, -12)
         title:SetText("Talent Management: " .. shadowName)
-        
-        talentFrame:SetMovable(true)
-        talentFrame:EnableMouse(true)
-        talentFrame:RegisterForDrag("LeftButton")
-        talentFrame:SetScript("OnDragStart", function(self) self:StartMoving() end)
-        talentFrame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
         
         local exitButton = CreateFrame("Button", nil, talentFrame, "UIPanelCloseButton")
         exitButton:SetPoint("TOPRIGHT", 2, 0)
@@ -2658,7 +2654,7 @@ local function CreateBotControlBar()
         local selectionFrame = CreateFrame("Frame", "ShadowSelectionFrame", UIParent)
         selectionFrame:SetSize(300, 100 + (#matches * 30))
         selectionFrame:SetPoint("CENTER")
-        selectionFrame:SetFrameStrata("DIALOG")
+        selectionFrame:SetFrameStrata("FULLSCREEN_DIALOG")
         
         selectionFrame:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8X8",
