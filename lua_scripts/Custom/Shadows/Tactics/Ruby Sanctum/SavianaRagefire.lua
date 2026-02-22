@@ -113,6 +113,7 @@ local function SavianaRagefireLoop(eventId, delay, repeats, saviana)
             
             -- Move tanks in front of boss, by water
             if not IsAtPos(tank, 3149.7, 648.15, 1.5) then
+			    UseRocketBoots(tank)
                 tank:MoveTo(1, 3149.7, 648.15, 77.23, true)
             end
         end
