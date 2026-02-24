@@ -96,6 +96,7 @@ local customFamilyNames = {
     ["Voidcaller"] = 16,
     ["Voidhunter"] = 16,
     ["Voidwalker"] = 16,
+    ["Tainted Arcane Wrath"] = 16,
     ["Nexus Terror"] = 16,
     ["Crazed Mana-Surge"] = 16,
     ["Arcane Devourer"] = 16,
@@ -137,7 +138,7 @@ local customFamilyNames = {
 
 
 if not (GetCoreName() == "AzerothCore") then
-	print("[Demon Morph Module]: Incompatible core detected. This module only works on AzerothCore as it required RegisterPlayerEvent PLAYER_EVENT_ON_PET_ADDED_TO_WORLD.")
+	print("[Demon Morph Module]: Incompatible core detected. This module only works on AzerothCore as it requires RegisterPlayerEvent PLAYER_EVENT_ON_PET_ADDED_TO_WORLD.")
 	return
 end
 
@@ -211,29 +212,33 @@ local function OnKillCreature(event, player, creature)
     or displayId == 6173
     or displayId == 1913
     or displayId == 7126
-    or displayId == 19595 -- Invisible imp
+	or displayId == 19595 -- Invisible imp
     then
         return
     end
 
     local matchedFamily = nil
 
-    if demonCache[entry] then
-        matchedFamily = demonCache[entry].family
+    if entry == 12217 then -- Imp corruptor
+        matchedFamily = 23
     else
-        for familyId, familyName in pairs(familyNames) do
-            if string.find(string.lower(creatureName), string.lower(familyName)) then
-                matchedFamily = familyId
-                break
+        if demonCache[entry] then
+            matchedFamily = demonCache[entry].family
+        else
+            for familyId, familyName in pairs(familyNames) do
+                if string.find(string.lower(creatureName), string.lower(familyName)) then
+                    matchedFamily = familyId
+                    break
+                end
             end
         end
-    end
 
-    if not matchedFamily then
-        for customName, customFamily in pairs(customFamilyNames) do
-            if string.find(string.lower(creatureName), string.lower(customName)) then
-                matchedFamily = customFamily
-                break
+        if not matchedFamily then
+            for customName, customFamily in pairs(customFamilyNames) do
+                if string.find(string.lower(creatureName), string.lower(customName)) then
+                    matchedFamily = customFamily
+                    break
+                end
             end
         end
     end
