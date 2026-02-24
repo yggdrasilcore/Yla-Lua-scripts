@@ -167,6 +167,7 @@ function DisableManualSpells(player)
             table.insert(values, string.format("(%d, %d)", guidLow, spellId))
             player:RemoveSpell(spellId)
         end
+        player:SaveToDB()
         
         CharDBExecute("REPLACE INTO acore_eluna.disable_shadows_spells (guid, spell_id) VALUES " .. table.concat(values, ", "))
         RemovedPlayerSpells[guidLow] = playerSpellsToRemove
@@ -216,6 +217,7 @@ local function OnMapChange(event, player)
                             player:LearnSpell(spellId)
                         end
                     end
+                    player:SaveToDB()
                 end
             end
         )
@@ -237,6 +239,7 @@ local function OnLeaveCombat(event, player)
                 player:LearnSpell(spellId)
             end
         end
+        player:SaveToDB()
         player:SetData("RemovedManualSpells", false)
     end
 end
@@ -284,7 +287,6 @@ local function OnSave(event, player)
 end
 
 RegisterPlayerEvent(28, OnMapChange)
-RegisterPlayerEvent(4, OnLeaveCombat)
 RegisterPlayerEvent(34, OnLeaveCombat)
 RegisterPlayerEvent(25, OnSave)
 CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.disable_shadows_spells (`guid` INT UNSIGNED NOT NULL, `spell_id` INT UNSIGNED NOT NULL, PRIMARY KEY (`guid`, `spell_id`))")
