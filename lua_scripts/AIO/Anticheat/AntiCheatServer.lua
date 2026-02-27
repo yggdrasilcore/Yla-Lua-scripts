@@ -75,6 +75,7 @@ local function OnAIOAntiCheatCommand(event, player, command)
 		if not player then return end
         local arg = command:match("AntiCheatAlert%s+(%S+)")
         if not arg then return false end
+        if player:IsOnTransport() then return false end
      
         print("[Anticheat]: Player "..player:GetName().." caught exploiting cheat type "..arg.." at map "..player:GetMapId()..", XYZ "..player:GetX()..", "..player:GetY()..", "..player:GetZ()..". ")
         if arg == "M2Clip" then
