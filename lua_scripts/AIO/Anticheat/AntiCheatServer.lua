@@ -21,7 +21,8 @@ local function StartAntiClipCheck(player)
 				or (gObject:GetGoState() == 1 and (
 					gObject:GetName():lower():find("door")
 					or gObject:GetName():lower():find("entrance")
-					or gObject:GetName():lower():find("gate"))
+					or gObject:GetName():lower():find("gate")
+					or gObject:GetName():lower():find("port"))
 				) then
 					local x, y, z = gObject:GetLocation()
 					SendToDiscord("M2 object clipping detected. Offending player: "..player:GetName()..". Gobject ID: "..gObject:GetEntry()..". Name: "..gObject:GetName()..". Gobject state: "..gObject:GetGoState()..". Pos: "..string.format("%.2f, %.2f, %.2f", x, y, z)..". Map: "..gObject:GetMapId())
@@ -94,10 +95,12 @@ local function OnAIOAntiCheatCommand(event, player, command)
 end
 
 local function ReloadEluna(event)
-    local players = GetPlayersInWorld()
-    for _, player in ipairs(players) do
-		StartElunaAnticheat(event, player)
-	end
+    CreateLuaEvent(function()
+        local players = GetPlayersInWorld()
+        for _, player in ipairs(players) do
+            StartElunaAnticheat(event, player)
+        end
+    end, 5000, 1)
 end
 
 RegisterPlayerEvent(42, OnAIOAntiCheatCommand)
