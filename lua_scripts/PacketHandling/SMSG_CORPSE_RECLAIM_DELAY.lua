@@ -7,9 +7,11 @@ local function killPlayer(e, d, r, player)
 end
 
 local function On0x269(event, packet, player)
+    local map = player:GetMapId()
+    if map == 0 or map == 1 or map == 530 or map == 571 then return end -- Don't run on continents
 	if player:GetHealth() > 0 and not (player:HasAura(8326) or player:HasAura(20584)) then
 		print("Reviving on 0x269")
-		RunCommand("revive "..player:GetName())
+		player:ResurrectPlayer()
 		player:RegisterEvent(killPlayer, 1100, 1) -- If player is alive 1 second later, it means we gotta try again. KillPlayer() will make this packet fire again.
 	end
 end
