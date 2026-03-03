@@ -1,8 +1,8 @@
 function DisableSpellCast(player, duration)
     if player:HasCasterSpec() then
-        player:AddAura(30225, player) -- 4 Second silence 
+        player:AddAura(302250, player) -- 4 Second silence 
         if duration then
-            local aura = player:GetAura(30225)
+            local aura = player:GetAura(302250)
             if aura then
                 aura:SetDuration(duration * 1000)
             end
@@ -16,7 +16,7 @@ function DisableSpellCast(player, duration)
 end
 
 function AllowSpellCast(player)
-    if player:HasAura(30225) then
-        player:RemoveAura(30225) -- Remove silence
+    if player:HasAura(302250) then
+        player:RemoveAura(302250) -- Remove silence
     end
 end
