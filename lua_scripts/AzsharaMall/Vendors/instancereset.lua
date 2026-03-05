@@ -3,6 +3,7 @@ local TOKEN_ITEM_ID = 20880
 local MAX_MENU_ITEMS = 8
 local model_ID = 27486
 local freeReset = {}
+local accountLockoutCache = {} -- [accountId] = {lockoutMap, chars}
 
 local instanceData = {
     [249] = {name = "Onyxia's Lair", size = 25},
@@ -61,28 +62,93 @@ local instanceData = {
     [724] = {name = "The Ruby Sanctum", size = 25}
 }
 
-local function GetSavedInstanceLockouts(player)
-    local guid = player:GetGUIDLow()
-    local query = CharDBQuery("SELECT instance FROM character_instance WHERE guid = " .. guid)
-    if query then
-        local instances = {}
+local pendingReset = {} -- [guid] = {map, difficulty, chars}
+
+local function BuildLockoutCacheForAccount(accountId)
+    accountLockoutCache[accountId] = {chars = {}, lockoutMap = {}, freeResets = {}}
+
+    CharDBQueryAsync("SELECT guid, name FROM characters WHERE account = " .. accountId, function(charQuery)
+        if not charQuery then return end
+
+        local chars = {}
         repeat
-            local instanceId = query:GetUInt32(0)
-            table.insert(instances, instanceId)
-        until not query:NextRow()
-        return instances
-    end
-    return nil
+            local guid = charQuery:GetUInt32(0)
+            local name = charQuery:GetString(1)
+            table.insert(chars, {guid = guid, name = name})
+        until not charQuery:NextRow()
+
+        accountLockoutCache[accountId].chars = chars
+
+        for _, char in ipairs(chars) do
+            CharDBQueryAsync("SELECT time FROM character_instance_vendor_reset WHERE guid = " .. char.guid, function(resetQuery)
+                if resetQuery then
+                    accountLockoutCache[accountId].freeResets[char.guid] = resetQuery:GetUInt32(0)
+                    freeReset[char.guid] = accountLockoutCache[accountId].freeResets[char.guid]
+                else
+                    accountLockoutCache[accountId].freeResets[char.guid] = 0
+                    freeReset[char.guid] = 0
+                end
+            end)
+
+            CharDBQueryAsync("SELECT instance FROM character_instance WHERE guid = " .. char.guid, function(instanceQuery)
+                if not instanceQuery then return end
+                repeat
+                    local instanceId = instanceQuery:GetUInt32(0)
+                    CharDBQueryAsync("SELECT map, difficulty FROM instance WHERE id = " .. instanceId, function(iQuery)
+                        if not iQuery then return end
+                        local map = iQuery:GetUInt32(0)
+                        local difficulty = iQuery:GetUInt32(1)
+                        if instanceData[map] then
+                            local key = map * 10 + difficulty
+                            if not accountLockoutCache[accountId].lockoutMap[key] then
+                                accountLockoutCache[accountId].lockoutMap[key] = {}
+                            end
+                            -- Avoid duplicate entries if cache is rebuilt
+                            local already = false
+                            for _, entry in ipairs(accountLockoutCache[accountId].lockoutMap[key]) do
+                                if entry.guid == char.guid then already = true break end
+                            end
+                            if not already then
+                                table.insert(accountLockoutCache[accountId].lockoutMap[key], {guid = char.guid, name = char.name})
+                            end
+                        end
+                    end)
+                until not instanceQuery:NextRow()
+            end)
+        end
+    end)
 end
 
-local function GetInstanceDetails(instanceId)
-    local query = CharDBQuery("SELECT map, difficulty FROM instance WHERE id = " .. instanceId)
-    if query then
-        local map = query:GetUInt32(0)
-        local difficulty = query:GetUInt32(1)
-        return map, difficulty
-    end
-    return nil, nil
+
+local function OnPlayerMapChange(event, player)
+    if player:IsBot() then return end
+
+    local guid = player:GetGUIDLow()
+    local accountId = player:GetAccountId()
+
+    player:RegisterEvent(function(e, d, r, player)
+        if player:GetMapId() == 37 then BuildLockoutCacheForAccount(accountId) end
+    end, 1000)
+    
+    if player:GetData("InstanceResetLockChecked") then return end
+    
+    CharDBQueryAsync("SELECT command FROM acore_eluna.command_queue WHERE comment = " .. guid .. " AND executed = 0", function(q)
+        local player = GetPlayerByGUID(guid)
+        if not player then return end
+
+        if q then
+            repeat
+                local command = q:GetString(0)
+                local mapVal, diffVal = command:match("UnbindInstance%((%d+),%s*(%d+)%)")
+                if mapVal and diffVal then
+                    player:UnbindInstance(tonumber(mapVal), tonumber(diffVal))
+                    CharDBExecute("UPDATE acore_eluna.command_queue SET executed = 1 WHERE comment = " .. guid .. " AND command = 'UnbindInstance(" .. mapVal .. ", " .. diffVal .. ")'")
+                end
+            until not q:NextRow()
+        end
+
+        player:SetData("InstanceResetLockChecked", 1)
+    end)
 end
 
 local function GetTokenCost(difficulty, size)
@@ -98,12 +164,12 @@ end
 local function ChargeTokens(player, tokenCost)
     local guid = player:GetGUIDLow()
     if tokenCost == 0 then return true end
-    
+
     if not freeReset[guid] then
         freeReset[guid] = 0
         return true
     end
-    
+
     if player:GetItemCount(TOKEN_ITEM_ID) >= tokenCost then
         player:RemoveItem(TOKEN_ITEM_ID, tokenCost)
         return true
@@ -132,42 +198,69 @@ local function GetDifficultyName(difficulty, size)
     return ""
 end
 
-local function ResetInstanceLockout(player, map, difficulty)
+local function ResetInstanceLockout(player, map, difficulty, targetGuid, targetName)
     local guid = player:GetGUIDLow()
+    local accountId = player:GetAccountId()
     local size = instanceData[map] and instanceData[map].size or 0
     local tokenCost = GetTokenCost(difficulty, size)
-	
-    if (not freeReset[guid] or (freeReset[guid] < os.time())) then
-		tokenCost = 0
-		freeReset[guid] = os.time() + 7 * 24 * 60 * 60
-		CharDBExecute("REPLACE INTO character_instance_vendor_reset (guid, time) VALUES (" .. guid .. ", " .. freeReset[guid] .. ");")
-	end
-    
-    if ChargeTokens(player, tokenCost) then
-        player:UnbindInstance(map, difficulty)
-        local instanceName = instanceData[map] and instanceData[map].name
-        local difficultyName = GetDifficultyName(difficulty, size)
-        if instanceName then
-            player:SendBroadcastMessage("Your instance lockout for " .. instanceName .. " (" .. difficultyName .. ") has been reset.")
-        else
-            player:SendBroadcastMessage("Your chosen instance lockout has been reset.")
+    local instanceName = instanceData[map] and instanceData[map].name
+    local difficultyName = GetDifficultyName(difficulty, size)
+
+    if not freeReset[targetGuid] or freeReset[targetGuid] < os.time() then
+        tokenCost = 0
+        freeReset[targetGuid] = os.time() + 7 * 24 * 60 * 60
+        CharDBExecute("REPLACE INTO character_instance_vendor_reset (guid, time) VALUES (" .. targetGuid .. ", " .. freeReset[targetGuid] .. ");")
+        if accountLockoutCache[accountId] then
+            accountLockoutCache[accountId].freeResets[targetGuid] = freeReset[targetGuid]
         end
+    end
+
+    if not ChargeTokens(player, tokenCost) then
+        return
+    end
+
+    local onlineTarget = GetPlayerByGUID(targetGuid)
+    if onlineTarget then
+        onlineTarget:UnbindInstance(map, difficulty)
+        CharDBExecute("DELETE FROM character_instance WHERE guid = " .. targetGuid .. " AND instance IN (SELECT id FROM instance WHERE map = " .. map .. " AND difficulty = " .. difficulty .. ")")
+    else
+        CharDBExecute("DELETE FROM character_instance WHERE guid = " .. targetGuid .. " AND instance IN (SELECT id FROM instance WHERE map = " .. map .. " AND difficulty = " .. difficulty .. ")")
+        CharDBExecute("INSERT INTO acore_eluna.command_queue (comment, command, inserted, executed) VALUES (" .. targetGuid .. ", 'UnbindInstance(" .. map .. ", " .. difficulty .. ")', " .. os.time() .. ", 0)")
+    end
+
+    local key = map * 10 + difficulty
+    if accountLockoutCache[accountId] then
+        local lockedChars = accountLockoutCache[accountId].lockoutMap[key]
+        if lockedChars then
+            for i = #lockedChars, 1, -1 do
+                if lockedChars[i].guid == targetGuid then
+                    table.remove(lockedChars, i)
+                    break
+                end
+            end
+            if #lockedChars == 0 then
+                accountLockoutCache[accountId].lockoutMap[key] = nil
+            end
+        end
+    end
+
+    if instanceName then
+        player:SendBroadcastMessage("Instance lockout for " .. instanceName .. " (" .. difficultyName .. ") has been reset for " .. targetName .. ".")
+    else
+        player:SendBroadcastMessage("Instance lockout has been reset for " .. targetName .. ".")
     end
 end
 
-local function SortInstancesByMapID(instances)
-    if not instances or #instances == 0 then
-        return {}
-    end
-
+local function SortInstancesByMapID(lockoutMap)
     local sortedInstances = {}
-    for _, instanceId in ipairs(instances) do
-        local map, difficulty = GetInstanceDetails(instanceId)
-        if map and difficulty and instanceData[map] then
+    for key, chars in pairs(lockoutMap) do
+        local map = math.floor(key / 10)
+        local difficulty = key % 10
+        if instanceData[map] then
             table.insert(sortedInstances, {
-                instanceId = instanceId,
                 map = map,
-                difficulty = difficulty
+                difficulty = difficulty,
+                chars = chars,
             })
         end
     end
@@ -175,43 +268,76 @@ local function SortInstancesByMapID(instances)
     return sortedInstances
 end
 
+local function ShowCharacterList(player, creature, map, difficulty)
+    local guid = player:GetGUIDLow()
+    local accountId = player:GetAccountId()
+    local cache = accountLockoutCache[accountId]
+    local key = map * 10 + difficulty
+    local lockedChars = (cache and cache.lockoutMap[key]) or {}
+    local size = instanceData[map] and instanceData[map].size or 0
+    local instanceName = instanceData[map] and instanceData[map].name or "Unknown"
+    local difficultyName = GetDifficultyName(difficulty, size)
+
+    player:GossipClearMenu()
+
+    if #lockedChars == 0 then
+        player:SendBroadcastMessage("No characters are locked to this instance.")
+        player:GossipComplete()
+        return
+    end
+
+    for i, char in ipairs(lockedChars) do
+        local charTokenCost = GetTokenCost(difficulty, size)
+        if not freeReset[char.guid] or freeReset[char.guid] < os.time() then
+            charTokenCost = 0
+        end
+
+        local label = char.name .. " (Cost: " .. charTokenCost .. " Vote Tokens)"
+        local confirmText = "Are you sure you want to reset " .. instanceName .. " " .. difficultyName .. " for character " .. char.name .. "? This will cost " .. charTokenCost .. " Vote Tokens."
+        player:GossipMenuAddItem(2, label, 0, 50000 + key * 100 + i, false, confirmText)
+    end
+
+    pendingReset[guid] = {map = map, difficulty = difficulty, chars = lockedChars}
+
+    player:GossipMenuAddItem(4, "Back", 0, 8000)
+    player:GossipMenuAddItem(0, "Nevermind", 0, 9999)
+    player:GossipSendMenu(1, creature)
+end
+
 local function GenerateMenu(page, player, creature)
     local guid = player:GetGUIDLow()
+    local accountId = player:GetAccountId()
     player:GossipClearMenu()
-    
-    local instances = GetSavedInstanceLockouts(player)
 
-    local sortedInstances = SortInstancesByMapID(instances)
+    local cache = accountLockoutCache[accountId]
+    if not cache then
+        player:SendBroadcastMessage("Your instance data is still loading, please try again in a moment.")
+        player:GossipComplete()
+        return
+    end
+
+    local sortedInstances = SortInstancesByMapID(cache.lockoutMap)
+
+    if #sortedInstances == 0 then
+        player:SendBroadcastMessage("You don't have any raid locks to reset.")
+        player:GossipComplete()
+        return
+    end
 
     local startIndex = (page - 1) * MAX_MENU_ITEMS + 1
     local endIndex = math.min(page * MAX_MENU_ITEMS, #sortedInstances)
 
-    local hasValidOptions = false
-
     for i = startIndex, endIndex do
         local instance = sortedInstances[i]
         local map, difficulty = instance.map, instance.difficulty
-        
-        if instanceData[map] then
-            local instanceName = instanceData[map].name
-            local difficultyName = GetDifficultyName(difficulty, instanceData[map].size)
-            local size = instanceData[map].size
-            local tokenCost = GetTokenCost(difficulty, size)
-            if not (size == 5 and difficulty == 0) then
-				if (not freeReset[guid] or (freeReset[guid] < os.time())) then tokenCost = 0 end
-				
-				local gossipText = "Reset " .. instanceName .. " " .. difficultyName .. "                                       (Cost: " .. tokenCost .. " Vote Tokens)"
-				player:GossipMenuAddItem(2, gossipText, 0, map * 10 + difficulty, false, "Are you sure you want to reset " .. instanceName .. " " .. difficultyName .. " for " .. tokenCost .. " vote tokens?")
-				
-				hasValidOptions = true
-			end
-        end
-    end
+        local size = instanceData[map].size
 
-    if not hasValidOptions then
-        player:SendBroadcastMessage("You don't have any raid locks to reset.")
-        player:GossipComplete()
-        return
+        if not (size == 5 and difficulty == 0) then
+            local instanceName = instanceData[map].name
+            local difficultyName = GetDifficultyName(difficulty, size)
+            local gossipText = instanceName .. " " .. difficultyName
+            player:GossipMenuAddItem(2, gossipText, 0, 10000 + map * 10 + difficulty)
+        end
     end
 
     if page > 1 then
@@ -226,34 +352,68 @@ local function GenerateMenu(page, player, creature)
 end
 
 local function OnGossipHello(event, player, creature)
-    local guid = player:GetGUIDLow()
-    if not freeReset[guid] then
-        local result = CharDBQuery("SELECT time FROM character_instance_vendor_reset WHERE guid = " .. guid)
-        if result then
-            freeReset[guid] = result:GetUInt32(0)
-        else
-            freeReset[guid] = 0
-        end
-    end
     player:GossipClearMenu()
     GenerateMenu(1, player, creature)
 end
 
 local function OnGossipSelect(event, player, creature, sender, intid, code, menu_id)
+    local guid = player:GetGUIDLow()
+    local accountId = player:GetAccountId()
+
     if intid >= 1000 and intid <= 1050 then
         local newPage = intid - 1000
         GenerateMenu(newPage, player, creature)
         return
-    else
-        local map = math.floor(intid / 10)
-        local difficulty = intid % 10
-        if map ~= 999 and difficulty >= 0 and difficulty <= 5 then
-            ResetInstanceLockout(player, map, difficulty)
-        end
     end
+
+    if intid == 9999 then
+        player:GossipComplete()
+        return
+    end
+
+    if intid == 8000 then
+        GenerateMenu(1, player, creature)
+        return
+    end
+
+    if intid >= 50000 then
+        local remainder = intid - 50000
+        local key = math.floor(remainder / 100)
+        local charIndex = remainder % 100
+        local pending = pendingReset[guid]
+        if pending and pending.chars[charIndex] then
+            local char = pending.chars[charIndex]
+            ResetInstanceLockout(player, pending.map, pending.difficulty, char.guid, char.name)
+        end
+
+        local map = math.floor(key / 10)
+        local difficulty = key % 10
+        local cache = accountLockoutCache[accountId]
+        local lockedChars = cache and cache.lockoutMap[key]
+        if lockedChars and #lockedChars > 0 then
+            ShowCharacterList(player, creature, map, difficulty)
+        else
+            GenerateMenu(1, player, creature)
+        end
+        return
+    end
+    
+    if intid >= 10000 then
+        local key = intid - 10000
+        local map = math.floor(key / 10)
+        local difficulty = key % 10
+        ShowCharacterList(player, creature, map, difficulty)
+        return
+    end
+
     player:GossipComplete()
 end
 
+for _, player in ipairs(GetPlayersInWorld()) do
+    OnPlayerMapChange(nil, player)
+end
+
+RegisterPlayerEvent(28, OnPlayerMapChange)
 RegisterCreatureGossipEvent(NPC_ID, 1, OnGossipHello)
 RegisterCreatureGossipEvent(NPC_ID, 2, OnGossipSelect)
 CharDBExecute("CREATE TABLE IF NOT EXISTS character_instance_vendor_reset (guid INT NOT NULL, time INT NOT NULL, PRIMARY KEY (guid));")
