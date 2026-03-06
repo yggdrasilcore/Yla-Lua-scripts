@@ -377,7 +377,7 @@ end
 function FestergutHandleMelee(festergut, botMelee, gooPos)
     if #botMelee == 0 then return end
 
-    local atPos = IsAtPos(festergut, festergutPos[1], festergutPos[2], 3)
+    local atPos = IsAtPos(festergut, festergutPos[1], festergutPos[2], 7)
 
     for _, player in ipairs(botMelee) do
         local target = rightLeg
