@@ -1,37 +1,38 @@
 local mutedShadows = {}
+
 local function OnCommand(event, player, command)
-    local args = {}
-    for arg in command:gmatch("%S+") do
-        table.insert(args, arg)
-    end
-    
-    if args[1] == "muteshadow" then
-        for i = 2, #args do
-            mutedShadows[args[i]] = true
-            print("Muted shadow: " .. args[i])
+    if command == "muteshadows" or command == "unmuteshadows" then
+        local muting = command == "muteshadows"
+        local senderAccountId = player:GetAccountId()
+        local senderName = player:GetName()
+        local affected = {}
+
+        for _, p in ipairs(GetPlayersInWorld()) do
+            if p:GetAccountId() == senderAccountId and p:GetName() ~= senderName then
+                local name = p:GetName()
+                mutedShadows[name] = muting or nil
+                table.insert(affected, name)
+            end
         end
-        return false
-    elseif args[1] == "unmuteshadow" then
-        for i = 2, #args do
-            mutedShadows[args[i]] = nil
-            print("Unmuted shadow: " .. args[i])
+
+        if #affected > 0 then
+            player:SendBroadcastMessage((muting and "Muted: " or "Unmuted: ") .. table.concat(affected, ", "))
+        else
+            player:SendBroadcastMessage("No shadows found.")
         end
         return false
     end
 end
+
 local function OnChatMessage(event, player, message, _, _, _, _)
     local name = player:GetName()
-    
-    local mutedList = {}
-    for shadowName, _ in pairs(mutedShadows) do
-        table.insert(mutedList, shadowName)
-    end
-    
     if not mutedShadows[name] then return end
-    if isPlayerBot[name] then
+    if player:IsBot() then
+        print("Shadow " .. name .. " muted from saying " .. message)
         return false
     end
 end
+
 RegisterPlayerEvent(42, OnCommand)
 RegisterPlayerEvent(18, OnChatMessage)
 RegisterPlayerEvent(20, OnChatMessage)

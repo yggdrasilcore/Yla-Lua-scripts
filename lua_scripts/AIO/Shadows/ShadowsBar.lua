@@ -84,12 +84,7 @@ local function ShowShadowsSettingsPanel()
         resetShadowsButton:SetHeight(30)
         resetShadowsButton:SetText("Reset Shadows Settings")
         resetShadowsButton:SetScript("OnClick", function()
-            local names = {}
-            for name, _ in pairs(cachedNames) do
-                table.insert(names, name)
-            end
-            local namesString = table.concat(names, " ")
-            SendChatMessage(".unmuteshadow " .. namesString, "GUILD")
+            SendChatMessage(".unmuteshadows", "GUILD")
             
             local channel = GetNumRaidMembers() > 0 and "RAID" or GetNumPartyMembers() > 0 and "PARTY" or nil
             SendChatMessage("reset botAI", channel)
@@ -938,20 +933,7 @@ local function CreateBotControlBar()
             button.state = not button.state
             button.border:SetAlpha(button.state and 1 or 0)
             
-            local names = {}
-            for name, _ in pairs(cachedNames) do
-                table.insert(names, name)
-            end
-            
-            local namesString = table.concat(names, " ")
-            local cmd
-            if button.state then
-                cmd = ".unmuteshadow " .. namesString
-                print("Unmuted: " .. namesString)
-            else
-                cmd = ".muteshadow " .. namesString
-                print("Muted: " .. namesString)
-            end
+            local cmd = button.state and ".unmuteshadows" or ".muteshadows"
             SendChatMessage(cmd, "GUILD")
             
             UpdateButtonTooltip(button)
