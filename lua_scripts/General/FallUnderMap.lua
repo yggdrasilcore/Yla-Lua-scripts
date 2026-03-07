@@ -1,10 +1,8 @@
 local function CheckPlayer(eventId, delay, repeats, player)
-    if not player:IsFalling() or player:IsInWater() then return end
+    if not player:IsFalling() or player:IsInWater() or player:IsOnVehicle() then return end
     
     local groundZ = player:GetGroundZ()
     local floorZ = player:GetFloorZ()
-    if not groundZ and not floorZ then return end
-
     if not groundZ and not floorZ then return end
 
     local minZ = player:GetMapId() == 530 and -499 or -100000
@@ -24,8 +22,9 @@ local function CheckPlayer(eventId, delay, repeats, player)
     else
         targetZ = floorZ
     end
-    if playerZ < targetZ then
-        print(string.format("[MapGlitch] %s is below ground, teleporting to %.2f", player:GetName(), targetZ))
+    if playerZ < targetZ - 1 then
+        print(string.format("[MapGlitch] %s is below ground at map %d (%.2f, %.2f, %.2f), teleporting to Z %.2f",
+            player:GetName(), player:GetMapId(), player:GetX(), player:GetY(), playerZ, targetZ))
         player:Teleport(player:GetMapId(), player:GetX(), player:GetY(), targetZ + 0.2, player:GetO())
     end
 end
