@@ -13,3 +13,7 @@ function IsInRearHalf(boss, player)
     
     return math.abs(relativeAngle) > math.pi / 2
 end
+
+function IsBehind(boss, player)
+    IsInRearHalf(boss, player)
+end

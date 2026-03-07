@@ -60,28 +60,6 @@ local function TryRootAtPos(player, gooPos, duration)
     end
 end
 
-function AddRootAura(player, duration)
-    local aura = player:AddAura(35340, player)
-    if aura then aura:SetDuration(duration) end
-end
-
-function MoveImmediately(player, x, y, z)
-    DisableSpellCast(player, 0.2)
-    player:RemoveAura(35340)
-    player:MoveTo(1, x, y, z, true)
-end
-
-function ApplyDamageReductionStacks(player, stacks, duration)
-    local aura = player:GetAura(699100)
-    if not aura then
-        aura = player:AddAura(699100, player)
-    end
-    if aura then
-        aura:SetStackAmount(stacks)
-        aura:SetDuration(duration)
-    end
-end
-
 -- ============================================================
 -- Main Loop
 -- ============================================================
@@ -595,7 +573,7 @@ local function FestergutOnEnterCombat(event, player, festergut)
         festergut:SetData("GooTime", nil)
         festergut:SetData("LastHCReassignTime", nil)
         TogglePlayerbotScript(player, "icc", false)
-        if player:GetDifficulty() < 1 then ApplyHiddenBuffsToShadows(player) end
+        if player:GetDifficulty() > 1 then ApplyHiddenBuffsToShadows(player) end
         StartLuaEvent(festergut, FestergutLoop)
     end
 end
