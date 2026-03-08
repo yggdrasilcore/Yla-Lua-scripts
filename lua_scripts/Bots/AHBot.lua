@@ -129,6 +129,18 @@ local ItemWeights = {
     Projectile = 5,
     Other = 20,
     SpecificItems = {
+        [41599] = 2,
+        [2459]  = 2,
+        [5634]  = 2,
+        [13442] = 2,
+        [9036]  = 2,
+        [33447]  = 4,   -- Runic Healing Potion
+        [33448]  = 4,   -- Runic Mana Potion
+        [40093]  = 1.5, --Indestructible (str) Potion
+        [43015]  = 2,   -- Fish Feast
+        [34753]  = 2.5, -- Great Feast
+        [43480]  = 1,   -- Small Feast
+        [35223]  = 2,   -- Papa Hummel's Pet Biscuits
 		-- Example items to include that the auction house bots will weigh as separate categories.
 		-- Adding weights per item ID here can, for example, ensure that they are always sold by the AH in a desired (relative) quantity.
 		-- Example below: Frostweave Bag
@@ -1629,9 +1641,16 @@ if EnableItemFilters then
 		table.insert(conditions, "NOT (class = 2 AND RequiredLevel < " .. MinLevelGear .. ")")
 	end
 
-	if #conditions > 0 then
-		ItemTemplateQuery = ItemTemplateQuery .. " WHERE " .. table.concat(conditions, " AND ")
-	end
+    if #conditions > 0 then
+        local forceInclude = {}
+        for id, _ in pairs(ItemWeights.SpecificItems) do
+            table.insert(forceInclude, id)
+        end
+        ItemTemplateQuery = ItemTemplateQuery .. " WHERE (" .. table.concat(conditions, " AND ") .. ")"
+        if #forceInclude > 0 then
+            ItemTemplateQuery = ItemTemplateQuery .. " OR entry IN (" .. table.concat(forceInclude, ",") .. ")"
+        end
+    end
 end
 
 local function CheckAuctions(houseId, callback)
