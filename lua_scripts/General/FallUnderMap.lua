@@ -1,17 +1,22 @@
 local function CheckPlayer(eventId, delay, repeats, player)
-    if not player:IsFalling() or player:IsInWater() or player:IsOnVehicle() then return end
+    if not player:IsFalling() or player:IsInWater() or player:IsOnVehicle() then
+        player:SetData("MapGlitchFailTicks", 0)
+        return
+    end
     
     local groundZ = player:GetGroundZ()
     local floorZ = player:GetFloorZ()
-    if not groundZ and not floorZ then return end
-
+    if not groundZ and not floorZ then
+        player:SetData("MapGlitchFailTicks", 0)
+        return
+    end
     local minZ = player:GetMapId() == 530 and -499 or -100000
-
     if groundZ and groundZ < minZ then groundZ = nil end
     if floorZ and floorZ < minZ then floorZ = nil end
-
-    if not groundZ and not floorZ then return end
-
+    if not groundZ and not floorZ then
+        player:SetData("MapGlitchFailTicks", 0)
+        return
+    end
     local playerZ = player:GetZ()
     
     local targetZ = nil
@@ -22,10 +27,19 @@ local function CheckPlayer(eventId, delay, repeats, player)
     else
         targetZ = floorZ
     end
-    if playerZ < targetZ - 1 then
+
+    if playerZ < targetZ - 1 and playerZ > targetZ - 30 then
+    
+        local ticks = (player:GetData("MapGlitchFailTicks") or 0) + 1
+        player:SetData("MapGlitchFailTicks", ticks)
+        if ticks < 1 then return end
+
+        player:SetData("MapGlitchFailTicks", 0)
         print(string.format("[MapGlitch] %s is below ground at map %d (%.2f, %.2f, %.2f), teleporting to Z %.2f",
-            player:GetName(), player:GetMapId(), player:GetX(), player:GetY(), playerZ, targetZ))
+            player:GetName(), player:GetMapId(), player:GetX(), player:GetY(), playerZ, targetZ + 0.2))
         player:Teleport(player:GetMapId(), player:GetX(), player:GetY(), targetZ + 0.2, player:GetO())
+    else
+        player:SetData("MapGlitchFailTicks", 0)
     end
 end
 
