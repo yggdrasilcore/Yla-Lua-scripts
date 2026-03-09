@@ -170,7 +170,11 @@ local function InstanceDialogue(event, creature, who)
     if who:ToPlayer() and creature:GetDistance(who) < 10 and creature:IsWithinLoS(who) then
         if not lastGreeting[creature:GetGUIDLow()] or (lastGreeting[creature:GetGUIDLow()] and (lastGreeting[creature:GetGUIDLow()] < os.time())) then
             lastGreeting[creature:GetGUIDLow()] = os.time() + 90
-            creature:SendUnitSay("Psst, "..who:GetName().."! I can reset your instance lockouts through mysterious magic. First reset per week is free!", 0)
+            if IsVIP(who) then
+                creature:SendUnitSay("Psst, "..who:GetName().."! I can reset your instance lockouts through mysterious magic. VIPs like you get two free resets per week!", 0)
+            else
+                creature:SendUnitSay("Psst, "..who:GetName().."! I can reset your instance lockouts through mysterious magic. First reset per week is free!", 0)
+            end
             creature:PerformEmote(1)
             return -- Save some processing by returning early
         end

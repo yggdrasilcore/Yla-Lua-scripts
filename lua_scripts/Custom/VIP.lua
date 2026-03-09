@@ -1,3 +1,7 @@
+function IsVIP(player)
+    return player:GetData("VIPTime") and player:GetData("VIPTime") > os.time()
+end
+
 local function CheckVIPOnLoad()
     local playerNames = {}
     local accountIdMap = {}

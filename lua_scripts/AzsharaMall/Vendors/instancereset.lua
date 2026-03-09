@@ -2,7 +2,10 @@ local NPC_ID = 190090
 local TOKEN_ITEM_ID = 20880
 local MAX_MENU_ITEMS = 8
 local model_ID = 27486
+local FREE_RESETS   = 1
+local VIP_RESETS    = 2
 local freeReset = {}
+local resetCount = {}
 local accountLockoutCache = {} -- [accountId] = {lockoutMap, chars}
 
 local instanceData = {
@@ -71,54 +74,73 @@ local function BuildLockoutCacheForAccount(accountId)
         if not charQuery then return end
 
         local chars = {}
+        local guidList = {}
         repeat
             local guid = charQuery:GetUInt32(0)
             local name = charQuery:GetString(1)
             table.insert(chars, {guid = guid, name = name})
+            table.insert(guidList, guid)
         until not charQuery:NextRow()
 
         accountLockoutCache[accountId].chars = chars
 
-        for _, char in ipairs(chars) do
-            CharDBQueryAsync("SELECT time FROM character_instance_vendor_reset WHERE guid = " .. char.guid, function(resetQuery)
-                if resetQuery then
-                    accountLockoutCache[accountId].freeResets[char.guid] = resetQuery:GetUInt32(0)
-                    freeReset[char.guid] = accountLockoutCache[accountId].freeResets[char.guid]
+        if #guidList == 0 then return end
+
+        local guidIn = table.concat(guidList, ",")
+
+        CharDBQueryAsync("SELECT guid, time, count FROM acore_eluna.character_instance_vendor_reset WHERE guid IN (" .. guidIn .. ")", function(resetQuery)
+            local loaded = {}
+            if resetQuery then
+                repeat
+                    local g = resetQuery:GetUInt32(0)
+                    local t = resetQuery:GetUInt32(1)
+                    local c = resetQuery:GetUInt32(2)
+                    loaded[g] = {time = t, count = c}
+                until not resetQuery:NextRow()
+            end
+
+            for _, char in ipairs(chars) do
+                if loaded[char.guid] then
+                    accountLockoutCache[accountId].freeResets[char.guid] = loaded[char.guid].time
+                    freeReset[char.guid] = loaded[char.guid].time
+                    resetCount[char.guid] = loaded[char.guid].count
                 else
                     accountLockoutCache[accountId].freeResets[char.guid] = 0
                     freeReset[char.guid] = 0
+                    resetCount[char.guid] = 0
                 end
-            end)
+            end
+        end)
 
-            CharDBQueryAsync("SELECT instance FROM character_instance WHERE guid = " .. char.guid, function(instanceQuery)
-                if not instanceQuery then return end
-                repeat
-                    local instanceId = instanceQuery:GetUInt32(0)
-                    CharDBQueryAsync("SELECT map, difficulty FROM instance WHERE id = " .. instanceId, function(iQuery)
-                        if not iQuery then return end
-                        local map = iQuery:GetUInt32(0)
-                        local difficulty = iQuery:GetUInt32(1)
-                        if instanceData[map] then
-                            local key = map * 10 + difficulty
-                            if not accountLockoutCache[accountId].lockoutMap[key] then
-                                accountLockoutCache[accountId].lockoutMap[key] = {}
-                            end
-                            -- Avoid duplicate entries if cache is rebuilt
-                            local already = false
-                            for _, entry in ipairs(accountLockoutCache[accountId].lockoutMap[key]) do
-                                if entry.guid == char.guid then already = true break end
-                            end
-                            if not already then
-                                table.insert(accountLockoutCache[accountId].lockoutMap[key], {guid = char.guid, name = char.name})
-                            end
-                        end
-                    end)
-                until not instanceQuery:NextRow()
-            end)
-        end
+        CharDBQueryAsync("SELECT ci.guid, i.map, i.difficulty FROM character_instance ci JOIN instance i ON i.id = ci.instance WHERE ci.guid IN (" .. guidIn .. ")", function(instanceQuery)
+            if not instanceQuery then return end
+
+            local guidNameMap = {}
+            for _, char in ipairs(chars) do
+                guidNameMap[char.guid] = char.name
+            end
+
+            repeat
+                local guid = instanceQuery:GetUInt32(0)
+                local map = instanceQuery:GetUInt32(1)
+                local difficulty = instanceQuery:GetUInt32(2)
+                if instanceData[map] then
+                    local key = map * 10 + difficulty
+                    if not accountLockoutCache[accountId].lockoutMap[key] then
+                        accountLockoutCache[accountId].lockoutMap[key] = {}
+                    end
+                    local already = false
+                    for _, entry in ipairs(accountLockoutCache[accountId].lockoutMap[key]) do
+                        if entry.guid == guid then already = true break end
+                    end
+                    if not already then
+                        table.insert(accountLockoutCache[accountId].lockoutMap[key], {guid = guid, name = guidNameMap[guid]})
+                    end
+                end
+            until not instanceQuery:NextRow()
+        end)
     end)
 end
-
 
 local function OnPlayerMapChange(event, player)
     if player:IsBot() then return end
@@ -206,18 +228,24 @@ local function ResetInstanceLockout(player, map, difficulty, targetGuid, targetN
     local instanceName = instanceData[map] and instanceData[map].name
     local difficultyName = GetDifficultyName(difficulty, size)
 
-    if not freeReset[targetGuid] or freeReset[targetGuid] < os.time() then
-        tokenCost = 0
-        freeReset[targetGuid] = os.time() + 7 * 24 * 60 * 60
-        CharDBExecute("REPLACE INTO character_instance_vendor_reset (guid, time) VALUES (" .. targetGuid .. ", " .. freeReset[targetGuid] .. ");")
-        if accountLockoutCache[accountId] then
-            accountLockoutCache[accountId].freeResets[targetGuid] = freeReset[targetGuid]
-        end
+    local maxResets = FREE_RESETS
+    if IsVIP(player) then
+        maxResets = VIP_RESETS
     end
 
-    if not ChargeTokens(player, tokenCost) then
-        return
+    if not freeReset[targetGuid] or freeReset[targetGuid] < os.time() then
+        freeReset[targetGuid] = os.time() + 7 * 24 * 60 * 60
+        resetCount[targetGuid] = 0
     end
+
+    if resetCount[targetGuid] < maxResets then
+        tokenCost = 0
+        resetCount[targetGuid] = resetCount[targetGuid] + 1
+
+        CharDBExecute("REPLACE INTO acore_eluna.character_instance_vendor_reset (guid, time, count) VALUES (" .. targetGuid .. ", " .. freeReset[targetGuid] .. ", " .. resetCount[targetGuid] .. ")")
+    end
+
+    if not ChargeTokens(player, tokenCost) then return end
 
     local onlineTarget = GetPlayerByGUID(targetGuid)
     if onlineTarget then
@@ -288,7 +316,16 @@ local function ShowCharacterList(player, creature, map, difficulty)
 
     for i, char in ipairs(lockedChars) do
         local charTokenCost = GetTokenCost(difficulty, size)
+
+        local maxResets = 1
+        if IsVIP(player) then
+            maxResets = 2
+        end
+        
         if not freeReset[char.guid] or freeReset[char.guid] < os.time() then
+            resetCount[char.guid] = 0
+            charTokenCost = 0
+            elseif resetCount[char.guid] and resetCount[char.guid] < maxResets then
             charTokenCost = 0
         end
 
@@ -416,4 +453,4 @@ end
 RegisterPlayerEvent(28, OnPlayerMapChange)
 RegisterCreatureGossipEvent(NPC_ID, 1, OnGossipHello)
 RegisterCreatureGossipEvent(NPC_ID, 2, OnGossipSelect)
-CharDBExecute("CREATE TABLE IF NOT EXISTS character_instance_vendor_reset (guid INT NOT NULL, time INT NOT NULL, PRIMARY KEY (guid));")
+CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.character_instance_vendor_reset (guid INT NOT NULL, time INT NOT NULL, count INT DEFAULT 0, PRIMARY KEY (guid));")
