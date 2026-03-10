@@ -1,9 +1,4 @@
-function OnSpawn(event, creature)
-    creature:SetReactState(0)
-    creature:RegisterEvent(CheckForEnemies, 1000, 0)
-end
-
-function CheckForEnemies(eventId, delay, repeats, creature)
+local function CheckForEnemies(eventId, delay, repeats, creature)
     local nearestEnemy = creature:GetNearestCreature(50, 27896)
     if nearestEnemy then
         creature:AttackStart(nearestEnemy)
@@ -24,6 +19,11 @@ function CheckForEnemies(eventId, delay, repeats, creature)
         creature:AttackStart(nearestEnemy)
         return
     end
+end
+
+local function OnSpawn(event, creature)
+    creature:SetReactState(0)
+    creature:RegisterEvent(CheckForEnemies, 1000, 0)
 end
 
 RegisterCreatureEvent(27899, 5, OnSpawn)

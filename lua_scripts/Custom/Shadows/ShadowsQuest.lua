@@ -263,8 +263,7 @@ local function Talk(event, player, msg, Type, lang)
     end
 end
 
-
-function AddLostAura(event, shadow, target)
+local function AddLostAura(event, shadow, target)
     if shadow:GetAreaId() == AREA_ID then
         shadow:RegisterEvent(function(eventId, delay, repeats, shadow)
             shadow:AddAura(SHADOWFORM_AURA, shadow)

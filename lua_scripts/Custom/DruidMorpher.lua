@@ -345,6 +345,16 @@ local function CountTotalMorphs(player)
     return math.min(total, MaxMorphSkill)
 end
 
+local function CheckIfNeedToApplyMorph(event, player)
+    if player:GetClass() == 11 and player:HasItem(17890)
+    and not player:IsPvPFlagged() and (player:HasAura(768)
+    or player:HasAura(9634)    or player:HasAura(5487)
+    or player:HasAura(783) or player:HasAura(33891)
+    or player:HasAura(24858) or player:HasAura(1066)) then
+        player:RegisterEvent(Morpher, 100, 1)
+    end
+end
+
 local function OnKillCreature(event, player, creature)
     if player:GetClass() ~= 11 then return end
     if not player:HasItem(17890) then return end
@@ -1485,16 +1495,6 @@ local function OnCombat(event, player, enemy)
             local guid = player:GetGUIDLow()
             player:RegisterEvent(HideWeapon, InvisibleWeaponTimer, 1) -- 0 repetitions = infinite
         end
-    end
-end
-
-function CheckIfNeedToApplyMorph(event, player)
-    if player:GetClass() == 11 and player:HasItem(17890)
-    and not player:IsPvPFlagged() and (player:HasAura(768)
-    or player:HasAura(9634)    or player:HasAura(5487)
-    or player:HasAura(783) or player:HasAura(33891)
-    or player:HasAura(24858) or player:HasAura(1066)) then
-        player:RegisterEvent(Morpher, 100, 1)
     end
 end
 

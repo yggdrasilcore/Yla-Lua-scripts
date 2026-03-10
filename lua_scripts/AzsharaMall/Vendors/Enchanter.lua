@@ -156,7 +156,7 @@ local T = {
 
 local pVar = {};
  
-function Enchanter(event, plr, unit)
+local function Enchanter(event, plr, unit)
     pVar[plr:GetName()] = nil;
     plr:SendBroadcastMessage("Enchanting services cost 1 Vote Token per item.")
     for _, v in ipairs(T["Menu"]) do
@@ -165,7 +165,7 @@ function Enchanter(event, plr, unit)
     plr:GossipSendMenu(1, unit)
 end
 
-function EnchanterSelect(event, plr, unit, sender, intid, code)
+local function EnchanterSelect(event, plr, unit, sender, intid, code)
     if (intid < 500) then
         local ID = intid
         local f

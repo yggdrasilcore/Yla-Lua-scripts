@@ -1,10 +1,10 @@
-function UnrootCreature(event, delay, repeats, creature)
+local unction UnrootCreature(event, delay, repeats, creature)
     if creature then
         creature:SetRooted(false)
     end
 end
 
-function ArmyOfTheDeadSpawn(event, creature)
+local function ArmyOfTheDeadSpawn(event, creature)
     creature:SetRooted(true)
     creature:PerformEmote(449)
     
