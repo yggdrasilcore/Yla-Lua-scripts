@@ -220,7 +220,11 @@ local function UpdateVehicleTenacity()
 end
 
 local function OnPlayerEnterWintergrasp(event, player, newZone, newArea)
-    if player:GetZoneId() == ZONE_WINTERGRASP then
+    if event == 4 then -- Logout
+        if player:HasAura(TENACITY_PLAYER) then
+            player:RemoveAura(TENACITY_PLAYER)
+        end
+    elseif player:GetZoneId() == ZONE_WINTERGRASP then
         player:RegisterEvent(UpdatePlayerTenacity, 1000, 0)
     end
 end
@@ -228,4 +232,5 @@ end
 for _, player in ipairs(GetPlayersInWorld()) do OnPlayerEnterWintergrasp(_, player, _, _) end
 
 CreateLuaEvent(UpdateVehicleTenacity, 1000, 0)
+RegisterPlayerEvent(4, OnPlayerEnterWintergrasp)
 RegisterPlayerEvent(27, OnPlayerEnterWintergrasp)
