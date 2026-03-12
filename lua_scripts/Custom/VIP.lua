@@ -46,13 +46,8 @@ end
 local function CheckVIP(event, player)
 	local name = player:GetName()
 	local acc = player:GetAccountId()
-    if isPlayerBot[name] then print("Skipping VIP check on bot "..name) return end
-	if player:GetData("VIPTime") then
-		print("VIP Time - Map check for "..name.. ", VIP time is "..player:GetData("VIPTime"))
-		return
-	end
+    if isPlayerBot[name] then return end
 	
-	print("Fetching VIP time for "..name..", acc ".. acc)
 	AuthDBQueryAsync("SELECT viptime FROM accounts_vip WHERE account = " .. player:GetAccountId() .. ";", function(result)
 		local player = GetPlayerByName(name)
 		if not player then return end
@@ -61,18 +56,16 @@ local function CheckVIP(event, player)
 		else
 			player:SetData("VIPTime", 0)
 		end
-		print("VIP Time - Login check for "..name.. ", VIP time is "..player:GetData("VIPTime"))
 	end)
 end
-
 
 local function VIPBotRepairOnResurrect(event, player)
     local name = player:GetName()
     if not isPlayerBot[name] then
-        print("dead no bot ress")
-        if (player:GetData("VIPTime") and player:GetData("VIPTime") > os.time()) then
+        if IsVIP(player) then
+            player:DurabilityRepairAll(false)
             player:SendBroadcastMessage("Your Yggdrasil VIP subscription has repaired your gear.")
-            return -- No valid VIP, do not repair
+            return
         end
     end
     
@@ -84,7 +77,7 @@ local function VIPBotRepairOnResurrect(event, player)
             if botName == name then
 				local botMaster = GetPlayerByName(botMasterName)
 				if not botMaster then return end
-				if not (botMaster:GetData("VIPTime") and botMaster:GetData("VIPTime") > os.time()) then
+				if not IsVIP(botMaster) then
 					bot:SendUnitWhisper('My equipment has taken a 10% durability hit. Please repair my gear by whispering "repair" to me next to a repair vendor.', 0, botMaster)
 					return -- No valid VIP, do not repair
 				end
@@ -548,7 +541,7 @@ local function VIPGMCommands(event, player, command)
 end
 
 local function CheckVIPCmd(player)
-    if not (player:GetData("VIPTime") and player:GetData("VIPTime") > os.time()) then
+    if not IsVIP(player) then
         player:SendBroadcastMessage("You don't have an active Yggdrasil VIP subscription. Talk to Twiggy to active VIP today.")
         return false
     end
