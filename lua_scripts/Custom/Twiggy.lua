@@ -121,6 +121,7 @@ local function VIPmenu(player, creature)
 		end
 
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_holy_borrowedtime:32:32:-22:0|tVIP status: On (" .. timeMessage .. ")", 0, 2)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tVIP extension", 0, 20)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_blacksmithing:32:32:-22:0|tVIP repair", 0, 12)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_01:32:32:-22:0|tVIP bank", 0, 13)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_letter_01:32:32:-22:0|tVIP mail", 2, 14)
@@ -345,62 +346,27 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 2)
         player:GossipSendMenu(12, creature, 60)
 	elseif intId == 20 then
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tFor how long do you want VIP?", 0, 20)
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|t7 days (7 Community Tokens)", 0, 21)
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|t14 days (12 Community Tokens)", 0, 22)
-		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|t21 days (15 Community Tokens)", 0, 23)
-		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|t1 month (20 Community Tokens)", 0, 25)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tChoose duration\n \nHow many days of VIP do you want to add?\n ", 0, 20)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|t7 days (7 Community Tokens)", 0, 21, false, "Are you sure you want to purchase 7 days of VIP for 7 Community Tokens?")
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|t14 days (12 Community Tokens)", 0, 22, false, "Are you sure you want to purchase 14 days of VIP for 12 Community Tokens?")
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|t21 days (15 Community Tokens)", 0, 23, false, "Are you sure you want to purchase 21 days of VIP for 15 Community Tokens?")
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|t31 days (20 Community Tokens)", 0, 25, false, "Are you sure you want to purchase 31 days of VIP for 20 Community Tokens?")
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 2)
         player:GossipSendMenu(12, creature, 60)
-	elseif intId == 21 then
-		if player:HasItem(19322,7) then
-			player:RemoveItem(19322,7)
-			player:SetData("VIPTime", (os.time() + 7 * 24 * 60 * 60))
-			
-			AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. player:GetAccountId() .. ", " .. (os.time() + 7 * 24 * 60 * 60) .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
-
-			VIPmenu(player, creature)
-		else 
-			player:SendAreaTriggerMessage("You don't have enough Community Tokens.")
+    elseif intId == 21 or intId == 22 or intId == 23 or intId == 25 then
+        local costs = {[21]=7, [22]=12, [23]=15, [25]=20}
+        local durations = {[21]=7, [22]=14, [23]=21, [25]=31}
+        if player:HasItem(19322, costs[intId]) then
+            player:RemoveItem(19322, costs[intId])
+            local newTime = math.max(os.time(), player:GetData("VIPTime") or 0) + durations[intId] * 24 * 60 * 60
+            player:SetData("VIPTime", newTime)
+            AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. player:GetAccountId() .. ", " .. newTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+            VIPmenu(player, creature)
+        else
+            player:SendAreaTriggerMessage("You don't have enough Community Tokens.")
             mainMenu(player, creature)
-		end
-	elseif intId == 22 then
-		if player:HasItem(19322,12) then
-			player:RemoveItem(19322,12)
-			player:SetData("VIPTime", (os.time() + 14 * 24 * 60 * 60))
-			
-			AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. player:GetAccountId() .. ", " .. (os.time() + 14 * 24 * 60 * 60) .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
-
-			VIPmenu(player, creature)
-		else 
-			player:SendAreaTriggerMessage("You don't have enough Community Tokens.")
-            mainMenu(player, creature)
-		end
-	elseif intId == 23 then
-		if player:HasItem(19322,15) then
-			player:RemoveItem(19322,15)
-			player:SetData("VIPTime", (os.time() + 21 * 24 * 60 * 60))
-			
-			AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. player:GetAccountId() .. ", " .. (os.time() + 21 * 24 * 60 * 60) .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
-			
-			VIPmenu(player, creature)
-		else 
-			player:SendAreaTriggerMessage("You don't have enough Community Tokens.")
-            mainMenu(player, creature)
-		end
-	elseif intId == 25 then
-		if player:HasItem(19322,20) then
-			player:RemoveItem(19322,20)
-			player:SetData("VIPTime", (os.time() + 31 * 24 * 60 * 60))
-			
-			AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. player:GetAccountId() .. ", " .. (os.time() + 31 * 24 * 60 * 60) .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
-			
-			VIPmenu(player, creature)
-		else 
-			player:SendAreaTriggerMessage("You don't have enough Community Tokens.")
-            mainMenu(player, creature)
-		end
-		
+        end
+    
     elseif intId == 3 then
         player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tWhat can I use my currencies for?", 0, 30)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tCommunity Tokens: "..player:GetItemCount(19322), 0, 3)
