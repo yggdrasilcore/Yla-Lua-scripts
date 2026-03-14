@@ -8,7 +8,10 @@ end
 
 local function On0x269(event, packet, player)
     local map = player:GetMapId()
+    print("packet 269 sent!")
     if map == 0 or map == 1 or map == 530 or map == 571 then return end -- Don't run on continents
+    if player:GetData("269Debounce") and player:GetData("269Debounce") > os.time() then return end
+    player:SetData("269Debounce", os.time() + 1)
 	if player:GetHealth() > 0 and not (player:HasAura(8326) or player:HasAura(20584)) then
 		print("Reviving on 0x269")
 		player:ResurrectPlayer()
