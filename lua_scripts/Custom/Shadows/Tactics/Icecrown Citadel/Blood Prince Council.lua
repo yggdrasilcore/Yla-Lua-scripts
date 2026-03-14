@@ -3,15 +3,12 @@
 local function KeepInBPCArea(eventId, delay, repeats, player)
     if not player:IsInCombat() then player:RemoveEventById(eventId) return end
     if player:GetNearestGameObject(15, 201378) then
-        player:MoveStop()
         UseRocketBoots(player)
         MoveImmediately(player, 4658, 2798, 361.18)
     elseif player:GetNearestGameObject(15, 201377) then
-        player:MoveStop()
         UseRocketBoots(player)
         MoveImmediately(player, 4658, 2740, 361.18)
     elseif player:GetNearestGameObject(15, 201376) then
-        player:MoveStop()
         UseRocketBoots(player)
         MoveImmediately(player, 4609, 2769, 361.17)
     end

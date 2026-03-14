@@ -1,4 +1,5 @@
 function IdentifyTanks(creature)
+    if not creature then return nil, nil end
     local map = creature:GetMap()
     local instanceId = creature:GetInstanceId()
     local allPlayers = map:GetPlayers()

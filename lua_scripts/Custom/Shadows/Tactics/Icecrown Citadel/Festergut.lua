@@ -580,13 +580,6 @@ end
 
 RegisterPlayerEvent(33, FestergutOnEnterCombat)
 
-local function FestergutOnLeaveCombat(event, player)
-    if player:GetMapId() ~= 631 then return end
-    TogglePlayerbotScript(player, "icc", true)
-end
-
-RegisterPlayerEvent(34, FestergutOnLeaveCombat)
-
 -- ============================================================
 -- Spell Events
 -- ============================================================
