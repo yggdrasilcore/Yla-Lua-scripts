@@ -1,49 +1,71 @@
-local function killKologarn(event, player, kologarn)
-	if kologarn:GetEntry() == 32930 then
-		kologarn:RegisterEvent(function(e, d, r, kologarn)
-			local bridge = kologarn:GetNearestCreature(50, 34297)
-			if not bridge then print("Error finding bridge") return end
-			print("despawning kolo")
-			kologarn:DespawnOrUnsummon()
-			print("showing bridge")
-			bridge:SetDisplayId(kologarn:GetDisplayId())
-			print("making bridge invis")
-			bridge:AddAura(74490, bridge)
-		end, 10000)
+local KOLOGARN_ENTRY = 32930
+local BRIDGE_ENTRY = 342971
+local BRIDGE_X, BRIDGE_Y, BRIDGE_Z, BRIDGE_O = 1797.15, -24.4027, 448.741, 3.1935
+
+local killedKologarn = {}
+
+local function checkBridge(e, d, r, player)
+	if not (player:GetMapId() == 603) and e then player:RemoveEventById(e) return end
+
+	local px, py = player:GetX(), player:GetY()
+	local dx, dy = px - BRIDGE_X, py - BRIDGE_Y
+	if (dx * dx + dy * dy) > (500 * 500) then return end
+
+    local kologarn = player:GetNearestCreature(500, KOLOGARN_ENTRY, 0, 0)
+	local bridge = player:GetNearestCreature(500, BRIDGE_ENTRY, 0, 0)
+        
+    if kologarn and kologarn:IsAlive() and bridge then
+        print("Depsawning kologarn bridge")
+        bridge:DespawnOrUnsummon() -- Removes bridge if glitched while Kologarn alive
+        return
+    end
+    
+	if not bridge and kologarn and not kologarn:IsAlive() then
+        print("Kologarn dead and Bridge not found - spawning new")
+		bridge = player:SpawnCreature(BRIDGE_ENTRY, BRIDGE_X, BRIDGE_Y, BRIDGE_Z, BRIDGE_O, 8, 0)
+		if not bridge then print("Error spawning bridge") return end
 	end
+    
+    if not bridge then return end
+    
+    if not kologarn:IsAlive() then
+        kologarn:DespawnOrUnsummon()
+    end
+    
+	bridge:NearTeleport(BRIDGE_X, BRIDGE_Y, BRIDGE_Z, BRIDGE_O)
+    
+    bridge:SetRooted()
+    
+    if not killedKologarn[bridge:GetInstanceId()] then
+        killedKologarn[bridge:GetInstanceId()] = os.time() + 5
+    end
+    
+    if killedKologarn[bridge:GetInstanceId()] < os.time() then
+        bridge:RemoveAura(74490)
+        bridge:SetUInt32Value(83, 383)
+    else
+        if not bridge:HasAura(74490) then
+            bridge:AddAura(74490, bridge)
+        end
+        
+    end
+end
+
+local function killKologarn(event, player, kologarn)
+	if kologarn:GetEntry() ~= KOLOGARN_ENTRY then return end
+	local instanceId = player:GetInstanceId()
+	killedKologarn[instanceId] = os.time() + 5
+	checkBridge(nil, nil, nil, player)
 end
 
 local function enterUlduar(event, player)
 	local map = player:GetMap()
-	if not (map:GetMapId() == 603) then return end
-	
-	local kologarn = player:GetNearestCreature(50000, 32930)
-	
-	if not kologarn then print("Error finding kologarn") return end
-	
-	print("kolo found")
-	
-	local bridge = kologarn:GetNearestCreature(50, 34297)
-	
-	if not bridge then print("Error finding bridge") return end
-	
-	print("bridge found")
-	
-	bridge:SetFaction(35)
-	
-	if kologarn:GetHealth() < 1 then
-		print("kolo dead")
-		
-		if (bridge:GetDisplayId() == kologarn:GetDisplayId()) then return end
-		
-		bridge:SetDisplayId(kologarn:GetDisplayId())
-	else
-		print("kolo not dead, hiding bridge")
-		bridge:SetDisplayId(15435)
-	end
+	if not map or map:GetMapId() ~= 603 then return end
+	player:RegisterEvent(checkBridge, 5000, 0)
 end
+
+for _, player in ipairs(GetPlayersInWorld()) do player:RegisterEvent(checkBridge, 5000, 0) end
 
 RegisterPlayerEvent(7, killKologarn)
 RegisterPlayerEvent(28, enterUlduar)
 WorldDBExecute("REPLACE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (63342, 'spell_kologarn_focused_eyebeam');")
-WorldDBExecute("REPLACE INTO `creature` (`guid`, `id1`, `id2`, `id3`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseMask`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `wander_distance`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`, `ScriptName`, `VerifiedBuild`, `CreateObject`, `Comment`) values('15001785','34297','0','0','603','0','0','3','1','0','1797.15','-24.4027','448.741','3.1935','604800','0','0','3625700','0','0','0','0','0','','0','0',NULL);")
