@@ -1,5 +1,5 @@
 function TogglePlayerbotScript(player, script, state)
-    local masterName = player:IsBot()
+    local masterName = isPlayerBot[player:GetName()]
     if not masterName then return end
     local master = GetPlayerByName(masterName)
     if not master then return end

@@ -92,7 +92,7 @@ function CombatCheck(eventId, delay, repeats, sindragosa)
 				local playersNearTomb = tomb:GetPlayersInRange(10)
 				
 				for _, player in pairs(playersNearTomb) do
-					if player:IsBot()
+					if player:IsBot() then
 						local lastDamageTime = player:GetData("LastTombDamage") or 0
 						
 						if currentTime - lastDamageTime >= 1.5 then
