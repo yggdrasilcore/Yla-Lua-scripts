@@ -8,7 +8,7 @@ function GetPlayersByRole(creature, range)
     local players = creature:GetPlayersInRange(range or 100)
     
     for _, player in ipairs(players) do
-        if player:IsAlive() and player:IsInCombat() and isPlayerBot[player:GetName()] then
+        if player:IsAlive() and player:IsInCombat() and player:IsBot() then
             table.insert(bots, player)
             
             if IsTank(player) then

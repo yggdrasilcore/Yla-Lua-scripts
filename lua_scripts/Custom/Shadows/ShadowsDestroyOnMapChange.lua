@@ -15,7 +15,7 @@ local function sendDestroy(player, storedMap)
 end
 
 local function checkMap(eventId, delay, repeats, player)
-    if not isPlayerBot[player:GetName()] then return end
+    if not player:IsBot() then return end
 
     local storedMap = player:GetData("BotMap")
     local currentMap = player:GetMapId()
@@ -41,7 +41,7 @@ end
 
 local function onLogout(event, player)
     if not player then return end
-    if not isPlayerBot[player:GetName()] then return end
+    if not player:IsBot() then return end
 
     local storedMap = player:GetData("BotMap")
     if not storedMap then return end

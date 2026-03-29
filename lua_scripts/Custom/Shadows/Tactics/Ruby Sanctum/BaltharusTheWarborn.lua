@@ -15,7 +15,7 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
         local group = nil
         local players = baltharus:GetPlayersInRange(100)
         for _, player in ipairs(players) do
-            if isPlayerBot[player:GetName()] then
+            if player:IsBot() then
                 group = player:GetGroup()
                 if group then break end
             end
@@ -53,7 +53,7 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
     for _, player in ipairs(players) do
         if player:IsAlive() and player:IsInCombat() then
             table.insert(validPlayers, player)
-            if isPlayerBot[player:GetName()] then
+            if player:IsBot() then
                 table.insert(botPlayers, player)
             end
         end
@@ -96,7 +96,7 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
     end
     table.sort(tanks, function(a, b) return a:GetMaxHealth() > b:GetMaxHealth() end)
     
-    if mainTank and isPlayerBot[mainTank:GetName()] and combatTime == 0 then
+    if mainTank and mainTank:IsBot() and combatTime == 0 then
         mainTank:AddAura(33206, mainTank)
         local aura = mainTank:GetAura(33206)
         if aura then
@@ -112,10 +112,10 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
             table.insert(bossTargets, clone)
             
             if not clone:GetData("UsedSpawnDefensive") and mainTank and offTank then
-                if isPlayerBot[mainTank:GetName()] then
+                if mainTank:IsBot() then
                     UseDefensive(mainTank)
                 end
-                if isPlayerBot[offTank:GetName()] then
+                if offTank:IsBot() then
                     UseDefensive(offTank)
                 end
                 clone:SetData("UsedSpawnDefensive", true)
@@ -123,7 +123,7 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
         end
     end
 
-    if mainTank and isPlayerBot[mainTank:GetName()] then
+    if mainTank and mainTank:IsBot() then
         local mainTankThreat = baltharus:GetThreat(mainTank)
         local hasHighestThreat = true
         
@@ -151,7 +151,7 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
         end
     end
     
-    if offTank and isPlayerBot[offTank:GetName()] then
+    if offTank and offTank:IsBot() then
         local hasClone = false
         for _, clone in ipairs(bossTargets) do
             if clone ~= baltharus then
@@ -186,17 +186,17 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
     end
     
     if combatTime <= 8 then
-        if mainTank and isPlayerBot[mainTank:GetName()] and not IsAtPos(mainTank, pullSpot.x, pullSpot.y, 2) then
+        if mainTank and mainTank:IsBot() and not IsAtPos(mainTank, pullSpot.x, pullSpot.y, 2) then
             mainTank:MoveTo(1, pullSpot.x, pullSpot.y, pullSpot.z, true)
             mainTank:AddAura(54861, mainTank)
         end
     else
         local hasMovedToWaitSpot = baltharus:GetData("MovedToWaitSpot")
         if not hasMovedToWaitSpot then
-            if mainTank and isPlayerBot[mainTank:GetName()] and not IsAtPos(mainTank, waitSpot.x, waitSpot.y, 2) then
+            if mainTank and mainTank:IsBot() and not IsAtPos(mainTank, waitSpot.x, waitSpot.y, 2) then
                 mainTank:MoveTo(1, waitSpot.x, waitSpot.y, waitSpot.z, true)
-            elseif (mainTank and isPlayerBot[mainTank:GetName()] and IsAtPos(mainTank, waitSpot.x, waitSpot.y, 2)) or 
-               (mainTank and not isPlayerBot[mainTank:GetName()] and combatTime > 15) then
+            elseif (mainTank and mainTank:IsBot() and IsAtPos(mainTank, waitSpot.x, waitSpot.y, 2)) or 
+               (mainTank and not mainTank:IsBot() and combatTime > 15) then
                 baltharus:SetData("MovedToWaitSpot", true)
             end
         else
@@ -205,7 +205,7 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
                 if boss:HasAura(75125) or boss:HasAura(75126) then
                     table.insert(castingBosses, boss)
                     local victim = boss:GetVictim()
-                    if victim and isPlayerBot[victim:GetName()] then
+                    if victim and victim:IsBot() then
                         UseDefensive(victim)
                         if not victim:HasAura(33206) then
                             local aura = victim:AddAura(33206, victim)
@@ -236,10 +236,10 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
             end
             
             if #castingBosses > 0 or bossNotFacingCounterClockwise then
-                if mainTank and isPlayerBot[mainTank:GetName()] and mainTank:HasAura(35340) then 
+                if mainTank and mainTank:IsBot() and mainTank:HasAura(35340) then 
                     mainTank:RemoveAura(35340) 
                 end
-                if offTank and isPlayerBot[offTank:GetName()] and offTank:HasAura(35340) then 
+                if offTank and offTank:IsBot() and offTank:HasAura(35340) then 
                     offTank:RemoveAura(35340) 
                 end
 
@@ -284,7 +284,7 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
                     baltharus:SetData("LastMainTankTargetX", finalPos.x)
                     baltharus:SetData("LastMainTankTargetY", finalPos.y)
                     
-                    if isPlayerBot[mainTank:GetName()] then
+                    if mainTank:IsBot() then
                         baltharus:SetData("MainTankLastX", nil)
                         baltharus:SetData("MainTankLastY", nil)
                         
@@ -294,7 +294,7 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
                 
                 baltharus:SetData("MovedThisCast", movedThisCast)
                 
-                if mainTank and isPlayerBot[mainTank:GetName()] then
+                if mainTank and mainTank:IsBot() then
                     local targetX = baltharus:GetData("TempestTargetX")
                     local targetY = baltharus:GetData("TempestTargetY")
                     local targetZ = baltharus:GetData("TempestTargetZ")
@@ -352,15 +352,15 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
                 baltharus:SetData("MainTankLastY", nil)
                 baltharus:SetData("OffTankLastX", nil)
                 baltharus:SetData("OffTankLastY", nil)
-                if mainTank and isPlayerBot[mainTank:GetName()] and mainTank:HasAura(35340) then 
+                if mainTank and mainTank:IsBot() and mainTank:HasAura(35340) then 
                     mainTank:RemoveAura(35340) 
                 end
-                if offTank and isPlayerBot[offTank:GetName()] and offTank:HasAura(35340) then 
+                if offTank and offTank:IsBot() and offTank:HasAura(35340) then 
                     offTank:RemoveAura(35340) 
                 end
             end
             
-            if offTank and isPlayerBot[offTank:GetName()] and mainTank then
+            if offTank and offTank:IsBot() and mainTank then
                 local mtx, mty = mainTank:GetX(), mainTank:GetY()
                 local mtAngle = math.atan2(mty - stackPos.y, mtx - stackPos.x)
                 local oppositeAngle = mtAngle + math.pi

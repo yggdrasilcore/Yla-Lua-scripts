@@ -74,7 +74,7 @@ local function FestergutLoop(eventId, delay, repeats, festergut)
     local bots       = {}
 
     for _, player in ipairs(allPlayers) do
-        if player:IsAlive() and player:IsInCombat() and isPlayerBot[player:GetName()] then
+        if player:IsAlive() and player:IsInCombat() and player:IsBot() then
             table.insert(bots, player)
         end
     end
@@ -312,7 +312,7 @@ function FestergutHandleSpore(festergut, bots, sporePlayers, cachedSporeCount, g
         local assignedName = festergut:GetData("SporeAssigned" .. i)
         if assignedName and sporePositions[i] then
             for _, sp in ipairs(sporePlayers) do
-                if sp:GetName() == assignedName and isPlayerBot[sp:GetName()] then
+                if sp:GetName() == assignedName and sp:IsBot() then
                     local tp = sporePositions[i]
                     if not IsAtPos(sp, tp[1], tp[2], 3) then
                         MoveImmediately(sp, tp[1], tp[2], tp[3])
@@ -559,7 +559,7 @@ local function FestergutOnEnterCombat(event, player, festergut)
     if festergut and festergut:GetEntry() == FESTERGUT_ENTRY then
         local players = festergut:GetPlayersInRange(100)
         for _, p in ipairs(players) do
-            if isPlayerBot[p:GetName()] then
+            if p:IsBot() then
                 p:SetData("FestergutSpreadPos", nil)
             end
         end
@@ -587,7 +587,7 @@ RegisterPlayerEvent(33, FestergutOnEnterCombat)
 function OnPungentBlight(event, caster, spell)
     local players = caster:GetPlayersInRange(100)
     for _, player in ipairs(players) do
-        if isPlayerBot[player:GetName()] then
+        if player:IsBot() then
             --print(player:GetName().." using defensive!")
             UseDefensive(player)
         end

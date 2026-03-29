@@ -14,7 +14,7 @@ local function GeneralZarithrian(eventId, delay, repeats, zarithrian)
     local validPlayers = {}
     
     for _, player in ipairs(players) do
-        if player:IsAlive() and player:IsInCombat() and isPlayerBot[player:GetName()] then
+        if player:IsAlive() and player:IsInCombat() and player:IsBot() then
             table.insert(validPlayers, player)
         end
     end
@@ -55,8 +55,8 @@ local function GeneralZarithrian(eventId, delay, repeats, zarithrian)
         end
     end
     
-    local mainTankIsBot = mainTank and isPlayerBot[mainTank:GetName()] or false
-    local offTankIsBot = offTank and isPlayerBot[offTank:GetName()] or false
+    local mainTankIsBot = mainTank and mainTank:IsBot() or false
+    local offTankIsBot = offTank and offTank:IsBot() or false
     
     local useNormalTactics = (mainTank and offTank and mainTankIsBot and offTankIsBot)
     local hasRealPlayerTank = not mainTankIsBot or not offTankIsBot
@@ -142,8 +142,8 @@ local function GeneralZarithrian(eventId, delay, repeats, zarithrian)
             zarithrian:SetData("LastSwapTime", os.time())
             
             mainTank, offTank = IdentifyTanks(zarithrian)
-            mainTankIsBot = mainTank and isPlayerBot[mainTank:GetName()] or false
-            offTankIsBot = offTank and isPlayerBot[offTank:GetName()] or false
+            mainTankIsBot = mainTank and mainTank:IsBot() or false
+            offTankIsBot = offTank and offTank:IsBot() or false
         end
         
         if mainTank and mainTankIsBot then
@@ -228,7 +228,7 @@ local function GeneralZarithrian(eventId, delay, repeats, zarithrian)
         
         for _, tank in ipairs(tanks) do
             if mainTank and offTank and tank:GetGUID() ~= mainTank:GetGUID() and tank:GetGUID() ~= offTank:GetGUID() then
-                if isPlayerBot[tank:GetName()] then
+                if tank:IsBot() then
                     if not IsAtPos(tank, offTankPos.x, offTankPos.y, 2) then
                         tank:MoveTo(1, offTankPos.x, offTankPos.y, offTankPos.z, true)
                     end
@@ -310,7 +310,7 @@ local function GeneralZarithrian(eventId, delay, repeats, zarithrian)
         local playersNearAdd = add:GetPlayersInRange(15)
         for _, player in pairs(playersNearAdd) do
             local name = player:GetName()
-            if isPlayerBot[name] then
+            if player:IsBot() then
                 local lastDamageTime = player:GetData("LastFlamecallerDamage") or 0
                 if currentTime - lastDamageTime >= 2 then
                     player:DealDamage(add, add:GetMaxHealth() * (math.random() * 0.01 + 0.015))

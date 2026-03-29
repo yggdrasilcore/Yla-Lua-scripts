@@ -50,7 +50,7 @@ function OnPlagueInsectCombat(event, player, enemy)
             local py = p:GetY()
             local name = p:GetName()
             
-            if py < 3153 and py > 3075 and isPlayerBot[name] then
+            if py < 3153 and py > 3075 and player:IsBot() then
                 if not p:GetData("InsectEventActive") then
                     p:SetData("InsectEventActive", true)
                     p:RegisterEvent(BotAttackInsects, 1000, 300)

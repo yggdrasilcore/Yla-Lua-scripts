@@ -5,7 +5,7 @@ local function SavianaRagefireLoop(eventId, delay, repeats, saviana)
     local validPlayers = {}
     
     for _, player in ipairs(players) do
-        if player:IsAlive() and player:IsInCombat() and isPlayerBot[player:GetName()] then
+        if player:IsAlive() and player:IsInCombat() and player:IsBot() then
             table.insert(validPlayers, player)
         end
     end

@@ -12,7 +12,7 @@ local function LichKingLoop(eventId, delay, repeats, lk)
     if hp >= 65 and hp <= 70 then
         for _, player in pairs(players) do
             local name = player:GetName()
-            if isPlayerBot[name] then
+            if player:IsBot() then
                 for _, auraId in ipairs(necroticAuras) do
                     if player:HasAura(auraId) then
                         player:CastSpell(player, 66116, true) -- Dispell necrotics from bots on phase transition
@@ -29,7 +29,7 @@ local function LichKingLoop(eventId, delay, repeats, lk)
 		
 		for _, player in pairs(players) do
 			local name = player:GetName()
-			if isPlayerBot[name] then
+			if player:IsBot() then
 				local ragingSpirit = player:GetNearestCreature(30, 36633)
 				
 				if ragingSpirit and not ragingSpirit:IsDead() then
@@ -60,7 +60,7 @@ local function LichKingLoop(eventId, delay, repeats, lk)
 				else
 					for _, player in pairs(players) do
 						local name = player:GetName()
-						if isPlayerBot[name] then
+						if player:IsBot() then
 							if player:HasMeleeSpec() then
 								if player:GetDistance(valkyr) > 5 then
 									player:MoveTo(1, vx, vy, valkyr:GetZ(), true)
@@ -85,7 +85,7 @@ local function LichKingLoop(eventId, delay, repeats, lk)
             
             for _, player in pairs(players) do
                 local name = player:GetName()
-                if isPlayerBot[name] and player ~= victim then
+                if player:IsBot() and player ~= victim then
                     local defileMoveTime = player:GetData("DefileMove") or 0
                     
                     if currentTime - defileMoveTime > 2.3 then
@@ -103,7 +103,7 @@ local function LichKingLoop(eventId, delay, repeats, lk)
             local tank = victim:ToPlayer()
             local name = tank:GetName()
             
-            if isPlayerBot[name] and IsTank(tank) then
+            if player:IsBot() and IsTank(tank) then
                 if not IsAtPos(tank, 500, -2125, 5) then
                     local defiles = lk:GetCreaturesInRange(100, 38757)
                     local canMove = true
@@ -143,7 +143,7 @@ local function LichKingLoop(eventId, delay, repeats, lk)
 		
 		for _, player in pairs(players) do
 			local name = player:GetName()
-			if isPlayerBot[name] then
+			if player:IsBot() then
 				local vileSpirit = player:GetNearestCreature(30, 37799)
 				
 				if vileSpirit and not vileSpirit:IsDead() then
@@ -172,7 +172,7 @@ function OnSoulReaperCast(event, caster, spell, skipCheck)
     
     if target and target:IsPlayer() then
         local player = target:ToPlayer()
-        if isPlayerBot[player:GetName()] and IsTank(player) then
+        if player:IsBot() and IsTank(player) then
             UseDefensive(player)
             player:AddAura(71638)
         end
@@ -184,7 +184,7 @@ function OnDefilePrepare(event, caster, spell)
 	if not target then return end
 	if not target:IsPlayer() then return end
     target:SetData("DefileMove", os.time())
-	if isPlayerBot[target:GetName()] then UseRocketBoots(target) end
+	if target:IsBot() then UseRocketBoots(target) end
 end
 
 RegisterPlayerEvent(33, OnLKCombat)

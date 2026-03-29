@@ -1,5 +1,5 @@
 function GetRole(player)
-    if not player or not player:IsAlive() or not player:IsInCombat() or not isPlayerBot[player:GetName()] then
+    if not player or not player:IsAlive() or not player:IsInCombat() or not player:IsBot() then
         return nil
     end
     

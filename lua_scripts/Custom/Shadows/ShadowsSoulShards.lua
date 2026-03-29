@@ -11,7 +11,7 @@ SpellsUsingSoulShards = {
 
 local function OnSpellCast(event, player, spell, skipCheck)
     if player:GetClass() ~= 9 then return end
-    if not isPlayerBot[player:GetName()] then return end
+    if not player:IsBot() then return end
     player:AddItem(6265, 1)
 end
 
@@ -21,7 +21,7 @@ end
 
 local function OnWarlockShadowEnterMap(event, player)
     if player:GetClass() ~= 9 then return end
-    if not isPlayerBot[player:GetName()] then return end
+    if not player:IsBot() then return end
     if not player:HasItem(6265) then player:AddItem(6265, 1) end
 end
 

@@ -9,7 +9,7 @@ function CombatCheck(eventId, delay, repeats, sindragosa)
     if target and target:ToPlayer() then
         local player = target:ToPlayer()
         local name = player:GetName()
-        if isPlayerBot[name] and IsTank(player) then
+        if player:IsBot() and IsTank(player) then
             local px, py = player:GetX(), player:GetY()
             local sx, sy = sindragosa:GetX(), sindragosa:GetY()
             
@@ -29,7 +29,7 @@ function CombatCheck(eventId, delay, repeats, sindragosa)
         
 		for _, player in pairs(playersInRange) do
 			local name = player:GetName()
-			if isPlayerBot[name] then
+			if player:IsBot() then
 				local hasMarked = player:HasAura(70126)
 				local hasIced = player:HasAura(70157)
 				local aura = player:GetAura(70126)
@@ -92,9 +92,7 @@ function CombatCheck(eventId, delay, repeats, sindragosa)
 				local playersNearTomb = tomb:GetPlayersInRange(10)
 				
 				for _, player in pairs(playersNearTomb) do
-					local pname = player:GetName()
-					
-					if isPlayerBot[pname] then
+					if player:IsBot()
 						local lastDamageTime = player:GetData("LastTombDamage") or 0
 						
 						if currentTime - lastDamageTime >= 1.5 then

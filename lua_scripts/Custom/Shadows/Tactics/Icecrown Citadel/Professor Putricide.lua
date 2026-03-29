@@ -28,9 +28,7 @@ local function ProfessorPutricideLoop(eventId, delay, repeats, putricide)
     local players = putricide:GetPlayersInRange(200)
     
     for _, player in ipairs(players) do
-        local playerName = player:GetName()
-        
-        if isPlayerBot[playerName] then
+        if player:IsBot() then
             local x, y, z = player:GetLocation()
             local shouldTeleport = false
             

@@ -51,7 +51,7 @@ function IdentifyTanks(creature)
         local function findBestBotTank(exclude1, exclude2)
             local botTanks = {}
             for _, player in ipairs(players) do
-                if isPlayerBot[player:GetName()] and IsTank(player) then
+                if player:IsBot() and IsTank(player) then
                     if (not exclude1 or player:GetGUID() ~= exclude1:GetGUID()) and (not exclude2 or player:GetGUID() ~= exclude2:GetGUID()) then
                         table.insert(botTanks, player)
                     end
@@ -106,7 +106,7 @@ function IdentifyTanks(creature)
             else
                 local botTanks = {}
                 for _, player in ipairs(players) do
-                    if isPlayerBot[player:GetName()] and IsTank(player) then
+                    if player:IsBot() and IsTank(player) then
                         table.insert(botTanks, player)
                     end
                 end

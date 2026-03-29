@@ -4,7 +4,7 @@ local healerBuffs = {51040, 51041}
 local meleeBuffs = {40933, 42039, 42107, 47999, 48007, 48015, 48216, 48273, 48390, 48643, 49116, 53356, 53025, 52995, 52946}
 
 function ApplyHiddenBuffsToShadows(player)
-    if not isPlayerBot[player:GetName()] then return end
+    if not player:IsBot() then return end
     
     local buffsToApply = {}
     
@@ -24,7 +24,7 @@ function ApplyHiddenBuffsToShadows(player)
 end
 
 local function RemoveHiddenBuffs(player)
-    if not isPlayerBot[player:GetName()] then return end
+    if not player:IsBot() then return end
     
     local allBuffs = {}
     for _, v in ipairs(tankBuffs) do table.insert(allBuffs, v) end
@@ -39,14 +39,14 @@ end
 
 local function OnMapChange(event, player)
     if not player then return end
-    if not isPlayerBot[player:GetName()] then return end
+    if not player:IsBot() then return end
     
     RemoveHiddenBuffs(player)
 end
 
 local function OnLeaveCombat(event, player)
     if not player then return end
-    if not isPlayerBot[player:GetName()] then return end
+    if not player:IsBot() then return end
     
     RemoveHiddenBuffs(player)
 end

@@ -2,8 +2,7 @@ local function CompleteSummonIfShadowNearby(event, player, spell, skipCheck)
     local playersInRange = player:GetPlayersInRange(10, 2, 1)
     
     for _, bot in ipairs(playersInRange) do
-        local botName = bot:GetName()
-        if not isPlayerBot[botName] then return end
+        if not bot:IsBot() then return end
         if not (player:IsInSameGroupWith(bot) or player:IsInSameRaidWith(bot)) then return end
         
         local rootAura = bot:AddAura(32113, bot)
@@ -26,7 +25,7 @@ local function CompleteSummonIfShadowNearby(event, player, spell, skipCheck)
             if not target then return end
 
             local name = target:GetName()
-            if not isPlayerBot[name] then player:CastSpell(target, 7720, true) return end
+            if not player:IsBot() then player:CastSpell(target, 7720, true) return end
 
             local bot = target
             if not (player:IsInSameGroupWith(bot) or player:IsInSameRaidWith(bot)) then player:SendBroadcastMessage("You can only summon shadows in your group.") return end
@@ -50,7 +49,7 @@ local function SummonShadows(event, player, spell, skipCheck)
     if not bot then return end
     
     local name = bot:GetName()
-    if not isPlayerBot[name] then return end
+    if not player:IsBot() then return end
     
     if not (player:IsInSameGroupWith(bot) or player:IsInSameRaidWith(bot)) then player:SendBroadcastMessage("You can only summon shadows in your group.") return end
     
@@ -99,7 +98,7 @@ local function OnCastRitualOfSummoning(event, portal)
                     FirstPlayerCasting = player
                 end
                 
-                if isPlayerBot[name] then
+                if player:IsBot() then
                     table.insert(botsCasting, name)
                 end
                 
@@ -116,7 +115,7 @@ local function OnCastRitualOfSummoning(event, portal)
                 if botsMadeToCast >= botsNeeded then break end
                 
                 local name = player:GetName()
-                if isPlayerBot[name] and player:IsInSameGroupWith(FirstPlayerCasting) then
+                if player:IsBot() and player:IsInSameGroupWith(FirstPlayerCasting) then
                     local alreadyCasting = false
                     for _, castingBot in ipairs(botsCasting) do
                         if castingBot == name then

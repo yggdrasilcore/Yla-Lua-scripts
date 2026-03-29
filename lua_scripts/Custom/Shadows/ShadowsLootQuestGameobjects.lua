@@ -63,6 +63,16 @@ WorldDBQueryAsync([[
     print("[QuestItemGO] Indexed " .. numQuests .. " quests, " .. numItems .. " items, " .. numGOs .. " gameobjects.")
 end)
 
+print("[QuestItemGO] questItemGoCache = {")
+for questId, entries in pairs(questItemGoCache) do
+    print("    [" .. questId .. "] = {")
+    for _, e in ipairs(entries) do
+        print("        { goEntry=" .. e.goEntry .. ", itemId=" .. e.itemId .. ", itemCount=" .. e.itemCount .. ", data3=" .. e.data3 .. " },")
+    end
+    print("    },")
+end
+print("}")
+
 local function GetItemName(itemId)
     local template = GetItemTemplate(itemId)
     return template and template:GetName() or tostring(itemId)
@@ -101,7 +111,7 @@ local function WhisperBagsFull(player, data)
     if lastWhisper and os.time() - lastWhisper < 120 then return end
     player:SetData(throttleKey, os.time())
 
-    local masterName = isPlayerBot[player:GetName()]
+    local masterName = player:IsBot()
     local master = GetPlayerByName(masterName)
     if not master then return end
 
@@ -139,7 +149,7 @@ local function LootObject(eventId, delay, repeats, player, data)
                 if freshGO then freshGO:Despawn() end
             end
         else
-            local masterName = isPlayerBot[player:GetName()]
+            local masterName = player:IsBot()
             local master = GetPlayerByName(masterName)
             if master then
                 local itemName = GetItemName(data.itemId)
@@ -179,7 +189,7 @@ local function ValidateAndApproachGO(player, data)
 end
 
 local function CheckForQuestGOs(eventId, delay, repeats, player)
-    if not isPlayerBot[player:GetName()] then player:RemoveEventById(eventId) return end
+    if not player:IsBot() then player:RemoveEventById(eventId) return end
 
     for questId, entries in pairs(questItemGoCache) do
         if player:HasQuest(questId) then
@@ -194,7 +204,7 @@ end
 
 local function OnMapChange(event, player)
     if not player then return end
-    if not isPlayerBot[player:GetName()] then return end
+    if not player:IsBot() then return end
     if player:GetData("BotQuestLoopActive") then return end
     player:SetData("BotQuestLoopActive", true)
     player:RegisterEvent(CheckForQuestGOs, {20000, 30000}, 0)
@@ -202,11 +212,8 @@ end
 
 RegisterPlayerEvent(28, OnMapChange)
 
-local players = GetPlayersInWorld()
-if players then
-    for _, player in ipairs(players) do
-        if player:GetData("BotQuestLoopActive") then return end
-        player:SetData("BotQuestLoopActive", true)
-        player:RegisterEvent(CheckForQuestGOs, {20000, 30000}, 0)
-    end
+for _, player in ipairs(GetPlayersInWorld()) do
+    if player:GetData("BotQuestLoopActive") then return end
+    player:SetData("BotQuestLoopActive", true)
+    player:RegisterEvent(CheckForQuestGOs, {20000, 30000}, 0)
 end

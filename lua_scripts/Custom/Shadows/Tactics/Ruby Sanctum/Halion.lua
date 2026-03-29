@@ -42,8 +42,8 @@ local function HalionInsideLoop(eventId, delay, repeats, player)
     end
     
     local mainTank, offTank = IdentifyTanks(halionInside)
-    local mainTankIsBot = mainTank and isPlayerBot[mainTank:GetName()] or false
-    local offTankIsBot = offTank and isPlayerBot[offTank:GetName()] or false
+    local mainTankIsBot = mainTank and mainTank:IsBot() or false
+    local offTankIsBot = offTank and offTank:IsBot() or false
     
     local insideTank = nil
     local insideTankIsBot = false
@@ -200,8 +200,8 @@ local function HalionLoop(eventId, delay, repeats, halion)
     if #bots == 0 then StopLuaEvent(halion) return end
     
     local mainTank, offTank = IdentifyTanks(halion)
-    local mainTankIsBot = mainTank and isPlayerBot[mainTank:GetName()] or false
-    local offTankIsBot = offTank and isPlayerBot[offTank:GetName()] or false
+    local mainTankIsBot = mainTank and mainTank:IsBot() or false
+    local offTankIsBot = offTank and offTank:IsBot() or false
     
     local healers = {}
     for _, player in ipairs(bots) do
@@ -615,12 +615,12 @@ end
 function CheckIfPlayerNeedsDispel(halion)
 	local allPlayers = GetPlayersInInstance(halion)
 	for _, player in ipairs(allPlayers) do
-		if not isPlayerBot[player:GetName()] then
+		if not player:IsBot() then
 			if player:HasAura(COMBUSTION_AURA) or player:HasAura(CONSUMPTION_AURA) and (player:GetDistance(ORB_CENTER_POS[1], ORB_CENTER_POS[2], ORB_CENTER_POS[3]) > 40) then
 				local nearbyPlayers = player:GetPlayersInRange(40)
 				
 				for _, bot in ipairs(nearbyPlayers) do
-					if isPlayerBot[bot:GetName()] then
+					if bot:IsBot() then
 						local class = bot:GetClass()
 						if class == 2 or class == 8 or class == 11 or class == 7 or class == 5 then
 							RemoveCurseOrMagic(bot, player)
@@ -946,8 +946,8 @@ function FindAndMoveToInsidePosition(player, halionInside, dangerNpcs)
 end
 
 function HandlePhase3Transition(halion, bots, mainTank, offTank, healers)
-    local mainTankIsBot = mainTank and isPlayerBot[mainTank:GetName()] or false
-    local offTankIsBot = offTank and isPlayerBot[offTank:GetName()] or false
+    local mainTankIsBot = mainTank and mainTank:IsBot() or false
+    local offTankIsBot = offTank and offTank:IsBot() or false
     
     local halionInside = nil
     local cutterActive = false

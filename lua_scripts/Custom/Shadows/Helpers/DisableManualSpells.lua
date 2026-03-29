@@ -144,7 +144,7 @@ local RemovedPlayerSpells = {}
 function DisableManualSpells(player)
     if not player then return end
     
-    if not isPlayerBot[player:GetName()] then return end
+    if not player:IsBot() then return end
     
     if player:GetData("RemovedManualSpells") then return end
     
@@ -179,7 +179,7 @@ end
 local function OnMapChange(event, player)
     if not player then return end
     
-    if not isPlayerBot[player:GetName()] then return end
+    if not player:IsBot() then return end
     
     player:SetData("RemovedManualSpells", false)
     
@@ -227,7 +227,7 @@ end
 local function OnLeaveCombat(event, player)
     if not player then return end
     
-    if not isPlayerBot[player:GetName()] then return end
+    if not player:IsBot() then return end
     
     local guidLow = player:GetGUIDLow()
     local cachedSpells = RemovedPlayerSpells[guidLow]
@@ -247,7 +247,7 @@ end
 local function OnSave(event, player)
     if not player then return end
     
-    if not isPlayerBot[player:GetName()] then return end
+    if not player:IsBot() then return end
     
     local guidLow = player:GetGUIDLow()
     local guid = player:GetGUID()

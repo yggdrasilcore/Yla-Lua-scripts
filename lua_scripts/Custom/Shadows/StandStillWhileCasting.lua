@@ -1,6 +1,6 @@
 local function StandStillWhiteCasting(event, player, spell, _)
 	local name = player:GetName()
-	if not isPlayerBot[name] then return end
+	if not player:IsBot() then return end
 	if event == 1 then
 		player:AddAura(32113, player)
 	else

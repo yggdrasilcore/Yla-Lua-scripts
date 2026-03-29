@@ -1,5 +1,5 @@
 local function RootWatchdogLoop(eventId, delay, repeats, player)
-    if not isPlayerBot[player:GetName()] then player:RemoveEventById(eventId) return end
+    if not player:IsBot() then player:RemoveEventById(eventId) return end
     if player:IsRooted() and not player:HasUnitState(0x00000400) then
         player:RemoveMovementFlag(0x800)
     end

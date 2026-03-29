@@ -4,7 +4,7 @@
 local function AddShadowsGarfrostFrostProtection(event, player, enemy)
     if enemy then
         if enemy:GetEntry() == 36494 then -- 36494 is Garfrost
-            if isPlayerBot[player:GetName()] then
+            if player:IsBot() then
                 player:AddAura(2705400, player)
             end
         else

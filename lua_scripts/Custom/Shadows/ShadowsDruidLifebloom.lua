@@ -46,7 +46,7 @@ local function OnLifebloomTick(eventId, delay, repeats, player)
 end
 
 local function OnMapChange(event, player)
-    if not isPlayerBot[player:GetName()] then return end
+    if not player:IsBot() then return end
     if player:GetClass() ~= 11 then return end
 
     if player:GetData("lifebloomeventstarted") then return end

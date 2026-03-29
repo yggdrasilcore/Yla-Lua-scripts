@@ -1,6 +1,6 @@
  
 local function RemoveRaidIconsOnDeath(event, obj1, player)
-    if event == 8 and not isPlayerBot[player:GetName()] then return end -- Ensures we don't process player death twice as this is in event 7 (packet) anyway
+    if event == 8 and not player:IsBot() then return end -- Ensures we don't process player death twice as this is in event 7 (packet) anyway
     
     local group = player:GetGroup()
     if not group then return end
