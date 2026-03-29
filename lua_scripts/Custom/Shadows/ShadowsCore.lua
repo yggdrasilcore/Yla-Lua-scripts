@@ -1078,60 +1078,75 @@ local function OnBotCommand(event, player, command)
         return false
     end
     if string.find(command, "^playerb") then
-	
         local guid = player:GetGUIDLow()
-		local name = player:GetName()
+        local name = player:GetName()
         
-		if (string.find(command, "^playerbots bot add ")
+        if (string.find(command, "^playerbots bot add ")
         and (botSummonTime[guid] and (os.time() - botSummonTime[guid] < 5)))
         then
-		
-			local selectedChar = string.match(command, "^playerbots bot add (.+)$")
-			
-			local exists = false
-			for _, char in ipairs(activeBots[name]) do
-			   if char == selectedChar then
-				   exists = true
-				   return false
-			   end
-			end
+            local selectedChar = string.match(command, "^playerbots bot add (.+)$")
+            
+            local exists = false
+            for _, char in ipairs(activeBots[name]) do
+                if char == selectedChar then
+                    exists = true
+                    return false
+                end
+            end
 
-			if not exists then
-			   table.insert(activeBots[name], selectedChar)
-			end
+            if not exists then
+                table.insert(activeBots[name], selectedChar)
+            end
 
-			if not botMasters[guid] then 
-				botMasters[guid] = {} 
-			end
-			
-			isPlayerBot[selectedChar] = name
-			player:SetData("BotCount", (player:GetData("BotCount") or 0) + 1)
-			table.insert(botMasters[guid], player:GetName())
+            if not botMasters[guid] then 
+                botMasters[guid] = {} 
+            end
+            
+            isPlayerBot[selectedChar] = name
+            player:SetData("BotCount", (player:GetData("BotCount") or 0) + 1)
+            table.insert(botMasters[guid], player:GetName())
             addCmdTimer[guid] = GetCurrTime()
-			if player:GetData("BotCount") > 4 then 
-				local shadowsGroup = player:GetGroup()
-				if shadowsGroup then 
-					shadowsGroup:ConvertToRaid()
-				end
-			end
+            if player:GetData("BotCount") > 4 then 
+                local shadowsGroup = player:GetGroup()
+                if shadowsGroup then 
+                    shadowsGroup:ConvertToRaid()
+                end
+            end
+
+            player:RegisterEvent(function(e, d, r, player)
+                local bot = GetPlayerByName(selectedChar)
+                if not bot then return end
+
+                local botGroup = bot:GetGroup()
+                local playerGroup = player:GetGroup()
+
+                if botGroup and playerGroup and botGroup ~= playerGroup then
+                    bot:RemoveFromGroup()
+                    player:GroupInvite(bot)
+                elseif botGroup and not playerGroup then
+                    bot:RemoveFromGroup()
+                    player:GroupInvite(bot)
+                end
+            end, 200, 1)
+
             return true
         end
-		
-		if string.find(command, "^playerbots bot remove ") then
-		   local selectedChar = string.match(command, "^playerbots bot remove (.+)$")
-		   for i, botName in ipairs(activeBots[name]) do
-			   if botName == selectedChar then
-				   table.remove(activeBots[name], i)
-					player:SetData("BotCount", (player:GetData("BotCount") or 0) - 1)
-				   break
-			   end
-		   end
-		   
-		   return true
-		end
+        
+        if string.find(command, "^playerbots bot remove ") then
+            local selectedChar = string.match(command, "^playerbots bot remove (.+)$")
+            for i, botName in ipairs(activeBots[name]) do
+                if botName == selectedChar then
+                    table.remove(activeBots[name], i)
+                    player:SetData("BotCount", (player:GetData("BotCount") or 0) - 1)
+                    break
+                end
+            end
+            
+            return true
+        end
         return false
     end
-	
+
 	if command == "shadowslogin" then
 		if player:GetData("LoginTime") and (player:GetData("LoginTime") < os.time() + 5) then
 			local accountId = player:GetAccountId()
