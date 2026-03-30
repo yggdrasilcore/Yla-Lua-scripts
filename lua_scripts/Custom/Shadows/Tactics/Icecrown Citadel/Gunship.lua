@@ -359,17 +359,24 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
             local anyForward = false
             local players = player:GetPlayersInRange(200)
             for _, p in ipairs(players) do
-                if not IsTank(p) and p:GetY() > HORDE_SKYBREAKER_Y_LIMIT - 7 then
+                if not IsTank(p) and p:GetY() > 2446 then
                     anyForward = true
                     break
                 end
             end
+            
             if not anyForward and not mage then
                 print("[GunshipDebug] " .. player:GetName() .. " main tank jumping back to Ogrim's Hammer!")
                 AllowSpellCast(player) local aura = player:AddAura(65985, player) if aura then aura:SetDuration(5000) end player:CastSpellAoF(HORDE_OGRIM_TANK_TRANSITION.x, HORDE_OGRIM_TANK_TRANSITION.y, HORDE_OGRIM_TANK_TRANSITION.z, ROCKET_PACK_SPELL, true)
                 player:SetData("GunshipJumpCooldown", os.time() + JUMP_COOLDOWN)
                 player:RegisterEvent(GunshipLoop, 200, 1)
                 return
+            elseif anyForward then
+                if IsAtPos(player, HORDE_SKYBREAKER_TANK_JUMP.x, HORDE_SKYBREAKER_TANK_JUMP.y, 2) then
+                    AddRootAura(player, 2000)
+                else
+                    MoveImmediately(player, HORDE_SKYBREAKER_TANK_JUMP.x, HORDE_SKYBREAKER_TANK_JUMP.y, HORDE_SKYBREAKER_TANK_JUMP.z)
+                end
             end
 
             -- On Skybreaker (enemy ship): tank Muradin
