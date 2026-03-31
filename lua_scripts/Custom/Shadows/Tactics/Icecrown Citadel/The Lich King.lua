@@ -174,7 +174,7 @@ function OnSoulReaperCast(event, caster, spell, skipCheck)
         local player = target:ToPlayer()
         if player:IsBot() and IsTank(player) then
             UseDefensive(player)
-            player:AddAura(71638)
+            player:AddAura(71638, player)
         end
     end
 end

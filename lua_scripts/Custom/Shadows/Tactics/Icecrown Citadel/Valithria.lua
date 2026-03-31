@@ -37,9 +37,9 @@ local function CheckHealer(eventId, delay, repeats, healer)
     end
 end
 
-local function OnMapEnter(event, player)
-    if not (player:GetMapId() == 631) then return end
-    if not player:IsBot() then return end
+local function OnMapEnter(event, healer)
+    if not (healer:GetMapId() == 631) then return end
+    if not healer:IsBot() then return end
 
     healer:RegisterEvent(CheckHealer, 1500, 0)
 end
