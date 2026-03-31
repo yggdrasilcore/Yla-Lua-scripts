@@ -41,7 +41,8 @@ local function OnMapEnter(event, player)
     if not (player:GetMapId() == 631) then return end
     if not player:IsBot() then return end
 
-    healer:RegisterEvent(CheckHealer, 2000, 0)
+    healer:RegisterEvent(CheckHealer, 1500, 0)
 end
 
 RegisterPlayerEvent(28, OnMapEnter)
+for _, player in ipairs(GetPlayersInWorld()) do OnMapEnter(nil, player) end
