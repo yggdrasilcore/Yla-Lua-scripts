@@ -1157,7 +1157,7 @@ local function HideWeapon(eventId, delay, repeats, player)
     end
 end
 
-local function Morpher(eventId, delay, repeats, player)
+function Morpher(eventId, delay, repeats, player)
     if player and player:GetClass() == 11 and player:HasItem(17890) and not player:IsPvPFlagged() and player:IsAlive() then
         local guid = player:GetGUIDLow()
         
