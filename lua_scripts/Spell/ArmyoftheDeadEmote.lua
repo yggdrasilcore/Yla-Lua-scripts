@@ -1,4 +1,4 @@
-local unction UnrootCreature(event, delay, repeats, creature)
+local function UnrootCreature(event, delay, repeats, creature)
     if creature then
         creature:SetRooted(false)
     end
