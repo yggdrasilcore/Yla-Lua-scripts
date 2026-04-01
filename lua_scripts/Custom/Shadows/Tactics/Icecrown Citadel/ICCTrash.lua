@@ -1,4 +1,4 @@
-function BotAttackInsects(player)
+local function BotAttackInsects(player)
     local insects = player:GetCreaturesInRange(100, 37782)
     
     if #insects == 0 then return end
@@ -20,12 +20,24 @@ function BotAttackInsects(player)
         if player:GetDistance(nearestInsect) > 5 then
             player:MoveTo(0, nearestInsect:GetX(), nearestInsect:GetY(), nearestInsect:GetZ())
         else
-            player:DealDamage(nearestInsect, 5000)
+            if player:GetClass() == 6 then -- DK
+                player:CastSpell(_, 49941, true) -- Blood Boil
+            elseif player:GetClass() == 1 then -- Warrior
+                player:CastSpell(_, 47502, true) -- Thunder Clap
+            elseif player:GetClass() == 2 then -- Paladin
+                player:CastSpell(_, 48819, true) -- Consecration
+            elseif player:GetClass() == 5 then -- Priest
+                player:CastSpell(_, 48078, true) -- Holy Nova
+            elseif player:GetClass() == 8 then -- Mage
+                player:CastSpell(_, 42921, true) -- Rrcane Explosion
+            else
+                player:DealDamage(nearestInsect, 5000)
+            end
         end
     end
 end
 
-function BotInsectLoop(eventId, delay, repeats, player)
+local function BotInsectLoop(eventId, delay, repeats, player)
     if player:GetMapId() ~= 631 then
         player:RemoveEventById(eventId)
         return
@@ -42,7 +54,7 @@ function BotInsectLoop(eventId, delay, repeats, player)
     end
 end
 
-function OnBotMapChange(event, player)
+local function OnBotMapChange(event, player)
     if player:GetMapId() == 631 and player:IsBot() then
         player:RegisterEvent(BotInsectLoop, math.random(1500, 2200), 0)
     end
