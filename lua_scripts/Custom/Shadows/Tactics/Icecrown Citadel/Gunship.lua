@@ -723,7 +723,10 @@ local function GunshipOnEnterCombat(event, player, creature)
     if player:GetMapId() ~= 631 then return end
     if not player:IsBot() then return end
     local pz = player:GetZ()
-    if pz < 400 or pz > 500 then return end -- Ignore bots elsewhere
+    if pz < 410 or pz > 500 then return end -- Ignore bots elsewhere
+    
+    local zafod = player:GetNearestCreature(200, ZAFOD) -- Only start if on/near gunship/Zafod
+    if not zafod then return end
     
     player:Dismount() -- Dismount so e.g., Druids don't get stuck mounted
     HandleRocketPack(event, player) -- Add rocket pack visual on enter combat
