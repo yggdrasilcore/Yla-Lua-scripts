@@ -103,7 +103,7 @@ local function LichKingLoop(eventId, delay, repeats, lk)
             local tank = victim:ToPlayer()
             local name = tank:GetName()
             
-            if player:IsBot() and IsTank(tank) then
+            if tank:IsBot() and IsTank(tank) then
                 if not IsAtPos(tank, 500, -2125, 5) then
                     local defiles = lk:GetCreaturesInRange(100, 38757)
                     local canMove = true
