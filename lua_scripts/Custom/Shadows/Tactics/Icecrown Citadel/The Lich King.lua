@@ -4,6 +4,8 @@ local function LichKingLoop(eventId, delay, repeats, lk)
         return
     end
     
+    local mainTank, offTank = IdentifyTanks(lk)
+    
 	-- Dispell on p1 -> p2 transition
     local hp = lk:GetHealthPct()
     local players = lk:GetPlayersInRange(100)
@@ -36,7 +38,7 @@ local function LichKingLoop(eventId, delay, repeats, lk)
 					local lastAttackTime = player:GetData("LastSpiritAttack") or 0
 					
 					if currentTime - lastAttackTime >= 1 then
-						player:DealDamage(ragingSpirit, ragingSpirit:GetMaxHealth() * (math.random() * 0.01 + 0.005))
+                        player:DealDamage(ragingSpirit, ragingSpirit:GetMaxHealth() * (math.random() * 0.01 + 0.005))
 						player:SetData("LastSpiritAttack", currentTime)
 					end
 				end
@@ -45,38 +47,60 @@ local function LichKingLoop(eventId, delay, repeats, lk)
 	end
     
 	-- P2: Handle Val'kyrs damage and tank positioning better
-    if hp <= 65 and hp >= 42 then
+    if hp <= 70 and hp >= 42 then
         local valkyrs = lk:GetCreaturesInRange(100, 36609)
         local valkyrInAir = false
         local currentTime = os.time()
         
 		for _, valkyr in pairs(valkyrs) do
 			local vx, vy = valkyr:GetX(), valkyr:GetY()
-			local distance2D = math.sqrt((vx - 504)^2 + (vy - 840)^2)
-			
-			if distance2D <= 43 then
-				if valkyr:HasAura(68985) then
-					valkyrInAir = true
-				else
-					for _, player in pairs(players) do
-						local name = player:GetName()
-						if player:IsBot() then
-							if player:HasMeleeSpec() then
-								if player:GetDistance(valkyr) > 5 then
-									player:MoveTo(1, vx, vy, valkyr:GetZ(), true)
-								end
-							end
-							
-							local lastAttackTime = player:GetData("LastValkyrAttack") or 0
-							
-							if currentTime - lastAttackTime >= 1 then
-								player:DealDamage(valkyr, valkyr:GetMaxHealth() * (math.random() * 0.01 + 0.005))
-								player:SetData("LastValkyrAttack", currentTime)
-							end
-						end
-					end
-				end
-			end
+            
+            if valkyr:GetDistance2d(504, -2123) <= 43 then
+                if valkyr:GetZ() > 846 then
+                    valkyrInAir = true
+                    
+                    for _, player in pairs(players) do
+                        if player:GetMap() and player:GetMap():IsHeroic() then
+                            if player == offTank then -- Heroic, off tank taunts Val'kyrs
+                                if not valkyr:HasAura(70428) then 
+                                    player:AddAura(70428, valkyr)
+                                elseif valkyr:HasAura(70428) then
+                                    local tauntAura = valkyr:GetAura(70428)
+                                    if tauntAura and tauntAura:GetDuration() < 200 then
+                                        player:AddAura(70428, valkyr)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                    
+                else
+                    for _, player in pairs(players) do
+                        local name = player:GetName()
+                        if player:IsBot() and not player:HasAura(68985) then      
+                        
+                            --[[
+                        if player:HasMeleeSpec() then
+                            print(name .. " has melee spec, distance: " .. player:GetDistance(valkyr))
+                            if player:GetDistance(valkyr) > 5 then
+                                print(name .. " moving to valkyr")
+                                player:MoveTo(1, vx, vy, valkyr:GetZ(), true)
+                            end
+                        end
+                        ]]
+
+                            local lastAttackTime = player:GetData("LastValkyrAttack") or 0
+
+                            if currentTime - lastAttackTime >= 1 then
+                                local DMGtoDeal = (valkyr:GetMaxHealth() * (math.random() * 0.01 + 0.005)) / 2
+                                player:DealDamage(valkyr, DMGtoDeal)
+                                player:SetData("LastValkyrAttack", currentTime)
+                                -- print("DPlayer "..player:GetName().." is damaging birdie for: "..DMGtoDeal.." HP!")
+                            end
+                        end
+                    end
+                end
+            end
 		end
         
         if valkyrInAir then
@@ -103,7 +127,7 @@ local function LichKingLoop(eventId, delay, repeats, lk)
             local tank = victim:ToPlayer()
             local name = tank:GetName()
             
-            if tank:IsBot() and IsTank(tank) then
+            if victim:IsBot() and IsTank(tank) then
                 if not IsAtPos(tank, 500, -2125, 5) then
                     local defiles = lk:GetCreaturesInRange(100, 38757)
                     local canMove = true
@@ -187,6 +211,19 @@ function OnDefilePrepare(event, caster, spell)
 	if target:IsBot() then UseRocketBoots(target) end
 end
 
+local function OnReload(player)
+    if player:GetMapId() == 631 then
+        if player:GetZ() > 835 then
+            local LK = player:GetNearestCreature(100, 36597)
+            if not LK then return end
+            if LK:IsInCombat() then
+                OnLKCombat(_, player, LK)
+            end
+        end
+    end
+end
+
+for _, player in ipairs(GetPlayersInWorld()) do OnReload(player) end
 RegisterPlayerEvent(33, OnLKCombat)
 RegisterSpellEvent(69409, 2, OnSoulReaperCast)
 RegisterSpellEvent(72762, 1, OnDefilePrepare)
