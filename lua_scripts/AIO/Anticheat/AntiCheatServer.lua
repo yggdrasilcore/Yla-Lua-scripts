@@ -25,7 +25,7 @@ local function StartAntiClipCheck(player)
 					or gObject:GetName():lower():find("port"))
 				) then
 					local x, y, z = gObject:GetLocation()
-					SendToDiscord("M2 object clipping detected. Offending player: "..player:GetName()..". Gobject ID: "..gObject:GetEntry()..". Name: "..gObject:GetName()..". Gobject state: "..gObject:GetGoState()..". Pos: "..string.format("%.2f, %.2f, %.2f", x, y, z)..". Map: "..gObject:GetMapId())
+                    -- Just log for now, to avoid false positives
 					player:RunCommand(".AntiCheatAlert M2Clip")
 					break
 				end
@@ -77,16 +77,17 @@ local function OnAIOAntiCheatCommand(event, player, command)
         local arg = command:match("AntiCheatAlert%s+(%S+)")
         if not arg then return false end
         if player:IsOnTransport() then return false end
+        local x, y, z = player:GetLocation()
      
         print("[Anticheat]: Player "..player:GetName().." caught exploiting cheat type "..arg.." at map "..player:GetMapId()..", XYZ "..player:GetX()..", "..player:GetY()..", "..player:GetZ()..". ")
         if arg == "M2Clip" then
 			-- Just log for now, to avoid false positives
         elseif arg == "SpeedHack" then
-			-- Just log for now, to avoid false positives
+            SendToDiscord("SpeedHack detected. Offending player: "..player:GetName()..". Pos: "..string.format("%.2f, %.2f, %.2f", x, y, z)..". Map: "..player:GetMapId())
         elseif arg == "WaterWalkHack" then
             player:KickPlayer()
         elseif arg == "FlyHack" then
-			-- Just log for now, to avoid false positives
+            SendToDiscord("FlyHack detected. Offending player: "..player:GetName()..". Pos: "..string.format("%.2f, %.2f, %.2f", x, y, z)..". Map: "..player:GetMapId())
         elseif arg == "FlyPvPHack" then
             player:KickPlayer()
         end
