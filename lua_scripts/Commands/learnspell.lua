@@ -2,12 +2,15 @@
 
 local function onCommand(event, player, command)
     if command:match("^%s*learn%s+(%d+)%s*$") then
+        if not player then return end
+        if player:GetGMRank() == 0 then return false end
+        
         local _, _, spellIdStr = command:find("^%s*learn%s+(%d+)%s*$")
         local spellId = tonumber(spellIdStr)
 
         if spellId then
             if player:GetSelection() and player:GetSelection():IsPlayer() then
-                target:LearnSpell(spellId)
+                player:GetSelection():LearnSpell(spellId)
             else
                 player:LearnSpell(spellId)
             end
