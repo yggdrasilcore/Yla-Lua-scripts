@@ -273,9 +273,9 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
                     local lastY = baltharus:GetData("LastMainTankTargetY")
                     
                     if not lastX or math.abs(finalPos.x - lastX) > 1 or math.abs(finalPos.y - lastY) > 1 then
-                        print("NEW POSITION - Main tank at: " .. tx .. ", " .. ty .. ", " .. mainTank:GetZ())
-                        print("NEW POSITION - Moving to: " .. finalPos.x .. ", " .. finalPos.y .. ", " .. finalPos.z)
-                        print("NEW POSITION - Current angle: " .. currentAngle .. ", New angle: " .. newAngle)
+                        --print("NEW POSITION - Main tank at: " .. tx .. ", " .. ty .. ", " .. mainTank:GetZ())
+                        --print("NEW POSITION - Moving to: " .. finalPos.x .. ", " .. finalPos.y .. ", " .. finalPos.z)
+                        --print("NEW POSITION - Current angle: " .. currentAngle .. ", New angle: " .. newAngle)
                     end
                     
                     baltharus:SetData("TempestTargetX", finalPos.x)
@@ -327,7 +327,7 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
                                 local newZ = map:GetHeight(newX, newY)
                                 
                                 mainTank:NearTeleport(newX, newY, newZ, mainTank:GetO())
-                                print("TELEPORT - Main tank teleported to: " .. newX .. ", " .. newY .. ", " .. newZ)
+                                --print("TELEPORT - Main tank teleported to: " .. newX .. ", " .. newY .. ", " .. newZ)
                                 
                                 baltharus:SetData("MainTankLastX", newX)
                                 baltharus:SetData("MainTankLastY", newY)
@@ -414,7 +414,7 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
                             local newZ = map:GetHeight(newX, newY)
                             
                             offTank:NearTeleport(newX, newY, newZ, offTank:GetO())
-                            print("TELEPORT - Off tank teleported to: " .. newX .. ", " .. newY .. ", " .. newZ)
+                            --print("TELEPORT - Off tank teleported to: " .. newX .. ", " .. newY .. ", " .. newZ)
                             
                             baltharus:SetData("OffTankLastX", newX)
                             baltharus:SetData("OffTankLastY", newY)
@@ -453,7 +453,7 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
                             local newZ = map:GetHeight(newX, newY)
                             
                             offTank:NearTeleport(newX, newY, newZ, offTank:GetO())
-                            print("TELEPORT - Off tank teleported to: " .. newX .. ", " .. newY .. ", " .. newZ)
+                            --print("TELEPORT - Off tank teleported to: " .. newX .. ", " .. newY .. ", " .. newZ)
                             
                             baltharus:SetData("OffTankLastX", newX)
                             baltharus:SetData("OffTankLastY", newY)

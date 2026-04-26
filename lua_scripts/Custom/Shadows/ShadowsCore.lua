@@ -765,7 +765,7 @@ function UninviteGroupGUID(event, packet, player)
     if uninvitedPlayer then
         if not logoutEvent[uninvitedPlayer:GetName()] then
 			if dontKickTime[uninvitedPlayer:GetName()] and dontKickTime[uninvitedPlayer:GetName()] > os.time() then return end
-			print("shadows debug - uninvited GUID")
+			--print("shadows debug - uninvited GUID")
             logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
         end 
     end
@@ -777,7 +777,7 @@ function UninviteGroup(event, packet, player)
     if uninvitedPlayer then
         if not logoutEvent[uninvitedPlayer:GetName()] then
 			if dontKickTime[uninvitedPlayer:GetName()] and dontKickTime[uninvitedPlayer:GetName()] > os.time() then return end
-			print("shadows debug - uninvited group")
+			--print("shadows debug - uninvited group")
             logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
         end
     end
@@ -788,7 +788,7 @@ local function LeaveGroup(event, group, guid, method, kicker, reason)
     if uninvitedPlayer then
         if not logoutEvent[uninvitedPlayer:GetName()] then
 			if dontKickTime[uninvitedPlayer:GetName()] and dontKickTime[uninvitedPlayer:GetName()] > os.time() then return end
-			print("shadows debug - leaving group")
+			--print("shadows debug - leaving group")
             logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
         end
     end
