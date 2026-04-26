@@ -1,4 +1,23 @@
-
+function ManageInsect(eventId, delay, repeats, player)
+    local insectGUID = player:GetData("AssignedInsectGUID")
+    
+    if not insectGUID then
+        player:RemoveEventById(eventId)
+        return
+    end
+    
+    local insect = nil
+    local insects = player:GetCreaturesInRange(100, 37782)
+    for _, npc in pairs(insects) do
+        if npc:GetGUIDLow() == insectGUID then
+            insect = npc
+            break
+        end
+    end
+    
+    if not insect or insect:IsDead() or player:IsDead() then
+        player:SetData("AssignedInsectGUID", nil)
+        player:RemoveEventById(eventId)
         return
     end
 
