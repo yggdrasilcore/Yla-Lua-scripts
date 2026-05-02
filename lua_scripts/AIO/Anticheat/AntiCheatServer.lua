@@ -26,7 +26,7 @@ local function StartAntiClipCheck(player)
 				) then
 					local x, y, z = gObject:GetLocation()
                     -- Just log for now, to avoid false positives
-					player:RunCommand(".AntiCheatAlert M2Clip")
+					OnAIOAntiCheatCommand(42, player, "AntiCheatAlert M2Clip")
 					break
 				end
 			end
