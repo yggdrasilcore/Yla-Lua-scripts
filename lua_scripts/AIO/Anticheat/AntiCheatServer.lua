@@ -83,10 +83,19 @@ local function OnAIOAntiCheatCommand(event, player, command)
         if arg == "M2Clip" then
 			-- Just log for now, to avoid false positives
         elseif arg == "SpeedHack" then
-            SendToDiscord("SpeedHack detected. Offending player: "..player:GetName()..". Pos: "..string.format("%.2f, %.2f, %.2f", x, y, z)..". Map: "..player:GetMapId())
+            local clientSpd, closestSpd = command:match("SpeedHack%s+(%S+)%s+(%S+)")
+            local state = player:IsUnderWater() and "Swimming" or player:IsFlying() and "Flying" or player:IsFalling() and "Falling" or "Walking"
+            SendToDiscord("SpeedHack detected. Offending player: "..player:GetName()..". Pos: "..string.format("%.2f, %.2f, %.2f", x, y, z)..". Map: "..player:GetMapId()..(clientSpd and ". Client speed: "..clientSpd..", Server speed: "..closestSpd or "")..". State: "..state)
         elseif arg == "WaterWalkHack" then
             player:KickPlayer()
         elseif arg == "FlyHack" then
+            if not player:IsOutdoors() then
+                player:AddAura(43775, player)
+                player:RegisterEvent(function(e, d, r, player)
+                    player:RemoveAura(43775)
+                end, 200, 5)
+                return false
+            end
             SendToDiscord("FlyHack detected. Offending player: "..player:GetName()..". Pos: "..string.format("%.2f, %.2f, %.2f", x, y, z)..". Map: "..player:GetMapId())
         elseif arg == "FlyPvPHack" then
             player:KickPlayer()

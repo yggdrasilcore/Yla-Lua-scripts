@@ -49,10 +49,10 @@ AntiSpeed:SetScript("OnUpdate", function(self, elapsed)
                 end
             end
             
-            if not matched then
+            if not matched and clientSpeed > closestSpeed then
                 self.failCount = self.failCount + 1
                 if self.failCount >= 3 then
-					SendChatMessage(".AntiCheatAlert SpeedHack", "GUILD")
+					SendChatMessage(".AntiCheatAlert SpeedHack "..string.format("%.2f", clientSpeed).." "..string.format("%.2f", closestSpeed), "GUILD")
                     self.failCount = 0
                 end
             else
