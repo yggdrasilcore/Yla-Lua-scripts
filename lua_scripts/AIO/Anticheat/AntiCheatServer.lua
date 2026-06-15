@@ -96,6 +96,8 @@ local function OnAIOAntiCheatCommand(event, player, command)
                 end, 200, 5)
                 return false
             end
+            if not player:IsMoving() then return end
+            if player:IsDead() then return end
             SendToDiscord("FlyHack detected. Offending player: "..player:GetName()..". Pos: "..string.format("%.2f, %.2f, %.2f", x, y, z)..". Map: "..player:GetMapId())
         elseif arg == "FlyPvPHack" then
             player:KickPlayer()
