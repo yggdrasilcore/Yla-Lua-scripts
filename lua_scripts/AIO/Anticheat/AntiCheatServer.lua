@@ -71,7 +71,7 @@ local function StartElunaAnticheat(event, player)
     StartAntiClipCheck(player)
 end
 
-local function OnAIOAntiCheatCommand(event, player, command)
+function OnAIOAntiCheatCommand(event, player, command)
     if command:find("AntiCheatAlert") then
 		if not player then return end
         local arg = command:match("AntiCheatAlert%s+(%S+)")
