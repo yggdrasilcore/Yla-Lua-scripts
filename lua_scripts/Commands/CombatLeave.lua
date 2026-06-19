@@ -61,24 +61,24 @@ local function TimedCBCheck(eventid, delay, repeats, player)
         return
     end
     
-    local hasBossInRange = false
+    local hasCreatureInReasonableRange = false
     local creatures = player:GetCreaturesInRange(200)
     
     --print(string.format("Checking %d creatures in range for player %s", #creatures, player:GetName()))
     
     for _, creature in pairs(creatures) do
-        if creature:GetRank() > 1 and creature:IsInCombat() then
-            hasBossInRange = true
+        if creature:IsInCombat() then
+            hasCreatureInReasonableRange = true
             break
         end
     end
     
-    if not hasBossInRange then
+    if not hasCreatureInReasonableRange then
         player:SetData("isInBossFight", nil)
         print("scheduling combat clear")
     end
     
-    if player:GetInstanceId() and not hasBossInRange then
+    if player:GetInstanceId() and not hasCreatureInReasonableRange then
         print(string.format("Periodic Combat Clear - Player %s is in instance, clearing combat", player:GetName()))
         player:SetData("cbstoptime", os.time())
         player:RunCommand("combatstop")
