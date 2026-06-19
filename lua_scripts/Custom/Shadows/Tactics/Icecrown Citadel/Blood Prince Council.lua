@@ -18,10 +18,10 @@ end
 local function OnPlayerKillBQL(event, player, enemy)
     if not enemy then return end
     
-    if enemy:GetEntry() == 37970
+    if player:IsBot()
+    and (enemy:GetEntry() == 37970
     or enemy:GetEntry() == 37972
-    or enemy:GetEntry() == 37973
-    and player:IsBot()
+    or enemy:GetEntry() == 37973)
     then
         player:RegisterEvent(KeepInBPCArea, 200, 1)
     end
