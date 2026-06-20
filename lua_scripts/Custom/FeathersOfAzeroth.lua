@@ -277,12 +277,22 @@ do
    end)
 end
 
-local function CanFly(player)
-	if player:GetMapId() == 530 or player:GetMapId() == 571 then return true end -- Flying in Outlands/Northrend always OK
-	
-	if (player:GetMapId() == 0 or player:GetMapId() == 1) and player:HasSpell(29118) then return true end -- Flying Azeroth OK if players have FoA
+local function IsInOldWorld(player)
+	local mapId = player:GetMapId()
+	local zoneId = player:GetZoneId()
+	local areaId = player:GetAreaId()
+
+	return mapId == 0 or mapId == 1
+	or zoneId == 3430 or zoneId == 3433 or zoneId == 3557
+	or zoneId == 3524 or zoneId == 4080 or zoneId == 3487
+	or zoneId == 3455 or zoneId == 3525 or zoneId == 3479
+	or areaId == 3496 or areaId == 2274 or areaId == 4281
 end
 
+local function CanFly(player)
+	if player:GetMapId() == 530 or player:GetMapId() == 571 then return true end
+	if IsInOldWorld(player) and player:HasSpell(FeathersSpell) then return true end
+end
 
 local function isPointInPolygon(x, y, polygon) -- Checks if player is within specified boundaries
     local odd = false
@@ -588,9 +598,7 @@ local function CheckFlyableArea(event, player, zoneId, areaId)
 end
 
 local function OnUseItem(event, player, item, target)
-    if player:IsCasting() then
-        return false
-    end
+    if player:IsCasting() then return false end
     
     if not (player:HasSpell(34091) or player:HasSpell(34090)) then
         player:SendBroadcastMessage("You can't use this item without knowing how to fly!")
@@ -601,17 +609,7 @@ local function OnUseItem(event, player, item, target)
         player:LearnSpell(FeathersSpell)
     end
     
-    local mapId = player:GetMapId()
-    local zoneId = player:GetZoneId()
-    local areaId = player:GetAreaId()
-    
-    if not (mapId == 0 or mapId == 1
-    or zoneId == 3430 or zoneId == 3433 or zoneId == 3557
-    or zoneId == 3524 or zoneId == 4080 or zoneId == 3487
-    or zoneId == 3455 or zoneId == 3525 or zoneId == 3479
-    or areaId == 3496 or areaId == 2274 or areaId == 4281)
-    or player:GetInstanceId() > 0 or player:InBattleground()
-    then
+    if not IsInOldWorld(player) or player:GetInstanceId() > 0 or player:InBattleground() then
         player:SendBroadcastMessage("The Feathers of Azeroth can't carry you here.")
         return false
     end
@@ -713,20 +711,27 @@ local function OnCommand(event, player, command)
 end
 
 local function OnX53orInvincible(event, player, spell, skipCheck)
-	if not ZonesToCheckZ(player) then return true end
-	
-	if player:HasAura(75973) then -- x-53
-		player:RemoveAura(75973)
-		if player:HasSpell(34091) then
-			player:AddAura(75972, player)
-		elseif player:HasSpell(34090) then
-			player:AddAura(75957, player)        
-		end
-	elseif player:HasAura(72282) then -- invincible
-        if player:HasSpell(34091) then player:RemoveAura(72282) player:AddAura(72284, player)
-        elseif player:HasSpell(34090) then player:RemoveAura(72282) player:AddAura(72283, player)
+	if not IsInOldWorld(player) then return end -- Skips players on native flight areas
+    
+    if player:HasSpell(FeathersSpell) then -- Only proceed for Feather Burst
+    
+        if player:HasAura(75973) then -- x-53, no speed
+            player:RemoveAura(75973)
+            if player:HasSpell(34091) then player:AddAura(75972, player) -- Fast flight
+            elseif player:HasSpell(34090) then player:AddAura(75957, player) -- Slow flight
+            end
+        elseif player:HasAura(72282) then -- Ground invincible
+            player:RemoveAura(72282)
+            if player:HasSpell(34091) then player:AddAura(72284, player) -- Fast Flight
+            elseif player:HasSpell(34090) then player:AddAura(72283, player) -- Slow flight
+            end
         end
-    end
+        
+    else
+        if player:HasAura(72284) then player:RemoveAura(72284) player:AddAura(72282, player) -- Override fast Invincible to walking if no feathers
+        elseif player:HasAura(72283) then player:RemoveAura(72283) player:AddAura(72282, player) -- Override slow Invincible to walking if no feathers
+        end
+   end
 end
 
 local function OnCastFlyingMount(event, player, spell)
@@ -745,9 +750,11 @@ RegisterPlayerEvent(28, OnMapChange)
 RegisterPlayerEvent(42, OnCommand)
 RegisterItemEvent(FeathersItem, 2, OnUseItem)
 RegisterPlayerGossipEvent(182746573, 2, OnGossipSelect)
-RegisterPacketEvent(0x346, 5, OnMoveSetFly)
+RegisterPacketEvent(0x346, 5, OnMoveSetFly) -- If a player tries to fly, check if they should be able to
 RegisterSpellEvent(75973, 2, OnX53orInvincible)
 RegisterSpellEvent(72282, 2, OnX53orInvincible)
+RegisterSpellEvent(72283, 2, OnX53orInvincible)
+RegisterSpellEvent(72284, 2, OnX53orInvincible)
 for _, spellId in ipairs(FLYING_MOUNTS) do
     RegisterSpellEvent(spellId, 1, OnCastFlyingMount)
 end
