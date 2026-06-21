@@ -1,3 +1,5 @@
+local LADY_DEATHWHISPER_ENTRY = 36855
+
 local function LadyDeathwhisper10Loop(eventId, delay, repeats, deathwhisper)
     if deathwhisper:IsDead() or not deathwhisper:IsInCombat() then
         deathwhisper:RemoveEvents()
@@ -45,8 +47,7 @@ local function LadyDeathwhisper25Loop(eventId, delay, repeats, deathwhisper)
 end
 
 local function OnLadyDeathwhisperCombat(event, player, enemy)
-
-    if enemy and enemy:GetEntry() == 36855 then
+    if enemy and enemy:GetEntry() == LADY_DEATHWHISPER_ENTRY then
         if not enemy:GetData("EventActive") then    
             enemy:SetData("EventActive", true)
             if player:GetDifficulty() == 0 or player:GetDifficulty() == 2 then
@@ -59,3 +60,34 @@ local function OnLadyDeathwhisperCombat(event, player, enemy)
 end
 
 RegisterPlayerEvent(33, OnLadyDeathwhisperCombat)
+
+
+-- Move stuck bots after killing LDW adds and not LOS to LDW
+local function LadyDeathwhisperLosLoop(eventId, delay, repeats, player)
+    if player:GetMapId() ~= 631 then player:RemoveEventById(eventId) return end
+    if player:GetZ() > 130 then player:RemoveEventById(eventId) return end
+
+    local ldw = player:GetSelection()
+    if ldw and ldw:GetEntry() == LADY_DEATHWHISPER_ENTRY then
+        if player:IsInCombat() and ldw:IsInCombat() then
+            local hpPct = ldw:GetHealthPct()
+            if hpPct > 99 then
+                if not player:IsWithinLoS(ldw) then
+                    if not player:IsMoving() then
+                        UseRocketBoots(player)
+                        MoveImmediately(player, -606, 2211.60, 49.5)
+                    end
+                end
+            end
+        end
+    end
+end
+
+local function OnEnterMap631(event, player)
+    if player:GetMapId() == 631 and player:IsBot() then
+        player:RegisterEvent(LadyDeathwhisperLosLoop, 2000, 0, player)
+    end
+end
+
+RegisterPlayerEvent(28, OnEnterMap631)
+for _, player in ipairs(GetPlayersInWorld()) do OnEnterMap631(_, player) end
