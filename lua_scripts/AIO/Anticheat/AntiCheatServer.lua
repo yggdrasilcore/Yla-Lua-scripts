@@ -84,6 +84,12 @@ function OnAIOAntiCheatCommand(event, player, command)
 			-- Just log for now, to avoid false positives
         elseif arg == "SpeedHack" then
             local clientSpd, closestSpd = command:match("SpeedHack%s+(%S+)%s+(%S+)")
+            
+            -- Skip normal falling, whereby speed is 5
+            if player:IsFalling() and clientSpd and tonumber(clientSpd) == 5 then
+                return false
+            end
+            
             local state = player:IsUnderWater() and "Swimming" or player:IsFlying() and "Flying" or player:IsFalling() and "Falling" or "Walking"
             SendToDiscord("SpeedHack detected. Offending player: "..player:GetName()..". Pos: "..string.format("%.2f, %.2f, %.2f", x, y, z)..". Map: "..player:GetMapId()..(clientSpd and ". Client speed: "..clientSpd..", Server speed: "..closestSpd or "")..". State: "..state)
         elseif arg == "WaterWalkHack" then
