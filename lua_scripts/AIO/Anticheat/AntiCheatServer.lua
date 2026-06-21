@@ -93,6 +93,7 @@ function OnAIOAntiCheatCommand(event, player, command)
             local state = player:IsUnderWater() and "Swimming" or player:IsFlying() and "Flying" or player:IsFalling() and "Falling" or "Walking"
             SendToDiscord("SpeedHack detected. Offending player: "..player:GetName()..". Pos: "..string.format("%.2f, %.2f, %.2f", x, y, z)..". Map: "..player:GetMapId()..(clientSpd and ". Client speed: "..clientSpd..", Server speed: "..closestSpd or "")..". State: "..state)
         elseif arg == "WaterWalkHack" then
+            SendToDiscord("WaterWalkHack detected. Offending player: "..player:GetName()..". Pos: "..string.format("%.2f, %.2f, %.2f", x, y, z)..". Map: "..player:GetMapId()..". Player kicked.")
             player:KickPlayer()
         elseif arg == "FlyHack" then
             if not player:IsOutdoors() then
