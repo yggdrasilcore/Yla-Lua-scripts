@@ -85,8 +85,16 @@ function OnAIOAntiCheatCommand(event, player, command)
         elseif arg == "SpeedHack" then
             local clientSpd, closestSpd = command:match("SpeedHack%s+(%S+)%s+(%S+)")
             
-            -- Skip normal falling, whereby speed is 5
-            if player:IsFalling() and clientSpd and tonumber(clientSpd) == 5 then
+            -- Allowed speed deviations
+            if player:IsFalling() and clientSpd then
+                local speed = tonumber(clientSpd)
+                if speed == 5    -- Skips normal falling
+                or speed == 40   -- Skips most knockbacks, incl LK shadow traps
+                then return false end
+            end
+            
+            -- Skip knockbacks, which are mostly speed 40
+            if player:IsFalling() and clientSpd and tonumber(clientSpd) == 40 then
                 return false
             end
             
