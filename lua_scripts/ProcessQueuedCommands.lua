@@ -18,4 +18,4 @@ local function ProcessCommandQueue()
     end)
 end
 
-CreateLuaEvent(ProcessCommandQueue, 30000, 0)
+CreateLuaEvent(ProcessCommandQueue, 300000, 0)
