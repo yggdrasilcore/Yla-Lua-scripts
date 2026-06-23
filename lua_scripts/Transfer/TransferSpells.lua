@@ -991,7 +991,7 @@ local function onLevelChange(event, player, oldLevel)
 end
 
 local function onFirstLogin(event, player)
-    if player:GetLevel() > 55 then
+    if player:GetMapId() == 571 then
         for profession, spells in pairs(spellRanks) do
             for i = #spells, 1, -1 do
                 if player:HasSpell(spells[i]) then

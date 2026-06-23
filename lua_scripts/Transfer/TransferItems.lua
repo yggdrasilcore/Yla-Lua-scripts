@@ -1,5 +1,5 @@
 local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 in column at_login
-    if player:GetLevel() > 55 then
+    if player:GetMapId() == 571 then
         local guid = player:GetGUIDLow()
         local name = player:GetName()
         
