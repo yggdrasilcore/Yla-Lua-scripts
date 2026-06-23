@@ -1,11 +1,19 @@
 local function ProcessCommandQueue()
     CharDBQueryAsync("SELECT command FROM acore_eluna.command_queue WHERE executed IS NULL", function(query)
         if query then
+            local commands = {}
             repeat
-                local command = query:GetString(0)
-                RunCommand(command)
-                CharDBExecute(string.format("UPDATE acore_eluna.command_queue SET executed = %d WHERE command = '%s' AND executed IS NULL LIMIT 1", os.time(), command:gsub("'", "\\'")))
+                table.insert(commands, query:GetString(0))
             until not query:NextRow()
+
+            for _, command in ipairs(commands) do
+                RunCommand(command)
+            end
+
+            CharDBExecute(string.format(
+                "UPDATE acore_eluna.command_queue SET executed = %d WHERE executed IS NULL",
+                os.time()
+            ))
         end
     end)
 end
