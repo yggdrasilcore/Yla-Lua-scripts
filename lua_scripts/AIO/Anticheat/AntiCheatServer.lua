@@ -74,13 +74,16 @@ end
 function OnAIOAntiCheatCommand(event, player, command)
     if command:find("AntiCheatAlert") then
 		if not player then return end
+        if player:GetGMRank() > 0 then return false end
+        
         local arg = command:match("AntiCheatAlert%s+(%S+)")
         if not arg then return false end
+        
         if player:IsOnTransport() then return false end
         local x, y, z = player:GetLocation()
      
-        print("[Anticheat]: Player "..player:GetName().." caught exploiting cheat type "..arg.." at map "..player:GetMapId()..", XYZ "..player:GetX()..", "..player:GetY()..", "..player:GetZ()..". ")
         if arg == "M2Clip" then
+            print("[Anticheat]: Player "..player:GetName().." caught exploiting cheat type "..arg.." at map "..player:GetMapId()..", XYZ "..player:GetX()..", "..player:GetY()..", "..player:GetZ()..". ")
 			-- Just log for now, to avoid false positives
         elseif arg == "SpeedHack" then
             local clientSpd, closestSpd = command:match("SpeedHack%s+(%S+)%s+(%S+)")
@@ -111,8 +114,8 @@ function OnAIOAntiCheatCommand(event, player, command)
                 end, 200, 5)
                 return false
             end
-            if not player:IsMoving() then return end
-            if player:IsDead() then return end
+            if not player:IsMoving() then return false end
+            if player:IsDead() then return false end
             SendToDiscord("FlyHack detected. Offending player: "..player:GetName()..". Pos: "..string.format("%.2f, %.2f, %.2f", x, y, z)..". Map: "..player:GetMapId())
         elseif arg == "FlyPvPHack" then
             player:KickPlayer()
