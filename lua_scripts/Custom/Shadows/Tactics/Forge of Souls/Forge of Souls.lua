@@ -210,7 +210,7 @@ local function StartFoSTactics(event, d, r, player)
 end
 
 local function OnEnterFoS(event, player)
-    --if not player:IsBot() then return end
+    if not player:IsBot() then return end
     if not (player:GetMapId() == 632) then
         if player:HasAura(PACIFY) then player:RemoveAura(PACIFY) end
         return
