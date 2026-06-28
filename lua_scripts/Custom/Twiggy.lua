@@ -259,7 +259,7 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
         player:GossipSendMenu(12, creature, 60)
 	elseif intId == 54 then
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/achievement_zone_easternkingdoms_01:32:32:-22:0|tAzeroth flight features:\n ", 0, 54)
-		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_feather_13:32:32:-22:0|tThe Feathers of Azeroth: \n \nTo fly in Kalimdor and Eastern Kingdoms, you must buy the Feathers of Azeroth from the bird breeder at the Mall for 50 gold, given that you are already able to fly.\n ", 0, 54)
+		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_feather_13:32:32:-22:0|tThe Feathers of Azeroth: \n \nTo fly in Kalimdor and Eastern Kingdoms, you must buy the Feathers of Azeroth from the bird breeder at the Mall, given that you are already able to fly.\n ", 0, 54)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_flower_02:32:32:-22:0|tUse any mount: \n \nThe Feathers can wrap any mount of your choice in the Feathers of Azeroth, permitting its flight in old world areas.\n ", 0, 54)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/Spell_magic_featherfall:32:32:-22:0|tSupports shapeshifts: \n \nAll flying mounts and shapeshifts that can fly in all of Outland and Northrend, including Druid shapeshifts, can be wrapped in the Feathers of Azeroth. \n ", 0, 54)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 5)
