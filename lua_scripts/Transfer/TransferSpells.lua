@@ -1049,6 +1049,14 @@ local function onLearnTalent(event, player, talentId, talentRank, spellId)
 	end
 end
 
+local function OnLogin(event, player) -- Corrects X-53 rocket
+    if player:HasSpell(76154) then
+        player:RemoveSpell(76154)
+        player:LearnSpell(75973)
+    end
+end
+
+RegisterPlayerEvent(3, OnLogin)
 RegisterPlayerEvent(13, onLevelChange)
 RegisterPlayerEvent(30, onFirstLogin)
 RegisterPlayerEvent(39, onLearnTalent)
