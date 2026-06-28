@@ -9,7 +9,6 @@ end
 
 local function OnGossipSelect(event, player, creature, sender, intid, code)
     if intid == 1 then
-        local goldCost = 50 -- Replace with the actual cost in gold (1 copper = 10000 gold)
         local itemLink = GetItemLink(ITEM_ID)
 
         player:GossipClearMenu()
