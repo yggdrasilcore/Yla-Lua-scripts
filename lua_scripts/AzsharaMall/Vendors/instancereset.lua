@@ -220,6 +220,69 @@ local function GetDifficultyName(difficulty, size)
     return ""
 end
 
+local function FormatTimeRemaining(seconds, maxResets)
+    local days = math.floor(seconds / 86400)
+    local hours = math.floor((seconds % 86400) / 3600)
+    local minutes = math.floor((seconds % 3600) / 60)
+    local suffix = (maxResets > 1) and ("until " .. maxResets .. " free resets") or "until free reset"
+    if days > 0 then
+        return days .. "d " .. hours .. "h " .. suffix
+    elseif hours > 0 then
+        return hours .. "h " .. minutes .. "m " .. suffix
+    else
+        return minutes .. "m " .. suffix
+    end
+end
+
+local function GetFreeResetLabel(remaining, maxResets)
+    if remaining <= 0 then
+        return nil
+    end
+    if maxResets > 1 then
+        return remaining .. " free resets available"
+    else
+        return "Free reset available"
+    end
+end
+
+local function ShowCooldownList(player, creature)
+    local accountId = player:GetAccountId()
+    local cache = accountLockoutCache[accountId]
+
+    player:GossipClearMenu()
+
+    if not cache then
+        player:SendBroadcastMessage("Your instance data is still loading, please try again in a moment.")
+        player:GossipComplete()
+        return
+    end
+
+    local maxResets = FREE_RESETS
+    if IsVIP(player) then
+        maxResets = VIP_RESETS
+    end
+
+    for _, char in ipairs(cache.chars) do
+        local timerText
+
+        if not freeReset[char.guid] or freeReset[char.guid] < os.time() then
+            timerText = GetFreeResetLabel(maxResets, maxResets)
+        else
+            local remaining = maxResets - (resetCount[char.guid] or 0)
+            timerText = GetFreeResetLabel(remaining, maxResets)
+            if not timerText then
+                timerText = FormatTimeRemaining(freeReset[char.guid] - os.time(), maxResets)
+            end
+        end
+
+        local label = char.name .. " - " .. timerText
+        player:GossipMenuAddItem(0, label, 0, 9998)
+    end
+
+    player:GossipMenuAddItem(4, "Back", 0, 7001)
+    player:GossipSendMenu(1, creature)
+end
+
 local function ResetInstanceLockout(player, map, difficulty, targetGuid, targetName)
     local guid = player:GetGUIDLow()
     local accountId = player:GetAccountId()
@@ -355,14 +418,11 @@ local function GenerateMenu(page, player, creature)
 
     local sortedInstances = SortInstancesByMapID(cache.lockoutMap)
 
-    if #sortedInstances == 0 then
-        player:SendBroadcastMessage("You don't have any raid locks to reset.")
-        player:GossipComplete()
-        return
-    end
+    player:GossipMenuAddItem(0, "Check free reset cooldown", 0, 7000)
 
     local startIndex = (page - 1) * MAX_MENU_ITEMS + 1
     local endIndex = math.min(page * MAX_MENU_ITEMS, #sortedInstances)
+    local shown = 0
 
     for i = startIndex, endIndex do
         local instance = sortedInstances[i]
@@ -374,7 +434,14 @@ local function GenerateMenu(page, player, creature)
             local difficultyName = GetDifficultyName(difficulty, size)
             local gossipText = instanceName .. " " .. difficultyName
             player:GossipMenuAddItem(2, gossipText, 0, 10000 + map * 10 + difficulty)
+            shown = shown + 1
         end
+    end
+
+    if shown == 0 then
+        player:GossipMenuAddItem(0, "You don't have any instance locks to reset.", 0, 7001)
+        player:GossipSendMenu(1, creature)
+        return
     end
 
     if page > 1 then
@@ -396,6 +463,21 @@ end
 local function OnGossipSelect(event, player, creature, sender, intid, code, menu_id)
     local guid = player:GetGUIDLow()
     local accountId = player:GetAccountId()
+
+    if intid == 7000 then
+        ShowCooldownList(player, creature)
+        return
+    end
+
+    if intid == 7001 then
+        OnGossipHello(nil, player, creature)
+        return
+    end
+
+    if intid == 9998 then
+        ShowCooldownList(player, creature)
+        return
+    end
 
     if intid >= 1000 and intid <= 1050 then
         local newPage = intid - 1000
