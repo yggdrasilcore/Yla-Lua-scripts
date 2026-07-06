@@ -21,6 +21,7 @@ local ActionsPerCycle		= 500			-- Default: 500 (items). The higher the value, th
 local StartupDelay 			= 1000			-- Default: 1000 (ms). Delay after startup/Eluna reload before the auction house initializes. Having this set to 0 will cause lag on initial world load. 
 local EnableGMMessages		= true			-- Default: True. Messages all online GMs on command and initiation events.
 local AnnounceOnLogin		= false			-- Default: True. Announces to all players on login that this server runs the Eluna AH Bot module.
+local DeleteAuctionMails	= true          -- Default: True. Periodically deletes auction mails on AHBots characters every 15 min.
 
 -------------------------------------------------------------------------------------------------------------------------
 -- Buyer Configs
@@ -2482,6 +2483,14 @@ local function AHBot_SellItems(_, _, _, specificHouse)
 end
 
 ---------------------------------------------------------------------------------
+-- Clear Auction Bots' Mailboxes
+---------------------------------------------------------------------------------
+
+local function AHBot_DeleteAuctionMails(event, delay, repeats)
+    CharDBExecute("UPDATE mail SET expire_time = expire_time - 90*86400, deliver_time = deliver_time - 90*86400 WHERE receiver IN ("..table.concat(AHBots, ",")..") AND sender IN (2, 6, 7);")
+end
+
+---------------------------------------------------------------------------------
 -- Initialize item_template cache and initial event scheduling
 ---------------------------------------------------------------------------------
 
@@ -2592,6 +2601,9 @@ if EnableBuyer then
 	end
 end
 
+if DeleteAuctionMails then
+	CreateLuaEvent(AHBot_DeleteAuctionMails, 15 * 60 * 1000)
+end
 ---------------------------------------------------------------------------------
 -- Management commands
 ---------------------------------------------------------------------------------
