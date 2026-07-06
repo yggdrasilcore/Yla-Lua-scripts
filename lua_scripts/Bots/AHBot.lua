@@ -2487,7 +2487,7 @@ end
 ---------------------------------------------------------------------------------
 
 local function AHBot_DeleteAuctionMails(event, delay, repeats)
-    CharDBExecute("UPDATE mail SET expire_time = expire_time - 90*86400, deliver_time = deliver_time - 90*86400 WHERE receiver IN ("..table.concat(AHBots, ",")..") AND sender IN (2, 6, 7);")
+    CharDBExecute("UPDATE mail SET expire_time = LEAST(expire_time - 90*86400, expire_time), deliver_time = LEAST(deliver_time - 90*86400, deliver_time) WHERE receiver IN (" .. table.concat(AHBots, ",") .. ") AND sender IN (2, 6, 7) AND expire_time > UNIX_TIMESTAMP() - 90*86400 AND deliver_time > UNIX_TIMESTAMP() - 90*86400")
 end
 
 ---------------------------------------------------------------------------------
