@@ -60,19 +60,18 @@ CharDBQueryAsync("SELECT value FROM acore_eluna.persistent_storage WHERE entry =
     end
 end)
 
-function CompoundTenacity(value)
-    if value ~= 0 then
-        if WG_LossRecorded then return end
-        WG_LossRecorded = true
-        CreateLuaEvent(function()
-            local loser = WG_Controller == "Alliance" and "Horde" or "Alliance"
-            WG_LossCount[loser] = (WG_LossCount[loser] or 0) + 1
-            WG_LossCount[WG_Controller] = 0
-            SaveLossCount()
-            print("[WG] " .. WG_Controller .. " won. " .. loser .. " lost (loss count: " .. WG_LossCount[loser] .. ")")
-        end, 500, 1)
+function CompoundTenacity(controllerChanged)
+    if controllerChanged then
+        WG_LossCount["Alliance"] = 0
+        WG_LossCount["Horde"] = 0
+        SaveLossCount()
+        print("[WG] Defender changed to " .. WG_Controller .. ". Loss counts reset.")
     else
-        WG_LossRecorded = false
+        local loser = WG_Controller == "Alliance" and "Horde" or "Alliance"
+        WG_LossCount[loser] = (WG_LossCount[loser] or 0) + 1
+        WG_LossCount[WG_Controller] = 0
+        SaveLossCount()
+        print("[WG] " .. WG_Controller .. " won. " .. loser .. " lost (loss count: " .. WG_LossCount[loser] .. ")")
     end
 end
 
@@ -234,3 +233,74 @@ for _, player in ipairs(GetPlayersInWorld()) do OnPlayerEnterWintergrasp(_, play
 CreateLuaEvent(UpdateVehicleTenacity, 1000, 0)
 RegisterPlayerEvent(4, OnPlayerEnterWintergrasp)
 RegisterPlayerEvent(27, OnPlayerEnterWintergrasp)
+
+
+
+
+
+
+
+
+
+--- WG Lua Controller
+
+
+WG_FightActive = false
+WG_Controller = nil
+
+local WG_LastTimer = nil
+local WG_LastController = nil
+local WG_WasWarTime = false
+
+local function CheckWintergraspState()
+    local timer = GetWintergraspTimer()
+    local hasValidTimer = (timer ~= nil and timer > 0)
+
+    local defender = GetWintergraspDefenderTeam()
+    if defender == 0 then
+        WG_Controller = "Alliance"
+    else
+        WG_Controller = "Horde"
+    end
+
+    local hadValidTimer = (WG_LastTimer ~= nil and WG_LastTimer > 0)
+    local controllerChanged = (WG_LastController ~= nil and WG_LastController ~= WG_Controller)
+
+    if IsWintergraspWarTime() then
+        ProcessWintergraspWorldstate(3801, 0)
+        WG_FightActive = true
+    else
+        WG_FightActive = false
+    end
+
+    if WG_WasWarTime and not IsWintergraspWarTime() then
+        CompoundTenacity(controllerChanged)
+    end
+
+    WG_LastTimer = timer
+    WG_LastController = WG_Controller
+    WG_WasWarTime = WG_FightActive
+end
+
+CreateLuaEvent(CheckWintergraspState, 5000, 0)
+
+CharDBQueryAsync("SELECT value FROM worldstates WHERE entry = 3802", function(query)
+    if query then
+        local v = query:GetUInt32(0)
+        if v == 0 then
+            WG_Controller = "Alliance"
+        else
+            WG_Controller = "Horde"
+        end
+    end
+end)
+
+local function InitializeWGState()
+    if IsWintergraspWarTime() then
+        WG_FightActive = true
+    else
+        WG_FightActive = false
+    end
+end
+
+InitializeWGState()
