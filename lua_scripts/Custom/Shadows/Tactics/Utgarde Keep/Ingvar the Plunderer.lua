@@ -81,7 +81,7 @@ local function MoveBehindTarget(player, target, distance)
     player:MoveTo(1, targetX, targetY, Z_HEIGHT, true)
 end
 
-local function IngvarLoop(eventId, delay, repeats, player)
+local function IngvarLoop(event, delay, repeats, player)
     if player:GetMapId() ~= UTGARDE_KEEP_MAP_ID then player:RemoveEventById(event) end
 
     local ingvar = player:GetNearestCreature(100, INGVAR_ENTRY)
