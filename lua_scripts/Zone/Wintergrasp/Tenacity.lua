@@ -124,7 +124,7 @@ local function GetWGPlayers()
 end
 
 local function GetStacksForTeam(playerTeam, stack, team)
-    local lossBonus = math.max((WG_LossCount[playerTeam == "alliance" and "Alliance" or "Horde"] or 0) - 1, 0)
+    local lossBonus = math.max((WG_LossCount[playerTeam == "alliance" and "Alliance" or "Horde"] or 0), 0)
     local outnumberedBonus = (team == playerTeam) and stack or 0
     return math.min(outnumberedBonus + lossBonus, MAX_TENACITY)
 end
