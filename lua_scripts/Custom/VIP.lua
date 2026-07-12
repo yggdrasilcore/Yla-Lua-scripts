@@ -103,63 +103,176 @@ local function VIPGMCommands(event, player, command)
         return false
     end
     
-    local addMatch = cmd:match("^vip add (%S+) (%d+)$")
+    if cmd == "vip add" then
+        player:SendBroadcastMessage("Usage:")
+        player:SendBroadcastMessage("|-- .vip add <days>")
+        player:SendBroadcastMessage("|-- .vip add <charactername> <days>")
+        player:SendBroadcastMessage("|-- .vip add account <accountname> <days>")
+        return false
+    end
+    
+    local addAccountTarget, addAccountDays = cmd:match("^vip add account (%S+) (%d+)$")
+    local addTarget, addDays = cmd:match("^vip add (%S+) (%d+)$")
     local addSingleMatch = cmd:match("^vip add (%d+)$")
-    local removeMatch = cmd:match("^vip remove (%S+) (%d+)$")
+    local removeTarget, removeDays = cmd:match("^vip remove (%S+) (%d+)$")
     local removeSingleMatch = cmd:match("^vip remove (%d+)$")
     local removeAllMatch = cmd:match("^vip remove (%S+) all$")
     local removeAllSingleMatch = cmd:match("^vip remove all$")
     
-    if addMatch then
-        local targetName, daysStr = addMatch:match("(%S+) (%d+)")
-        local days = tonumber(daysStr)
+    if addAccountTarget and addAccountDays then
+        local accountName = addAccountTarget
+        local days = tonumber(addAccountDays)
+        local gmName = player:GetName()
         
         if not days or days <= 0 then
             player:SendBroadcastMessage("Invalid number of days. Please use a positive number.")
             return false
         end
         
-        local targetPlayer = GetPlayerByName(targetName)
-        if not targetPlayer then
-            player:SendBroadcastMessage("Player '" .. targetName .. "' not found or not online.")
+        AuthDBQueryAsync("SELECT id, username FROM account WHERE username = '" .. accountName .. "' COLLATE utf8mb4_general_ci;", function(result)
+            local gm = GetPlayerByName(gmName)
+            
+            if not result then
+                if gm then gm:SendBroadcastMessage("Account '" .. accountName .. "' does not exist.") end
+                return
+            end
+            
+            local targetAccountId = result:GetUInt32(0)
+            local targetUsername = result:GetString(1)
+            
+            CharDBQueryAsync("SELECT name FROM characters WHERE account = " .. targetAccountId .. ";", function(charResult)
+                local gm = GetPlayerByName(gmName)
+                local charNames = {}
+                local onlineCharName = nil
+                
+                if charResult then
+                    repeat
+                        local charName = charResult:GetString(0)
+                        table.insert(charNames, charName)
+                        
+                        if not onlineCharName then
+                            local p = GetPlayerByName(charName)
+                            if p then
+                                if isPlayerBot[charName] then
+                                    local botMaster = nil
+                                    for masterName, bots in pairs(activeBots) do
+                                        for i, botName in ipairs(bots) do
+                                            if botName == charName then
+                                                botMaster = GetPlayerByName(masterName)
+                                                break
+                                            end
+                                        end
+                                        if botMaster then break end
+                                    end
+                                    if botMaster then
+                                        onlineCharName = botMaster:GetName()
+                                    end
+                                else
+                                    onlineCharName = charName
+                                end
+                            end
+                        end
+                    until not charResult:NextRow()
+                end
+                
+                AuthDBQueryAsync("SELECT viptime FROM accounts_vip WHERE account = " .. targetAccountId .. ";", function(vipResult)
+                    local gm = GetPlayerByName(gmName)
+                    
+                    local currentVIPTime = vipResult and vipResult:GetUInt32(0) or 0
+                    local currentTime = os.time()
+                    
+                    local baseTime = math.max(currentVIPTime, currentTime)
+                    local newVIPTime = baseTime + (days * 24 * 60 * 60)
+                    
+                    AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+                    
+                    local charListStr = #charNames > 0 and table.concat(charNames, ", ") or "no characters"
+                    
+                    local freshOnlinePlayer = onlineCharName and GetPlayerByName(onlineCharName) or nil
+                    if freshOnlinePlayer then
+                        freshOnlinePlayer:SetData("VIPTime", newVIPTime)
+                        freshOnlinePlayer:SendBroadcastMessage("A GM has granted you " .. days .. " VIP days. Your VIP status has been updated!")
+                    end
+                    
+                    if gm then gm:SendBroadcastMessage("Added " .. days .. " VIP days to " .. targetUsername .. " (" .. charListStr .. "). New VIP expires: " .. os.date("%Y-%m-%d %H:%M:%S", newVIPTime)) end
+                end)
+            end)
+        end)
+        
+        return false
+
+    elseif addTarget and addDays then
+        local targetName = addTarget
+        local days = tonumber(addDays)
+        local gmName = player:GetName()
+        
+        if not days or days <= 0 then
+            player:SendBroadcastMessage("Invalid number of days. Please use a positive number.")
             return false
         end
         
-        -- Check if target is a bot, if so find its master
-        if isPlayerBot[targetName] then
-            local botMaster = nil
-            for masterName, bots in pairs(activeBots) do
-                for i, botName in ipairs(bots) do
-                    if botName == targetName then
-                        botMaster = GetPlayerByName(masterName)
-                        break
-                    end
-                end
-                if botMaster then break end
+        CharDBQueryAsync("SELECT name, account FROM characters WHERE name = '" .. targetName .. "' COLLATE utf8mb4_general_ci;", function(result)
+            local gm = GetPlayerByName(gmName)
+            
+            if not result then
+                if gm then gm:SendBroadcastMessage("Player '" .. targetName .. "' does not exist.") end
+                return
             end
             
-            if botMaster then
-                targetPlayer = botMaster
-                player:SendBroadcastMessage("Adding VIP to " .. targetName .. "'s master: " .. botMaster:GetName())
-            else
-                player:SendBroadcastMessage("Could not find master for bot: " .. targetName)
-                return false
+            local charName = result:GetString(0)
+            local targetAccountId = result:GetUInt32(1)
+            local targetPlayer = GetPlayerByName(charName)
+            
+            -- Check if target is a bot, if so find its master
+            if targetPlayer and isPlayerBot[charName] then
+                local botMaster = nil
+                for masterName, bots in pairs(activeBots) do
+                    for i, botName in ipairs(bots) do
+                        if botName == charName then
+                            botMaster = GetPlayerByName(masterName)
+                            break
+                        end
+                    end
+                    if botMaster then break end
+                end
+                
+                if botMaster then
+                    targetPlayer = botMaster
+                    charName = botMaster:GetName()
+                    targetAccountId = botMaster:GetAccountId()
+                    if gm then gm:SendBroadcastMessage("Adding VIP to " .. targetName .. "'s master: " .. botMaster:GetName()) end
+                else
+                    if gm then gm:SendBroadcastMessage("Could not find master for bot: " .. targetName) end
+                    return
+                end
             end
-        end
-        
-        local targetAccountId = targetPlayer:GetAccountId()
-        local currentVIPTime = targetPlayer:GetData("VIPTime") or 0
-        local currentTime = os.time()
-        
-        local baseTime = math.max(currentVIPTime, currentTime)
-        local newVIPTime = baseTime + (days * 24 * 60 * 60)
-        
-        AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
-        
-        targetPlayer:SetData("VIPTime", newVIPTime)
-        
-        player:SendBroadcastMessage("Added " .. days .. " VIP days to " .. targetPlayer:GetName() .. ". New VIP expires: " .. os.date("%Y-%m-%d %H:%M:%S", newVIPTime))
-        targetPlayer:SendBroadcastMessage("A GM has granted you " .. days .. " VIP days. Your VIP status has been updated!")
+            
+            AuthDBQueryAsync("SELECT username FROM account WHERE id = " .. targetAccountId .. ";", function(acctResult)
+                local gm = GetPlayerByName(gmName)
+                local username = acctResult and acctResult:GetString(0) or "unknown"
+                
+                AuthDBQueryAsync("SELECT viptime FROM accounts_vip WHERE account = " .. targetAccountId .. ";", function(vipResult)
+                    local gm = GetPlayerByName(gmName)
+                    local targetPlayer = GetPlayerByName(charName)
+                    
+                    local currentVIPTime = vipResult and vipResult:GetUInt32(0) or 0
+                    local currentTime = os.time()
+                    
+                    local baseTime = math.max(currentVIPTime, currentTime)
+                    local newVIPTime = baseTime + (days * 24 * 60 * 60)
+                    
+                    AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+                    
+                    if targetPlayer then
+                        targetPlayer:SetData("VIPTime", newVIPTime)
+                        targetPlayer:SendBroadcastMessage("A GM has granted you " .. days .. " VIP days. Your VIP status has been updated!")
+                        if gm then gm:SendBroadcastMessage("Added " .. days .. " VIP days to " .. username .. " (" .. targetPlayer:GetName() .. "). New VIP expires: " .. os.date("%Y-%m-%d %H:%M:%S", newVIPTime)) end
+                    else
+                        if gm then gm:SendBroadcastMessage("Added " .. days .. " VIP days to " .. username .. " (" .. charName .. ", offline). New VIP expires: " .. os.date("%Y-%m-%d %H:%M:%S", newVIPTime)) end
+                    end
+                end)
+            end)
+        end)
         
         return false
     elseif addSingleMatch then
@@ -222,9 +335,9 @@ local function VIPGMCommands(event, player, command)
         end
         
         return false
-    elseif removeMatch then
-        local targetName, daysStr = removeMatch:match("(%S+) (%d+)")
-        local days = tonumber(daysStr)
+    elseif removeTarget and removeDays then
+        local targetName = removeTarget
+        local days = tonumber(removeDays)
         
         if not days or days <= 0 then
             player:SendBroadcastMessage("Invalid number of days. Please use a positive number.")
@@ -435,10 +548,6 @@ local function VIPGMCommands(event, player, command)
             targetPlayer:SendBroadcastMessage("A GM has removed all VIP time from your account. Your VIP status has been updated!")
         end
         
-        return false
-    elseif cmd:match("^vip add") then
-        -- Handle incorrect vip add format
-        player:SendBroadcastMessage('Incorrect format. Usage: ".vip add <days>" or ".vip add <name> <days>"')
         return false
     elseif cmd:match("^vip remove") then
         -- Handle incorrect vip remove format
