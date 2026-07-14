@@ -1,16 +1,15 @@
-
-
 -------------------------------------------------------------------------------------------------------------------------
 -- XP changer script start
 -------------------------------------------------------------------------------------------------------------------------
 
-CharDBExecute("CREATE TABLE IF NOT EXISTS `character_rate_xp` (`guid` int(11) unsigned NOT NULL, `rate` int(11) NOT NULL DEFAULT 0, PRIMARY KEY (`guid`)) ENGINE=InnoDB DEFAULT CHARSET=utf8;")
+CharDBExecute("CREATE TABLE IF NOT EXISTS `character_rate_xp` (`guid` int(11) unsigned NOT NULL, `rate` int(11) NOT NULL DEFAULT 0, `max_paid_rate` int(11) NOT NULL DEFAULT 0, PRIMARY KEY (`guid`)) ENGINE=InnoDB DEFAULT CHARSET=utf8;")
 
 local currencyID = 20880
 local currencyNameSingular = "Vote Token"
 local currencyName = "Vote Tokens"
 
 local XPCache = {}
+local MaxPaidCache = {}
 
 local function OnTalkToGreetingTwig(event, player, object)
     local guid = player:GetGUIDLow()
@@ -31,6 +30,13 @@ local function OnTalkToGreetingTwig(event, player, object)
         cost9 = ""
         cost10 = ""
     end
+
+    local maxPaid = MaxPaidCache[guid] or 0
+    if maxPaid >= 6 then cost6 = "" end
+    if maxPaid >= 7 then cost7 = "" end
+    if maxPaid >= 8 then cost8 = "" end
+    if maxPaid >= 9 then cost9 = "" end
+    if maxPaid >= 10 then cost10 = "" end
 
     if not (object == player) then
 		local area = object:GetAreaId()
@@ -149,6 +155,13 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
             cost9 = ""
             cost10 = ""
         end
+
+        local maxPaid = MaxPaidCache[player:GetGUIDLow()] or 0
+        if maxPaid >= 6 then cost6 = "" end
+        if maxPaid >= 7 then cost7 = "" end
+        if maxPaid >= 8 then cost8 = "" end
+        if maxPaid >= 9 then cost9 = "" end
+        if maxPaid >= 10 then cost10 = "" end
     
         player:GossipClearMenu()
         if player:GetLevel() == 80 and not (player:GetClass() == 3) then
@@ -178,9 +191,10 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
     elseif intid == 998 then
         OnTalkToGreetingTwig(event, player, object)
     elseif intid < 11 then
+        local guid = player:GetGUIDLow()
         if currentRate > intid then
-            XPCache[player:GetGUIDLow()] = intid
-            CharDBExecute("REPLACE INTO character_rate_xp (guid, rate) VALUES ('"..player:GetGUIDLow().."', '"..intid.."')")
+            XPCache[guid] = intid
+            CharDBExecute("REPLACE INTO character_rate_xp (guid, rate, max_paid_rate) VALUES ('"..guid.."', '"..intid.."', '"..(MaxPaidCache[guid] or 0).."')")
             messagestring = "Congratulations, you changed your experience rate to: x"..intid
             if object == player then
                 player:SendBroadcastMessage(messagestring)
@@ -191,20 +205,24 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
             player:GossipComplete()
             return
         elseif intid > 5 and not (player:GetData("VIPTime") and (player:GetData("VIPTime") > os.time())) then -- Charge if higher tier XP and not VIP
-            if not player:HasItem(currencyID, intid - 5) then
-                player:GossipComplete()
-                messagestring = "You don't have sufficient funds!"
-                if object == player then
-                    player:SendBroadcastMessage(messagestring)
-                else
-                    object:SendUnitWhisper(messagestring, 0, player)
+            local maxPaid = MaxPaidCache[guid] or 0
+            if intid > maxPaid then
+                if not player:HasItem(currencyID, intid - 5) then
+                    player:GossipComplete()
+                    messagestring = "You don't have sufficient funds!"
+                    if object == player then
+                        player:SendBroadcastMessage(messagestring)
+                    else
+                        object:SendUnitWhisper(messagestring, 0, player)
+                    end
+                    return
                 end
-                return
+                player:RemoveItem(currencyID, intid - 5)
+                MaxPaidCache[guid] = intid
             end
-            player:RemoveItem(currencyID, intid - 5)
         end
-        XPCache[player:GetGUIDLow()] = intid
-        CharDBExecute("REPLACE INTO character_rate_xp (guid, rate) VALUES ('"..player:GetGUIDLow().."', '"..intid.."')")
+        XPCache[guid] = intid
+        CharDBExecute("REPLACE INTO character_rate_xp (guid, rate, max_paid_rate) VALUES ('"..guid.."', '"..intid.."', '"..(MaxPaidCache[guid] or 0).."')")
         messagestring = "Congratulations, you changed your experience rate to: x"..intid
         if object == player then
             player:SendBroadcastMessage(messagestring)
@@ -224,10 +242,11 @@ local function OnGiveXP(event, player, amount, victim)
 end 
 
 local function LoadXPCache()
-   CharDBQueryAsync("SELECT guid, rate FROM character_rate_xp", function(result)
+   CharDBQueryAsync("SELECT guid, rate, max_paid_rate FROM character_rate_xp", function(result)
        if result then
            repeat
                XPCache[result:GetUInt32(0)] = result:GetUInt8(1)
+               MaxPaidCache[result:GetUInt32(0)] = result:GetUInt8(2)
            until not result:NextRow()
        end
    end)
