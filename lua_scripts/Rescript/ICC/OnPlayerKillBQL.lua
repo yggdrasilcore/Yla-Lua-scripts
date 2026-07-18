@@ -1,8 +1,6 @@
 local function OnPlayerKillBQL(event, player, killed)
 	if killed:GetEntry() == 37955 then
 		
-		if killed:GetZ() > 403 then killed:MoveTo(0, killed:GetX(), killed:GetY(), 400.14) end -- Prevent flying death
-		
 		local group = player:GetGroup()
 		if group then
 			local members = group:GetMembers()
