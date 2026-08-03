@@ -997,7 +997,7 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
     local receiverName = receiver:GetName()
     local playerName = player:GetName()
 
-    if not isPlayerBot[receiverName] then return end
+    if not player:IsBot() then return end
 
     local masterName = nil
     for master, bots in pairs(activeBots) do
@@ -1009,6 +1009,8 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
         end
         if masterName then break end
     end
+    
+    if not masterName then return end
 
     if playerName ~= masterName then
         local masterResponses = {
