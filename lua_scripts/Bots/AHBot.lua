@@ -156,6 +156,7 @@ local NeverSellIDs			= {									-- Default: Various items not intended for AH s
 							   52252, -- Lightbringer Tabard	-- Additions here append to the SQL "NAME NOT" list. 
 							   44663, -- Adventurer's Satchel
 							   54822, -- Sen'Jin's Overcloak
+							   44508, -- "Discovery!" Alchemy dud item
 							   37201, -- Corpse Dust
 							   17195, -- Fake Mistletoe
 							   44432, -- China Glyph of Raise Dead??
