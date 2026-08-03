@@ -54,7 +54,7 @@ local function ArcaneBinder(event, player, item, target)
                     --print("Captured creature within range. Despawning creature.")
                     creature:DespawnOrUnsummon()
                     -- Stop the periodic check
-                    RemoveEventById(eventId())
+                    RemoveEventById(eventId)
                 end
             end, CHECK_INTERVAL * 1000, 0)
         end
