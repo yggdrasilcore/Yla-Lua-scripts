@@ -586,7 +586,7 @@ local function checkMount(player)
 	end
 end
 
-local function CheckFlyableArea(event, player, zoneId, areaId)
+function CheckFlyableArea(event, player, zoneId, areaId)
     if ZonesToCheckZ(player) then
 		if not event then checkMount(player) return end -- On script load, there's no event call, fire immediately
 		local d = 100 -- Else, default to a delay
