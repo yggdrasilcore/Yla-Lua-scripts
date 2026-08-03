@@ -40,7 +40,7 @@ local function TyrannusTactics(player)
     if not Tyrannus then return end
     
     if player:HasAura(OVERLORDS_BRAND) then -- Silence and pacify muted targets
-        DisableSpellCast(8000)
+        DisableSpellCast(player, 8)
         local pacify = player:AddAura(PACIFY, player)
         if pacify then pacify:SetDuration(8000) end
     end
