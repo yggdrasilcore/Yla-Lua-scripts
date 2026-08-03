@@ -1,5 +1,7 @@
 local function OnPacketReceive(event, packet, player)
 	local sel = player:GetSelection() -- Only proceed if player has a target
+	if not sel then return end
+	
 	local target = sel:ToCreature() -- Only proceed if target is a creature
 	
 	if target then
