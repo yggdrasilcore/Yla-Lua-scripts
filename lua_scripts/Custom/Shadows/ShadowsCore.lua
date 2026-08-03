@@ -1136,6 +1136,10 @@ local function OnBotCommand(event, player, command)
         
         if string.find(command, "^playerbots bot remove ") then
             local selectedChar = string.match(command, "^playerbots bot remove (.+)$")
+            
+            local selectedCharObj = GetPlayerByName(selectedChar)
+            if selectedCharObj then selectedCharObj:RemoveEvents() end
+            
             for i, botName in ipairs(activeBots[name]) do
                 if botName == selectedChar then
                     table.remove(activeBots[name], i)
