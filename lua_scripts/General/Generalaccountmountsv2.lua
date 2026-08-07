@@ -438,6 +438,8 @@ local function SyncAccountMounts(event, player)
 	local pGUID = player:GetGUIDLow()
 	local pAccountId = player:GetAccountId()
 	local playerName = player:GetName()
+    
+    if player:GetGMRank() > 0 then return end
 	
 	CharDBQueryAsync("SELECT guid FROM characters WHERE account = "..pAccountId.." and guid <> "..pGUID, function(results)
 		local player = GetPlayerByName(playerName)

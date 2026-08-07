@@ -81,9 +81,9 @@ local function SyncCurrencyOnLogin(player, accountId)
 end
 
 local function AccountWideCurrency(event, player)
-    if isPlayerBot[player:GetName()] then 
-        return 
-    end
+    if isPlayerBot[player:GetName()] then return end
+    
+    if player:GetGMRank() > 0 then return end
     
     local accountId = player:GetAccountId()
     local playerName = player:GetName()
