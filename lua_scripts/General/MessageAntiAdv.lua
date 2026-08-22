@@ -46,6 +46,11 @@ local function antiPublishing(event, player, msg)
     if string.find(msg, "discord%.com") then
         return true  -- Allow the message since it contains "discord.com"
     end
+    
+    if string.find(msg, "%.%.") then
+        return true
+    end
+
     -- Check if the message contains "discord.com"
     if string.find(msg, "yggdrasilwow%.com") then
         return true  -- Allow the message since it contains "discord.com"
