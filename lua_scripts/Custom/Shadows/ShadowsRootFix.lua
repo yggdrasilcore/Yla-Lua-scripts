@@ -12,5 +12,6 @@ end
 RegisterPlayerEvent(28, OnPlayerMapChange)
 
 for _, player in ipairs(GetPlayersInWorld()) do
+    if not player:IsBot() then return end
     player:RegisterEvent(RootWatchdogLoop, 5000, 0)
 end
