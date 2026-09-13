@@ -20,6 +20,13 @@
 
 local pairs = pairs
 
+-- nil when obj is stale (invalidated), Map has no guid
+local function guidOf(obj, otype)
+    if otype == "Map" then return 1 end
+    local ok, guid = pcall(obj.GetGUIDLow, obj)
+    return ok and guid or nil
+end
+
 local variableStores = {
     Map = {},
     Player = {},
@@ -40,7 +47,8 @@ end
 
 local function DestroyObjData(event, obj)
     local otype = obj:GetObjectType()
-    local guid = otype == "Map" and 1 or obj:GetGUIDLow()
+    local guid = guidOf(obj, otype)
+    if not guid then return end
 
     if otype == "Player" then
         variableStores[otype][guid] = nil
@@ -60,7 +68,8 @@ end
 
 local function GetData(self, field)
     local otype = self:GetObjectType()
-    local guid = otype == "Map" and 1 or self:GetGUIDLow()
+    local guid = guidOf(self, otype)
+    if not guid then return nil end
     local varStore = variableStores[otype]
 
     if otype == "Player" then
@@ -85,7 +94,8 @@ end
 
 local function SetData(self, field, val)
     local otype = self:GetObjectType()
-    local guid = otype == "Map" and 1 or self:GetGUIDLow()
+    local guid = guidOf(self, otype)
+    if not guid then return end
     local varStore = variableStores[otype]
 
     if otype == "Player" then
