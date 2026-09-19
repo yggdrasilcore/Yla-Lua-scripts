@@ -937,37 +937,118 @@ local slotTypes = {
 
 function ItemCache.LoadCache()
 	ItemCache["Cache"] = {}
-	local i = 1
-	local Query
-	
-	WorldDBQueryAsync("SELECT entry, class, name, subclass, InventoryType, ItemLevel, RequiredLevel, Quality, maxcount FROM item_template WHERE ((InventoryType>0 AND InventoryType NOT IN (28, 27, 24, 18, 19, 12) AND ItemLevel < 200) OR (Name LIKE '%frostmourne%' AND ItemLevel < 201)) AND name NOT LIKE '%deprecated%' AND Quality != 7 AND name NOT LIKE '%Sword2H, Corrupted%' AND name NOT LIKE '%Tigole%' ORDER BY Name ASC;", function(Query)
-        if Query then
-            repeat
-                local name = Query:GetString(2)
-                local inventoryType = Query:GetUInt32(4)
-                local quality = Query:GetUInt32(7)
-                local maxcount = Query:GetUInt32(8)
-                if not (name:find("%(") or name:find("%)") or 
-                        name:find("%[") or name:find("%]") or 
-                        name:lower():find("unused") or name:lower():find("test")) then
-                    ItemCache["Cache"][i] = {
-                        entry = Query:GetUInt32(0),
-                        class = Query:GetUInt32(1),
-                        name = name,
-                        subclass = Query:GetUInt32(3),
-                        InventoryType = inventoryType,
-                        itemLevel = Query:GetUInt32(5),
-                        level = Query:GetUInt32(6),
-                        quality = quality,
-                        maxcount = maxcount
-                    }
-                    i = i + 1
-                end
-            until not Query:NextRow()
-            table.sort(ItemCache["Cache"], function(a, b)
-                return a.name < b.name
-            end)
-        end
+	ItemCache["Allowed"] = {}
+
+	local baseRows = {}
+	local pending = 12
+	local allowed = ItemCache["Allowed"]
+
+	local function done()
+		pending = pending - 1
+		if pending > 0 then
+			return
+		end
+		local i = 1
+		for _, row in ipairs(baseRows) do
+			if allowed[row.entry] then
+				ItemCache["Cache"][i] = row
+				i = i + 1
+			end
+		end
+		table.sort(ItemCache["Cache"], function(a, b)
+			return a.name < b.name
+		end)
+		baseRows = nil
+	end
+
+	local function collectIds(result)
+		if result then
+			repeat
+				local id = result:GetInt32(0)
+				if id > 0 then
+					allowed[id] = true
+				end
+			until not result:NextRow()
+		end
+	end
+
+	-- 1. all items from drops, one query per loot table
+	for _, lootTable in ipairs({"creature_loot_template", "gameobject_loot_template", "item_loot_template", "reference_loot_template", "spell_loot_template", "mail_loot_template", "fishing_loot_template"}) do
+		local tbl = lootTable
+		WorldDBQueryAsync("SELECT DISTINCT Item FROM "..tbl, function(result)
+			collectIds(result)
+			done()
+		end)
+	end
+
+	-- 2. all items from npc vendors (blizzlike vendors only, skip custom 100000+ entries)
+	WorldDBQueryAsync("SELECT DISTINCT item FROM npc_vendor WHERE entry < 100000", function(result)
+		collectIds(result)
+		done()
+	end)
+
+	-- 3. all items from achis
+	WorldDBQueryAsync("SELECT DISTINCT ItemID FROM achievement_reward WHERE ItemID <> 0", function(result)
+		collectIds(result)
+		done()
+	end)
+
+	-- 4. all items from spells (Effect 24 = CREATE_ITEM, matched in Lua)
+	WorldDBQueryAsync("SELECT Effect_1, EffectItemType_1, Effect_2, EffectItemType_2, Effect_3, EffectItemType_3 FROM spell_dbc WHERE Effect_1 = 24 OR Effect_2 = 24 OR Effect_3 = 24", function(result)
+		if result then
+			repeat
+				if result:GetUInt32(0) == 24 and result:GetUInt32(1) ~= 0 then
+					allowed[result:GetUInt32(1)] = true
+				end
+				if result:GetUInt32(2) == 24 and result:GetUInt32(3) ~= 0 then
+					allowed[result:GetUInt32(3)] = true
+				end
+				if result:GetUInt32(4) == 24 and result:GetUInt32(5) ~= 0 then
+					allowed[result:GetUInt32(5)] = true
+				end
+			until not result:NextRow()
+		end
+		done()
+	end)
+
+	-- x. any other source: quest rewards and quest choices
+	WorldDBQueryAsync("SELECT RewardItem1, RewardItem2, RewardItem3, RewardItem4, RewardChoiceItemID1, RewardChoiceItemID2, RewardChoiceItemID3, RewardChoiceItemID4, RewardChoiceItemID5, RewardChoiceItemID6 FROM quest_template", function(result)
+		if result then
+			repeat
+				for col = 0, 9 do
+					local id = result:GetUInt32(col)
+					if id ~= 0 then
+						allowed[id] = true
+					end
+				end
+			until not result:NextRow()
+		end
+		done()
+	end)
+
+	-- 5. all candidate item IDs from item_template, overlap math happens in done()
+	WorldDBQueryAsync("SELECT entry, class, name, subclass, InventoryType, ItemLevel, RequiredLevel, Quality, maxcount FROM item_template WHERE ((InventoryType>0 AND InventoryType NOT IN (28, 27, 24, 18, 19, 12) AND ItemLevel < 200) OR (Name LIKE '%frostmourne%' AND ItemLevel < 201)) AND name NOT LIKE '%deprecated%' AND (Flags & 16) = 0 AND Quality NOT IN (6, 7) AND name NOT LIKE '%Sword2H, Corrupted%' AND name NOT LIKE '%Tigole%'", function(result)
+		if result then
+			repeat
+				local name = result:GetString(2)
+				if not (name:find("%(") or name:find("%)") or
+						name:find("%[") or name:find("%]") or
+						name:lower():find("unused") or name:lower():find("test")) then
+					table.insert(baseRows, {
+						entry = result:GetUInt32(0),
+						class = result:GetUInt32(1),
+						name = name,
+						subclass = result:GetUInt32(3),
+						InventoryType = result:GetUInt32(4),
+						itemLevel = result:GetUInt32(5),
+						level = result:GetUInt32(6),
+						quality = result:GetUInt32(7),
+						maxcount = result:GetUInt32(8)
+					})
+				end
+			until not result:NextRow()
+		end
+		done()
 	end)
 end
 
