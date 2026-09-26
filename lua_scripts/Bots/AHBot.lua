@@ -142,6 +142,13 @@ local ItemWeights = {
         [34753]  = 2.5, -- Great Feast
         [43480]  = 1,   -- Small Feast
         [35223]  = 2,   -- Papa Hummel's Pet Biscuits
+        
+        
+        [36905]  = 0.25,   -- Lichbloom
+        [36906]  = 0.25,   -- Icethorn
+        [36901]  = 0.25,   -- Goldclover
+        [37921]  = 0.25,   -- Deadnettle
+        
 		-- Example items to include that the auction house bots will weigh as separate categories.
 		-- Adding weights per item ID here can, for example, ensure that they are always sold by the AH in a desired (relative) quantity.
 		-- Example below: Frostweave Bag
