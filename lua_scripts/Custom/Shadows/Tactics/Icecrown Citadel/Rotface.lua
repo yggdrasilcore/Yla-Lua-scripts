@@ -1,3 +1,6 @@
+-- Multistate: Icecrown Citadel-only script (map 631).
+if not IsCompatibilityMode() and GetStateMapId() ~= 631 then return end
+
 local ROTFACE_ENTRY = 36627
 
 local function RotfaceZCheckLoop(eventId, delay, repeats, player)

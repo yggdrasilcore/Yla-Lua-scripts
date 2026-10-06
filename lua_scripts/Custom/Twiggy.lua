@@ -1,3 +1,24 @@
+local MS = require("Multistate")
+local EMQ = require("EMQ")
+
+-- Runs a .command in the global state (ChatHandler parsing must not run on map
+-- threads): directly in compatibility mode, otherwise forwarded via EMQ.
+EMQ.RegisterQueue("TwiggyRunCommand", function(player, data)
+    if player and data and data.cmd then
+        player:RunCommand(data.cmd)
+    end
+end)
+
+local function TwiggyRunCommand(player, cmd)
+    if not player or not cmd then
+        return
+    end
+    if MS.IsCompat() or MS.IsWorld() then
+        player:RunCommand(cmd)
+    else
+        player:SendEMQMessage("TwiggyRunCommand", { cmd = cmd })
+    end
+end
 -- Welcome to the Twiggy script :)
 
 -- Start Mall TP vars
@@ -106,8 +127,8 @@ local function ShowCategoryContents(player, creature, category, page)
 end
 
 local function VIPmenu(player, creature)
-	if player:GetData("VIPTime") and player:GetData("VIPTime") > os.time() then
-		local vipTime = player:GetData("VIPTime")
+	if MS.GetShared(player, "VIPTime") and MS.GetShared(player, "VIPTime") > os.time() then
+		local vipTime = MS.GetShared(player, "VIPTime")
 		local remainingTime = vipTime - os.time()
 
 		if remainingTime >= 86400 then
@@ -225,13 +246,13 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
     if intId == 1 then
 		mainMenu(player, creature)
 	elseif intId == 24 then
-		player:RunCommand("xpchangemenu "..os.time())
+		TwiggyRunCommand(player, "xpchangemenu "..os.time())
 	elseif intId == 8 then
-		player:RunCommand("shadowsmenu")
+		TwiggyRunCommand(player, "shadowsmenu")
 	elseif intId == 7 then
-		player:RunCommand("choosestandardfeathers")
+		TwiggyRunCommand(player, "choosestandardfeathers")
 	elseif intId == 6 then
-		player:RunCommand("rafmenu")
+		TwiggyRunCommand(player, "rafmenu")
 	elseif intId == 5 then
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_fire_burningspeed:32:32:-22:0|tRates", 0, 49)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_helmet_89:32:32:-22:0|tTransmog and morph services", 0, 50)
@@ -358,8 +379,8 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
         local durations = {[21]=7, [22]=14, [23]=21, [25]=31}
         if player:HasItem(19322, costs[intId]) then
             player:RemoveItem(19322, costs[intId])
-            local newTime = math.max(os.time(), player:GetData("VIPTime") or 0) + durations[intId] * 24 * 60 * 60
-            player:SetData("VIPTime", newTime)
+            local newTime = math.max(os.time(), MS.GetShared(player, "VIPTime") or 0) + durations[intId] * 24 * 60 * 60
+            MS.SetShared(player, "VIPTime", newTime)
             AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. player:GetAccountId() .. ", " .. newTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
             VIPmenu(player, creature)
         else

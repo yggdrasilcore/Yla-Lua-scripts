@@ -1,3 +1,7 @@
+-- Multistate: PLAYER_EVENT_ON_LOGIN (3) only fires in the global state (the
+-- Guild API used here is world-only as well).
+if GetStateMapId() ~= -1 then return end
+
 local EVENT_PLAYER_LOGIN = 3
 
 -- Function to handle the event

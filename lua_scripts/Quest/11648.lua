@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local QUEST_ID = 11648
 local REQUIRED_CASTS = 5
 local NPC_ID = 25478

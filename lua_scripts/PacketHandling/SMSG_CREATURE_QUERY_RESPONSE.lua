@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local SMSG_CREATURE_QUERY_RESPONSE = 0x061
 
 local function SendCreatureQueryResponse(player, entry, name, subname, iconName, typeFlags, creatureType, family, rank, killCredit1, killCredit2, modelId1, modelId2, modelId3, modelId4, modHealth, modMana, racialLeader, questItems, movementId)
@@ -86,7 +89,7 @@ local mapCreatures = {
 }
 
 local function OnMapChange(event, player)
-    if isPlayerBot[player:GetName()] then return end
+    if ShadowGetMaster(player:GetName()) then return end
     local mapId = player:GetMapId()
     if mapCreatures[mapId] then
         mapCreatures[mapId](player)

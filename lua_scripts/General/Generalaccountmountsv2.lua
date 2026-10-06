@@ -1,3 +1,6 @@
+-- Multistate: global-only script (all hooks fire in the world state).
+if GetStateMapId() ~= -1 then return end
+
 ------------------------------------------------------------------------------------------------
 -- ACCOUNT MOUNTS MOD
 ------------------------------------------------------------------------------------------------

@@ -2,6 +2,14 @@
 -- Conf
 ----------------------------------------------------------------------------------------------------
 
+-- Multistate: this logger intentionally runs in every state. World-only sources
+-- (world update, auction, weather, addon, commands, logins) are collected in the
+-- global state; map-only sources (map update, area triggers, creature/GO delete,
+-- player saves) are collected in each map state. Every state flushes its own
+-- caches to the shared statistics table on its own timer. Player counting is
+-- state-aware because GetPlayersInWorld() only exists in the global state.
+local MS = require("Multistate")
+
 -- Global config
 local EnableModule		= true		-- Enable == true, disable == false
 
@@ -76,7 +84,7 @@ local function CacheDataPoints()
 	if EnableDebug then print("[Eluna Server Logger]: Storing data point ".. DataPointCount .. " for session ".. SessionID .." to database...") end
 	local values = {}
 	
-	table.insert(values, "('pCount', " .. #GetPlayersInWorld() .. ", NULL, " .. os.time() .. ")")
+	table.insert(values, "('pCount', " .. MS.CountPlayers() .. ", NULL, " .. os.time() .. ")")
 
 	local totalDiff = 0
 	for _, diff in ipairs(event13Cache) do

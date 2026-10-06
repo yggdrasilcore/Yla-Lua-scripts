@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local function StandStillWhiteCasting(event, player, spell, _)
 	local name = player:GetName()
 	if not player:IsBot() then return end

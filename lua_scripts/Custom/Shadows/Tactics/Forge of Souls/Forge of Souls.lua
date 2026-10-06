@@ -1,3 +1,6 @@
+-- Multistate: Forge of Souls-only script (map 632).
+if not IsCompatibilityMode() and GetStateMapId() ~= 632 then return end
+
 local BRONJAHM_ID           = 36497
 local BRONJAHM_CENTER_POS   = { 5297, 2506, 686.07 }
 local BRONJAHM_RADIUS       = 22
@@ -220,4 +223,4 @@ local function OnEnterFoS(event, player)
 end
 
 RegisterPlayerEvent(28, OnEnterFoS)
-for _, player in ipairs(GetPlayersInWorld()) do OnEnterFoS(nil, player) end
+require("Multistate").ForEachPlayer(function(player) OnEnterFoS(nil, player) end)

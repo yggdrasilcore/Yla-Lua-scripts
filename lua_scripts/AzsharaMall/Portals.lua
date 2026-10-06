@@ -1,3 +1,6 @@
+-- Multistate: Azshara Mall-only script (mall map 37).
+if not IsCompatibilityMode() and GetStateMapId() ~= 37 then return end
+
 local function OnHordePortal(e, g, p)
     if p:IsAlliance() then
         p:SendBroadcastMessage("You cannot use this portal.")

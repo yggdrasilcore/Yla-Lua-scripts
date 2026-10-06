@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local preFallZTolerance = 2
 
 local function CheckPlayer(eventId, delay, repeats, player)
@@ -137,7 +140,7 @@ local function CheckPlayer(eventId, delay, repeats, player)
 end
 
 local function RegisterPlayerCheck(event, player)
-    if isPlayerBot[player:GetName()] then return end
+    if ShadowGetMaster(player:GetName()) then return end
     local existingEvent = player:GetData("MapGlitchEvent")
     if existingEvent then player:RemoveEventById(existingEvent) end
 
@@ -146,4 +149,6 @@ local function RegisterPlayerCheck(event, player)
 end
 
 RegisterPlayerEvent(28, RegisterPlayerCheck)
-for _, player in ipairs(GetPlayersInWorld()) do RegisterPlayerCheck(_, player) end
+-- Multistate: state-aware catch-up for already-online players (server start or
+-- reload). GetPlayersInWorld() only exists in the global state.
+require("Multistate").ForEachPlayer(function(player) RegisterPlayerCheck(nil, player) end)

@@ -1,3 +1,6 @@
+-- Multistate: Icecrown Citadel-only script (map 631).
+if not IsCompatibilityMode() and GetStateMapId() ~= 631 then return end
+
 local LADY_DEATHWHISPER_ENTRY = 36855
 
 local function LadyDeathwhisper10Loop(eventId, delay, repeats, deathwhisper)
@@ -90,4 +93,4 @@ local function OnEnterMap631(event, player)
 end
 
 RegisterPlayerEvent(28, OnEnterMap631)
-for _, player in ipairs(GetPlayersInWorld()) do OnEnterMap631(_, player) end
+require("Multistate").ForEachPlayer(function(player) OnEnterMap631(nil, player) end)

@@ -1,3 +1,6 @@
+-- Multistate: Black Temple-only script (map 564).
+if not IsCompatibilityMode() and GetStateMapId() ~= 564 then return end
+
 local ids = {22856, 23418, 23419, 23420}
 
 local function CheckReliquaryPullLoop(eventId, delay, repeats, player)
@@ -20,4 +23,4 @@ local function CheckReliquaryPull(event, player)
 end
 
 RegisterPlayerEvent(28, CheckReliquaryPull)
-for _, player in ipairs(GetPlayersInWorld()) do CheckReliquaryPull(_, player) end
+require("Multistate").ForEachPlayer(function(player) CheckReliquaryPull(nil, player) end)

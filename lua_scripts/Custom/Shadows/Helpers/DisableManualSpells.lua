@@ -199,7 +199,7 @@ local function OnMapChange(event, player)
         CharDBQueryAsync(
             string.format("SELECT spell_id FROM acore_eluna.disable_shadows_spells WHERE guid = %d", guidLow),
             function(query)
-                local player = GetPlayerByGUID(guid)
+                local player = require("Multistate").FindPlayerByGUID(guid)
                 if not player then return end
                 
                 if query then
@@ -255,7 +255,7 @@ local function OnSave(event, player)
     CharDBQueryAsync(
         string.format("SELECT spell_id FROM acore_eluna.disable_shadows_spells WHERE guid = %d", guidLow),
         function(query)
-            local player = GetPlayerByGUID(guid)
+            local player = require("Multistate").FindPlayerByGUID(guid)
             if not player then return end
             
             if query then
@@ -291,6 +291,31 @@ RegisterPlayerEvent(34, OnLeaveCombat)
 RegisterPlayerEvent(25, OnSave)
 CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.disable_shadows_spells (`guid` INT UNSIGNED NOT NULL, `spell_id` INT UNSIGNED NOT NULL, PRIMARY KEY (`guid`, `spell_id`))")
 
+-- Multistate: the disablespells command fires globally but spell removal must
+-- run on the target's map state.
+local MS = require("Multistate")
+local EMQ = require("EMQ")
+
+EMQ.RegisterQueue("DisableSpellsCmd", function(player, data)
+    if not player or not data then
+        return
+    end
+    local target = nil
+    local sel = player:GetSelection()
+    if sel and data.targetGuidLow and sel:GetGUIDLow() == data.targetGuidLow then
+        target = sel:ToPlayer()
+    elseif data.targetName then
+        target = MS.FindPlayerByName(data.targetName)
+    end
+    if target then
+        DisableManualSpells(target)
+        player:SendBroadcastMessage("DisableManualSpells executed on " .. target:GetName())
+    else
+        player:SendBroadcastMessage("DisableManualSpells target not found on this map.")
+    end
+end)
+
+-- (Queue registered above in every state; the command below only fires globally.)
 local function OnDisableSpellsCommand(event, player, command)
     if command == "disablespells" and player:GetGMRank() > 0 then
 		
@@ -307,12 +332,19 @@ local function OnDisableSpellsCommand(event, player, command)
         end
         
         local targetPlayer = target:ToPlayer()
-        
-        DisableManualSpells(targetPlayer)
-        player:SendBroadcastMessage("DisableManualSpells executed on " .. targetPlayer:GetName())
-        
+
+        local data = { targetGuidLow = target:GetGUIDLow(), targetName = targetPlayer:GetName() }
+        if MS.IsCompat() then
+            DisableManualSpells(targetPlayer)
+            player:SendBroadcastMessage("DisableManualSpells executed on " .. targetPlayer:GetName())
+        else
+            player:SendEMQMessage("DisableSpellsCmd", data)
+        end
+
         return false
     end
 end
 
-RegisterPlayerEvent(42, OnDisableSpellsCommand)
+if GetStateMapId() == -1 then
+    RegisterPlayerEvent(42, OnDisableSpellsCommand)
+end

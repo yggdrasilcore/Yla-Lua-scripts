@@ -1,3 +1,9 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 -- ----------------------------------------------------------------------------------------------
 -- ACCOUNTWIDE CURRENCY CONFIG 
 --
@@ -47,7 +53,7 @@ local function SyncCurrencyOnLogin(player, accountId)
         print("[AccountCurrency] SyncCurrencyOnLogin: Player " .. name .. " has " .. playerCurrencyCount .. " of currency " .. currencyId)
         
         CharDBQueryAsync("SELECT count FROM accountwide_currency WHERE accountId = " .. accountId .. " AND currencyId = " .. currencyId, function(query)
-            local player = GetPlayerByName(name)
+            local player = require("Multistate").FindPlayerByName(name)
             if not player then 
                 print("[AccountCurrency] SyncCurrencyOnLogin: Player " .. name .. " no longer exists, aborting sync")
                 return 
@@ -81,7 +87,7 @@ local function SyncCurrencyOnLogin(player, accountId)
 end
 
 local function AccountWideCurrency(event, player)
-    if isPlayerBot[player:GetName()] then return end
+    if ShadowGetMaster(player:GetName()) then return end
     
     if player:GetGMRank() > 0 then return end
     

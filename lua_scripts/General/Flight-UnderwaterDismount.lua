@@ -1,3 +1,6 @@
+-- Multistate: global-only script (all hooks fire in the world state).
+if GetStateMapId() ~= -1 then return end
+
 local BUFFIDS = {
     3363, 8153, 32235, 32239, 32240,
     32242, 32243, 32244, 32245, 32246, 32289, 32290, 32292, 32295, 32296, 32297, 32345,

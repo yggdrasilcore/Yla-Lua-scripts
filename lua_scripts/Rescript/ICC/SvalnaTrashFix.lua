@@ -1,3 +1,6 @@
+-- Multistate: Icecrown Citadel-only script (map 631).
+if not IsCompatibilityMode() and GetStateMapId() ~= 631 then return end
+
 local function CheckWarlordDeath(eventId, delay, repeats, creature)    
     if creature then
         if not creature:IsAlive() or not creature:IsInCombat() then

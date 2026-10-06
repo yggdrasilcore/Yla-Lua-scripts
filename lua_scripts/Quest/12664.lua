@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local NPC_ID = 28666
 local MENU_ID = 9732
 local SPELL_ID = 52194

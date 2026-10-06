@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local Z_TOLERANCE = 2 -- Proxy for object height
 
 local function OnPlayerKillCreature(event, player, killed)

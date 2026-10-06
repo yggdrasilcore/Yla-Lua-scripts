@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local function UseRockFalcon(event, player, item, target)
     if not target or not (target:GetEntry() == 24747) then
         return false

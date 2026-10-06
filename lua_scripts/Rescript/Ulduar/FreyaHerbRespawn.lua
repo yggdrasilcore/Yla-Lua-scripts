@@ -1,3 +1,6 @@
+-- Multistate: Ulduar-only script (map 603).
+if not IsCompatibilityMode() and GetStateMapId() ~= 603 then return end
+
 local lastPlayerHeartbeat = {}
 local ULDUAR_MAP_ID = 603
 local FREYA_AREA_ID = 4656
@@ -51,7 +54,8 @@ end
 
 RegisterPlayerEvent(28, OnMapChange)
 
-local players = GetPlayersInWorld()
+local players = {}
+require("Multistate").ForEachPlayer(function(p) table.insert(players, p) end)
 for _, player in ipairs(players) do
     if player:GetMapId() == ULDUAR_MAP_ID then
         player:RegisterEvent(OnHeartbeat, 60 * 1000, 0)

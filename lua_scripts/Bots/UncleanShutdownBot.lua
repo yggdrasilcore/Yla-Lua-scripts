@@ -1,3 +1,7 @@
+-- Multistate: shutdown/startup hooks (server events 11, 12, 14) only fire in the
+-- global state, so this script is global-only.
+if GetStateMapId() ~= -1 then return end
+
 local function onStartup(event)
     CharDBQueryAsync("SELECT value FROM acore_eluna.persistent_storage WHERE entry = 'dirty_shutdown'", function(query)
         if query and query:GetString(0) == "1" then

@@ -1,3 +1,6 @@
+-- Multistate: Azshara Mall-only script (mall map 37).
+if not IsCompatibilityMode() and GetStateMapId() ~= 37 then return end
+
 local NPC_ID = 190090
 local TOKEN_ITEM_ID = 20880
 local MAX_MENU_ITEMS = 8
@@ -155,7 +158,7 @@ local function OnPlayerMapChange(event, player)
     if player:GetData("InstanceResetLockChecked") then return end
     
     CharDBQueryAsync("SELECT command FROM acore_eluna.command_queue WHERE comment = " .. guid .. " AND executed = 0", function(q)
-        local player = GetPlayerByGUID(guid)
+        local player = require("Multistate").FindPlayerByGUID(guid)
         if not player then return end
 
         if q then
@@ -310,7 +313,7 @@ local function ResetInstanceLockout(player, map, difficulty, targetGuid, targetN
 
     if not ChargeTokens(player, tokenCost) then return end
 
-    local onlineTarget = GetPlayerByGUID(targetGuid)
+    local onlineTarget = require("Multistate").FindPlayerByGUID(targetGuid)
     if onlineTarget then
         onlineTarget:UnbindInstance(map, difficulty)
         CharDBExecute("DELETE FROM character_instance WHERE guid = " .. targetGuid .. " AND instance IN (SELECT id FROM instance WHERE map = " .. map .. " AND difficulty = " .. difficulty .. ")")
@@ -528,9 +531,11 @@ local function OnGossipSelect(event, player, creature, sender, intid, code, menu
     player:GossipComplete()
 end
 
-for _, player in ipairs(GetPlayersInWorld()) do
+-- Multistate: state-aware catch-up for already-online players (server start or
+-- reload). GetPlayersInWorld() only exists in the global state.
+require("Multistate").ForEachPlayer(function(player)
     OnPlayerMapChange(nil, player)
-end
+end)
 
 RegisterPlayerEvent(28, OnPlayerMapChange)
 RegisterCreatureGossipEvent(NPC_ID, 1, OnGossipHello)

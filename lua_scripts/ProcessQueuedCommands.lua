@@ -1,3 +1,7 @@
+-- Multistate: the command-queue pump (global timer + RunCommand) must run exactly
+-- once server-wide in the global state.
+if GetStateMapId() ~= -1 then return end
+
 local function ProcessCommandQueue()
     CharDBQueryAsync("SELECT command FROM acore_eluna.command_queue WHERE executed IS NULL", function(query)
         if query then

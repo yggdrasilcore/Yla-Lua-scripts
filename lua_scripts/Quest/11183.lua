@@ -1,3 +1,28 @@
+-- Multistate: creature events fire in map states, but Group member listing is
+-- world-only, so group-wide quest credit is forwarded via EMQ.
+local MS = require("Multistate")
+local EMQ = require("EMQ")
+
+EMQ.RegisterQueue("Quest11183Credit", function(player, data)
+    if not player then
+        return
+    end
+    local group = player:GetGroup()
+    if group then
+        for _, member in ipairs(group:GetMembers()) do
+            if member:IsPlayer() then
+                member:CompleteQuest(QUEST_ID)
+            end
+        end
+    elseif player:IsPlayer() then
+        player:CompleteQuest(QUEST_ID)
+    end
+end)
+
+-- Multistate: map-only script (all hooks fire in map states; the EMQ queue
+-- above must still register in every state, hence the gate sits below it).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local SPELL_ID = 42521
 local ITEM_ID = 33113
 local newZelfrax = 238640
@@ -62,10 +87,14 @@ local function OnCreatureDeath(event, creature, killer)
     end
     local groupMembers = killer:GetGroup()
     if groupMembers then
-        for _, member in ipairs(groupMembers:GetMembers()) do
-            if member:IsPlayer() then
-                member:CompleteQuest(QUEST_ID)
+        if MS.IsCompat() or MS.IsWorld() then
+            for _, member in ipairs(groupMembers:GetMembers()) do
+                if member:IsPlayer() then
+                    member:CompleteQuest(QUEST_ID)
+                end
             end
+        elseif killer:IsPlayer() then
+            killer:SendEMQMessage("Quest11183Credit", {})
         end
     else
         if killer:IsPlayer() then

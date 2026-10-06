@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local RP_GG_ITEM = 42986
 local RP_GG_SPELL = 49761
 local RP_GG_MIN_RANGE = 12

@@ -1,3 +1,6 @@
+-- Multistate: Drak'Tharon Keep-only script (map 600).
+if not IsCompatibilityMode() and GetStateMapId() ~= 600 then return end
+
 local MAP_ID       = 600
 local TICK_TIMER   = 100 -- ms
 local NUDGE_Z      = 1 -- yds
@@ -23,4 +26,4 @@ local function OnEnterDTK(event, player)
 end
 
 RegisterPlayerEvent(28, OnEnterDTK)
-for _, player in ipairs(GetPlayersInWorld()) do OnEnterDTK(nil, player) end
+require("Multistate").ForEachPlayer(function(player) OnEnterDTK(nil, player) end)

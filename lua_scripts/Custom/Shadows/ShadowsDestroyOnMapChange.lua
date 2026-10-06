@@ -6,7 +6,8 @@ local function SMSG_DESTROY_OBJECT(target, object, onDeath)
 end
 
 local function sendDestroy(player, storedMap)
-    local players = GetPlayersInWorld()
+    local players = {}
+    require("Multistate").ForEachPlayer(function(p) table.insert(players, p) end)
     for _, p in ipairs(players) do
         if p:GetMapId() == storedMap then
             SMSG_DESTROY_OBJECT(p, player, false)
@@ -52,6 +53,6 @@ end
 RegisterPlayerEvent(28, onMapChanged)
 RegisterPlayerEvent(4, onLogout)
 
-for _, player in ipairs(GetPlayersInWorld()) do
+require("Multistate").ForEachPlayer(function(player)
     onMapChanged(nil, player)
-end
+end)

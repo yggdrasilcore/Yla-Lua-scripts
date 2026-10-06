@@ -1,6 +1,10 @@
 -- Require libs and whatever else has payloads defined
 require('lualzw')
 require('Smallfolk')
+-- Multistate: packet, addon-message, login and timer handlers here all run in the
+-- global state, so this file is global-only.
+if GetStateMapId() ~= -1 then return end
+
 require('Payloads')
 
 -- Name of the global table storing the injected functionality
@@ -169,7 +173,7 @@ local function PushInitModule(eventid, delay, repeats)
 end
 
 local function AwaitInjection(event, player)
-    if isPlayerBot[player:GetName()] then return end
+    if ShadowGetMaster(player:GetName()) then return end
 	player:QueueWardenPayload()
 	player:SetData("ModuleInit", false)
     pushingModule[player:GetGUIDLow()] = true
@@ -183,7 +187,7 @@ local function SetReloadFlag(event, packet, player)
 end
 
 local function AwaitPacketInjection(event, packet, player)
-    if isPlayerBot[player:GetName()] then return end
+    if ShadowGetMaster(player:GetName()) then return end
     if player:GetData("JustReloaded") and player:GetData("JustReloaded") > os.time() and not pushingModule[player:GetGUIDLow()] then -- Inject only if both cancel logout AND set action bars called close to each other, and not currently injecting to player 
         player:QueueWardenPayload()
         player:SetData("ModuleInit", false)

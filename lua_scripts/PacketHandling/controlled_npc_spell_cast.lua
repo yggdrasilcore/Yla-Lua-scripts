@@ -1,3 +1,6 @@
+-- Multistate: global-only script (all hooks fire in the world state).
+if GetStateMapId() ~= -1 then return end
+
 local function controllednpcspellcast(event, packet, player)
     if not player then
         return

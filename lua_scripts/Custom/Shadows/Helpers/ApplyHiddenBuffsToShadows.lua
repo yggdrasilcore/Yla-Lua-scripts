@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local tankBuffs = {39423}
 local casterBuffs = {51040, 31750, 34772}
 local healerBuffs = {51040, 51041}

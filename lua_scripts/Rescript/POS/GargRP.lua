@@ -1,3 +1,6 @@
+-- Multistate: Pit of Saron-only script (map 658).
+if not IsCompatibilityMode() and GetStateMapId() ~= 658 then return end
+
 -- POS Gargoyle event on the 4 slaves between Ick and the entrance (the ones without a ball and chain)
 -- Made for Yggdrasil WoW by mostly nick :)
 
@@ -57,7 +60,8 @@ end
 
 local function CheckPlayersAndSpawnNPCs()
     for playerName, _ in pairs(PLAYERS_ON_MAP) do
-        local player = GetPlayerByName(playerName)
+        -- Multistate: state-aware lookup (this timer runs in map states).
+        local player = require("Multistate").FindPlayerByName(playerName)
         if player then
             local instance = player:GetInstanceId()
             local x, y, z = player:GetLocation()

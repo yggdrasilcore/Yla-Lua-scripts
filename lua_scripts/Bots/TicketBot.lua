@@ -1,3 +1,7 @@
+-- Multistate: packet events and GetPlayerByGUID() only exist in the global state,
+-- and the polling timers must run exactly once server-wide, so this script is global-only.
+if GetStateMapId() ~= -1 then return end
+
 local DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1271259248697020416/d06Mm8lDRGspWsVpAwU1p2ZgJNlDWinTLdnOZqE7krNPLV6R9bjWM8jL5Kif0X6tQlmo"
 
 local function SanitizeForJSON(str)

@@ -1,3 +1,6 @@
+-- Multistate: Icecrown Citadel-only script (map 631).
+if not IsCompatibilityMode() and GetStateMapId() ~= 631 then return end
+
 local SLIME_SPRAY = 69508
 
 local function OnSpellCast(event, caster, spell, skipCheck)

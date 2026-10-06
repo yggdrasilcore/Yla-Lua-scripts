@@ -1,3 +1,6 @@
+-- Multistate: Azshara Mall-only script (mall map 37).
+if not IsCompatibilityMode() and GetStateMapId() ~= 37 then return end
+
 local Beastmaster = {
     entry = 190011, -- Beastmaster entry.
     maxObj = 13, -- 13 = Max amount of menu objects.
@@ -76,19 +79,24 @@ function Beastmaster.OnSelect(event, player, unit, sender, intid, code)
 			player:SendAreaTriggerMessage("Taming pet... Please wait!")
             --Beastmaster.GenerateMenu(1, player, unit)
             -- Wait for 3 seconds before executing the following logic
+            -- Multistate: state-aware re-resolve (this timer runs in map states).
             CreateLuaEvent(function()
+                local MS = require("Multistate")
                 local finalPetCount = Beastmaster.GetPetCount(playerGUID)
-                local players = GetPlayersInWorld()
 
                	for playerName, _ in pairs(playerPayment) do
-					local player = GetPlayerByName(playerName)
-					playerPayment[player:GetName()] = nil
-                    if finalPetCount > initialPetCount then
-						player:ModifyMoney(-1000000)
-						player:SendBroadcastMessage("You have been charged 100 gold for taming the pet.")
-					else
-						player:SendBroadcastMessage("You must stable your pet before you can get another.")
-					end
+					local player = MS.FindPlayerByName(playerName)
+                    if not player then
+                        playerPayment[playerName] = nil
+                    else
+                        playerPayment[player:GetName()] = nil
+                        if finalPetCount > initialPetCount then
+                            player:ModifyMoney(-1000000)
+                            player:SendBroadcastMessage("You have been charged 100 gold for taming the pet.")
+                        else
+                            player:SendBroadcastMessage("You must stable your pet before you can get another.")
+                        end
+                    end
                 end
 
             end, 3000, 1)

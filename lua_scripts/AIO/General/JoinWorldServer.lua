@@ -1,3 +1,7 @@
+-- Multistate: PLAYER_EVENT_ON_FIRST_LOGIN (30) and PLAYER_EVENT_ON_LOGIN (3) only
+-- fire in the global state.
+if GetStateMapId() ~= -1 then return end
+
 local function onLoginEvent(event, player)
     if event == 30 or (event == 3 and player:GetClass() == 6 and player:GetLevel() == 55) then
         player:RegisterEvent(function(event, delay, repeats, player)

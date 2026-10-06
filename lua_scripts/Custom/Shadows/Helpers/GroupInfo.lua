@@ -200,6 +200,10 @@ RegisterPlayerEvent(42, OnCheckRoleCommand)
 
 local processedGroups = {}
 
+-- Multistate: load-time group sweep uses world-only APIs (GetPlayersInWorld,
+-- Group methods), so it runs in the global state only. The helper functions
+-- above stay available in every state for the tactics scripts.
+if require("Multistate").IsCompat() or require("Multistate").IsWorld() then
 local players = GetPlayersInWorld()
 for _, player in ipairs(players) do
     local group = player:GetGroup()
@@ -229,4 +233,5 @@ for _, player in ipairs(players) do
             end
         end
     end
+end
 end

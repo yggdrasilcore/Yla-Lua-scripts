@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local function RootWatchdogLoop(eventId, delay, repeats, player)
     if not player:IsBot() then player:RemoveEventById(eventId) return end
     if player:IsRooted() and not player:HasUnitState(0x00000400) then
@@ -11,7 +14,7 @@ end
 
 RegisterPlayerEvent(28, OnPlayerMapChange)
 
-for _, player in ipairs(GetPlayersInWorld()) do
+require("Multistate").ForEachPlayer(function(player)
     if not player:IsBot() then return end
     player:RegisterEvent(RootWatchdogLoop, 5000, 0)
-end
+end)

@@ -4,21 +4,26 @@ local bindingLifeTimer = {}
 local SPELL_BINDING_LIFE = 48809
 local bindingLifeCheck = {}
 
+-- Multistate: the item/zone handlers run in map states while the packet
+-- handler runs globally, so per-player timestamps live in shared Data().
+local MS = require("Multistate")
+
 local function RemoveBindingLife(event, packet, player)
     if not (player:GetAreaId() == FORGOTTENSHORE) then
         return
     end
     local playerName = player:GetName()
     
-    if bindingLifeCheck[playerName] and bindingLifeCheck[playerName] > os.time() then
+    if (MS.GetShared(player, "BindingLifeCheck") or 0) > os.time() then
         return
     end
 
-    if player:GetAreaId() == FORGOTTENSHORE and bindingLifeTimer[playerName]
+    if player:GetAreaId() == FORGOTTENSHORE and MS.GetShared(player, "BindingLifeTimer")
     and not player:IsInCombat() and not player:HasAura(SPELL_BINDING_LIFE)
     then
         player:RegisterEvent(function(eventid, delay, repeats, player)
-            local timestamp = bindingLifeTimer[playerName]
+            local timestamp = MS.GetShared(player, "BindingLifeTimer")
+            if not timestamp then return end
             local elapsedTime = os.time() - timestamp
 
             if elapsedTime < BINDING_LIFE_DURATION then
@@ -27,7 +32,7 @@ local function RemoveBindingLife(event, packet, player)
                 player:AddAura(SPELL_BINDING_LIFE, player)
 
                 local aura = player:GetAura(SPELL_BINDING_LIFE)
-                bindingLifeCheck[playerName] = os.time() + 1
+                MS.SetShared(player, "BindingLifeCheck", os.time() + 1)
                 if aura then
                     aura:SetDuration(remainingDuration * 1000) -- Convert to milliseconds
                 end
@@ -39,15 +44,15 @@ end
 local function OnBindingLife(event, player, item, target)
     local playerName = player:GetName()
     if player:GetAreaId() == FORGOTTENSHORE then
-        bindingLifeTimer[playerName] = os.time()
+        MS.SetShared(player, "BindingLifeTimer", os.time())
     end
 end
 
 local function onAreaChange(event, player, newArea, oldArea)
     local playerName = player:GetName()
 
-    if oldArea == FORGOTTENSHORE and bindingLifeTimer[playerName] then
-        bindingLifeTimer[playerName] = nil
+    if oldArea == FORGOTTENSHORE and MS.GetShared(player, "BindingLifeTimer") then
+        MS.ClearShared(player, "BindingLifeTimer")
     end
 end
 

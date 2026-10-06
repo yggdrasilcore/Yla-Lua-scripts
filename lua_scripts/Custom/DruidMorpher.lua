@@ -288,8 +288,66 @@ local function CacheCreatures()
     end)
 end
 
+-- Multistate: per-player morph caches are filled on login (global state) and on
+-- reload (every state), but map states also see fresh logins that never run
+-- their loader. These lazy loaders fill the LOCAL state's cache synchronously
+-- from the DB, so all map-side readers (gossip, Morpher) stay correct without
+-- cross-state sharing (morph progression itself is persisted in
+-- character_morphs). Morpher() additionally lazy-loads per form by itself.
+local MS = require("Multistate")
+
+local function EnsureDruidSelection(player)
+    if not player then
+        return
+    end
+    local guid = player:GetGUIDLow()
+    if morphSelection1[guid] or morphSelection2[guid] or morphSelection3[guid]
+        or morphSelection4[guid] or morphSelection5[guid] or morphSelection6[guid]
+        or morphSelection7[guid] then
+        return
+    end
+    local result = CharDBQuery("SELECT id, form FROM character_morphs WHERE guid = " .. guid .. " AND active = 1")
+    if result then
+        repeat
+            local id = result:GetUInt32(0)
+            local form = result:GetUInt32(1)
+            if form == 1 then morphSelection1[guid] = id
+            elseif form == 2 then morphSelection2[guid] = id
+            elseif form == 3 then morphSelection3[guid] = id
+            elseif form == 4 then morphSelection4[guid] = id
+            elseif form == 5 then morphSelection5[guid] = id
+            elseif form == 6 then morphSelection6[guid] = id
+            elseif form == 7 then morphSelection7[guid] = id
+            end
+        until not result:NextRow()
+    end
+end
+
+local function EnsureDruidCache(player)
+    if not player then
+        return
+    end
+    local guid = player:GetGUIDLow()
+    if creatureCache[guid] then
+        return
+    end
+    creatureCache[guid] = {}
+    local results = CharDBQuery("SELECT name, id, form FROM character_morphs WHERE guid = " .. guid)
+    if results then
+        repeat
+            local name = results:GetString(0)
+            local displayId = results:GetUInt32(1)
+            local formIndex = results:GetUInt32(2)
+            if not creatureCache[guid][formIndex] then
+                creatureCache[guid][formIndex] = {}
+            end
+            table.insert(creatureCache[guid][formIndex], { name = name, displayId = displayId })
+        until not results:NextRow()
+    end
+end
+
 local function LoadPlayerMorphs(player)
-    if isPlayerBot[player:GetName()] then return end
+    if ShadowGetMaster(player:GetName()) then return end
     if player:GetClass() ~= 11 then return end -- Only proceed for druids
     
     local guid = player:GetGUIDLow()
@@ -356,6 +414,8 @@ local function CheckIfNeedToApplyMorph(event, player)
 end
 
 local function OnKillCreature(event, player, creature)
+    EnsureDruidSelection(player)
+    EnsureDruidCache(player)
     if player:GetClass() ~= 11 then return end
     if not player:HasItem(17890) then return end
 
@@ -500,6 +560,8 @@ local function OnKillCreature(event, player, creature)
 end
 
 local function ShowInitialGossipMenu(player)
+    EnsureDruidSelection(player)
+    EnsureDruidCache(player)
     local guid = player:GetGUIDLow()
     
     -- Function to get active morph name
@@ -686,6 +748,8 @@ local function ShowGossipPage(player, formId, page)
 end
 
 local function OnGossipSelect(event, player, object, sender, intid, code, menu_id)
+    EnsureDruidSelection(player)
+    EnsureDruidCache(player)
     if player:IsPvPFlagged() then player:SendAreaTriggerMessage("You can't use druid morphs while flagged for PvP.") return false end
 
     if intid == 10 then
@@ -1051,6 +1115,8 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
 end
 
 local function OnGossipHello(event, player, object)
+    EnsureDruidSelection(player)
+    EnsureDruidCache(player)
     if player:GetClass() == 11 then -- Check if player is a druid
         if player:IsPvPFlagged() then player:SendAreaTriggerMessage("You can't use druid morphs while flagged for PvP.") return false end
         player:GossipComplete()
@@ -1373,7 +1439,7 @@ local function OnLogin(event, player)
         
         CharDBQueryAsync("SELECT id, form FROM character_morphs WHERE guid = "..guid.." AND active = 1", function(morphdb)
             if morphdb then
-                local player = GetPlayerByName(playername)
+                local player = MS.FindPlayerByName(playername)
                 if not player then return end
                 repeat
                     local id = morphdb:GetUInt32(0)
@@ -1411,7 +1477,8 @@ local function OnLogin(event, player)
 end
 
 local function ReloadEluna(event)
-    local players = GetPlayersInWorld()
+    local players = {}
+    MS.ForEachPlayer(function(p) table.insert(players, p) end)
     for _, player in ipairs(players) do
         if player:GetClass() == 11 and player:HasItem(17890) and not player:IsPvPFlagged() then 
             local guid = player:GetGUIDLow()
@@ -1421,7 +1488,7 @@ local function ReloadEluna(event)
             
             CharDBQueryAsync("SELECT id, form FROM character_morphs WHERE guid = "..guid.." AND active = 1", function(morphdb)
                 if morphdb then
-                    local player = GetPlayerByName(playername)
+                    local player = MS.FindPlayerByName(playername)
                     repeat
                         local id = morphdb:GetUInt32(0)
                         local form = morphdb:GetUInt32(1)

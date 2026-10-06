@@ -46,6 +46,37 @@ local RACE_QUESTS = {
 
 ----------------------------------------------
 ------------------- Code ---------------------
+-- Multistate: PLAYER_EVENT_ON_CHAT (18) fires in the global state, but the
+-- skip sequence mutates the player on its map, so it is forwarded via EMQ.
+local MS = require("Multistate")
+local EMQ = require("EMQ")
+
+-- Map-state executor (via EMQ, or directly in compatibility mode).
+local function DoSkipDK(player)
+    if not player then
+        return
+    end
+    -- Add Hearthstone
+    player:AddItem(ITEM_HEARTHSTONE)
+
+    -- Complete quests
+    AutoCompleteQuests(player, SHARED_QUESTS)
+    AutoCompleteQuests(player, RACE_QUESTS[player:GetRace()])
+
+    --Set correct level
+    if player:GetLevel() < 58 then
+        player:SetLevel(58)
+    end
+
+    -- Teleport to Dalaran
+    player:Teleport(571, 5849.55, 637, 647.52, 2.38338, TELE_TO_GM_MODE)
+
+    player:SendBroadcastMessage("You have skipped the Death Knight starter zone and been teleported to Dalaran.")
+end
+
+EMQ.RegisterQueue("CmdSkipDK", function(player, data) DoSkipDK(player) end)
+
+if GetStateMapId() ~= -1 then return end
 
 local function AutoCompleteQuests(player, quests)
     if not player or not quests then
@@ -66,23 +97,12 @@ local function DeathKnightSkipStarterZone(event, player, message, Type, lang)
             return
         end
 
-        -- Add Hearthstone
-        player:AddItem(ITEM_HEARTHSTONE)
-        
-        -- Complete quests
-        AutoCompleteQuests(player, SHARED_QUESTS)
-        AutoCompleteQuests(player, RACE_QUESTS[player:GetRace()])
-        
-        --Set correct level
-        if player:GetLevel() < 58 then
-            player:SetLevel(58)
+        if MS.IsCompat() then
+            DoSkipDK(player)
+        else
+            player:SendEMQMessage("CmdSkipDK", {})
         end
-        
-        -- Teleport to Dalaran
-        player:Teleport(571, 5849.55, 637, 647.52, 2.38338, TELE_TO_GM_MODE)
-        
-        player:SendBroadcastMessage("You have skipped the Death Knight starter zone and been teleported to Dalaran.")
-        
+
         return false
     end
 end

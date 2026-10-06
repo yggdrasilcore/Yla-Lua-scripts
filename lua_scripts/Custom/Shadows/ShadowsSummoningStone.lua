@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local function CompleteSummonIfShadowNearby(event, player, spell, skipCheck)
     local playersInRange = player:GetPlayersInRange(10, 2, 1)
     
@@ -21,7 +24,7 @@ local function CompleteSummonIfShadowNearby(event, player, spell, skipCheck)
             local targetGuid = player:GetData("Target")
             if not targetGuid then return end
     
-            local target = GetPlayerByGUID(targetGuid)
+            local target = require("Multistate").FindPlayerByGUID(targetGuid)
             if not target then return end
 
             local name = target:GetName()
@@ -45,7 +48,7 @@ local function SummonShadows(event, player, spell, skipCheck)
     local targetGuid = player:GetData("Target")
     if not targetGuid then return end
     
-    local bot = GetPlayerByGUID(targetGuid)
+    local bot = require("Multistate").FindPlayerByGUID(targetGuid)
     if not bot then return end
     
     local name = bot:GetName()
@@ -74,7 +77,7 @@ local function OnCastRitualOfSummoning(event, portal)
         local casterSpells = {}
         
         if FirstPlayerName then
-            FirstPlayerCasting = GetPlayerByName(FirstPlayerName)
+            FirstPlayerCasting = require("Multistate").FindPlayerByName(FirstPlayerName)
         end
         
         for _, player in ipairs(playersInRange) do

@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local BOREAN_ANIMAL_BLOOD = 46221
 local SPELL_TO_CAST = 63471
 local CHECK_DURATION = 180
@@ -6,7 +9,7 @@ local CHECK_FREQUENCY = 1000 -- Check once per second
 local playersWithEvents = {}
 
 local function CheckPlayerInWater(eventId, delay, repeats, playerGuid)
-    local player = GetPlayerByGUID(playerGuid)
+    local player = require("Multistate").FindPlayerByGUID(playerGuid)
 	--print("Event to check whether players are in water initiated.")
     if player then
         if not player:HasAura(BOREAN_ANIMAL_BLOOD) then

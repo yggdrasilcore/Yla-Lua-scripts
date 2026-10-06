@@ -1,3 +1,6 @@
+-- Multistate: Azshara Mall-only script (mall map 37).
+if not IsCompatibilityMode() and GetStateMapId() ~= 37 then return end
+
 local NPC_ID = 190013
 local EMBLEM_OF_FROST_ITEM_ID = 49426
 local DEFAULT_EMBLEMS_COST = 100

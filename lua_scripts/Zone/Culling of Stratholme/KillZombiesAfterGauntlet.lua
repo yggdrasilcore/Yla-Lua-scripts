@@ -1,3 +1,6 @@
+-- Multistate: Culling of Stratholme-only script (map 595).
+if not IsCompatibilityMode() and GetStateMapId() ~= 595 then return end
+
 local ARTHAS_ENTRY = 26499
 local ZOMBIE_ENTRY = 27737
 
@@ -28,4 +31,4 @@ local function OnPlayerMapChange(event, player)
 end
 
 RegisterPlayerEvent(28, OnPlayerMapChange)
-for _, player in ipairs(GetPlayersInWorld()) do OnPlayerMapChange(_, player) end
+require("Multistate").ForEachPlayer(function(player) OnPlayerMapChange(nil, player) end)

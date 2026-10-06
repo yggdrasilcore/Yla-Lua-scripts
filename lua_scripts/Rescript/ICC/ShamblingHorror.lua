@@ -1,3 +1,6 @@
+-- Multistate: Icecrown Citadel-only script (map 631).
+if not IsCompatibilityMode() and GetStateMapId() ~= 631 then return end
+
 local NPC_ID = 37698
 local SPELL_SHOCKWAVE = 72149
 local SPELL_ENRAGE = 72143
@@ -61,7 +64,7 @@ local function OnUpdateAI(event, creature, diff)
         local playersNearby = creature:GetPlayersInRange(10)
         for _, player in pairs(playersNearby) do
             local name = player:GetName()
-            if isPlayerBot[name] then
+            if ShadowGetMaster(name) then
                 creature:RegisterEvent(function(eventid, delay, repeats, creature)
                     creature:AddAura(17308, creature) -- Some generic 2-sec stun spell
                 end, 500, 1)

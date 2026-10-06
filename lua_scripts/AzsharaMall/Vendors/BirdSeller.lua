@@ -1,3 +1,6 @@
+-- Multistate: Azshara Mall-only script (mall map 37).
+if not IsCompatibilityMode() and GetStateMapId() ~= 37 then return end
+
 local NPC_ID = 190099 -- Replace with your NPC entry ID
 local ITEM_ID = 20739 -- Replace with the ID of the item to be sold
 

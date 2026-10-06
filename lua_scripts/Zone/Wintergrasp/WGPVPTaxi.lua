@@ -1,3 +1,6 @@
+-- Multistate: Northrend-only script (map 571).
+if not IsCompatibilityMode() and GetStateMapId() ~= 571 then return end
+
 local FLYING_MOUNTS = {
    3363, 8153, 32235, 32239, 32240,
    32242, 32243, 32244, 32245, 32246, 32289, 32290, 32292, 32295, 32296, 32297, 32345,

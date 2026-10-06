@@ -1,3 +1,6 @@
+-- Multistate: Ruby Sanctum-only script (map 724).
+if not IsCompatibilityMode() and GetStateMapId() ~= 724 then return end
+
 local function CalculateCirclePosition(map, centerX, centerY, radius, angleRadians)
     local x = centerX + radius * math.cos(angleRadians)
     local y = centerY + radius * math.sin(angleRadians)

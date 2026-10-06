@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local function TreeFormWatchdogLoop(eventId, delay, repeats, player)
     if not player:IsBot() then player:RemoveEventById(eventId) return end
     if not player:IsInCombat() then return end
@@ -13,4 +16,4 @@ local function OnPlayerMapChange(event, player)
 end
 
 RegisterPlayerEvent(28, OnPlayerMapChange)
-for _, player in ipairs(GetPlayersInWorld()) do OnPlayerMapChange(_, player) end
+require("Multistate").ForEachPlayer(function(player) OnPlayerMapChange(nil, player) end)

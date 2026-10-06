@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local XFacMaps = {[631]=1, [658]=1, [632]=1, [668]=1}
 local MaxGOCharges = {
     -- {gameObjectId, maxCharges}

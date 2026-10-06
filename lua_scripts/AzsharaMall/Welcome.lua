@@ -1,3 +1,6 @@
+-- Multistate: Azshara Mall-only script (mall map 37).
+if not IsCompatibilityMode() and GetStateMapId() ~= 37 then return end
+
 -- Event registration
 function OnGossipHello(event, player, creature)
    player:GossipClearMenu()

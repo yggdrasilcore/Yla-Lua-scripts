@@ -1,3 +1,6 @@
+-- Multistate: Tempest Keep-only script (map 550).
+if not IsCompatibilityMode() and GetStateMapId() ~= 550 then return end
+
 -- Prevents "Select True Beam" aura for persisting forever
 
 local SELECT_TRUE_BEAM = 33365

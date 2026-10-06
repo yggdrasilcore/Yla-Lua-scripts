@@ -1,3 +1,6 @@
+-- Multistate: global-only script (all hooks fire in the world state).
+if GetStateMapId() ~= -1 then return end
+
 local function LeaveVehiclePacket(event, packet, player) -- Adds parachute on vehicle change in certain Northrend areas
     if player:GetAreaId() == 4537 or player:GetAreaId() == 210 or player:GetAreaId() == 4509
     or player:GetAreaId() == 4510 or player:GetAreaId() == 4513 

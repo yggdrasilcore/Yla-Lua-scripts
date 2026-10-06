@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local function OnMapChange(event, player)
     if not player then return end    
     if (player:GetInstanceId() > 0)  -- If in instance, remove flight

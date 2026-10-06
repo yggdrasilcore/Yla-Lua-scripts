@@ -1,3 +1,6 @@
+-- Multistate: global-only script (all hooks fire in the world state).
+if GetStateMapId() ~= -1 then return end
+
 local function OnLogin(event, player)
     if not player:IsAlliance() and player:HasSpell(61425) then
         player:RemoveSpell(61425)

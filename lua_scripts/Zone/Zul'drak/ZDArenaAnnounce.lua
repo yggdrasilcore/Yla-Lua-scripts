@@ -1,3 +1,6 @@
+-- Multistate: Northrend-only script (map 571).
+if not IsCompatibilityMode() and GetStateMapId() ~= 571 then return end
+
 local YGGDRAS = 30014
 local STINKBEARD = 30017
 local ELEMENTAL1 = 30024

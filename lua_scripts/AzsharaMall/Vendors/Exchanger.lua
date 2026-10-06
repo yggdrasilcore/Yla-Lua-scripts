@@ -1,3 +1,6 @@
+-- Multistate: Azshara Mall-only script (mall map 37).
+if not IsCompatibilityMode() and GetStateMapId() ~= 37 then return end
+
 local NPC_ID = 190000
 
 local VOTE_TOKEN_NAME = "Vote Tokens"

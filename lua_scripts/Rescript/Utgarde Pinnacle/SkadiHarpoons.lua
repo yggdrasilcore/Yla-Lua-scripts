@@ -1,3 +1,6 @@
+-- Multistate: Utgarde Pinnacle-only script (map 575).
+if not IsCompatibilityMode() and GetStateMapId() ~= 575 then return end
+
 local function OnShootHarpoonLauncher(event, player, itemEntry)
     if itemEntry == 37372 then
         local turret = player:GetNearestGameObject(6)

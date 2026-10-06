@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local function OnUseGameObject(event, go, player)
     player:RegisterEvent(function(eventId, delay, repeats, player)
        if player:GetMapId() == 585 and player:HasQuest(11490) then

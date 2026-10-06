@@ -1,3 +1,6 @@
+-- Multistate: global-only script (all hooks fire in the world state).
+if GetStateMapId() ~= -1 then return end
+
 local HERBALISM_SKILL = 182
 local BASE_SPELLS = {
     2383,   -- Find Herbs

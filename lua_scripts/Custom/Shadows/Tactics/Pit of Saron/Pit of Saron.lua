@@ -1,3 +1,6 @@
+-- Multistate: Pit of Saron-only script (map 658).
+if not IsCompatibilityMode() and GetStateMapId() ~= 658 then return end
+
 local MAP_ID            = 658
 
 local GARFROST_ID       = 36494
@@ -89,4 +92,4 @@ local function OnEnterFoS(event, player)
 end
 
 RegisterPlayerEvent(28, OnEnterFoS)
-for _, player in ipairs(GetPlayersInWorld()) do OnEnterFoS(nil, player) end
+require("Multistate").ForEachPlayer(function(player) OnEnterFoS(nil, player) end)

@@ -1,7 +1,8 @@
 -- Makes Nibelung Valkyrs controllable by permanent pet classes (frost mage with glyph, warlock) as they were in retail
 -- Written by mostly nick :) for Yggdrasil WoW
-local ValkyrAttack = {}
-local ValkyrFollow = {}
+-- Multistate: the controlling packet arrives globally while the valkyr tick runs
+-- in map states, so command timestamps live in shared Data() on the owner.
+local MS = require("Multistate")
 
 local function NibelungValkyrFix(event, packet, player)
     if not player then
@@ -15,9 +16,9 @@ local function NibelungValkyrFix(event, packet, player)
         local petGuid = packet:ReadGUID()  -- Read the Pet GUID
         local count = packet:ReadUByte()   -- Read the count (uint8)
         if count == 2 then
-            ValkyrAttack[player:GetName()] = os.time()
+            MS.SetShared(player, "ValkyrAttack", os.time())
         elseif count == 1 then
-            ValkyrFollow[player:GetName()] = os.time()
+            MS.SetShared(player, "ValkyrFollow", os.time())
         end
     end
 end
@@ -30,9 +31,19 @@ local function OnValkyrSpawn(event, player, pet)
         
         pet:RegisterEvent(function(eventId, delay, repeats, pet)
             if pet then
-                local player = GetPlayerByName(name)
-                local attackTime = ValkyrAttack[name] or 0
-                local followTime = ValkyrFollow[name] or 0
+                local player = MS.FindPlayerByName(name)
+                if not player then
+                    local owner = pet:GetOwner()
+                    if owner and owner:IsPlayer() then
+                        player = owner:ToPlayer()
+                    end
+                end
+                if not player then
+                    RemoveEventById(eventId)
+                    return
+                end
+                local attackTime = MS.GetShared(player, "ValkyrAttack") or 0
+                local followTime = MS.GetShared(player, "ValkyrFollow") or 0
 
                 if attackTime > followTime and attackTime > os.time() - 1.5 then
                     pet:SetReactState(2)

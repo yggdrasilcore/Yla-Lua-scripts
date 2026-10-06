@@ -1,3 +1,6 @@
+-- Multistate: global-only script (all hooks fire in the world state).
+if GetStateMapId() ~= -1 then return end
+
 local MOVE_TO_POS = {x = 6423, y = 433, z = 511, o = 0.7}
 local HOME_POS = {x = 6409, y = 422, z = 511.348, o = 0.62}
 local eventActive3081 = false

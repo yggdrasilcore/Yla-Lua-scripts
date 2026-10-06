@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 -- RP addition for https://github.com/TrinityCore/TrinityCore/issues/14172
 -- Made by mostly nick :)
 

@@ -1,5 +1,8 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local function SendBroadcastWithCheck(playerGUID, message, itemEntry, itemCount, acc)
-	local player = GetPlayerByGUID(playerGUID)
+	local player = require("Multistate").FindPlayerByGUID(playerGUID)
 	local oldCount = player:GetItemCount(itemEntry)
 	player:AddItem(itemEntry, itemCount)
 	
@@ -30,7 +33,7 @@ local function SendBroadcastWithCheck(playerGUID, message, itemEntry, itemCount,
 end
 
 local function TokensOnLogin(event, player)
-    if isPlayerBot[player:GetName()] then return end
+    if ShadowGetMaster(player:GetName()) then return end
     if player:GetData("LoginChecked") then return end
     local acc = player:GetAccountId()
     local playerGUID = player:GetGUID()
@@ -38,7 +41,7 @@ local function TokensOnLogin(event, player)
     local votemessage = false
    
     CharDBQueryAsync("SELECT dp, vp FROM account_currencies WHERE id = " .. acc, function(query)
-        local player = GetPlayerByGUID(playerGUID)
+        local player = require("Multistate").FindPlayerByGUID(playerGUID)
  	    if not player then return end
  	    player:SetData("LoginChecked", true)
         if query then

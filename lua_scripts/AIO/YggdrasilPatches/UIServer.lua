@@ -1,4 +1,9 @@
 local AIO = require("AIO")
+-- Multistate: logout/command/packet/addon handlers run globally, save/map-change
+-- run in map states. The LvlRewards flags are read and written in both, so they
+-- live in shared Data() (visible in every state). The load-time sweep below is
+-- state-aware (GetPlayersInWorld is world-only).
+local MS = require("Multistate")
 
 local UIFixLimit = {}
 local NoAFKLogoutZones = {
@@ -40,23 +45,23 @@ local function AIO_UI_FIX(event, player, command)
 	local guid = player:GetGUIDLow()
 	
 	if event == 28 then -- on login/map change, check reward state
-		if player:GetData("LvlRewardsChecked") then return end
+		if MS.GetShared(player, "LvlRewardsChecked") then return end
 		CharDBQueryAsync("SELECT data FROM character_custom_data WHERE guid = "..guid.." AND type = 99", function(result)
-			local player = GetPlayerByGUID(GetPlayerGUID(guid))
+			local player = MS.FindPlayerByGUID(GetPlayerGUID(guid))
 			if result then
 				local data = result:GetString(0)
 				if not player then return end
 				if data == "DISABLED" then
-					player:SetData("LvlRewardsDisabled", true)
+					MS.SetShared(player, "LvlRewardsDisabled", true)
 				else
-					player:SetData("LvlRewardsDisabled", false)
+					MS.SetShared(player, "LvlRewardsDisabled", false)
 				end
-				player:SetData("LvlRewardsChecked", true)
+				MS.SetShared(player, "LvlRewardsChecked", true)
 			end
 		end)
 	elseif event == 4 or event == 25 then
-		if player:GetData("LvlRewardsChanged") then
-			if player:GetData("LvlRewardsDisabled") then
+		if MS.GetShared(player, "LvlRewardsChanged") then
+			if MS.GetShared(player, "LvlRewardsDisabled") then
 				CharDBExecute("REPLACE INTO character_custom_data (guid, type, time, data) VALUES ("..guid..", 99, "..os.time()..", 'DISABLED')")
 			else
 				CharDBExecute("REPLACE INTO character_custom_data (guid, type, time, data) VALUES ("..guid..", 99, "..os.time()..", 'ENABLED')")
@@ -82,16 +87,16 @@ local function AIO_UI_FIX(event, player, command)
 		-- LVL Reward Toggle in features tab
 		elseif command == "lvlrewardsoff" then
 			player:SendBroadcastMessage("Your level-up rewards have been disabled.")
-			player:SetData("LvlRewardsDisabled", true)
-			player:SetData("LvlRewardsChanged", true)
+			MS.SetShared(player, "LvlRewardsDisabled", true)
+			MS.SetShared(player, "LvlRewardsChanged", true)
 			return false
 		elseif command == "lvlrewardson" then
 			player:SendBroadcastMessage("Your level-up rewards have been enabled.")
-			player:SetData("LvlRewardsDisabled", false)
-			player:SetData("LvlRewardsChanged", true)
+			MS.SetShared(player, "LvlRewardsDisabled", false)
+			MS.SetShared(player, "LvlRewardsChanged", true)
 			return false
 		elseif command == "lvlrewardsstatus" then
-			local status = player:GetData("LvlRewardsDisabled")
+			local status = MS.GetShared(player, "LvlRewardsDisabled")
 			if status then
 				player:SendAddonMessage("LvlRewardsDisabled", "DISABLED", 7, player)
 			else
@@ -110,14 +115,14 @@ end
 local guidString = ""
 local first = true
 
-for _, player in ipairs(GetPlayersInWorld()) do   
+MS.ForEachPlayer(function(player)
    if first then
        guidString = tostring(player:GetGUIDLow())
        first = false
    else
        guidString = guidString .. "," .. player:GetGUIDLow()
    end
-end
+end)
 
 if not first then
    CharDBQueryAsync(
@@ -128,8 +133,8 @@ if not first then
                    local guid = result:GetUInt32(0)
                    local data = result:GetString(1)
                    if data == "DISABLED" then
-					   local player = GetPlayerByGUID(GetPlayerGUID(guid))
-					   if player then player:SetData("LvlRewardsDisabled", true) end
+					   local player = MS.FindPlayerByGUID(GetPlayerGUID(guid))
+					   if player then MS.SetShared(player, "LvlRewardsDisabled", true) end
 				   end
                until not result:NextRow()
            end

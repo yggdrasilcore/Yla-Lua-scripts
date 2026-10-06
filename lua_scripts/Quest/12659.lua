@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local function OnUseItem(event, player, item, target)
    if not player:GetSelection() then return false end
    local sel = player:GetSelection()

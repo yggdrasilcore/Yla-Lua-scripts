@@ -1,9 +1,11 @@
+local MS = require("Multistate")
+local EMQ = require("EMQ")
 local FeathersItem = 20739
 local FeathersSpell = 29118
 local MOUNTS_PER_PAGE = 10
 local MOUNT_DATA = {}
 local MOUNT_ICONS = {}
-local standardmount = {}
+-- Multistate: standardmount cache replaced by shared player Data (see below).
 local FLYING_MOUNTS = {
     3363, 8153, 32235, 32239, 32240,
     32242, 32243, 32244, 32245, 32246, 32289, 32290, 32292, 32295, 32296, 32297, 32345,
@@ -530,13 +532,13 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         local currentPage = intid - 500000
         ShowMountMenu(event, player, nil, nil, currentPage - 1, true)
     elseif intid == 300002 then
-        standardmount[player:GetGUIDLow()] = nil
+        MS.ClearShared(player, "FeathersStandardMount")
         print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is nil")
         player:SendBroadcastMessage("Standard mount removed.")
         CharDBExecute(string.format("DELETE FROM character_flight WHERE guid = %d", player:GetGUIDLow()))
         ShowManageStandardMount(event, player)
     elseif intid == 300003 then
-        standardmount[player:GetGUIDLow()] = nil
+        MS.ClearShared(player, "FeathersStandardMount")
         print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is nil")
         player:SendBroadcastMessage("Standard mount removed.")
         CharDBExecute(string.format("DELETE FROM character_flight WHERE guid = %d", player:GetGUIDLow()))
@@ -552,8 +554,8 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
     elseif intid >= 800000 then
         -- Mount selected as standard
         local mountId = intid - 800000
-        standardmount[player:GetGUIDLow()] = mountId
-        print("[Feathers of Azeroth]: Selecting standard mount for "..player:GetName().." is ".. standardmount[player:GetGUIDLow()].." (mount ID "..mountId..")")
+        MS.SetShared(player, "FeathersStandardMount", mountId)
+        print("[Feathers of Azeroth]: Selecting standard mount for "..player:GetName().." is ".. tostring(MS.GetShared(player, "FeathersStandardMount")) .." (mount ID "..mountId..")")
         CharDBExecute(string.format("REPLACE INTO character_flight (guid, standardmount) VALUES (%d, %d)", player:GetGUIDLow(), mountId))
         player:SendBroadcastMessage("Standard mount set successfully.")
         player:GossipComplete()
@@ -614,9 +616,10 @@ local function OnUseItem(event, player, item, target)
         return false
     end
     
-    if standardmount[player:GetGUIDLow()] and not player:IsCasting() then
-        player:CastSpell(player, standardmount[player:GetGUIDLow()], false)
-        print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is ".. standardmount[player:GetGUIDLow()])
+    local standardMount = MS.GetShared(player, "FeathersStandardMount")
+    if standardMount and not player:IsCasting() then
+        player:CastSpell(player, standardMount, false)
+        print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is ".. standardMount)
 		CheckFlyableArea(event, player, player:GetZoneId(), player:GetAreaId())
     else
         ShowMountMenu(event, player, item, target, 1)
@@ -647,8 +650,8 @@ local function LoadStandardMount(event, player)
     if result then
         local mountId = result:GetUInt32(0)
         if mountId  then
-            standardmount[guid] = mountId
-            print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is ".. standardmount[player:GetGUIDLow()])
+            MS.SetShared(player, "FeathersStandardMount", mountId)
+            print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is ".. mountId)
         end
     end
 end
@@ -656,13 +659,13 @@ end
 local function OnLoadScript()
     local dbQueryTable = {}
     
-    local players = GetPlayersInWorld()
-    for _, player in pairs(players) do
+    -- Multistate: state-aware enumeration (GetPlayersInWorld is world-only).
+    MS.ForEachPlayer(function(player)
         if player:HasItem(FeathersItem) then
             table.insert(dbQueryTable, player:GetGUIDLow())
 			CheckFlyableArea(event, player, player:GetZoneId(), player:GetAreaId())
         end
-    end
+    end)
     
     -- If we found any players with the item, query their standard mounts
     if #dbQueryTable > 0 then
@@ -675,7 +678,8 @@ local function OnLoadScript()
                 local guid = result:GetUInt32(0)
                 local mountId = result:GetUInt32(1)
                 if mountId then
-                    standardmount[guid] = mountId
+                    local p = MS.FindPlayerByGUID(guid)
+                    if p then MS.SetShared(p, "FeathersStandardMount", mountId) end
                 end
             until not result:NextRow()
         end
@@ -691,6 +695,17 @@ local function OnMoveSetFly(event, packet, player)
     end
 end
 
+-- Map-state executor for mount-by-command (via EMQ, or directly in compat mode).
+local function DoCastMountCommand(player, data)
+    if not player or not data or not data.spellId then
+        return
+    end
+    player:CastSpell(player, data.spellId, false)
+    CheckFlyableArea(42, player, player:GetZoneId(), player:GetAreaId())
+end
+
+EMQ.RegisterQueue("FeathersCastMount", DoCastMountCommand)
+
 local function OnCommand(event, player, command)
     if command == "choosestandardfeathers" then
         ShowManageStandardMountCmd(event, player)
@@ -703,8 +718,14 @@ local function OnCommand(event, player, command)
             then
                 return false
             end
-            player:CastSpell(player, spellId, false)
-            CheckFlyableArea(event, player, player:GetZoneId(), player:GetAreaId())
+            -- Multistate: the cast and the follow-up zone check must run on the
+            -- player's map state.
+            local data = { spellId = spellId }
+            if MS.IsCompat() then
+                DoCastMountCommand(player, data)
+            else
+                player:SendEMQMessage("FeathersCastMount", data)
+            end
             return false
         end
     end

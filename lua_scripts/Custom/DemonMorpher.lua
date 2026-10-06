@@ -168,6 +168,49 @@ local morph30 = {}
 local logincheck = {}
 local morphIdCache = {}
 
+-- Multistate: per-player morph caches are filled on login (global state) and on
+-- reload (every state), but map states also see fresh logins that never run
+-- their loader. This lazy loader fills the LOCAL state's cache synchronously
+-- from the DB, so all map-side readers stay correct without cross-state
+-- sharing (morph progression itself is persisted in character_morphs).
+local MS = require("Multistate")
+
+local function EnsureMorphCache(player)
+    if not player then
+        return
+    end
+    local guid = player:GetGUIDLow()
+    if morphIdCache[guid] then
+        return
+    end
+    morphIdCache[guid] = {}
+    morphCount[guid] = 0
+    local result = CharDBQuery("SELECT id, form FROM character_morphs WHERE guid = " .. guid)
+    if result then
+        repeat
+            local morphId = result:GetUInt32(0)
+            local morphForm = result:GetUInt32(1)
+            table.insert(morphIdCache[guid], morphId)
+            morphCount[guid] = morphCount[guid] + 1
+            if morphForm == 15 then
+                morph15[guid] = morphId
+            elseif morphForm == 16 then
+                morph16[guid] = morphId
+            elseif morphForm == 17 then
+                morph17[guid] = morphId
+            elseif morphForm == 19 then
+                morph19[guid] = morphId
+            elseif morphForm == 23 then
+                morph23[guid] = morphId
+            elseif morphForm == 29 then
+                morph29[guid] = morphId
+            elseif morphForm == 30 then
+                morph30[guid] = morphId
+            end
+        until not result:NextRow()
+    end
+end
+
 local function CacheCreatures()
     local demonCount = 0
 
@@ -200,6 +243,7 @@ local function CountTotalMorphs(player)
 end
 
 local function OnKillCreature(event, player, creature)
+    EnsureMorphCache(player)
     if player:GetClass() ~= 9 then return end
     if not player:HasItem(ITEM_ID) then return end
     local guid = player:GetGUIDLow()
@@ -302,6 +346,7 @@ local function ShowInitialGossipMenu(player)
 end
 
 local function OnItemGossipHello(event, player, item, object)
+    EnsureMorphCache(player)
 	if player:GetClass() == 9 then
         player:GossipComplete()
         ShowInitialGossipMenu(player)
@@ -321,7 +366,8 @@ local function OnPlayerGossipHello(player, object)
     player:GossipSendMenu(1, object, 99)
 end
 
-local function OnItemGossipSelect(event, player, object, sender, intid, code)	
+local function OnItemGossipSelect(event, player, object, sender, intid, code)
+    EnsureMorphCache(player)	
     if intid == 999 then
         OnPlayerGossipHello(player, object)
         return
@@ -382,7 +428,7 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
         local ITEMS_PER_PAGE = 10
         
         CharDBQueryAsync("SELECT name, id FROM character_morphs WHERE guid = "..guid.." AND form = "..formId, function(results)
-            local player = GetPlayerByName(playername)
+            local player = MS.FindPlayerByName(playername)
             
             if results then
                 -- Store all results in a table for pagination
@@ -481,7 +527,7 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
     end
     
     CharDBQueryAsync("SELECT name FROM character_morphs WHERE guid = " .. guid .. " AND form = " .. chosenFamily .. " AND id = " .. intid, function(morphNameResult)
-        local player = GetPlayerByName(name)
+        local player = MS.FindPlayerByName(name)
         local morphName = "Unknown Morph"
         if morphNameResult then
             morphName = morphNameResult:GetString(0)
@@ -552,6 +598,7 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
 end
 
 local function OnPetAddedToWorld(event, player, pet)
+    EnsureMorphCache(player)
     local guid = player:GetGUIDLow()
 	local summonedPetFamily = pet:GetCreatureFamily()
 	local petName = pet:GetName()
@@ -603,6 +650,7 @@ local function OnPetAddedToWorld(event, player, pet)
 end
 
 local function OnGossipHello(event, player, object)
+    EnsureMorphCache(player)
 	if player:GetClass() == 9 then
 		player:GossipClearMenu()
 		player:GossipMenuAddItem(0, "I hear you're interested in transforming your demon pets' forms...", 0, 1)
@@ -613,6 +661,7 @@ local function OnGossipHello(event, player, object)
 end
 
 local function OnGossipSelect(event, player, object, sender, intid, code)
+    EnsureMorphCache(player)
     if intid == 1 then
 
         player:GossipClearMenu()
@@ -655,8 +704,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
 end
 
 local function OnReloadEluna(event)
-    local players = GetPlayersInWorld()
-    for _, player in ipairs(players) do
+    MS.ForEachPlayer(function(player)
 		if player:HasItem(ITEM_ID) then
 			local guid = player:GetGUIDLow()
 			local name = player:GetName()
@@ -694,9 +742,9 @@ local function OnReloadEluna(event)
 				end
 			end)
 		end
-	end
+    end)
 end
-		
+
 -- Cache player's morphs on login if they have the required item
 local function OnPlayerLogin(event, player)
     if player:HasItem(ITEM_ID) then
@@ -704,7 +752,7 @@ local function OnPlayerLogin(event, player)
 		local name = player:GetName()
 		
         CharDBQueryAsync("SELECT id, form, active FROM character_morphs WHERE guid = " .. guid, function(result)
-			player = GetPlayerByName(name)
+			player = MS.FindPlayerByName(name)
 			if result then
 				repeat
 					local morphId = result:GetUInt32(0)

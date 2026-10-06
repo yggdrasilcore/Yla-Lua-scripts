@@ -1,3 +1,6 @@
+-- Multistate: Icecrown Citadel-only script (map 631).
+if not IsCompatibilityMode() and GetStateMapId() ~= 631 then return end
+
 local TWISTED_NIGHTMARE = 71941
 
 local function CheckHealer(eventId, delay, repeats, healer)

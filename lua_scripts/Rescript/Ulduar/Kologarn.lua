@@ -1,3 +1,6 @@
+-- Multistate: Ulduar-only script (map 603).
+if not IsCompatibilityMode() and GetStateMapId() ~= 603 then return end
+
 local KOLOGARN_ENTRY = 32930
 local BRIDGE_ENTRY = 342971
 local BRIDGE_X, BRIDGE_Y, BRIDGE_Z, BRIDGE_O = 1797.15, -24.4027, 448.741, 3.1935
@@ -64,7 +67,7 @@ local function enterUlduar(event, player)
 	player:RegisterEvent(checkBridge, 5000, 0)
 end
 
-for _, player in ipairs(GetPlayersInWorld()) do player:RegisterEvent(checkBridge, 5000, 0) end
+require("Multistate").ForEachPlayer(function(player) player:RegisterEvent(checkBridge, 5000, 0) end)
 
 RegisterPlayerEvent(7, killKologarn)
 RegisterPlayerEvent(28, enterUlduar)

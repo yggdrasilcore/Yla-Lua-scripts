@@ -1,3 +1,32 @@
+-- Multistate: PLAYER_EVENT_ON_COMMAND (42) fires in the global state. Reads stay
+-- direct; faction changes execute on the map state via EMQ.
+local MS = require("Multistate")
+local EMQ = require("EMQ")
+
+-- Map-state executor (via EMQ, or directly in compatibility mode).
+local function DoSetFaction(player, data)
+    if not player then
+        return
+    end
+    local target = player
+    local sel = player:GetSelection()
+    if sel and data.targetGuidLow and sel:GetGUIDLow() == data.targetGuidLow then
+        target = sel
+    elseif data.targetName then
+        target = MS.FindPlayerByName(data.targetName) or player
+    end
+    if target and target:IsPlayer() then
+        target:SetFaction(data.factionId)
+        player:SendBroadcastMessage("Set " .. (target == player and "your" or "selected player's") .. " faction to: " .. data.factionId)
+    else
+        player:SendBroadcastMessage("Your faction is: " .. player:GetFaction())
+    end
+end
+
+EMQ.RegisterQueue("CmdSetFaction", DoSetFaction)
+
+if GetStateMapId() ~= -1 then return end
+
 local function GetFactionCommand(event, player, command)
     if command == "getfaction" then
         local target = player:GetSelection()
@@ -18,25 +47,28 @@ local function SetFactionCommand(event, player, command)
     for word in command:gmatch("%w+") do
         table.insert(args, word)
     end
-    
+
     -- Check if command is "setfaction" and has a faction number
     if args[1] == "setfaction" and args[2] then
         -- Convert the second argument to a number
         local factionId = tonumber(args[2])
-        
+
         if not factionId then
             player:SendBroadcastMessage("Please provide a valid faction number.")
             return false
         end
-        
+
         -- Get target or use player if no target
+        local data = { factionId = factionId }
         local target = player:GetSelection()
         if target and target:IsPlayer() then
-            target:SetFaction(factionId)
-            player:SendBroadcastMessage("Set selected player's faction to: " .. factionId)
+            data.targetGuidLow = target:GetGUIDLow()
+            data.targetName = target:GetName()
+        end
+        if MS.IsCompat() then
+            DoSetFaction(player, data)
         else
-            player:SetFaction(factionId)
-            player:SendBroadcastMessage("Set your faction to: " .. factionId)
+            player:SendEMQMessage("CmdSetFaction", data)
         end
         return false
     end

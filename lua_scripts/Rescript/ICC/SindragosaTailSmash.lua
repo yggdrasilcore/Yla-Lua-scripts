@@ -1,3 +1,6 @@
+-- Multistate: Icecrown Citadel-only script (map 631).
+if not IsCompatibilityMode() and GetStateMapId() ~= 631 then return end
+
 local function TailSmashFix(event, sindragosa, spell)
 	sindragosa:RegisterEvent(function(e, d, r, sindragosa)
 		sindragosa:StopSpellCast()

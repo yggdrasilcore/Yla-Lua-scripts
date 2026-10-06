@@ -1,3 +1,4 @@
+local MS = require("Multistate")
 -------------------------------------------------------------------------------------------------------------------------
 -- XP changer script start
 -------------------------------------------------------------------------------------------------------------------------
@@ -23,7 +24,7 @@ local function OnTalkToGreetingTwig(event, player, object)
     local cost9 = " (4x "..currencyName..")"
     local cost10 = " (5x "..currencyName..")"
     
-    if object == player or (player:GetData("VIPTime") and player:GetData("VIPTime") > os.time()) then
+    if object == player or (MS.GetShared(player, "VIPTime") and MS.GetShared(player, "VIPTime") > os.time()) then
         cost6 = ""
         cost7 = ""
         cost8 = ""
@@ -148,7 +149,7 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
         local cost9 = " (4x "..currencyName..")"
         local cost10 = " (5x "..currencyName..")"
         
-        if object == player or (player:GetData("VIPTime") and player:GetData("VIPTime") > os.time()) then
+        if object == player or (MS.GetShared(player, "VIPTime") and MS.GetShared(player, "VIPTime") > os.time()) then
             cost6 = ""
             cost7 = ""
             cost8 = ""
@@ -204,7 +205,7 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
             player:CastSpell(player, 47292, true)
             player:GossipComplete()
             return
-        elseif intid > 5 and not (player:GetData("VIPTime") and (player:GetData("VIPTime") > os.time())) then -- Charge if higher tier XP and not VIP
+        elseif intid > 5 and not (MS.GetShared(player, "VIPTime") and (MS.GetShared(player, "VIPTime") > os.time())) then -- Charge if higher tier XP and not VIP
             local maxPaid = MaxPaidCache[guid] or 0
             if intid > maxPaid then
                 if not player:HasItem(currencyID, intid - 5) then
@@ -256,7 +257,9 @@ local function onXPCommand(event, player, command)
     if command:match("^%s*xpchangemenu%s+(%d+)%s*$") then
         local _, _, timestring = command:find("^%s*xpchangemenu%s+(%d+)%s*$")
         local verificationtime = tonumber(timestring)
-        if verificationtime and verificationtime == os.time() then
+        -- Multistate: the menu command may arrive via EMQ (Twiggy gossip runs on
+        -- map states), so allow a small transit window instead of an exact second.
+        if verificationtime and math.abs(os.time() - verificationtime) <= 5 then
             OnTalkToGreetingTwig(event, player, player)
         end
         return false

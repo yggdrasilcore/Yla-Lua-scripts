@@ -1,3 +1,6 @@
+-- Multistate: Azshara Mall-only script (mall map 37).
+if not IsCompatibilityMode() and GetStateMapId() ~= 37 then return end
+
 local targetName = "Twogga"
 
 local function resetChase(eventId, delay, repeats, creature)

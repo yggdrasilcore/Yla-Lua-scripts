@@ -1,3 +1,6 @@
+-- Multistate: global-only script (server event 14 fires in the world state).
+if GetStateMapId() ~= -1 then return end
+
 local function onStartup(event)
 	RunCommand("worldstate sunsreach counter 0 10000")
 	RunCommand("worldstate sunsreach counter 1 10000")

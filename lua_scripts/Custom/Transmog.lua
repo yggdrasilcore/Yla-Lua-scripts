@@ -27,6 +27,10 @@ Forked by mostly nick :) to include UI, saving, applying and deleting sets, hidi
 ]]
 
 local itemIconCache = require("itemIconCache")
+-- Multistate: login (3) runs globally, map change (28) / equip (29) / gossip run
+-- in map states. The mog caches are populated per state by the login/map-change
+-- handler each state sees; the packet repair handler below reads live DB data.
+local MS = require("Multistate")
 
 ---------------------------------------------------------------------------------
 -- Transmog item vendor vars
@@ -489,7 +493,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
         
         CharDBQueryAsync("SELECT PresetID, SetName, SetData FROM custom_transmogrification_sets WHERE Owner = " .. guidlow, -- Asyncing query as a hybrid between performance and load as I'm too lazy to create a dynamic cache
             function(result)
-                local player = GetPlayerByName(playername) -- Refetching current player object
+                local player = require("Multistate").FindPlayerByName(playername) -- Refetching current player object
                 if result then
                     local index = 1
                     repeat
@@ -640,7 +644,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
         
         CharDBQueryAsync("SELECT MAX(PresetID) as PresetID FROM custom_transmogrification_sets WHERE Owner = " .. guid,
             function(query)
-                local player = GetPlayerByName(playername)
+                local player = require("Multistate").FindPlayerByName(playername)
                 local presetID = 1
                 if query then
                     local row = query:GetRow()
@@ -867,7 +871,7 @@ local function OnLogin(event, player)
     
     entryMap[playerGUID] = {}
     CharDBQueryAsync("SELECT GUID, FakeEntry FROM custom_transmogrification WHERE Owner = "..playerGUID, function(result)
-        local player = GetPlayerByName(playername)
+        local player = require("Multistate").FindPlayerByName(playername)
         if result then
             repeat
                 local itemGUID = result:GetUInt32(0)
@@ -1562,22 +1566,39 @@ RegisterCreatureGossipEvent(TRANSMOG_VENDOR_NPC_ID, 2, MogVendorSelect)
 ---------------------------------------------------------------------------------
 
 local function OnRepair(event, packet, player)
-    for slot = EQUIPMENT_SLOT_START, EQUIPMENT_SLOT_END-1 do
-        local item = player:GetItemByPos(INVENTORY_SLOT_BAG_0, slot)
-        if item then
-            local fentry = GetFakeEntry(item)
-            if fentry then
-                local origentry = item:GetEntry()
-                local slot = item:GetSlot()
-                player:SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * ITEM_SLOT_MULTIPLIER), item:GetEntry())
-                player:RegisterEvent(function(eventId, delay, repeats, player)
-                    if player then
-                        player:SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * ITEM_SLOT_MULTIPLIER), fentry)
-                    end
-                end, 100, 1)
+    -- Multistate: packet handlers run in the global state, where the mog caches
+    -- only hold login-time data, so live mogs are read from the DB. The read is
+    -- asynchronous: a sync query here would stall the world thread on DB latency.
+    local playerName = player:GetName()
+    local repairOwner = player:GetGUIDLow()
+    CharDBQueryAsync("SELECT GUID, FakeEntry FROM custom_transmogrification WHERE Owner = " .. repairOwner, function(result)
+        local player = GetPlayerByName(playerName)
+        if not player then
+            return
+        end
+        local liveEntries = {}
+        if result then
+            repeat
+                liveEntries[result:GetUInt32(0)] = result:GetUInt32(1)
+            until not result:NextRow()
+        end
+        for slot = EQUIPMENT_SLOT_START, EQUIPMENT_SLOT_END-1 do
+            local item = player:GetItemByPos(INVENTORY_SLOT_BAG_0, slot)
+            if item then
+                local fentry = liveEntries[item:GetGUIDLow()]
+                if fentry then
+                    local origentry = item:GetEntry()
+                    local slot = item:GetSlot()
+                    player:SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * ITEM_SLOT_MULTIPLIER), item:GetEntry())
+                    player:RegisterEvent(function(eventId, delay, repeats, player)
+                        if player then
+                            player:SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * ITEM_SLOT_MULTIPLIER), fentry)
+                        end
+                    end, 100, 1)
+                end
             end
         end
-    end
+    end)
 end
 
 RegisterPlayerEvent(3, OnLogin)
@@ -1589,12 +1610,11 @@ RegisterPacketEvent(0x2A8, 5, OnRepair)
 RegisterCreatureGossipEvent(NPC_Entry, 1, OnGossipHello)
 RegisterCreatureGossipEvent(NPC_Entry, 2, OnGossipSelect)
 
-local plrs = GetPlayersInWorld() -- Equivalent of ELUNA reload
-if plrs then
-    for k, player in ipairs(plrs) do
-        OnLogin(k, player)
-    end
-end
+-- Multistate: state-aware catch-up for already-online players (server start or
+-- reload). GetPlayersInWorld() only exists in the global state.
+MS.ForEachPlayer(function(player)
+    OnLogin(3, player)
+end)
 
 ---------------------------------------------------------------------------------
 -- Transmogrify items event registrations end

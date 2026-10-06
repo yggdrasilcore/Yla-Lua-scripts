@@ -1,3 +1,6 @@
+-- Multistate: global-only script (all hooks fire in the world state).
+if GetStateMapId() ~= -1 then return end
+
 local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 in column at_login
     if player:GetMapId() == 571 then
         local guid = player:GetGUIDLow()
@@ -27,7 +30,7 @@ local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 i
                     
                 until not result:NextRow()
         
-                local player = GetPlayerByGUID(guid)
+                local player = require("Multistate").FindPlayerByName(name)
                 if not player then return end
                 
                 local achis = {}
@@ -230,7 +233,8 @@ local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 i
                    end
                 end
                 CharDBExecute("DELETE FROM character_login_transfer WHERE guid = " .. guid) --Clean up when we're done, unless the script stops at an error preceding this point
-                local player = GetPlayerByName(name)
+                local player = require("Multistate").FindPlayerByName(name)
+                if not player then return end
                 player:RegisterEvent(function(_,_,_,player)
                     player:SendBroadcastMessage("|cFFA64DFFWelcome to Yggdrasil, "..name.."!\nPlease check your mail to retrieve your items. As a part of your arrival, you will be able to customize your character from next logout.|t")
                 end, 10000, 1)

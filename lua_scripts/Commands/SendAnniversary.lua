@@ -1,3 +1,7 @@
+-- Multistate: PLAYER_EVENT_ON_LOGIN (3) and PLAYER_EVENT_ON_COMMAND (42) only
+-- fire in the global state, and SendMail is global. No EMQ hop is needed.
+if GetStateMapId() ~= -1 then return end
+
 local function SendAnniversary(event, player, command)
    
     local args = {}

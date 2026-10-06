@@ -1,3 +1,8 @@
+-- Multistate: quest flags are read in the global state (chat) but written in
+-- map states (map change, item, timers), so per-player progression lives in
+-- shared Data(); the throttle stays a per-state local.
+local MS = require("Multistate")
+
 -- Constants
 local QUEST_ID = 30000
 local TELEPORT_ITEM = 21878
@@ -13,14 +18,10 @@ local SHADOWFORM_AURA = 58001 -- Makes shadows seem less janky textured
 local IMMUNE_ALL = 29230 -- Prevents premature dragon death
 local HEARTHSTONE = 8690 -- Teleport player away when done, if no cached location saved
 local DespawnTimer = 180000 -- 3 minutes quest time
+-- (Multistate: the old/new location singletons and the event throttle were
+-- migrated to per-player shared Data(); see MS usages below.)
 local shadowsEvent = os.time()
 local eventState = 0
-local oldMap = 0
-local oldX = 0
-local oldY = 0
-local oldZ = 0
-local oldO = 0
-local locationChar = 0
 local minLevel = 15
 local dkLimit = 70 -- Prevents DKs from zapping toons into the scarlet enclave area
 local EventLocation = {-639.76, -259.62, 352.58, 2.27}
@@ -34,18 +35,14 @@ local function ShadowsTeleItem(event, player, item, target)
         return false
     end
     
-    if shadowsEvent > os.time() then
+    local questCooldown = MS.GetShared(player, "ShadowsQuestCooldown") or 0
+    if questCooldown > os.time() then
         player:SendAreaTriggerMessage("You can't save your shadows right now! Try again in a few minutes.")
         player:SendBroadcastMessage("You can't save your shadows right now! Try again in a few minutes.")
         return false
     end
     
-    oldMap = player:GetMapId()
-    oldX = player:GetX()
-    oldY = player:GetY()
-    oldZ = player:GetZ()
-    oldO = player:GetO()
-    locationChar = player:GetGUIDLow()
+    MS.SetShared(player, "ShadowsQuestReturn", { map = player:GetMapId(), x = player:GetX(), y = player:GetY(), z = player:GetZ(), o = player:GetO() })
     
     player:Teleport(MAP_ID, EventLocation[1], EventLocation[2], EventLocation[3], EventLocation[4])
 
@@ -54,18 +51,18 @@ end
 
 local function ShadowsMap(event, player)
     if player:GetAreaId() == AREA_ID then
-        if player:HasQuest(QUEST_ID) and (shadowsEvent <= os.time()) then
+        if player:HasQuest(QUEST_ID) and ((MS.GetShared(player, "ShadowsQuestCooldown") or 0) <= os.time()) then
         
             local playerLocation = {player:GetLocation()}
             if not ((player:GetX() >= EventLocation[1]-1 and player:GetX() <= EventLocation[1]+1) and
                     (player:GetY() >= EventLocation[2]-1 and player:GetY() <= EventLocation[2]+1)) then
-                    player:SetData("ShadowsQuestEvent", nil)
+                    MS.ClearShared(player, "ShadowsQuestEvent")
                 return
             end
 
-            player:SetData("ShadowsQuestEvent", true)
-            
-            shadowsEvent = os.time() + 180
+            MS.SetShared(player, "ShadowsQuestEvent", true)
+
+            MS.SetShared(player, "ShadowsQuestCooldown", os.time() + 180)
             
             player:RegisterEvent(function(eventId, delay, repeats, player)
                 if player and player:GetAreaId() == AREA_ID and (player:HasItem(TELEPORT_ITEM) or player:HasItem(QUEST_ITEM)) then
@@ -73,8 +70,10 @@ local function ShadowsMap(event, player)
                     player:RemoveItem(QUEST_ITEM, 1)
                     player:RemoveQuest(QUEST_ID)
                     player:AddItem(QUEST_ITEM, 1)
-                    if locationChar == player:GetGUIDLow() then
-                        player:Teleport(oldMap, oldX, oldY, oldZ, oldO)
+                    local ret = MS.GetShared(player, "ShadowsQuestReturn")
+                    if ret then
+                        player:Teleport(ret.map, ret.x, ret.y, ret.z, ret.o)
+                        MS.ClearShared(player, "ShadowsQuestReturn")
                     else
                         player:CastSpell(player, HEARTHSTONE, true)
                     end
@@ -94,7 +93,7 @@ local function ShadowsMap(event, player)
             if timerender then timerender:DespawnOrUnsummon() end
             if swirl then swirl:DespawnOrUnsummon() end
             
-            eventState = 0
+            MS.SetShared(player, "ShadowsQuestState", 0)
             
             local x, y, z, o = player:GetLocation()
             local facing = player:GetO()
@@ -150,13 +149,13 @@ end
 local function Talk(event, player, msg, Type, lang)
     if player:GetAreaId() ~= AREA_ID then return end
     
-    if not player:GetData("ShadowsQuestEvent") then print("event not active on player") return end
+    if not MS.GetShared(player, "ShadowsQuestEvent") then print("event not active on player") return end
     
     local shadowSpeak = player:GetNearestCreature(50, SHADOW_ENTRY)
     
     if not shadowSpeak then return end
     
-    if msg:lower() == "formation shield" and eventState == 0 then
+    if msg:lower() == "formation shield" and (MS.GetShared(player, "ShadowsQuestState") or 0) == 0 then
         local shadows = player:GetCreaturesInRange(50, SHADOW_ENTRY)
         local timerender = player:GetNearestCreature(50, TIMERENDER_ENTRY)
         if timerender then
@@ -171,10 +170,10 @@ local function Talk(event, player, msg, Type, lang)
             player:RegisterEvent(function(eventId, delay, repeats, player)
                 player:SendAreaTriggerMessage("Say \"attack\" to make your shadows attack the captor!")
                 player:SendBroadcastMessage("Say \"attack\" to make your shadows attack the captor!")
-                eventState = 1
+                MS.SetShared(player, "ShadowsQuestState", 1)
             end, 2000, 1)
         end, 5000, 1)
-    elseif msg:lower() == "attack" and eventState == 1 then
+    elseif msg:lower() == "attack" and (MS.GetShared(player, "ShadowsQuestState") or 0) == 1 then
         local shadowSpeak = player:GetNearestCreature(50, SHADOW_ENTRY)
         local shadows = player:GetCreaturesInRange(50, SHADOW_ENTRY)
         local timerender = player:GetNearestCreature(50, TIMERENDER_ENTRY)
@@ -194,9 +193,9 @@ local function Talk(event, player, msg, Type, lang)
         player:RegisterEvent(function(eventId, delay, repeats, player)
             player:SendAreaTriggerMessage("Target the Infinite Timerender and say \"cast Frostbolt\"!")
             player:SendBroadcastMessage("Target the Infinite Timerender and say \"cast Frostbolt\"!")
-            eventState = 2
+            MS.SetShared(player, "ShadowsQuestState", 2)
         end, 4000, 1)
-    elseif msg:lower() == "cast frostbolt" and eventState == 2 and player:GetSelection() then
+    elseif msg:lower() == "cast frostbolt" and (MS.GetShared(player, "ShadowsQuestState") or 0) == 2 and player:GetSelection() then
         local shadows = player:GetCreaturesInRange(50, SHADOW_ENTRY)
         local timerender = player:GetNearestCreature(50, TIMERENDER_ENTRY)
         
@@ -234,7 +233,7 @@ local function Talk(event, player, msg, Type, lang)
                     player:RemoveItem(QUEST_ITEM, 1)
                     player:RemoveItem(TELEPORT_ITEM, 1)
                     player:RewardQuest(QUEST_ID)
-                    shadowsEvent = os.time()
+                    MS.SetShared(player, "ShadowsQuestCooldown", os.time())
                     
                     local shadows = player:GetCreaturesInRange(50, SHADOW_ENTRY)
                     for _, shadow in pairs(shadows) do
@@ -250,9 +249,11 @@ local function Talk(event, player, msg, Type, lang)
                 
                 player:RegisterEvent(function(eventId, delay, repeats, player)
                     print("teleporting player home")
-                    eventState = 0
-                    if locationChar == player:GetGUIDLow() then
-                        player:Teleport(oldMap, oldX, oldY, oldZ, oldO)
+                    MS.SetShared(player, "ShadowsQuestState", 0)
+                    local ret2 = MS.GetShared(player, "ShadowsQuestReturn")
+                    if ret2 then
+                        player:Teleport(ret2.map, ret2.x, ret2.y, ret2.z, ret2.o)
+                        MS.ClearShared(player, "ShadowsQuestReturn")
                     else
                         player:CastSpell(player, HEARTHSTONE, true)
                     end

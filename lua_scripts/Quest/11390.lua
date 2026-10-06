@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local Quest11390Timer = {}
 
 local function CheckPlayerArea(eventId, delay, repeats, player)

@@ -1,3 +1,27 @@
+-- Multistate: login/logout/chat/command/packet handlers run globally, everything
+-- else runs in map states. Cross-state coordination (summon handshake, referee
+-- flag, referral sweep) uses shared player Data() and EMQ; progress itself
+-- accumulates in account_raf via DB writes from every state.
+local MS = require("Multistate")
+local EMQ = require("EMQ")
+
+EMQ.RegisterQueue("RAFRunCommand", function(player, data)
+    if player and data and data.cmd then
+        player:RunCommand(data.cmd)
+    end
+end)
+
+local function RAFRunCommand(player, cmd)
+    if not player or not cmd then
+        return
+    end
+    if MS.IsCompat() or MS.IsWorld() then
+        player:RunCommand(cmd)
+    else
+        player:SendEMQMessage("RAFRunCommand", { cmd = cmd })
+    end
+end
+
 -- Welcome to Yggdrasil's RAF system, by mostly nick :)
 
 -- START VARS
@@ -103,7 +127,7 @@ local function ShowReferralInfoMenu(player, page)
 	local name = player:GetName()
 	
     AuthDBQueryAsync(string.format([[SELECT account_id, status, date, progress FROM account_raf WHERE referer_id = %d]], accountId), function(query)
-		player = GetPlayerByName(name)
+		player = MS.FindPlayerByName(name)
 		if query then
 			local entries = {}
 			repeat
@@ -175,15 +199,17 @@ local function ShowSummonFriendsMenu(player, page)
     local accountId = player:GetAccountId()
     player:GossipClearMenu()
 
-    if summonerGraceTimer[accountId] and summonerGraceTimer[accountId] > os.time() then
-        local timeLeft = summonCD[accountId] - os.time()
+    local summonCDUntil = MS.GetShared(player, "RAFSummonCD") or 0
+    local summonGraceUntil = MS.GetShared(player, "RAFSummonGrace") or 0
+    if summonGraceUntil > os.time() then
+        local timeLeft = summonCDUntil - os.time()
         local minutesLeft = math.floor(timeLeft / 60)
         local secondsLeft = timeLeft % 60
         player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_pocketwatch_01:48:48:-26:0|tSummon grace timer!\n \nYou recently requested to summon someone. Time until you can send next request:\n\n"..minutesLeft.." minutes and "..secondsLeft.." seconds\n \nClick here to refresh cooldown.\n \n \n", 1, 7)
         player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:48:48:-26:0|tBack", 1, 998)
         player:GossipSendMenu(12, player, 1)
-    elseif summonCD[accountId] and summonCD[accountId] > os.time() then
-        local timeLeft = summonCD[accountId] - os.time()
+    elseif summonCDUntil > os.time() then
+        local timeLeft = summonCDUntil - os.time()
         local minutesLeft = math.floor(timeLeft / 60)
         local secondsLeft = timeLeft % 60
         player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_holy_borrowedtime:48:48:-26:0|tRAF summon cooldown:\n \n "..minutesLeft.." minutes and "..secondsLeft.." seconds\n \n", 1, 7)
@@ -202,25 +228,29 @@ local function ShowSummonFriendsMenu(player, page)
 			FROM account_raf
 			WHERE (referer_id = %d AND date > %d) OR (account_id = %d AND date > %d)
 		]], accountId, MaxRAFDuration, accountId, MaxRAFDuration), function(query)
-			player = GetPlayerByName(name)
+			player = MS.FindPlayerByName(name)
 			if query then
 				repeat
-					local playerList = GetPlayersInWorld()
 					local friendAccountId = query:GetUInt32(0)
 					local referrerAccountId = query:GetUInt32(1)
-					for _, friend in ipairs(playerList) do
-						if (friend:GetAccountId() == friendAccountId and friend:GetName() ~= playerName)
-						or (friend:GetAccountId() == referrerAccountId and friend:GetName() ~= playerName) 
-						then
-							table.insert(friendsToSummon, {name = friend:GetName(), guid = friend:GetGUIDLow()})
-						end
+					-- Multistate: resolve online friends from the DB so this works
+					-- in map states too (GetPlayersInWorld is world-only).
+					local onlineFriends = CharDBQuery(string.format("SELECT name, guid FROM characters WHERE online = 1 AND account IN (%d, %d)", friendAccountId, referrerAccountId))
+					if onlineFriends then
+						repeat
+							local friendName = onlineFriends:GetString(0)
+							local friendGuid = onlineFriends:GetUInt32(1)
+							if friendName ~= playerName then
+								table.insert(friendsToSummon, {name = friendName, guid = friendGuid})
+							end
+						until not onlineFriends:NextRow()
 					end
 				until not query:NextRow()
 				if not query:NextRow() then
 					if #friendsToSummon > 0 then
 						for i = startIndex, endIndex do
 							local friend = friendsToSummon[i]
-							eligibleSummon[player:GetName()] = friend.name
+							MS.SetShared(player, "RAFSummonOffers", friend.name)
 							player:GossipMenuAddItem(0, string.format("|TInterface/ICONS/spell_unused2:48:48:-26:0|tSummon %s", friend.name), 1, (friend.guid + 1000))
 						end
 						if totalPages > 1 then
@@ -256,7 +286,7 @@ local function ShowRefereeInfo(player)
    AuthDBQueryAsync(string.format([[
         SELECT referer_id, status, date, progress FROM account_raf WHERE account_id = %d
     ]], accountId), function(query)
-		player = GetPlayerByName(name)
+		player = MS.FindPlayerByName(name)
         if query then
             local refererAccountId = query:GetUInt32(0)
             local status = query:GetUInt32(1)
@@ -402,7 +432,7 @@ local function ClaimBonuses(player)
                         ClaimStatus4[GUIDLow] = ", claim now!" 
                     end
                 end
-                local player = GetPlayerByName(name)
+                local player = MS.FindPlayerByName(name)
                 player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tFirst referral reward:\n \nStatus: "..CompletionStatus0[GUIDLow]..""..ClaimStatus0[GUIDLow].."\n \nContains: 5 Community Tokens\n \n ", 1, 40)
                 player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_01:32:32:-22:0|tReward box 1:\n \nRequirement: ".. RewardTier1 .." referrals.\nStatus: "..CompletionStatus1[GUIDLow]..""..ClaimStatus1[GUIDLow].."\n \nContains:\n- Rotface and Festergut's Acidic Blood\n- Unobtainable Vanilla mounts\n- Fishing Chair\n- 60 Emblems of Frost\n \n ", 1, 41)
                 player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_02:32:32:-22:0|tReward box 2:\n \nRequirement: ".. RewardTier2 .." referrals.\nStatus: "..CompletionStatus2[GUIDLow]..""..ClaimStatus2[GUIDLow].."\n \nContains:\n- X-53 Touring Rocket\n- Hard-to-get mounts\n- ToC trinkets and cloaks\n- 95 Emblems of Frost\n \n ", 1, 42)
@@ -888,14 +918,15 @@ end
 
 local function ShowSummonRequest(friend)
 	friend:GossipClearMenu()
-	
-	requesttime[friend:GetAccountId()] = os.time() + 120
-	
-	if not requestsender[friend:GetAccountId()] then
-		requestsender[friend:GetAccountId()] = summonrequest
+
+	-- Multistate: the accept/decline menu runs on the friend's map state.
+	MS.SetShared(friend, "RAFSummonTime", os.time() + 120)
+
+	if not MS.GetShared(friend, "RAFSummonRequest") then
+		MS.SetShared(friend, "RAFSummonRequest", summonrequest)
 	end
-	summonerName = requestsender[friend:GetAccountId()]
-	summoner = GetPlayerByName(summonerName)
+	summonerName = MS.GetShared(friend, "RAFSummonRequest")
+	summoner = MS.FindPlayerByName(summonerName)
 	friend:GossipMenuAddItem(0, "|TInterface/ICONS/spell_unused2:48:48:-26:0|tIncoming summon request!\n \n" .. summonerName .. " wants to summon you to "..GetAreaName(summoner:GetAreaId()).."! Do you accept?\n \n", 1, 500)
 	friend:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_groupneedmore:48:48:-26:0|tYes\n \n", 1, 501)
 	friend:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:48:48:-26:0|tNo\n \n", 1, 502)
@@ -912,13 +943,13 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
 		or player:IsDead() or player:InArena()
 		or player:InBattleground() then -- Simple sanity check
 			player:SendAreaTriggerMessage("You can't summon your friend right now!")
-		elseif summonCD[accountId] and summonCD[accountId] > os.time() then
-			local timeLeft = summonCD[accountId] - os.time()
+		elseif (MS.GetShared(player, "RAFSummonCD") or 0) > os.time() then
+			local timeLeft = MS.GetShared(player, "RAFSummonCD") - os.time()
 			local minutesLeft = math.floor(timeLeft / 60)
 			local secondsLeft = timeLeft % 60
 			player:SendAreaTriggerMessage(string.format("Your RAF summon is on cooldown for %d minutes and %d seconds.", minutesLeft, secondsLeft))
 		else
-			player:RunCommand(string.format("rafsummonfriend %s", friendGUIDLow))
+			RAFRunCommand(player, string.format("rafsummonfriend %s", friendGUIDLow))
 		end
 		ShowSummonFriendsMenu(player)
 	elseif intid >= PAGINATION_INTID_START and intid < PAGINATION_INTID_START + 99 then
@@ -927,13 +958,16 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
 	elseif intid == 500 then
 		ShowSummonRequest(player)
 	elseif intid == 501 then
-		if os.time() >= requesttime[player:GetAccountId()] + 120 then
+		if os.time() >= (MS.GetShared(player, "RAFSummonTime") or 0) + 120 then
 			player:SendAreaTriggerMessage("You have not accepted the summon in time!")
 			player:GossipComplete()
 		else
-			summonerName = requestsender[player:GetAccountId()]
-			summoner = GetPlayerByName(summonerName)
-			if summoner:IsFlying() or summoner:IsOnVehicle()
+			summonerName = MS.GetShared(player, "RAFSummonRequest")
+			summoner = summonerName and MS.FindPlayerByName(summonerName) or nil
+			if not summoner then
+				player:SendAreaTriggerMessage("Your friend isn't available to summon you anymore.")
+				player:GossipComplete()
+			elseif summoner:IsFlying() or summoner:IsOnVehicle()
 			or summoner:IsFalling() or summoner:IsInCombat()
 			or summoner:IsDead() or summoner:InArena()
 			or summoner:InBattleground() then -- Simple sanity check on acceptance
@@ -943,18 +977,22 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
 				player:GossipComplete()
 			else
 				player:Teleport(summoner:GetMapId(), summoner:GetX(), summoner:GetY(), summoner:GetZ(), summoner:GetO())
-				requesttime[player:GetAccountId()] = requesttime[player:GetAccountId()] + 120
+				MS.SetShared(player, "RAFSummonTime", os.time() + 120)
+				MS.ClearShared(player, "RAFSummonRequest")
 				summoner:SendAreaTriggerMessage(player:GetName().." has accepted your summon request.")
-				summonerGraceTimer[summoner:GetAccountId()] = nil
-				summonCD[summoner:GetAccountId()] = os.time() + summonCDLength * 60
+				MS.ClearShared(summoner, "RAFSummonGrace")
+				MS.SetShared(summoner, "RAFSummonCD", os.time() + summonCDLength * 60)
 				summoner:GossipComplete()
 				player:GossipComplete()
 			end
 		end
 	elseif intid == 502 then
-		summonerName = requestsender[player:GetAccountId()]
-		summoner = GetPlayerByName(summonerName)
-		summoner:SendAreaTriggerMessage(player:GetName().." has denied your summon request.")
+		summonerName = MS.GetShared(player, "RAFSummonRequest")
+		summoner = summonerName and MS.FindPlayerByName(summonerName) or nil
+		if summoner then
+			summoner:SendAreaTriggerMessage(player:GetName().." has denied your summon request.")
+		end
+		MS.ClearShared(player, "RAFSummonRequest")
         player:GossipComplete()
     elseif intid == 1 then
         ShowRAFLink(player)
@@ -965,7 +1003,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         AuthDBQueryAsync(string.format([[
             SELECT totaltime FROM account WHERE id = %d
         ]], accountId), function(timeplayedquery)
-			player = GetPlayerByName(name)
+			player = MS.FindPlayerByName(name)
 			if timeplayedquery then
 				local timeplayed = timeplayedquery:GetUInt32(0)
 
@@ -982,7 +1020,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
 						SELECT id FROM account WHERE id = %d
 					]], referer_id), function(refererquerycheck)
 						if refererquerycheck then
-							player = GetPlayerByName(name)
+							player = MS.FindPlayerByName(name)
 							local refererQuery = refererquerycheck:GetUInt32(0)
 							if not refererQuery then
 								player:SendAreaTriggerMessage("The entered referral ID does not exist. Please check and try again.")
@@ -1004,7 +1042,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
 							]], referer_id), function(lookforrefererIP)
 
 								if lookforrefererIP then
-									player = GetPlayerByName(name)
+									player = MS.FindPlayerByName(name)
 									local refererIP = lookforrefererIP:GetString(0)
 
 									AuthDBExecute(string.format([[
@@ -1013,7 +1051,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
 										ON DUPLICATE KEY UPDATE referer_id = %d, status = 2, progress = 0, date = %d, IP = '%s', IP_referer = '%s'
 									]], accountId, referer_id, currentTime, playerIP, refererIP, referer_id, currentTime, playerIP, refererIP))
 
-									RAFreferee[accountId] = true
+									MS.SetShared(player, "RAFreferee", true)
 									player:SendAreaTriggerMessage(string.format("Successfully linked to referrer with ID: %d. Remember to relog to use the summon function.", referer_id))
 									ShowRAFLink(player)
 								end
@@ -1223,38 +1261,44 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
         end
 		
         local friendGUIDLow = tonumber(param)
-        if eligibleSummon[player:GetName()] then
-            if type(eligibleSummon[player:GetName()]) == "table" then  -- table in case there's multiple people in summon queue
-                for friendName, friendGUID in pairs(eligibleSummon[player:GetName()]) do
+        -- Multistate: offers were stored in shared Data by the summon menu.
+        local offers = MS.GetShared(player, "RAFSummonOffers")
+        if offers then
+            if type(offers) == "table" then  -- table in case there's multiple people in summon queue
+                for friendName, friendGUID in pairs(offers) do
                     if friendGUID == friendGUIDLow then
-                        local friend = GetPlayerByGUID(friendName)
+                        local friend = MS.FindPlayerByName(friendName)
                         if friend and friend:IsAlive() and not friend:IsInCombat()
 						and not friend:IsOnVehicle() and not friend:IsFalling()
 						and not friend:InArena() and not friend:InBattleground() then -- simple sanity check
-							eligibleSummon[player:GetName()] = nil
+							MS.ClearShared(player, "RAFSummonOffers")
 							summonrequest = player:GetName()
 							ShowSummonRequest(friend)
-							summonCD[accountId] = os.time() + 2 * 60 -- 2 min cd between summons
-							summonerGraceTimer[accountId] = os.time() + 2 * 60 -- Probably a duplicate but I'm tired so who cares
-                        else
+							MS.SetShared(player, "RAFSummonCD", os.time() + 2 * 60) -- 2 min cd between summons
+							MS.SetShared(player, "RAFSummonGrace", os.time() + 2 * 60) -- Probably a duplicate but I'm tired so who cares
+                        elseif friend then
                             player:SendBroadcastMessage(friend:GetName().." isn't able to receive summon requests right now.")
-                        end	
+                        else
+                            player:SendBroadcastMessage("Your friend isn't online right now.")
+                        end
 					end
                 end
             else
-                local friendName = eligibleSummon[player:GetName()] -- in case there's only one person in summon queue we don't need the table
-                local friend = GetPlayerByName(friendName)
+                local friendName = offers -- in case there's only one person in summon queue we don't need the table
+                local friend = MS.FindPlayerByName(friendName)
 				if friend and friend:IsAlive() and not friend:IsInCombat()
 				and not friend:IsOnVehicle() and not friend:IsFalling()
 				and not friend:InArena() and not friend:InBattleground() then -- simple sanity check
-					eligibleSummon[player:GetName()] = nil
+					MS.ClearShared(player, "RAFSummonOffers")
 					summonrequest = player:GetName()
 					ShowSummonRequest(friend)
-					summonCD[accountId] = os.time() + 2 * 60 -- 2 min cd between summons
-					summonerGraceTimer[accountId] = os.time() + 2 * 60 -- Probably a duplicate but I'm tired so who cares
-				else
+					MS.SetShared(player, "RAFSummonCD", os.time() + 2 * 60) -- 2 min cd between summons
+					MS.SetShared(player, "RAFSummonGrace", os.time() + 2 * 60) -- Probably a duplicate but I'm tired so who cares
+				elseif friend then
                     player:SendBroadcastMessage(friend:GetName().." isn't able to receive summon requests right now.")
-				end	
+				else
+                    player:SendBroadcastMessage("Your friend isn't online right now.")
+				end
             end
 		end
         return false
@@ -1280,7 +1324,7 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
 		AuthDBQueryAsync(string.format([[
 			SELECT account_id, status, date FROM account_raf WHERE referer_id = %d
 		]], accountId), function(query)
-			player = GetPlayerByName(name)
+			player = MS.FindPlayerByName(name)
 			if query then
 				local count = 0
 				repeat
@@ -1347,7 +1391,7 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
 					ON DUPLICATE KEY UPDATE referer_id = %d, status = 2, progress = 0, date = %d, IP = '%s'
 				]], accountId, referer_id, currentTime, playerIP, referer_id, currentTime, playerIP))
 
-				RAFreferee[accountId] = true
+				MS.SetShared(player, "RAFreferee", true)
 				player:SendBroadcastMessage(string.format("You have been registered as a referee with referer ID: %d", referer_id))
 			end
 		end
@@ -1359,9 +1403,11 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
                 DELETE FROM account_raf WHERE account_id = %d
             ]], account_to_delete))
 
-            if RAFreferee[account_to_delete] == true then
-                RAFreferee[account_to_delete] = nil
-            end
+            MS.ForEachPlayer(function(p)
+                if p:GetAccountId() == account_to_delete then
+                    MS.ClearShared(p, "RAFreferee")
+                end
+            end)
 
             player:SendBroadcastMessage(string.format("RAF entry for account ID %d has been deleted.", account_to_delete))
         else
@@ -1393,18 +1439,16 @@ local function CheckRefereeStatus(player)
 			AuthDBExecute(string.format([[
 				UPDATE account_raf SET IP = '%s' WHERE account_id = %d
 			]], playerIP, accountId))
-			RAFreferee[accountId] = true
+			-- Multistate: visible in every state (progress handlers run on maps).
+			MS.SetShared(player, "RAFreferee", true)
 		else
-			RAFreferee[accountId] = nil
+			MS.ClearShared(player, "RAFreferee")
 		end
 	end)
 end
 
 local function ClearRefereeStatus(event, player)
-    local accountId = player:GetAccountId()
-    if RAFreferee[accountId] == true then
-        RAFreferee[accountId] = nil
-    end
+    MS.ClearShared(player, "RAFreferee")
 end
 
 -- Check referee status on player login and server load
@@ -1413,15 +1457,15 @@ local function OnPlayerLogin(event, player)
 end
 
 local function ReloadEluna(event)
-    local players = GetPlayersInWorld()
-    for _, player in ipairs(players) do
+    -- Multistate: state-aware sweep (each state covers its visible players).
+    MS.ForEachPlayer(function(player)
         CheckRefereeStatus(player)
-    end
+    end)
 end
 
 local function UpdateProgress(player)
     local accountId = player:GetAccountId()
-    if RAFreferee[accountId] then
+    if MS.GetShared(player, "RAFreferee") then
         if not playerProgress[accountId] then
             playerProgress[accountId] = 0
             
@@ -1482,7 +1526,15 @@ local function OnCompleteQuest(event, player, quest)
 end
 
 local function CheckCompletedReferrals()
-    for refereeAccountId, _ in pairs(RAFreferee) do
+    -- Multistate: driven by the DB (pending referrals) instead of the per-state
+    -- RAFreferee table, so every pending referral is checked exactly once from
+    -- the global sweep. The status flip to 3 inside makes this idempotent.
+    local pending = AuthDBQuery("SELECT account_id FROM account_raf WHERE status = 2")
+    if not pending then
+        return
+    end
+    repeat
+        local refereeAccountId = pending:GetUInt32(0)
         AuthDBQueryAsync(string.format([[
             SELECT progress, referer_id FROM account_raf WHERE account_id = %d AND status = 2
         ]], refereeAccountId), function(query)
@@ -1504,7 +1556,7 @@ local function CheckCompletedReferrals()
 							message = "Twiggy: Congratulations, you've qualified for your referee reward! You have earned ".. TokenReward .." ".. TokenName.. " and a special reward, speak to me to claim it."
 							SendPurpleBroadcast(player, message)
 							player:AddItem(TokenID, TokenReward)
-							RAFreferee[refereeAccountId] = nil
+							MS.ClearShared(player, "RAFreferee")
 							break
 						end
 					end
@@ -1567,10 +1619,15 @@ local function CheckCompletedReferrals()
 				end
 			end
 		end)
-    end
+    until not pending:NextRow()
 end
 
-CreateLuaEvent(CheckCompletedReferrals, ProgressCheckTimer * 60 * 1000, 0)
+-- Multistate: the referral sweep touches every account and enumerates the world;
+-- it runs exactly once server-wide in the global state (DB status flips make it
+-- idempotent anyway).
+if MS.IsCompat() or MS.IsWorld() then
+    CreateLuaEvent(CheckCompletedReferrals, ProgressCheckTimer * 60 * 1000, 0)
+end
 RegisterPlayerEvent(3, OnPlayerLogin)
 RegisterPlayerEvent(4, ClearRefereeStatus)
 RegisterPlayerEvent(7, OnCreatureKill)

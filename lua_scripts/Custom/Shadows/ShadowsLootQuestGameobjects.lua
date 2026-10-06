@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local questItemGoCache = {}
 local cachedQuests = {}
 local cachedItems = {}
@@ -112,7 +115,7 @@ local function WhisperBagsFull(player, data)
     player:SetData(throttleKey, os.time())
 
     local masterName = player:IsBot()
-    local master = GetPlayerByName(masterName)
+    local master = require("Multistate").FindPlayerByName(masterName)
     if not master then return end
 
     local itemName = GetItemName(data.itemId)
@@ -150,7 +153,7 @@ local function LootObject(eventId, delay, repeats, player, data)
             end
         else
             local masterName = player:IsBot()
-            local master = GetPlayerByName(masterName)
+            local master = require("Multistate").FindPlayerByName(masterName)
             if master then
                 local itemName = GetItemName(data.itemId)
                 if not PlayerHasEnoughFreeSlots(player, 1) then
@@ -212,8 +215,8 @@ end
 
 RegisterPlayerEvent(28, OnMapChange)
 
-for _, player in ipairs(GetPlayersInWorld()) do
+require("Multistate").ForEachPlayer(function(player)
     if player:GetData("BotQuestLoopActive") then return end
     player:SetData("BotQuestLoopActive", true)
     player:RegisterEvent(CheckForQuestGOs, {20000, 30000}, 0)
-end
+end)

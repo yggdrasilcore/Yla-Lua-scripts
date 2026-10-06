@@ -1,7 +1,10 @@
+-- Multistate: map-only script (combat hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 function TogglePlayerbotScript(player, script, state)
-    local masterName = isPlayerBot[player:GetName()]
+    local masterName = ShadowGetMaster(player:GetName())
     if not masterName then return end
-    local master = GetPlayerByName(masterName)
+    local master = require("Multistate").FindPlayerByName(masterName)
     if not master then return end
     local cmd = state and "co +" .. script or "co -" .. script
     master:Whisper(cmd, 0, player)

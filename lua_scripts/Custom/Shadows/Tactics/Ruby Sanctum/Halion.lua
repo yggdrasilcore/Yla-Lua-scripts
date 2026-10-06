@@ -1,3 +1,5 @@
+-- Multistate: Ruby Sanctum-only script (map 724).
+if not IsCompatibilityMode() and GetStateMapId() ~= 724 then return end
 -- NPCs
 local HALION_ENTRY          = 39863
 local COMBUSTION_ENTRY      = 40001

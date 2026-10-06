@@ -1,3 +1,9 @@
+-- Multistate: this script runs in every state. Player enumeration is state-aware
+-- (GetPlayersInWorld only exists globally); the zone filter inside GetWGPlayers
+-- keeps non-Wintergrasp states idle. WG_FightActive / WG_Controller /
+-- WG_LossCount are recomputed from core state in every state, so all states agree.
+local MS = require("Multistate")
+
 local WG_LossCount = {}
 local WG_LossRecorded = false
 
@@ -104,8 +110,8 @@ local function GetWGPlayers()
     local hordeCount = 0
     local wgPlayers = {}
 
-    local players = GetPlayersInWorld()
-    if not players then return wgPlayers, allianceCount, hordeCount end
+    local players = {}
+    MS.ForEachPlayer(function(p) table.insert(players, p) end)
 
     for _, player in ipairs(players) do
         if player:GetMapId() == MAP_NORTHREND and player:GetZoneId() == ZONE_WINTERGRASP then
@@ -228,7 +234,7 @@ local function OnPlayerEnterWintergrasp(event, player, newZone, newArea)
     end
 end
 
-for _, player in ipairs(GetPlayersInWorld()) do OnPlayerEnterWintergrasp(_, player, _, _) end
+MS.ForEachPlayer(function(p) OnPlayerEnterWintergrasp(nil, p, nil, nil) end)
 
 CreateLuaEvent(UpdateVehicleTenacity, 1000, 0)
 RegisterPlayerEvent(4, OnPlayerEnterWintergrasp)

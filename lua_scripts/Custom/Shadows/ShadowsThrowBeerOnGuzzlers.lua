@@ -76,20 +76,18 @@ local function TryClaimGuzzler(guzzler, bot)
 end
 
 local function ReleaseGuzzler(guzzler, bot)
-    if not guzzler then
+    if not guzzler or not bot then
         return
     end
-    local ok, claims = pcall(function() return guzzler:GetData("ShadowAssignees") end)
-    if not ok or type(claims) ~= "table" then
+    local claims = guzzler:GetData("ShadowAssignees")
+    if type(claims) ~= "table" then
         return
     end
     local botGuid = bot:GetGUIDLow()
     if claims[botGuid] then
         claims[botGuid] = nil
-        pcall(function()
-            guzzler:SetData("ShadowAssignees", claims)
-            guzzler:SetData("ShadowClaimTime", os.time())
-        end)
+        guzzler:SetData("ShadowAssignees", claims)
+        guzzler:SetData("ShadowClaimTime", os.time())
     end
 end
 
@@ -279,5 +277,9 @@ local function BrewfestScheduler()
 end
 
 -- Coarse poll: every 15 min check if Brewfest is active, then arm per-minute window checks.
-CreateLuaEvent(BrewfestScheduler, 15 * 60 * 1000, 0)
-BrewfestScheduler() -- initial check at load so we don't wait 15 min after restart/reload
+-- Multistate: the Brewfest sweep uses GetPlayersInWorld and must run exactly once
+-- server-wide in the global state (the item handler above stays map-side).
+if require("Multistate").IsCompat() or require("Multistate").IsWorld() then
+    CreateLuaEvent(BrewfestScheduler, 15 * 60 * 1000, 0)
+    BrewfestScheduler() -- initial check at load so we don't wait 15 min after restart/reload
+end

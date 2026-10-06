@@ -1,3 +1,6 @@
+-- Multistate: Utgarde Keep-only script (map 574).
+if not IsCompatibilityMode() and GetStateMapId() ~= 574 then return end
+
 local INGVAR_ENTRY               = 23954
 
 local UTGARDE_KEEP_MAP_ID        = 574

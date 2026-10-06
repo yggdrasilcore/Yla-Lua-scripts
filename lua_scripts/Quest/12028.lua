@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local WISP = 24465
 local MORPH_DELAY_MS = 1550
 local DEMORPH_DELAY_MS = 3*60*1000

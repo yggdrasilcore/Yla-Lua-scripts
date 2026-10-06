@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local function OnEnterArea(event, player, oldArea, newArea)
     if newArea == 4428 then
         player:RegisterEvent(function(eventId, delay, repeats, player)

@@ -1,3 +1,6 @@
+-- Multistate: Azshara Mall-only script (mall map 37).
+if not IsCompatibilityMode() and GetStateMapId() ~= 37 then return end
+
 local logoutTimer = 1000
 local voteTokenItemId = 20880 -- ID for Vote Tokens
 local voteTokenCost = 50 -- Cost in Vote Tokens
@@ -96,7 +99,7 @@ local function getTaxiNodes(player)
 end
 
 local function taxieasternkingdomsNodes(playerGuid)
-    local player = GetPlayerByGUID(playerGuid)
+    local player = require("Multistate").FindPlayerByGUID(GetPlayerGUID(playerGuid))
     if not player then
         local query = CharDBQuery(string.format("SELECT taximask FROM characters WHERE guid = %u", playerGuid))
         
@@ -134,7 +137,7 @@ local function taxieasternkingdomsNodes(playerGuid)
 end
 
 local function taxikalimdorNodes(playerGuid)
-    local player = GetPlayerByGUID(playerGuid)
+    local player = require("Multistate").FindPlayerByGUID(GetPlayerGUID(playerGuid))
     if not player then
         local query = CharDBQuery(string.format("SELECT taximask FROM characters WHERE guid = %u", playerGuid))
         
@@ -172,7 +175,7 @@ local function taxikalimdorNodes(playerGuid)
 end
 
 local function taxioutlandNodes(playerGuid)
-    local player = GetPlayerByGUID(playerGuid)
+    local player = require("Multistate").FindPlayerByGUID(GetPlayerGUID(playerGuid))
     if not player then
         local query = CharDBQuery(string.format("SELECT taximask FROM characters WHERE guid = %u", playerGuid))
         

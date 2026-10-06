@@ -1,3 +1,6 @@
+-- Multistate: Obsidian Sanctum-only script (map 615).
+if not IsCompatibilityMode() and GetStateMapId() ~= 615 then return end
+
 local function OnKillSartharion(event, player, creature)
     if event == 7 and creature:GetEntry() ~= 28860 then return end
     

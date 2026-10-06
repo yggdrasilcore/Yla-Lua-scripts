@@ -1,3 +1,6 @@
+-- Multistate: Icecrown Citadel-only script (map 631).
+if not IsCompatibilityMode() and GetStateMapId() ~= 631 then return end
+
 -- OBJECT IDs
 -- Bosses
 local MURADIN_ENTRY            = 36948
@@ -799,4 +802,4 @@ end
 RegisterCreatureEvent(37519, 7, AllianceGunshipLock)
 RegisterPlayerEvent(33, GunshipOnEnterCombat)
 RegisterPlayerEvent(28, HandleMapEvents) -- Remove rocket pack visual
-for _, player in ipairs(GetPlayersInWorld()) do GunshipOnEnterCombat(_, player, _) end
+require("Multistate").ForEachPlayer(function(player) GunshipOnEnterCombat(nil, player, nil) end)

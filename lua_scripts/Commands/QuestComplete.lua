@@ -1,3 +1,9 @@
+-- Multistate: PLAYER_EVENT_ON_CHAT (18) fires in the global state, but quest
+-- completion mutates players on their map, so it is forwarded via EMQ. The DB
+-- existence check stays global (async), then the map state applies the reward.
+local MS = require("Multistate")
+local EMQ = require("EMQ")
+
 local MSG_QC = "#qc"
 
 local function DeleteAllItemsInBag(player)
@@ -18,26 +24,62 @@ local function CompleteAndRewardQuest(player, questID)
     DeleteAllItemsInBag(player)
 end
 
+-- Map-state executor (via EMQ, or directly in compatibility mode).
+local function DoQuestComplete(player, data)
+    if not player then
+        return
+    end
+    local questID = data.questID
+    if not questID then
+        return
+    end
+    local sel = player:GetSelection()
+    if sel and data.targetGuidLow and sel:GetGUIDLow() == data.targetGuidLow and sel:IsPlayer() then
+        CompleteAndRewardQuest(sel, questID)
+    elseif data.targetName then
+        local target = MS.FindPlayerByName(data.targetName)
+        if target then
+            CompleteAndRewardQuest(target, questID)
+        else
+            CompleteAndRewardQuest(player, questID)
+        end
+    else
+        CompleteAndRewardQuest(player, questID)
+    end
+end
+
+EMQ.RegisterQueue("CmdQuestComplete", DoQuestComplete)
+
+if GetStateMapId() ~= -1 then return end
+
 local function QuestAutoComplete(event, player, msg, Type, lang)
     local gmRank = player:GetGMRank()
     if gmRank >= 3 then
-		local name = player:GetName()
+        local name = player:GetName()
         local lowerMsg = msg:lower()
         if string.sub(lowerMsg, 1, #MSG_QC) == MSG_QC then
             local questID = tonumber(string.sub(lowerMsg, #MSG_QC + 1))
             if questID then
+                -- Capture the selection now; it is re-validated on the map state.
+                local target = player:GetSelection()
+                local targetGuidLow = nil
+                local targetName = nil
+                if target and target:IsPlayer() then
+                    targetGuidLow = target:GetGUIDLow()
+                    targetName = target:GetName()
+                end
                 WorldDBQueryAsync("SELECT * FROM quest_template WHERE ID = " .. questID, function(result)
-					player = GetPlayerByName(name)
+                    local player = MS.FindPlayerByName(name)
                     if not player then
                         print("Quest Complete Command error, player has gotten dereferenced!")
                         return
                     end
                     if result then
-                        local target = player:GetSelection()
-                        if target and target:IsPlayer() then
-                            CompleteAndRewardQuest(target, questID)
+                        local data = { questID = questID, targetGuidLow = targetGuidLow, targetName = targetName }
+                        if MS.IsCompat() then
+                            DoQuestComplete(player, data)
                         else
-                            CompleteAndRewardQuest(player, questID)
+                            player:SendEMQMessage("CmdQuestComplete", data)
                         end
                     else
                         player:SendBroadcastMessage("Non-existent quest ID: " .. questID)

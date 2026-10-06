@@ -1,3 +1,6 @@
+-- Multistate: Icecrown Citadel-only script (map 631).
+if not IsCompatibilityMode() and GetStateMapId() ~= 631 then return end
+
 local FESTERGUT_ENTRY  = 36626
 local GASTRIC_BLOAT    = {72214, 72219, 72231, 72551, 72552, 72553}
 local SPORE_AURA_1     = 69278

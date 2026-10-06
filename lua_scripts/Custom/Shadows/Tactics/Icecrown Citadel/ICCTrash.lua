@@ -1,3 +1,6 @@
+-- Multistate: Icecrown Citadel-only script (map 631).
+if not IsCompatibilityMode() and GetStateMapId() ~= 631 then return end
+
 local function BotAttackInsects(player)
     local insects = player:GetCreaturesInRange(100, 37782)
     
@@ -61,4 +64,4 @@ local function OnBotMapChange(event, player)
 end
 
 RegisterPlayerEvent(28, OnBotMapChange)
-for _, player in ipairs(GetPlayersInWorld()) do OnBotMapChange(_, player) end
+require("Multistate").ForEachPlayer(function(player) OnBotMapChange(nil, player) end)

@@ -231,7 +231,12 @@ local function OnLeaveCombat(event, creature, target)
 end
 
 -- Initial event setup
+-- Multistate: the bonk sweep enumerates the whole world (GetPlayersInWorld) and
+-- re-arms itself, so it runs exactly once in the global state. The creature
+-- combat handlers below stay active in every state.
 local initialDelay = math.random(EVENT_INTERVAL_MIN, EVENT_INTERVAL_MAX)
-CreateLuaEvent(BonkTime, initialDelay, 1)
+if require("Multistate").IsCompat() or require("Multistate").IsWorld() then
+    CreateLuaEvent(BonkTime, initialDelay, 1)
+end
 RegisterCreatureEvent(SPAWN_NPC_ID, 1, OnEnterCombat)
 RegisterCreatureEvent(SPAWN_NPC_ID, 2, OnLeaveCombat)

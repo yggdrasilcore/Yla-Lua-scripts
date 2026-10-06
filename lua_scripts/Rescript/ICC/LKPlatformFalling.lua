@@ -1,3 +1,6 @@
+-- Multistate: Icecrown Citadel-only script (map 631).
+if not IsCompatibilityMode() and GetStateMapId() ~= 631 then return end
+
 local function IsOnLKPlatform(x, y)
     local polygon = {
         {457, -2104},
@@ -46,7 +49,7 @@ local function CheckPositions(eventid, delay, repeats, player)
     
     local px, py = player:GetX(), player:GetY()
     local name = player:GetName()
-    if isPlayerBot[name] and IsOnLKPlatform(px, py) then
+    if ShadowGetMaster(name) and IsOnLKPlatform(px, py) then
         local z = player:GetZ()
         if z < 838 then
             local x, y, o = player:GetX(), player:GetY(), player:GetO()

@@ -1,3 +1,6 @@
+-- Multistate: map-only script (all hooks fire in map states).
+if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+
 local AURA_ID = 42786
 local QUEST_ID = 11343
 local MAP_ID = 571
@@ -15,7 +18,7 @@ local function CheckPlayersForQuestCompletion()
     local playerCount = 0
     
     for playerName, _ in pairs(checkPlayers) do
-        local player = GetPlayerByName(playerName)
+        local player = require("Multistate").FindPlayerByName(playerName)
         if player and player:GetAreaId() == AREA_ID then
             playerCount = playerCount + 1
             if player:HasAura(AURA_ID) then
