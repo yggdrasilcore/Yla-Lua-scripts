@@ -100,16 +100,6 @@ else
     end, 5000, 0)
 end
 
-print("[QuestItemGO] questItemGoCache = {")
-for questId, entries in pairs(questItemGoCache) do
-    print("    [" .. questId .. "] = {")
-    for _, e in ipairs(entries) do
-        print("        { goEntry=" .. e.goEntry .. ", itemId=" .. e.itemId .. ", itemCount=" .. e.itemCount .. ", data3=" .. e.data3 .. " },")
-    end
-    print("    },")
-end
-print("}")
-
 local function GetItemName(itemId)
     local template = GetItemTemplate(itemId)
     return template and template:GetName() or tostring(itemId)
