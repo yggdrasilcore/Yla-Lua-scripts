@@ -293,7 +293,7 @@ CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.disable_shadows_spells (`g
 
 -- Multistate: the disablespells command fires globally but spell removal must
 -- run on the target's map state.
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
 EMQ.RegisterQueue("DisableSpellsCmd", function(player, data)
@@ -305,7 +305,7 @@ EMQ.RegisterQueue("DisableSpellsCmd", function(player, data)
     if sel and data.targetGuidLow and sel:GetGUIDLow() == data.targetGuidLow then
         target = sel:ToPlayer()
     elseif data.targetName then
-        target = MS.FindPlayerByName(data.targetName)
+        target = Multistate.FindPlayerByName(data.targetName)
     end
     if target then
         DisableManualSpells(target)
@@ -334,7 +334,7 @@ local function OnDisableSpellsCommand(event, player, command)
         local targetPlayer = target:ToPlayer()
 
         local data = { targetGuidLow = target:GetGUIDLow(), targetName = targetPlayer:GetName() }
-        if MS.IsCompat() then
+        if Multistate.IsCompat() then
             DisableManualSpells(targetPlayer)
             player:SendBroadcastMessage("DisableManualSpells executed on " .. targetPlayer:GetName())
         else

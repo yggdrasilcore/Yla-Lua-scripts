@@ -294,7 +294,7 @@ end
 -- from the DB, so all map-side readers (gossip, Morpher) stay correct without
 -- cross-state sharing (morph progression itself is persisted in
 -- character_morphs). Morpher() additionally lazy-loads per form by itself.
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 
 local function EnsureDruidSelection(player)
     if not player then
@@ -1439,7 +1439,7 @@ local function OnLogin(event, player)
         
         CharDBQueryAsync("SELECT id, form FROM character_morphs WHERE guid = "..guid.." AND active = 1", function(morphdb)
             if morphdb then
-                local player = MS.FindPlayerByName(playername)
+                local player = Multistate.FindPlayerByName(playername)
                 if not player then return end
                 repeat
                     local id = morphdb:GetUInt32(0)
@@ -1478,7 +1478,7 @@ end
 
 local function ReloadEluna(event)
     local players = {}
-    MS.ForEachPlayer(function(p) table.insert(players, p) end)
+    Multistate.ForEachPlayer(function(p) table.insert(players, p) end)
     for _, player in ipairs(players) do
         if player:GetClass() == 11 and player:HasItem(17890) and not player:IsPvPFlagged() then 
             local guid = player:GetGUIDLow()
@@ -1488,7 +1488,7 @@ local function ReloadEluna(event)
             
             CharDBQueryAsync("SELECT id, form FROM character_morphs WHERE guid = "..guid.." AND active = 1", function(morphdb)
                 if morphdb then
-                    local player = MS.FindPlayerByName(playername)
+                    local player = Multistate.FindPlayerByName(playername)
                     repeat
                         local id = morphdb:GetUInt32(0)
                         local form = morphdb:GetUInt32(1)

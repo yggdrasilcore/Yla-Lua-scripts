@@ -1,7 +1,7 @@
 -- Multistate: RegisterItemEvent handlers fire in map states, but Group member
 -- listing is world-only, so group-wide drum casts are forwarded to the global
 -- state via EMQ.
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
 -- Global executor (Group API is world-only). Pets are resolved here as well so
@@ -51,7 +51,7 @@ WorldDBExecute("DELETE FROM spell_script_names WHERE spell_id IN (69377)") -- Wi
 
 local function CastOnGroup(player, spellId)
     local data = { spellId = spellId }
-    if MS.IsCompat() or MS.IsWorld() then
+    if Multistate.IsCompat() or Multistate.IsWorld() then
         DoCastOnGroup(player, data)
     else
         player:SendEMQMessage("DrumsCastOnGroup", data)

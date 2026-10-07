@@ -1,7 +1,7 @@
 local ITEM_ENTRY = 41415
 -- Multistate: item gossip handlers fire in map states, but Group member listing
 -- is world-only, so group-wide buffs are forwarded to the global state via EMQ.
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
 -- Global executor (Group API is world-only).
@@ -90,7 +90,7 @@ end
 
 local function CastOnGroup(player, spellId)
     local data = { spellId = spellId }
-    if MS.IsCompat() or MS.IsWorld() then
+    if Multistate.IsCompat() or Multistate.IsWorld() then
         DoCastOnGroup(player, data)
     else
         player:SendEMQMessage("TwiggyWisdomGroupBuff", data)

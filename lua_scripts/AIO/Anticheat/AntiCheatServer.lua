@@ -1,7 +1,7 @@
 -- Multistate: StartElunaAnticheat (event 28) runs in map states with per-state
 -- timers; the command handler (event 42) runs globally. Reload handling is
 -- state-aware because GetPlayersInWorld() only exists globally.
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 
 local function StartAntiClipCheck(player)
     player:SetData("LastPosX", player:GetX())
@@ -135,7 +135,7 @@ end
 
 local function ReloadEluna(event)
     CreateLuaEvent(function()
-        MS.ForEachPlayer(function(player)
+        Multistate.ForEachPlayer(function(player)
             StartElunaAnticheat(event, player)
         end)
     end, 5000, 1)

@@ -173,7 +173,7 @@ local morphIdCache = {}
 -- their loader. This lazy loader fills the LOCAL state's cache synchronously
 -- from the DB, so all map-side readers stay correct without cross-state
 -- sharing (morph progression itself is persisted in character_morphs).
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 
 local function EnsureMorphCache(player)
     if not player then
@@ -428,7 +428,7 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
         local ITEMS_PER_PAGE = 10
         
         CharDBQueryAsync("SELECT name, id FROM character_morphs WHERE guid = "..guid.." AND form = "..formId, function(results)
-            local player = MS.FindPlayerByName(playername)
+            local player = Multistate.FindPlayerByName(playername)
             
             if results then
                 -- Store all results in a table for pagination
@@ -527,7 +527,7 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
     end
     
     CharDBQueryAsync("SELECT name FROM character_morphs WHERE guid = " .. guid .. " AND form = " .. chosenFamily .. " AND id = " .. intid, function(morphNameResult)
-        local player = MS.FindPlayerByName(name)
+        local player = Multistate.FindPlayerByName(name)
         local morphName = "Unknown Morph"
         if morphNameResult then
             morphName = morphNameResult:GetString(0)
@@ -704,7 +704,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
 end
 
 local function OnReloadEluna(event)
-    MS.ForEachPlayer(function(player)
+    Multistate.ForEachPlayer(function(player)
 		if player:HasItem(ITEM_ID) then
 			local guid = player:GetGUIDLow()
 			local name = player:GetName()
@@ -752,7 +752,7 @@ local function OnPlayerLogin(event, player)
 		local name = player:GetName()
 		
         CharDBQueryAsync("SELECT id, form, active FROM character_morphs WHERE guid = " .. guid, function(result)
-			player = MS.FindPlayerByName(name)
+			player = Multistate.FindPlayerByName(name)
 			if result then
 				repeat
 					local morphId = result:GetUInt32(0)

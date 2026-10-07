@@ -1,6 +1,6 @@
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 function IsVIP(player)
-    return MS.GetShared(player, "VIPTime") and MS.GetShared(player, "VIPTime") > os.time()
+    return Multistate.GetData(player, "VIPTime") and Multistate.GetData(player, "VIPTime") > os.time()
 end
 
 local function CheckVIPOnLoad()
@@ -9,7 +9,7 @@ local function CheckVIPOnLoad()
     local accountIds = {}
     
     -- Multistate: state-aware enumeration (each state covers visible players).
-    MS.ForEachPlayer(function(player)
+    Multistate.ForEachPlayer(function(player)
         local name = player:GetName()
         local accountId = player:GetAccountId()
         
@@ -36,10 +36,10 @@ local function CheckVIPOnLoad()
         for _, name in ipairs(playerNames) do
             local player = GetPlayerByName(name)
             if player and vipTimeMap[accountIdMap[name]] then
-                MS.SetShared(player, "VIPTime", vipTimeMap[accountIdMap[name]])
+                Multistate.SetData(player, "VIPTime", vipTimeMap[accountIdMap[name]])
 				print("VIP found: "..player:GetName()..", acc "..player:GetAccountId()..".")
             elseif player then
-                MS.SetShared(player, "VIPTime", 0)
+                Multistate.SetData(player, "VIPTime", 0)
             end
         end
     end)
@@ -54,9 +54,9 @@ local function CheckVIP(event, player)
 		local player = GetPlayerByName(name)
 		if not player then return end
 		if result then
-			MS.SetShared(player, "VIPTime", result:GetUInt32(0))
+			Multistate.SetData(player, "VIPTime", result:GetUInt32(0))
 		else
-			MS.SetShared(player, "VIPTime", 0)
+			Multistate.SetData(player, "VIPTime", 0)
 		end
 	end)
 end
@@ -76,7 +76,7 @@ local function VIPBotRepairOnResurrect(event, player)
 	-- Find bot's master (multistate: DB-backed lookup works in every state).
     local botMasterName = ShadowGetMaster(name)
     if botMasterName then
-				local botMaster = MS.FindPlayerByName(botMasterName)
+				local botMaster = Multistate.FindPlayerByName(botMasterName)
 				if not botMaster then return end
 				if not IsVIP(botMaster) then
 					bot:SendUnitWhisper('My equipment has taken a 10% durability hit. Please repair my gear by whispering "repair" to me next to a repair vendor.', 0, botMaster)
@@ -189,7 +189,7 @@ local function VIPGMCommands(event, player, command)
                     
                     local freshOnlinePlayer = onlineCharName and GetPlayerByName(onlineCharName) or nil
                     if freshOnlinePlayer then
-                        MS.SetShared(freshOnlinePlayer, "VIPTime", newVIPTime)
+                        Multistate.SetData(freshOnlinePlayer, "VIPTime", newVIPTime)
                         freshOnlinePlayer:SendBroadcastMessage("A GM has granted you " .. days .. " VIP days. Your VIP status has been updated!")
                     end
                     
@@ -263,7 +263,7 @@ local function VIPGMCommands(event, player, command)
                     AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
                     
                     if targetPlayer then
-                        MS.SetShared(targetPlayer, "VIPTime", newVIPTime)
+                        Multistate.SetData(targetPlayer, "VIPTime", newVIPTime)
                         targetPlayer:SendBroadcastMessage("A GM has granted you " .. days .. " VIP days. Your VIP status has been updated!")
                         if gm then gm:SendBroadcastMessage("Added " .. days .. " VIP days to " .. username .. " (" .. targetPlayer:GetName() .. "). New VIP expires: " .. os.date("%Y-%m-%d %H:%M:%S", newVIPTime)) end
                     else
@@ -316,7 +316,7 @@ local function VIPGMCommands(event, player, command)
         end
         
         local targetAccountId = targetPlayer:GetAccountId()
-        local currentVIPTime = MS.GetShared(targetPlayer, "VIPTime") or 0
+        local currentVIPTime = Multistate.GetData(targetPlayer, "VIPTime") or 0
         local currentTime = os.time()
         
         local baseTime = math.max(currentVIPTime, currentTime)
@@ -324,7 +324,7 @@ local function VIPGMCommands(event, player, command)
         
         AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
         
-        MS.SetShared(targetPlayer, "VIPTime", newVIPTime)
+        Multistate.SetData(targetPlayer, "VIPTime", newVIPTime)
         
         if targetPlayer == player then
             player:SendBroadcastMessage("Added " .. days .. " VIP days to yourself. New VIP expires: " .. os.date("%Y-%m-%d %H:%M:%S", newVIPTime))
@@ -372,14 +372,14 @@ local function VIPGMCommands(event, player, command)
         end
         
         local targetAccountId = targetPlayer:GetAccountId()
-        local currentVIPTime = MS.GetShared(targetPlayer, "VIPTime") or 0
+        local currentVIPTime = Multistate.GetData(targetPlayer, "VIPTime") or 0
         local currentTime = os.time()
         
         local newVIPTime = math.max(currentTime, currentVIPTime - (days * 24 * 60 * 60))
         
         AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
         
-        MS.SetShared(targetPlayer, "VIPTime", newVIPTime)
+        Multistate.SetData(targetPlayer, "VIPTime", newVIPTime)
         
         if newVIPTime <= currentTime then
             player:SendBroadcastMessage("Removed " .. days .. " VIP days from " .. targetPlayer:GetName() .. ". VIP is now INACTIVE.")
@@ -432,14 +432,14 @@ local function VIPGMCommands(event, player, command)
         end
         
         local targetAccountId = targetPlayer:GetAccountId()
-        local currentVIPTime = MS.GetShared(targetPlayer, "VIPTime") or 0
+        local currentVIPTime = Multistate.GetData(targetPlayer, "VIPTime") or 0
         local currentTime = os.time()
         
         local newVIPTime = math.max(currentTime, currentVIPTime - (days * 24 * 60 * 60))
         
         AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
         
-        MS.SetShared(targetPlayer, "VIPTime", newVIPTime)
+        Multistate.SetData(targetPlayer, "VIPTime", newVIPTime)
         
         if newVIPTime <= currentTime then
             if targetPlayer == player then
@@ -494,7 +494,7 @@ local function VIPGMCommands(event, player, command)
         
         AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. currentTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
         
-        MS.SetShared(targetPlayer, "VIPTime", currentTime)
+        Multistate.SetData(targetPlayer, "VIPTime", currentTime)
         
         player:SendBroadcastMessage("Removed all VIP time from " .. targetPlayer:GetName() .. ". VIP is now INACTIVE.")
         targetPlayer:SendBroadcastMessage("A GM has removed all VIP time from your account. Your VIP status has been updated!")
@@ -538,7 +538,7 @@ local function VIPGMCommands(event, player, command)
         
         AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. currentTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
         
-        MS.SetShared(targetPlayer, "VIPTime", currentTime)
+        Multistate.SetData(targetPlayer, "VIPTime", currentTime)
         
         if targetPlayer == player then
             player:SendBroadcastMessage("Removed all VIP time from yourself. VIP is now INACTIVE.")
@@ -564,7 +564,7 @@ local function VIPGMCommands(event, player, command)
             return false
         end
         
-        local vipTime = MS.GetShared(targetPlayer, "VIPTime") or 0
+        local vipTime = Multistate.GetData(targetPlayer, "VIPTime") or 0
         local currentTime = os.time()
         
         if vipTime > currentTime then
@@ -621,7 +621,7 @@ local function VIPGMCommands(event, player, command)
             end
         end
         
-        local vipTime = MS.GetShared(targetPlayer, "VIPTime") or 0
+        local vipTime = Multistate.GetData(targetPlayer, "VIPTime") or 0
         local currentTime = os.time()
         
         if vipTime > currentTime then
@@ -661,7 +661,7 @@ local function VIPCommands(event, player, command)
     if cmd == "vip" and player:GetGMRank() == 0 then
         if not CheckVIPCmd(player) then return false end
         
-        local vipTime = MS.GetShared(player, "VIPTime") or 0
+        local vipTime = Multistate.GetData(player, "VIPTime") or 0
         local currentTime = os.time()
         
         if vipTime > currentTime then

@@ -34,7 +34,7 @@ local disallowedZones   =   {4298}--, 4197, 3628, 3666} -- Scarlet Enclave (DK s
 -- The accessor functions below are global so every Shadows script (and VIP,
 -- TokensLogin, etc.) can use them in any state. Never access isPlayerBot /
 -- activeBots Lua tables across files anymore; they are gone.
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
 CharDBExecute("CREATE TABLE IF NOT EXISTS shadows_bots (bot_name VARCHAR(12) NOT NULL PRIMARY KEY, master_name VARCHAR(12) NOT NULL)")
@@ -97,7 +97,7 @@ end
 
 -- Per-player shadows counters/flags in shared Data() (visible in every state).
 function ShadowGetBotCount(player)
-    return MS.GetShared(player, "ShadowsBotCount") or 0
+    return Multistate.GetData(player, "ShadowsBotCount") or 0
 end
 
 function ShadowSetBotCount(player, count)
@@ -105,7 +105,7 @@ function ShadowSetBotCount(player, count)
     if count < 0 then
         count = 0
     end
-    MS.SetShared(player, "ShadowsBotCount", count)
+    Multistate.SetData(player, "ShadowsBotCount", count)
 end
 
 function ShadowAddBotCount(player, delta)
@@ -113,20 +113,20 @@ function ShadowAddBotCount(player, delta)
 end
 
 function ShadowGetLoginTime(player)
-    return MS.GetShared(player, "ShadowsLoginTime")
+    return Multistate.GetData(player, "ShadowsLoginTime")
 end
 
 function ShadowSetLoginTime(player, t)
-    MS.SetShared(player, "ShadowsLoginTime", t)
+    Multistate.SetData(player, "ShadowsLoginTime", t)
 end
 
 -- Shadow bar flag (written on login/global, read in gossip/map and AIO/global).
 function ShadowGetBarData(player)
-    return MS.GetShared(player, "ShadowsBarData")
+    return Multistate.GetData(player, "ShadowsBarData")
 end
 
 function ShadowSetBarData(player, value)
-    MS.SetShared(player, "ShadowsBarData", value)
+    Multistate.SetData(player, "ShadowsBarData", value)
 end
 
 -- Summon-protection timestamps, stored per master in shared Data().
@@ -134,9 +134,9 @@ function ShadowSetDontKick(masterPlayer, botName, time)
     if not masterPlayer or not botName then
         return
     end
-    local t = MS.GetShared(masterPlayer, "ShadowsDontKick") or {}
+    local t = Multistate.GetData(masterPlayer, "ShadowsDontKick") or {}
     t[botName] = time
-    MS.SetShared(masterPlayer, "ShadowsDontKick", t)
+    Multistate.SetData(masterPlayer, "ShadowsDontKick", t)
 end
 
 function ShadowDontKickActive(botPlayer)
@@ -148,31 +148,31 @@ function ShadowDontKickActive(botPlayer)
     if not masterName then
         return false
     end
-    local master = MS.FindPlayerByName(masterName)
+    local master = Multistate.FindPlayerByName(masterName)
     if not master then
         return false
     end
-    local t = MS.GetShared(master, "ShadowsDontKick") or {}
+    local t = Multistate.GetData(master, "ShadowsDontKick") or {}
     return t[botName] and t[botName] > os.time()
 end
 
 -- Bot summon throttle (written in gossip/map, read in command/global).
 function ShadowGetBotSummonTime(player)
-    return MS.GetShared(player, "ShadowsBotSummonTime") or 0
+    return Multistate.GetData(player, "ShadowsBotSummonTime") or 0
 end
 
 function ShadowSetBotSummonTime(player, t)
-    MS.SetShared(player, "ShadowsBotSummonTime", t)
+    Multistate.SetData(player, "ShadowsBotSummonTime", t)
 end
 
 -- Follow-teleport throttle (Teleport() runs in both global packet handlers and
 -- map enter handlers).
 function ShadowGetLastTeleTime(player)
-    return MS.GetShared(player, "ShadowsLastTele") or 0
+    return Multistate.GetData(player, "ShadowsLastTele") or 0
 end
 
 function ShadowSetLastTeleTime(player, t)
-    MS.SetShared(player, "ShadowsLastTele", t)
+    Multistate.SetData(player, "ShadowsLastTele", t)
 end
 
 -- Runs a player command in the global state: directly when already global (or
@@ -188,7 +188,7 @@ function ShadowsRunCommand(player, cmd)
     if not player or not cmd then
         return
     end
-    if MS.IsCompat() or MS.IsWorld() then
+    if Multistate.IsCompat() or Multistate.IsWorld() then
         player:RunCommand(cmd)
     else
         player:SendEMQMessage("ShadowsRunCommand", { cmd = cmd })
@@ -443,7 +443,7 @@ local function ShadowsHello(player)
         end)
     end
 
-    if MS.GetShared(player, "VIPTime") and MS.GetShared(player, "VIPTime") > os.time() then -- Increased bot limit for VIP
+    if Multistate.GetData(player, "VIPTime") and Multistate.GetData(player, "VIPTime") > os.time() then -- Increased bot limit for VIP
         maxBotsForPlayer = maxVIPCount
     end
     
@@ -486,7 +486,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
     local name = player:GetName()
 	local maxBotsForPlayer = maxBotCount
     
-    if MS.GetShared(player, "VIPTime") and MS.GetShared(player, "VIPTime") > os.time() then -- Increased bot limit for VIP
+    if Multistate.GetData(player, "VIPTime") and Multistate.GetData(player, "VIPTime") > os.time() then -- Increased bot limit for VIP
         maxBotsForPlayer = maxVIPCount
     end
     
@@ -553,7 +553,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
      elseif intid == 3 then -- Follow
         for _, name in pairs(ShadowGetBots(name)) do
             if name ~= player:GetName() then
-                bot = MS.FindPlayerByName(name)
+                bot = Multistate.FindPlayerByName(name)
                 if bot then
                     bot:MoveFollow(player, math.random(-6, 6), math.random(-6, 6))
                     if bot:IsInCombat() and bot:GetSelection() then
@@ -568,7 +568,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
      elseif intid == 4 then -- Attack
         for _, name in pairs(ShadowGetBots(name)) do
             if name ~= player:GetName() then
-                bot = MS.FindPlayerByName(name)
+                bot = Multistate.FindPlayerByName(name)
                 if bot then
                     player:Say("/p attack", 0)
                 end
@@ -581,7 +581,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
         if botTeleTime[accountId] < os.time() then
             for _, name in pairs(ShadowGetBots(name)) do
                 if name ~= player:GetName() then
-                    bot = MS.FindPlayerByName(name)
+                    bot = Multistate.FindPlayerByName(name)
                     if bot then
                         if bot:GetMapId() == player:GetMapId() then
                             bot:Teleport(player:GetMapId(), player:GetX() + math.random(-3, 3), player:GetY() + math.random(-3, 3), player:GetZ() + math.random(0, 0.1), player:GetO() + math.random(-6, 6))
@@ -606,7 +606,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
     elseif intid == 6 then  -- Show list of active shadows to remove
         ListActiveShadows(player)
 	elseif intid == 7 then
-		if MS.GetShared(player, "ShadowBarStatusChecked") then
+		if Multistate.GetData(player, "ShadowBarStatusChecked") then
 			player:SendAddonMessage("ShadowsBar", "SETTINGS", 7, player)
 		else
 			player:SendAreaTriggerMessage("Your shadow bar settings are loading, please try again in a few seconds.")
@@ -694,7 +694,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
         if ShadowGetBotCount(player) < maxBotsForPlayer then
             local selectedIndex = intid - 100
             -- Multistate: shared add-spam throttle (written by command/global).
-            local lastAdd = MS.GetShared(player, "ShadowsAddCmd")
+            local lastAdd = Multistate.GetData(player, "ShadowsAddCmd")
             if lastAdd and not (GetCurrTime() - lastAdd > 300) then
                 player:SendAreaTriggerMessage("You can't add shadows that fast!")
                 ShadowsHello(player)
@@ -729,9 +729,9 @@ function SetActiveVars()
     -- Group players visible in this state by account ID and collect all GUIDs.
     -- Multistate: the global state sees everyone; map states see their own map.
     -- The shadows_bots table converges because all writes are REPLACE/DELETE.
-    MS.ForEachPlayer(function(player)
+    Multistate.ForEachPlayer(function(player)
         if player then
-            MS.SetShared(player, "ShadowBarStatusChecked", true)
+            Multistate.SetData(player, "ShadowBarStatusChecked", true)
             local accountId = player:GetAccountId()
             if not playersByAccount[accountId] then
                 playersByAccount[accountId] = {}
@@ -751,7 +751,7 @@ function SetActiveVars()
     -- Multistate: only the global state prunes stale mappings. This mirrors the
     -- original full table reset: any link involving an offline player is dropped,
     -- then co-online same-account links are re-detected below.
-    if MS.IsWorld() then
+    if Multistate.IsWorld() then
         CharDBExecute("DELETE FROM shadows_bots WHERE bot_name NOT IN (SELECT name FROM characters WHERE online = 1) OR master_name NOT IN (SELECT name FROM characters WHERE online = 1)")
     end
 
@@ -767,7 +767,7 @@ function SetActiveVars()
 						local data = result:GetString(1)
 						if data == "ENABLED" then
                             -- Multistate: state-aware lookup (callback runs in this state).
-				 		    local player = MS.FindPlayerByGUID(GetPlayerGUID(guid))
+				 		    local player = Multistate.FindPlayerByGUID(GetPlayerGUID(guid))
 				 		    if player then
 								ShadowSetBarData(player, true)
 		  		 			end
@@ -810,7 +810,7 @@ function SetActiveVars()
 
                     -- Set up activeBots for the main player
                     if mainPlayer then
-						local player = MS.FindPlayerByName(mainPlayer.name)
+						local player = Multistate.FindPlayerByName(mainPlayer.name)
                         activeBots[mainPlayer.name] = {}
                         player:SetData("BotCount", 0)
 
@@ -848,7 +848,7 @@ local function ShadowsLogin(event, player) -- Lazy persistent storage solution. 
 
         local masterName = ShadowGetMaster(name)
         local master
-        if masterName then master = MS.FindPlayerByName(masterName) end
+        if masterName then master = Multistate.FindPlayerByName(masterName) end
 
         if not master then return end
 
@@ -874,7 +874,7 @@ local function ShadowsLogin(event, player) -- Lazy persistent storage solution. 
 	CharDBQueryAsync("SELECT data FROM character_custom_data WHERE guid = "..guid.." AND type = 98", function(result)
 		if result then
 			local data = result:GetString(0)
-			local player = MS.FindPlayerByGUID(GetPlayerGUID(guid))
+			local player = Multistate.FindPlayerByGUID(GetPlayerGUID(guid))
 			if not player then return end
 			if data == "ENABLED" then
 				ShadowSetBarData(player, true)
@@ -912,7 +912,7 @@ local function LogoutOrSave(event, player)
     botsAvailable[accountId]    = nil
 
     if botMaster then
-        local master = MS.FindPlayerByName(botMaster)
+        local master = Multistate.FindPlayerByName(botMaster)
         if master then
             ShadowSetBotCount(master, #(ShadowGetBots(botMaster)))
         end
@@ -927,8 +927,8 @@ end
 function CheckActiveBots(eventid, delay, repeats, uninvitedPlayer)
     local uninvitedPlayerName = uninvitedPlayer:GetName()
     if ShadowGetMaster(uninvitedPlayerName) then
-        local player = MS.FindPlayerByName(ShadowGetMaster(uninvitedPlayerName))
-        local bot = MS.FindPlayerByName(uninvitedPlayerName)
+        local player = Multistate.FindPlayerByName(ShadowGetMaster(uninvitedPlayerName))
+        local bot = Multistate.FindPlayerByName(uninvitedPlayerName)
         if player and bot then
             player:RegisterEvent(function(_, _, _, player)
                 player:RunCommand(".playerbots bot remove " .. uninvitedPlayerName)
@@ -943,7 +943,7 @@ end
 function UninviteGroupGUID(event, packet, player)
     local guid = packet:ReadGUID()
     local reason = packet:ReadString()
-    local uninvitedPlayer = MS.FindPlayerByGUID(guid)
+    local uninvitedPlayer = Multistate.FindPlayerByGUID(guid)
     if uninvitedPlayer then
         if not logoutEvent[uninvitedPlayer:GetName()] then
 			if ShadowDontKickActive(uninvitedPlayer) then return end
@@ -955,7 +955,7 @@ end
 
 function UninviteGroup(event, packet, player)
     local uninvitedPlayerName = packet:ReadString()
-    local uninvitedPlayer = MS.FindPlayerByName(uninvitedPlayerName)
+    local uninvitedPlayer = Multistate.FindPlayerByName(uninvitedPlayerName)
     if uninvitedPlayer then
         if not logoutEvent[uninvitedPlayer:GetName()] then
 			if ShadowDontKickActive(uninvitedPlayer) then return end
@@ -966,7 +966,7 @@ function UninviteGroup(event, packet, player)
 end
 
 local function LeaveGroup(event, group, guid, method, kicker, reason)
-    local uninvitedPlayer = MS.FindPlayerByGUID(guid)
+    local uninvitedPlayer = Multistate.FindPlayerByGUID(guid)
     if uninvitedPlayer then
         if not logoutEvent[uninvitedPlayer:GetName()] then
 			if ShadowDontKickActive(uninvitedPlayer) then return end
@@ -980,10 +980,10 @@ local function DisbandGroup(event, group)
     for _, member in ipairs (group:GetMembers()) do
         if ShadowGetMaster(member:GetName()) then
             local botName = member:GetName()
-            local player = MS.FindPlayerByName(ShadowGetMaster(botName))
+            local player = Multistate.FindPlayerByName(ShadowGetMaster(botName))
             if player and not logoutEvent[botName] then
                 logoutEvent[botName] = player:RegisterEvent(function(_, _, _, player)
-					if ShadowDontKickActive(MS.FindPlayerByName(botName)) then return end
+					if ShadowDontKickActive(Multistate.FindPlayerByName(botName)) then return end
                     ShadowsRunCommand(player, ".playerbots bot remove " .. botName)
                     print("Removing "..botName.." from disbanded group")
                     logoutEvent[botName] = nil
@@ -1017,7 +1017,7 @@ function Teleport(player, sameMap)
         return
     end
     for i, botName in ipairs(ShadowGetBots(name)) do
-        local bot = MS.FindPlayerByName(botName)
+        local bot = Multistate.FindPlayerByName(botName)
         if bot and not player:IsInCombat() then
 			if (bot:GetHealth() == 0) and not bot:HasAura(8326) then -- Stops unreleased ghost corpses from being teleported
 				return
@@ -1083,7 +1083,7 @@ local function OnGroup(event, player, msg, Type, lang, group)
 			local groupMemberName = groupMember:GetName()
 
 			for _, botName in ipairs(ShadowGetBots(groupMemberName)) do
-				local bot = MS.FindPlayerByName(botName)
+				local bot = Multistate.FindPlayerByName(botName)
 				if bot and player:GetAccountId() == bot:GetAccountId() then
 					bot:SendUnitWhisper("Repairing!", 0, player)
 				end
@@ -1275,7 +1275,7 @@ local function OnBotCommand(event, player, command)
             end
 
             ShadowAddBotCount(player, 1)
-            MS.SetShared(player, "ShadowsAddCmd", GetCurrTime())
+            Multistate.SetData(player, "ShadowsAddCmd", GetCurrTime())
             if ShadowGetBotCount(player) > 4 then
                 local shadowsGroup = player:GetGroup()
                 if shadowsGroup then
@@ -1284,7 +1284,7 @@ local function OnBotCommand(event, player, command)
             end
 
             player:RegisterEvent(function(e, d, r, player)
-                local bot = MS.FindPlayerByName(selectedChar)
+                local bot = Multistate.FindPlayerByName(selectedChar)
                 if not bot then return end
 
                 local botGroup = bot:GetGroup()
@@ -1305,7 +1305,7 @@ local function OnBotCommand(event, player, command)
         if string.find(command, "^playerbots bot remove ") then
             local selectedChar = string.match(command, "^playerbots bot remove (.+)$")
 
-            local selectedCharObj = MS.FindPlayerByName(selectedChar)
+            local selectedCharObj = Multistate.FindPlayerByName(selectedChar)
             if selectedCharObj then selectedCharObj:RemoveEvents() end
 
             for i, botName in ipairs(ShadowGetBots(name)) do
@@ -1354,7 +1354,7 @@ local function OnBotCommand(event, player, command)
 		player:SendBroadcastMessage("Automatic shadows bar disabled.")
 		return false
 	elseif command == "shadowsbarstatus" then
-		MS.SetShared(player, "ShadowBarStatusChecked", true)
+		Multistate.SetData(player, "ShadowBarStatusChecked", true)
 		if not player:IsInGroup() then
 			if ShadowGetBarData(player) then
 				player:SendAddonMessage("ShadowsBar", "OPEN", 7, player)
@@ -1398,7 +1398,7 @@ local function OnBotCommand(event, player, command)
 	   
 	   if player:IsInGroup() then
 		   
-		   if MS.GetShared(player, "VIPTime") and MS.GetShared(player, "VIPTime") > os.time() then
+		   if Multistate.GetData(player, "VIPTime") and Multistate.GetData(player, "VIPTime") > os.time() then
 				maxBotsForPlayer = maxVIPCount
 		   end
 		   
@@ -1450,7 +1450,7 @@ local function OnDisallowedZones(event, player, newZone, newArea)
             player:RegisterEvent(function(eventId, delay, repeats, player)
                 if #botsToRemove > 0 then
                     for _, botName in ipairs(botsToRemove) do
-                        local bot = MS.FindPlayerByName(botName)
+                        local bot = Multistate.FindPlayerByName(botName)
                         if bot then
                             bot:RemoveFromGroup()
                         end
@@ -1478,7 +1478,7 @@ local function OnGroupChangeLeader(event, packet, player)
             local masterName = ShadowGetMaster(name)
             local master
 
-            if masterName then master = MS.FindPlayerByName(masterName) end
+            if masterName then master = Multistate.FindPlayerByName(masterName) end
 
             if not master then return end
             if group:IsLeader(player:GetGUID()) then
@@ -1493,7 +1493,7 @@ local function OnGroupChangeLeader(event, packet, player)
                         local masterName = ShadowGetMaster(name)
                         local master
 
-                        if masterName then master = MS.FindPlayerByName(masterName) end
+                        if masterName then master = Multistate.FindPlayerByName(masterName) end
             
                         group:SetLeader(master:GetGUID())
 
@@ -1510,7 +1510,7 @@ function ProcessWintergraspWorldstate(variableID, value) -- Called on init and u
     if value == 0 then
         -- Multistate: state-aware enumeration (this runs wherever Tenacity's
         -- per-state timer fires; the map/zone filter below selects WG players).
-        MS.ForEachPlayer(function(player)
+        Multistate.ForEachPlayer(function(player)
             if (player:GetMapId() == 571) and (player:GetZoneId() == 4197) then
                 local playerName = player:GetName()
 
@@ -1526,7 +1526,7 @@ function ProcessWintergraspWorldstate(variableID, value) -- Called on init and u
 
                         if #botsToRemove > 0 then
                             for _, botName in ipairs(botsToRemove) do
-                                local bot = MS.FindPlayerByName(botName)
+                                local bot = Multistate.FindPlayerByName(botName)
                                 if bot then
                                     bot:RemoveFromGroup()
                                 end

@@ -48,7 +48,7 @@ local RACE_QUESTS = {
 ------------------- Code ---------------------
 -- Multistate: PLAYER_EVENT_ON_CHAT (18) fires in the global state, but the
 -- skip sequence mutates the player on its map, so it is forwarded via EMQ.
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
 -- Map-state executor (via EMQ, or directly in compatibility mode).
@@ -97,7 +97,7 @@ local function DeathKnightSkipStarterZone(event, player, message, Type, lang)
             return
         end
 
-        if MS.IsCompat() then
+        if Multistate.IsCompat() then
             DoSkipDK(player)
         else
             player:SendEMQMessage("CmdSkipDK", {})

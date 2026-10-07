@@ -1,4 +1,4 @@
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 local FeathersItem = 20739
 local FeathersSpell = 29118
@@ -532,13 +532,13 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         local currentPage = intid - 500000
         ShowMountMenu(event, player, nil, nil, currentPage - 1, true)
     elseif intid == 300002 then
-        MS.ClearShared(player, "FeathersStandardMount")
+        Multistate.ClearData(player, "FeathersStandardMount")
         print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is nil")
         player:SendBroadcastMessage("Standard mount removed.")
         CharDBExecute(string.format("DELETE FROM character_flight WHERE guid = %d", player:GetGUIDLow()))
         ShowManageStandardMount(event, player)
     elseif intid == 300003 then
-        MS.ClearShared(player, "FeathersStandardMount")
+        Multistate.ClearData(player, "FeathersStandardMount")
         print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is nil")
         player:SendBroadcastMessage("Standard mount removed.")
         CharDBExecute(string.format("DELETE FROM character_flight WHERE guid = %d", player:GetGUIDLow()))
@@ -554,8 +554,8 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
     elseif intid >= 800000 then
         -- Mount selected as standard
         local mountId = intid - 800000
-        MS.SetShared(player, "FeathersStandardMount", mountId)
-        print("[Feathers of Azeroth]: Selecting standard mount for "..player:GetName().." is ".. tostring(MS.GetShared(player, "FeathersStandardMount")) .." (mount ID "..mountId..")")
+        Multistate.SetData(player, "FeathersStandardMount", mountId)
+        print("[Feathers of Azeroth]: Selecting standard mount for "..player:GetName().." is ".. tostring(Multistate.GetData(player, "FeathersStandardMount")) .." (mount ID "..mountId..")")
         CharDBExecute(string.format("REPLACE INTO character_flight (guid, standardmount) VALUES (%d, %d)", player:GetGUIDLow(), mountId))
         player:SendBroadcastMessage("Standard mount set successfully.")
         player:GossipComplete()
@@ -616,7 +616,7 @@ local function OnUseItem(event, player, item, target)
         return false
     end
     
-    local standardMount = MS.GetShared(player, "FeathersStandardMount")
+    local standardMount = Multistate.GetData(player, "FeathersStandardMount")
     if standardMount and not player:IsCasting() then
         player:CastSpell(player, standardMount, false)
         print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is ".. standardMount)
@@ -650,7 +650,7 @@ local function LoadStandardMount(event, player)
     if result then
         local mountId = result:GetUInt32(0)
         if mountId  then
-            MS.SetShared(player, "FeathersStandardMount", mountId)
+            Multistate.SetData(player, "FeathersStandardMount", mountId)
             print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is ".. mountId)
         end
     end
@@ -660,7 +660,7 @@ local function OnLoadScript()
     local dbQueryTable = {}
     
     -- Multistate: state-aware enumeration (GetPlayersInWorld is world-only).
-    MS.ForEachPlayer(function(player)
+    Multistate.ForEachPlayer(function(player)
         if player:HasItem(FeathersItem) then
             table.insert(dbQueryTable, player:GetGUIDLow())
 			CheckFlyableArea(event, player, player:GetZoneId(), player:GetAreaId())
@@ -678,8 +678,8 @@ local function OnLoadScript()
                 local guid = result:GetUInt32(0)
                 local mountId = result:GetUInt32(1)
                 if mountId then
-                    local p = MS.FindPlayerByGUID(guid)
-                    if p then MS.SetShared(p, "FeathersStandardMount", mountId) end
+                    local p = Multistate.FindPlayerByGUID(guid)
+                    if p then Multistate.SetData(p, "FeathersStandardMount", mountId) end
                 end
             until not result:NextRow()
         end
@@ -721,7 +721,7 @@ local function OnCommand(event, player, command)
             -- Multistate: the cast and the follow-up zone check must run on the
             -- player's map state.
             local data = { spellId = spellId }
-            if MS.IsCompat() then
+            if Multistate.IsCompat() then
                 DoCastMountCommand(player, data)
             else
                 player:SendEMQMessage("FeathersCastMount", data)

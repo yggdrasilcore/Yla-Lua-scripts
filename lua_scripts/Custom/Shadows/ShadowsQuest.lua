@@ -1,7 +1,7 @@
 -- Multistate: quest flags are read in the global state (chat) but written in
 -- map states (map change, item, timers), so per-player progression lives in
 -- shared Data(); the throttle stays a per-state local.
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 
 -- Constants
 local QUEST_ID = 30000
@@ -35,14 +35,14 @@ local function ShadowsTeleItem(event, player, item, target)
         return false
     end
     
-    local questCooldown = MS.GetShared(player, "ShadowsQuestCooldown") or 0
+    local questCooldown = Multistate.GetData(player, "ShadowsQuestCooldown") or 0
     if questCooldown > os.time() then
         player:SendAreaTriggerMessage("You can't save your shadows right now! Try again in a few minutes.")
         player:SendBroadcastMessage("You can't save your shadows right now! Try again in a few minutes.")
         return false
     end
     
-    MS.SetShared(player, "ShadowsQuestReturn", { map = player:GetMapId(), x = player:GetX(), y = player:GetY(), z = player:GetZ(), o = player:GetO() })
+    Multistate.SetData(player, "ShadowsQuestReturn", { map = player:GetMapId(), x = player:GetX(), y = player:GetY(), z = player:GetZ(), o = player:GetO() })
     
     player:Teleport(MAP_ID, EventLocation[1], EventLocation[2], EventLocation[3], EventLocation[4])
 
@@ -51,18 +51,18 @@ end
 
 local function ShadowsMap(event, player)
     if player:GetAreaId() == AREA_ID then
-        if player:HasQuest(QUEST_ID) and ((MS.GetShared(player, "ShadowsQuestCooldown") or 0) <= os.time()) then
+        if player:HasQuest(QUEST_ID) and ((Multistate.GetData(player, "ShadowsQuestCooldown") or 0) <= os.time()) then
         
             local playerLocation = {player:GetLocation()}
             if not ((player:GetX() >= EventLocation[1]-1 and player:GetX() <= EventLocation[1]+1) and
                     (player:GetY() >= EventLocation[2]-1 and player:GetY() <= EventLocation[2]+1)) then
-                    MS.ClearShared(player, "ShadowsQuestEvent")
+                    Multistate.ClearData(player, "ShadowsQuestEvent")
                 return
             end
 
-            MS.SetShared(player, "ShadowsQuestEvent", true)
+            Multistate.SetData(player, "ShadowsQuestEvent", true)
 
-            MS.SetShared(player, "ShadowsQuestCooldown", os.time() + 180)
+            Multistate.SetData(player, "ShadowsQuestCooldown", os.time() + 180)
             
             player:RegisterEvent(function(eventId, delay, repeats, player)
                 if player and player:GetAreaId() == AREA_ID and (player:HasItem(TELEPORT_ITEM) or player:HasItem(QUEST_ITEM)) then
@@ -70,10 +70,10 @@ local function ShadowsMap(event, player)
                     player:RemoveItem(QUEST_ITEM, 1)
                     player:RemoveQuest(QUEST_ID)
                     player:AddItem(QUEST_ITEM, 1)
-                    local ret = MS.GetShared(player, "ShadowsQuestReturn")
+                    local ret = Multistate.GetData(player, "ShadowsQuestReturn")
                     if ret then
                         player:Teleport(ret.map, ret.x, ret.y, ret.z, ret.o)
-                        MS.ClearShared(player, "ShadowsQuestReturn")
+                        Multistate.ClearData(player, "ShadowsQuestReturn")
                     else
                         player:CastSpell(player, HEARTHSTONE, true)
                     end
@@ -93,7 +93,7 @@ local function ShadowsMap(event, player)
             if timerender then timerender:DespawnOrUnsummon() end
             if swirl then swirl:DespawnOrUnsummon() end
             
-            MS.SetShared(player, "ShadowsQuestState", 0)
+            Multistate.SetData(player, "ShadowsQuestState", 0)
             
             local x, y, z, o = player:GetLocation()
             local facing = player:GetO()
@@ -149,13 +149,13 @@ end
 local function Talk(event, player, msg, Type, lang)
     if player:GetAreaId() ~= AREA_ID then return end
     
-    if not MS.GetShared(player, "ShadowsQuestEvent") then print("event not active on player") return end
+    if not Multistate.GetData(player, "ShadowsQuestEvent") then print("event not active on player") return end
     
     local shadowSpeak = player:GetNearestCreature(50, SHADOW_ENTRY)
     
     if not shadowSpeak then return end
     
-    if msg:lower() == "formation shield" and (MS.GetShared(player, "ShadowsQuestState") or 0) == 0 then
+    if msg:lower() == "formation shield" and (Multistate.GetData(player, "ShadowsQuestState") or 0) == 0 then
         local shadows = player:GetCreaturesInRange(50, SHADOW_ENTRY)
         local timerender = player:GetNearestCreature(50, TIMERENDER_ENTRY)
         if timerender then
@@ -170,10 +170,10 @@ local function Talk(event, player, msg, Type, lang)
             player:RegisterEvent(function(eventId, delay, repeats, player)
                 player:SendAreaTriggerMessage("Say \"attack\" to make your shadows attack the captor!")
                 player:SendBroadcastMessage("Say \"attack\" to make your shadows attack the captor!")
-                MS.SetShared(player, "ShadowsQuestState", 1)
+                Multistate.SetData(player, "ShadowsQuestState", 1)
             end, 2000, 1)
         end, 5000, 1)
-    elseif msg:lower() == "attack" and (MS.GetShared(player, "ShadowsQuestState") or 0) == 1 then
+    elseif msg:lower() == "attack" and (Multistate.GetData(player, "ShadowsQuestState") or 0) == 1 then
         local shadowSpeak = player:GetNearestCreature(50, SHADOW_ENTRY)
         local shadows = player:GetCreaturesInRange(50, SHADOW_ENTRY)
         local timerender = player:GetNearestCreature(50, TIMERENDER_ENTRY)
@@ -193,9 +193,9 @@ local function Talk(event, player, msg, Type, lang)
         player:RegisterEvent(function(eventId, delay, repeats, player)
             player:SendAreaTriggerMessage("Target the Infinite Timerender and say \"cast Frostbolt\"!")
             player:SendBroadcastMessage("Target the Infinite Timerender and say \"cast Frostbolt\"!")
-            MS.SetShared(player, "ShadowsQuestState", 2)
+            Multistate.SetData(player, "ShadowsQuestState", 2)
         end, 4000, 1)
-    elseif msg:lower() == "cast frostbolt" and (MS.GetShared(player, "ShadowsQuestState") or 0) == 2 and player:GetSelection() then
+    elseif msg:lower() == "cast frostbolt" and (Multistate.GetData(player, "ShadowsQuestState") or 0) == 2 and player:GetSelection() then
         local shadows = player:GetCreaturesInRange(50, SHADOW_ENTRY)
         local timerender = player:GetNearestCreature(50, TIMERENDER_ENTRY)
         
@@ -233,7 +233,7 @@ local function Talk(event, player, msg, Type, lang)
                     player:RemoveItem(QUEST_ITEM, 1)
                     player:RemoveItem(TELEPORT_ITEM, 1)
                     player:RewardQuest(QUEST_ID)
-                    MS.SetShared(player, "ShadowsQuestCooldown", os.time())
+                    Multistate.SetData(player, "ShadowsQuestCooldown", os.time())
                     
                     local shadows = player:GetCreaturesInRange(50, SHADOW_ENTRY)
                     for _, shadow in pairs(shadows) do
@@ -249,11 +249,11 @@ local function Talk(event, player, msg, Type, lang)
                 
                 player:RegisterEvent(function(eventId, delay, repeats, player)
                     print("teleporting player home")
-                    MS.SetShared(player, "ShadowsQuestState", 0)
-                    local ret2 = MS.GetShared(player, "ShadowsQuestReturn")
+                    Multistate.SetData(player, "ShadowsQuestState", 0)
+                    local ret2 = Multistate.GetData(player, "ShadowsQuestReturn")
                     if ret2 then
                         player:Teleport(ret2.map, ret2.x, ret2.y, ret2.z, ret2.o)
-                        MS.ClearShared(player, "ShadowsQuestReturn")
+                        Multistate.ClearData(player, "ShadowsQuestReturn")
                     else
                         player:CastSpell(player, HEARTHSTONE, true)
                     end

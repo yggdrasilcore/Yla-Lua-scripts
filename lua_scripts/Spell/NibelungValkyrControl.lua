@@ -2,7 +2,7 @@
 -- Written by mostly nick :) for Yggdrasil WoW
 -- Multistate: the controlling packet arrives globally while the valkyr tick runs
 -- in map states, so command timestamps live in shared Data() on the owner.
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 
 local function NibelungValkyrFix(event, packet, player)
     if not player then
@@ -16,9 +16,9 @@ local function NibelungValkyrFix(event, packet, player)
         local petGuid = packet:ReadGUID()  -- Read the Pet GUID
         local count = packet:ReadUByte()   -- Read the count (uint8)
         if count == 2 then
-            MS.SetShared(player, "ValkyrAttack", os.time())
+            Multistate.SetData(player, "ValkyrAttack", os.time())
         elseif count == 1 then
-            MS.SetShared(player, "ValkyrFollow", os.time())
+            Multistate.SetData(player, "ValkyrFollow", os.time())
         end
     end
 end
@@ -31,7 +31,7 @@ local function OnValkyrSpawn(event, player, pet)
         
         pet:RegisterEvent(function(eventId, delay, repeats, pet)
             if pet then
-                local player = MS.FindPlayerByName(name)
+                local player = Multistate.FindPlayerByName(name)
                 if not player then
                     local owner = pet:GetOwner()
                     if owner and owner:IsPlayer() then
@@ -42,8 +42,8 @@ local function OnValkyrSpawn(event, player, pet)
                     RemoveEventById(eventId)
                     return
                 end
-                local attackTime = MS.GetShared(player, "ValkyrAttack") or 0
-                local followTime = MS.GetShared(player, "ValkyrFollow") or 0
+                local attackTime = Multistate.GetData(player, "ValkyrAttack") or 0
+                local followTime = Multistate.GetData(player, "ValkyrFollow") or 0
 
                 if attackTime > followTime and attackTime > os.time() - 1.5 then
                     pet:SetReactState(2)

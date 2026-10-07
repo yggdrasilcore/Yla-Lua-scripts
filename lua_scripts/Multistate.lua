@@ -16,7 +16,7 @@
 -- gates use them directly with no probing. Use the helpers below to write
 -- context-safe code.
 --
--- Usable via: local MS = require("Multistate")
+-- Usable via: local Multistate = require("Multistate")
 -- (Keep this file dependency-free: it must load in every state, first or last.)
 
 local Multistate = {}
@@ -40,9 +40,9 @@ end
 
 -- File-scope guards. Idiom (placed before registrations/logic, after definitions
 -- that other files may rely on):
---   local MS = require("Multistate")
---   if MS.SkipMap() then return end    -- global-only script (world events/timers/APIs)
---   if MS.SkipWorld() then return end  -- map-only script (map events/APIs)
+--   local Multistate = require("Multistate")
+--   if Multistate.SkipMap() then return end    -- global-only script (world events/timers/APIs)
+--   if Multistate.SkipWorld() then return end  -- map-only script (map events/APIs)
 function Multistate.SkipMap()
     return Multistate.IsMap()
 end
@@ -129,7 +129,7 @@ end
 -- state are visible in map states and vice versa. Values must be marshallable
 -- (numbers, strings, booleans, plain tables); userdata (players, creatures,
 -- items, ...) can NOT be stored — store names/guids instead.
-function Multistate.GetShared(player, key)
+function Multistate.GetData(player, key)
     if not player or not key then
         return nil
     end
@@ -143,14 +143,14 @@ function Multistate.GetShared(player, key)
     return v
 end
 
-function Multistate.SetShared(player, key, value)
+function Multistate.SetData(player, key, value)
     if not player or not key then
         return
     end
     player:Data():Set(key, value)
 end
 
-function Multistate.ClearShared(player, key)
+function Multistate.ClearData(player, key)
     if not player or not key then
         return
     end

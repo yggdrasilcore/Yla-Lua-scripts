@@ -1,18 +1,18 @@
 -- Multistate: the vehicle-target packet arrives globally while kill handlers
 -- run in map states, so the stored vehicle name lives in shared Data().
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 
 local function EnterPlayerVehicle(event, packet, player)    
     if not player or not player:GetSelection() or not player:GetSelection():IsPlayer() then
         return
     end
-    MS.SetShared(player, "vehicleName", player:GetSelection():GetName())
+    Multistate.SetData(player, "vehicleName", player:GetSelection():GetName())
 end
 
 local function HandlePlayerKill(event, killer, killed)
-    local vehicleName = MS.GetShared(killed, "vehicleName")
+    local vehicleName = Multistate.GetData(killed, "vehicleName")
     if killed:IsOnVehicle() and vehicleName then
-        local playerVehicle = MS.FindPlayerByName(vehicleName)
+        local playerVehicle = Multistate.FindPlayerByName(vehicleName)
         if not playerVehicle then return end
         local vehicle = playerVehicle:GetVehicleKit()
         if vehicle and vehicle:IsOnBoard(killed) then

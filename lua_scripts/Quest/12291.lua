@@ -6,7 +6,7 @@ local bindingLifeCheck = {}
 
 -- Multistate: the item/zone handlers run in map states while the packet
 -- handler runs globally, so per-player timestamps live in shared Data().
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 
 local function RemoveBindingLife(event, packet, player)
     if not (player:GetAreaId() == FORGOTTENSHORE) then
@@ -14,15 +14,15 @@ local function RemoveBindingLife(event, packet, player)
     end
     local playerName = player:GetName()
     
-    if (MS.GetShared(player, "BindingLifeCheck") or 0) > os.time() then
+    if (Multistate.GetData(player, "BindingLifeCheck") or 0) > os.time() then
         return
     end
 
-    if player:GetAreaId() == FORGOTTENSHORE and MS.GetShared(player, "BindingLifeTimer")
+    if player:GetAreaId() == FORGOTTENSHORE and Multistate.GetData(player, "BindingLifeTimer")
     and not player:IsInCombat() and not player:HasAura(SPELL_BINDING_LIFE)
     then
         player:RegisterEvent(function(eventid, delay, repeats, player)
-            local timestamp = MS.GetShared(player, "BindingLifeTimer")
+            local timestamp = Multistate.GetData(player, "BindingLifeTimer")
             if not timestamp then return end
             local elapsedTime = os.time() - timestamp
 
@@ -32,7 +32,7 @@ local function RemoveBindingLife(event, packet, player)
                 player:AddAura(SPELL_BINDING_LIFE, player)
 
                 local aura = player:GetAura(SPELL_BINDING_LIFE)
-                MS.SetShared(player, "BindingLifeCheck", os.time() + 1)
+                Multistate.SetData(player, "BindingLifeCheck", os.time() + 1)
                 if aura then
                     aura:SetDuration(remainingDuration * 1000) -- Convert to milliseconds
                 end
@@ -44,15 +44,15 @@ end
 local function OnBindingLife(event, player, item, target)
     local playerName = player:GetName()
     if player:GetAreaId() == FORGOTTENSHORE then
-        MS.SetShared(player, "BindingLifeTimer", os.time())
+        Multistate.SetData(player, "BindingLifeTimer", os.time())
     end
 end
 
 local function onAreaChange(event, player, newArea, oldArea)
     local playerName = player:GetName()
 
-    if oldArea == FORGOTTENSHORE and MS.GetShared(player, "BindingLifeTimer") then
-        MS.ClearShared(player, "BindingLifeTimer")
+    if oldArea == FORGOTTENSHORE and Multistate.GetData(player, "BindingLifeTimer") then
+        Multistate.ClearData(player, "BindingLifeTimer")
     end
 end
 

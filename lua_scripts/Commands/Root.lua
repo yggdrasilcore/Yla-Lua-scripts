@@ -2,7 +2,7 @@
 -- changes must execute on the map state, so they are forwarded via EMQ. The
 -- target is re-resolved on the map state (selections usually persist, which also
 -- covers non-player targets that cannot be found by name).
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
 -- Map-state executor (via EMQ, or directly in compatibility mode).
@@ -15,7 +15,7 @@ local function DoRootCommand(player, data)
     if sel and data.targetGuidLow and sel:GetGUIDLow() == data.targetGuidLow then
         target = sel
     elseif data.targetName then
-        target = MS.FindPlayerByName(data.targetName) or player
+        target = Multistate.FindPlayerByName(data.targetName) or player
     end
     if data.remove then
         target:RemoveAura(38505)
@@ -41,7 +41,7 @@ local function OnRootCommand(event, player, command)
             data.targetGuidLow = target:GetGUIDLow()
             data.targetName = target:GetName()
         end
-        if MS.IsCompat() then
+        if Multistate.IsCompat() then
             DoRootCommand(player, data)
         else
             player:SendEMQMessage("CmdRoot", data)
@@ -55,7 +55,7 @@ local function OnRootCommand(event, player, command)
             data.targetGuidLow = target:GetGUIDLow()
             data.targetName = target:GetName()
         end
-        if MS.IsCompat() then
+        if Multistate.IsCompat() then
             DoRootCommand(player, data)
         else
             player:SendEMQMessage("CmdRoot", data)

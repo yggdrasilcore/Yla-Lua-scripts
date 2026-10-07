@@ -81,11 +81,11 @@ function Beastmaster.OnSelect(event, player, unit, sender, intid, code)
             -- Wait for 3 seconds before executing the following logic
             -- Multistate: state-aware re-resolve (this timer runs in map states).
             CreateLuaEvent(function()
-                local MS = require("Multistate")
+                local Multistate = require("Multistate")
                 local finalPetCount = Beastmaster.GetPetCount(playerGUID)
 
                	for playerName, _ in pairs(playerPayment) do
-					local player = MS.FindPlayerByName(playerName)
+					local player = Multistate.FindPlayerByName(playerName)
                     if not player then
                         playerPayment[playerName] = nil
                     else

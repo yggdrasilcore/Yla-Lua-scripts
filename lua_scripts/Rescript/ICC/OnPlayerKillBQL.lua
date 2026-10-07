@@ -1,7 +1,7 @@
 -- Multistate: PLAYER_EVENT_ON_KILL_CREATURE (7) fires in map states, but Group
 -- member listing is world-only, so group-wide aura cleanup and quest credit are
 -- forwarded to the global state via EMQ.
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
 local AURAS = { 70877, 72151, 72649, 71949, 70867, 70879, 70923 }
@@ -51,7 +51,7 @@ local function OnPlayerKillBQL(event, player, killed)
         end
 
         local data = { questId = questId }
-        if MS.IsCompat() or MS.IsWorld() then
+        if Multistate.IsCompat() or Multistate.IsWorld() then
             -- Compatibility/single-state: run inline.
             local group = player:GetGroup()
             if group then

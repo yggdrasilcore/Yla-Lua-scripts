@@ -1,7 +1,7 @@
 -- Multistate: PLAYER_EVENT_ON_COMPLETE_QUEST (54) and PLAYER_EVENT_ON_KILL_CREATURE
 -- (7) fire in map states, but Group member listing is world-only, so group-wide
 -- awarding is forwarded to the global state via EMQ.
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
 local TRANSMOG_TOKEN_ID = 37742
@@ -75,7 +75,7 @@ local function OnKillCreature(event, player, killed)
             isWorldBoss = killed:IsWorldBoss(),
             mapId = player:GetMapId(),
         }
-        if MS.IsCompat() or MS.IsWorld() then
+        if Multistate.IsCompat() or Multistate.IsWorld() then
             -- Compatibility/single-state: the global executor can run inline.
             DoTransmogTokenAward(player, data)
         else

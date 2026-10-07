@@ -30,7 +30,7 @@ local itemIconCache = require("itemIconCache")
 -- Multistate: login (3) runs globally, map change (28) / equip (29) / gossip run
 -- in map states. The mog caches are populated per state by the login/map-change
 -- handler each state sees; the packet repair handler below reads live DB data.
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 
 ---------------------------------------------------------------------------------
 -- Transmog item vendor vars
@@ -1612,7 +1612,7 @@ RegisterCreatureGossipEvent(NPC_Entry, 2, OnGossipSelect)
 
 -- Multistate: state-aware catch-up for already-online players (server start or
 -- reload). GetPlayersInWorld() only exists in the global state.
-MS.ForEachPlayer(function(player)
+Multistate.ForEachPlayer(function(player)
     OnLogin(3, player)
 end)
 

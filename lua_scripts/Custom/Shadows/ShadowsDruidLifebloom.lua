@@ -5,7 +5,7 @@ if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
 -- the Group API does not exist. Group-wide scanning is replaced with a
 -- map-native friendly-units-in-range scan; the load-time catch-up sweep is
 -- state-aware (GetPlayersInWorld is world-only).
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 
 local LIFEBLOOM_SPELLS = {48451, 48450, 33763}
 
@@ -63,7 +63,7 @@ end
 RegisterPlayerEvent(28, OnMapChange)
 
 CreateLuaEvent(function(e, d, r)
-    MS.ForEachPlayer(function(player)
+    Multistate.ForEachPlayer(function(player)
         OnMapChange(nil, player)
     end)
 end, 2000)

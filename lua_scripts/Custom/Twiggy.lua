@@ -1,4 +1,4 @@
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
 -- Runs a .command in the global state (ChatHandler parsing must not run on map
@@ -13,7 +13,7 @@ local function TwiggyRunCommand(player, cmd)
     if not player or not cmd then
         return
     end
-    if MS.IsCompat() or MS.IsWorld() then
+    if Multistate.IsCompat() or Multistate.IsWorld() then
         player:RunCommand(cmd)
     else
         player:SendEMQMessage("TwiggyRunCommand", { cmd = cmd })
@@ -127,8 +127,8 @@ local function ShowCategoryContents(player, creature, category, page)
 end
 
 local function VIPmenu(player, creature)
-	if MS.GetShared(player, "VIPTime") and MS.GetShared(player, "VIPTime") > os.time() then
-		local vipTime = MS.GetShared(player, "VIPTime")
+	if Multistate.GetData(player, "VIPTime") and Multistate.GetData(player, "VIPTime") > os.time() then
+		local vipTime = Multistate.GetData(player, "VIPTime")
 		local remainingTime = vipTime - os.time()
 
 		if remainingTime >= 86400 then
@@ -379,8 +379,8 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
         local durations = {[21]=7, [22]=14, [23]=21, [25]=31}
         if player:HasItem(19322, costs[intId]) then
             player:RemoveItem(19322, costs[intId])
-            local newTime = math.max(os.time(), MS.GetShared(player, "VIPTime") or 0) + durations[intId] * 24 * 60 * 60
-            MS.SetShared(player, "VIPTime", newTime)
+            local newTime = math.max(os.time(), Multistate.GetData(player, "VIPTime") or 0) + durations[intId] * 24 * 60 * 60
+            Multistate.SetData(player, "VIPTime", newTime)
             AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. player:GetAccountId() .. ", " .. newTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
             VIPmenu(player, creature)
         else

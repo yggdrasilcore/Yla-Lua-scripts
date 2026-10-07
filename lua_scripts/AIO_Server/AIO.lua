@@ -445,8 +445,8 @@ if AIO_SERVER then
     -- Multistate: addon traffic is handled globally; the cleanup timer runs
     -- exactly once in the global state (this file must still load in map states
     -- so require("AIO") keeps working there for client-addon registration).
-    local MS = require("Multistate")
-    if MS.IsCompat() or MS.IsWorld() then
+    local Multistate = require("Multistate")
+    if Multistate.IsCompat() or Multistate.IsWorld() then
         CreateLuaEvent(ProcessRemoveQue, AIO_MSG_CACHE_DELAY, 0)
     end
 else

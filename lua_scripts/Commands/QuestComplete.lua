@@ -1,7 +1,7 @@
 -- Multistate: PLAYER_EVENT_ON_CHAT (18) fires in the global state, but quest
 -- completion mutates players on their map, so it is forwarded via EMQ. The DB
 -- existence check stays global (async), then the map state applies the reward.
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
 local MSG_QC = "#qc"
@@ -37,7 +37,7 @@ local function DoQuestComplete(player, data)
     if sel and data.targetGuidLow and sel:GetGUIDLow() == data.targetGuidLow and sel:IsPlayer() then
         CompleteAndRewardQuest(sel, questID)
     elseif data.targetName then
-        local target = MS.FindPlayerByName(data.targetName)
+        local target = Multistate.FindPlayerByName(data.targetName)
         if target then
             CompleteAndRewardQuest(target, questID)
         else
@@ -69,14 +69,14 @@ local function QuestAutoComplete(event, player, msg, Type, lang)
                     targetName = target:GetName()
                 end
                 WorldDBQueryAsync("SELECT * FROM quest_template WHERE ID = " .. questID, function(result)
-                    local player = MS.FindPlayerByName(name)
+                    local player = Multistate.FindPlayerByName(name)
                     if not player then
                         print("Quest Complete Command error, player has gotten dereferenced!")
                         return
                     end
                     if result then
                         local data = { questID = questID, targetGuidLow = targetGuidLow, targetName = targetName }
-                        if MS.IsCompat() then
+                        if Multistate.IsCompat() then
                             DoQuestComplete(player, data)
                         else
                             player:SendEMQMessage("CmdQuestComplete", data)

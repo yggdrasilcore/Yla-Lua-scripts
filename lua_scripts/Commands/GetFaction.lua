@@ -1,6 +1,6 @@
 -- Multistate: PLAYER_EVENT_ON_COMMAND (42) fires in the global state. Reads stay
 -- direct; faction changes execute on the map state via EMQ.
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
 -- Map-state executor (via EMQ, or directly in compatibility mode).
@@ -13,7 +13,7 @@ local function DoSetFaction(player, data)
     if sel and data.targetGuidLow and sel:GetGUIDLow() == data.targetGuidLow then
         target = sel
     elseif data.targetName then
-        target = MS.FindPlayerByName(data.targetName) or player
+        target = Multistate.FindPlayerByName(data.targetName) or player
     end
     if target and target:IsPlayer() then
         target:SetFaction(data.factionId)
@@ -65,7 +65,7 @@ local function SetFactionCommand(event, player, command)
             data.targetGuidLow = target:GetGUIDLow()
             data.targetName = target:GetName()
         end
-        if MS.IsCompat() then
+        if Multistate.IsCompat() then
             DoSetFaction(player, data)
         else
             player:SendEMQMessage("CmdSetFaction", data)

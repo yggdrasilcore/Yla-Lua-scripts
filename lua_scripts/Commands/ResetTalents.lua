@@ -1,7 +1,7 @@
 -- Multistate: PLAYER_EVENT_ON_CHAT (18) fires in the global state, but resetting
 -- talents mutates the player on its map, so it is forwarded via EMQ. The
 -- cooldown table is only touched by the (global) chat handler.
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
 -- Table to store the last usage time for each player
@@ -46,7 +46,7 @@ local function OnChat(event, player, msg, Type, lang)
         -- Update last usage time for this player
         lastUsage[playerGuid] = currentTime
 
-        if MS.IsCompat() then
+        if Multistate.IsCompat() then
             DoResetTalents(player)
         else
             player:SendEMQMessage("CmdResetTalents", {})

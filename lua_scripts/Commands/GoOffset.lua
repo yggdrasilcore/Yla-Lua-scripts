@@ -1,6 +1,6 @@
 -- Multistate: PLAYER_EVENT_ON_COMMAND (42) fires in the global state, but the
 -- teleport must execute on the player's map state, so it is forwarded via EMQ.
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
 -- Define the command prefix and name
@@ -49,7 +49,7 @@ local function TeleportOffset(event, player, message, type, language)
 
             if x and y and z then
                 local data = { x = x, y = y, z = z }
-                if MS.IsCompat() then
+                if Multistate.IsCompat() then
                     DoTeleportOffset(player, data)
                 else
                     player:SendEMQMessage("CmdGoOffset", data)

@@ -3,7 +3,7 @@ if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
 
 function OnLevelUp(event, player, oldLevel)
 	-- Multistate: the flag is maintained by UIServer in shared Data().
-	if require("Multistate").GetShared(player, "LvlRewardsDisabled") then return end
+	if require("Multistate").GetData(player, "LvlRewardsDisabled") then return end
     local newLevel = player:GetLevel()
     local team = player:GetTeam()
     

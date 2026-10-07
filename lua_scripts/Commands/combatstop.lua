@@ -1,16 +1,16 @@
 -- Multistate: PLAYER_EVENT_ON_COMMAND (42) only fires in the global state. The
 -- "cbstoptime" handshake is stored via shared Data() (see CombatLeave.lua) so
 -- the map-state combat clearer can authorize this command.
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 if GetStateMapId() ~= -1 then return end
 
-local MS = require("Multistate")
+local Multistate = require("Multistate")
 
 local function OnCommand(event, player, command)
     if command:lower() == "combatstop" then
         local gmRank = player:GetGMRank()
         -- Multistate: shared cross-state handshake, also written from map states.
-        local cbstoptime = MS.GetShared(player, "cbstoptime")
+        local cbstoptime = Multistate.GetData(player, "cbstoptime")
         local currentTime = os.time()
         if gmRank > 2 then
             if debugprint == 1 then
