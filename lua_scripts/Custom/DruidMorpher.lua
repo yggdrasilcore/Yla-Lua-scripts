@@ -50,6 +50,7 @@ local searchResults = {} -- Store search results by player GUID
 local ITEMS_PER_PAGE = 13
 
 local function CacheCreatures()
+    druidCachePending = 7
 
     WorldDBQueryAsync([[
        SELECT entry, name 
@@ -74,8 +75,9 @@ local function CacheCreatures()
                 local entry, name = catResults:GetUInt32(0), catResults:GetString(1)
                 catCache[entry] = name
                 catCount = catCount + 1
-            until not catResults:NextRow()
+                until not catResults:NextRow()
         end
+        NoteDruidCacheDone()
     end)
 
     WorldDBQueryAsync([[
@@ -98,8 +100,9 @@ local function CacheCreatures()
                 local entry, name = bearResults:GetUInt32(0), bearResults:GetString(1)
                 bearCache[entry] = name
                 bearCount = bearCount + 1
-            until not bearResults:NextRow()
+                until not bearResults:NextRow()
         end
+        NoteDruidCacheDone()
     end)
 
     WorldDBQueryAsync([[
@@ -124,8 +127,9 @@ local function CacheCreatures()
                 local entry, name = birdResults:GetUInt32(0), birdResults:GetString(1)
                 birdCache[entry] = name
                 birdCount = birdCount + 1
-            until not birdResults:NextRow()
+                until not birdResults:NextRow()
         end
+        NoteDruidCacheDone()
     end)
     
     WorldDBQueryAsync([[
@@ -172,8 +176,9 @@ local function CacheCreatures()
                 local entry, name = travelResults:GetUInt32(0), travelResults:GetString(1)
                 travelCache[entry] = name
                 travelCount = travelCount + 1
-            until not travelResults:NextRow()
+                until not travelResults:NextRow()
         end
+        NoteDruidCacheDone()
     end)
     
     WorldDBQueryAsync([[
@@ -197,8 +202,9 @@ local function CacheCreatures()
                 local entry, name = owlResults:GetUInt32(0), owlResults:GetString(1)
                 owlCache[entry] = name
                 owlCount = owlCount + 1
-            until not owlResults:NextRow()
+                until not owlResults:NextRow()
         end
+        NoteDruidCacheDone()
     end)
     
     WorldDBQueryAsync([[
@@ -235,8 +241,9 @@ local function CacheCreatures()
                 local entry, name = treeResults:GetUInt32(0), treeResults:GetString(1)
                 treeCache[entry] = name
                 treeCount = treeCount + 1
-            until not treeResults:NextRow()
+                until not treeResults:NextRow()
         end
+        NoteDruidCacheDone()
     end)
     
     WorldDBQueryAsync([[
@@ -283,9 +290,49 @@ local function CacheCreatures()
                 local entry, name = aquaticResults:GetUInt32(0), aquaticResults:GetString(1)
                 aquaticCache[entry] = name
                 aquaticCount = aquaticCount + 1
-            until not aquaticResults:NextRow()
+                until not aquaticResults:NextRow()
         end
+        NoteDruidCacheDone()
     end)
+end
+
+druidCachePending = 0
+
+local function PublishDruidMorpherCaches()
+    SetWorldData("DruidMorpherCaches", {
+        cat = catCache,
+        bear = bearCache,
+        bird = birdCache,
+        travel = travelCache,
+        owl = owlCache,
+        tree = treeCache,
+        aquatic = aquaticCache,
+    })
+end
+
+local function NoteDruidCacheDone()
+    druidCachePending = druidCachePending - 1
+    if druidCachePending == 0 then
+        PublishDruidMorpherCaches()
+    end
+end
+
+local function AdoptDruidMorpherCaches()
+    local shared = GetWorldData("DruidMorpherCaches")
+    if type(shared) == "table" and shared.AsTable then
+        shared = shared:AsTable()
+    end
+    if type(shared) ~= "table" or type(shared.cat) ~= "table" then
+        return false
+    end
+    catCache = shared.cat or {}
+    bearCache = shared.bear or {}
+    birdCache = shared.bird or {}
+    travelCache = shared.travel or {}
+    owlCache = shared.owl or {}
+    treeCache = shared.tree or {}
+    aquaticCache = shared.aquatic or {}
+    return true
 end
 
 -- Multistate: per-player morph caches are filled on login (global state) and on
@@ -1574,7 +1621,15 @@ local function DBMMorph(event, player, command)
     end
 end
 
-CacheCreatures() -- Caching available creatures from world DB on script initialization
+if Multistate.IsWorld() then
+    CacheCreatures() -- Caching available creatures from world DB on script initialization
+else
+    CreateLuaEvent(function(eventId)
+        if AdoptDruidMorpherCaches() then
+            RemoveEventById(eventId)
+        end
+    end, 5000, 0)
+end
 
 RegisterPlayerEvent(3, OnLogin) 
 RegisterPlayerEvent(4, onLogout)

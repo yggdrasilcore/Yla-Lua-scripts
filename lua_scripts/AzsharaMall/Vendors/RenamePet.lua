@@ -2,6 +2,9 @@ local cost = 30
 local communityCost = cost/10
 local currencyName = "Vote Tokens"
 local communityCurrencyName = "Community Tokens"
+-- World queries the pet-name index once and publishes it as serialized
+-- world data; map states adopt the shared copy and never query.
+local Multistate = require("Multistate")
 local petNameCache = {}
 local sortedPetNameCache = {}
 local PAGE_SIZE = 13
@@ -44,10 +47,32 @@ local function LoadPetNames()
         table.insert(sortedPetNameCache, { id = id, word = data.word, entry = data.entry, half = data.half })
     end
     table.sort(sortedPetNameCache, function(a, b) return a.word < b.word end)
+    SetWorldData("PetNameCache", {cache = petNameCache, sorted = sortedPetNameCache})
+end
+
+local function AdoptPetNameCache()
+    local shared = GetWorldData("PetNameCache")
+    if type(shared) == "table" and shared.AsTable then
+        shared = shared:AsTable()
+    end
+    if type(shared) ~= "table" or type(shared.cache) ~= "table" then
+        return false
+    end
+    petNameCache = shared.cache
+    sortedPetNameCache = type(shared.sorted) == "table" and shared.sorted or {}
+    return true
 end
 
 -- Load pet names into cache on script load
-LoadPetNames()
+if Multistate.IsWorld() then
+    LoadPetNames()
+elseif Multistate.IsMap() then
+    CreateLuaEvent(function(eventId)
+        if AdoptPetNameCache() then
+            RemoveEventById(eventId)
+        end
+    end, 5000, 0)
+end
 
 -- Command handler
 local function OnPlayerCommand(event, player, command)

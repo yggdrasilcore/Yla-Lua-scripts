@@ -225,7 +225,20 @@ local function CacheCreatures()
 				demonCount = demonCount + 1
 			until not demonResults:NextRow()
 		end
+        SetWorldData("DemonMorpherCache", {cache = demonCache})
 	end)
+end
+
+local function AdoptDemonMorpherCache()
+    local shared = GetWorldData("DemonMorpherCache")
+    if type(shared) == "table" and shared.AsTable then
+        shared = shared:AsTable()
+    end
+    if type(shared) ~= "table" or type(shared.cache) ~= "table" then
+        return false
+    end
+    demonCache = shared.cache
+    return true
 end
 
 local function CountTotalMorphs(player)
@@ -803,7 +816,15 @@ local function OnPlayerLogout(event, player)
 	morphIdCache[guid] = nil
 end
 
-CacheCreatures()
+if Multistate.IsWorld() then
+    CacheCreatures()
+else
+    CreateLuaEvent(function(eventId)
+        if AdoptDemonMorpherCache() then
+            RemoveEventById(eventId)
+        end
+    end, 5000, 0)
+end
 RegisterPlayerEvent(3, OnPlayerLogin)
 RegisterPlayerEvent(4, OnPlayerLogout)
 RegisterPlayerEvent(7, OnKillCreature)

@@ -228,11 +228,8 @@ local SW_ENTRANCE = {
 }
 
 -- Query spell names and icons from spell_dbc and build the lookup tables
-do
-   local MOUNT_DATA = MOUNT_DATA or {}
-   local MOUNT_ICONS = MOUNT_ICONS or {}
-   
-   WorldDBQueryAsync("SELECT ID, Name_Lang_enUS, SpellIconID FROM spell_dbc WHERE ID IN (3363, 8153, 32235, 32239, 32240, 32242, 32243, 32244, 32245, 32246, 32289, 32290, 32292, 32295, 32296, 32297, 32345, 33943, 37015, 39798, 39800, 39801, 39802, 39803, 39910, 40120, 40192, 40212, 41513, 41514, 41515, 41516, 41517, 41518, 42667, 42668, 42673, 42679, 43810, 43927, 44151, 44153, 44317, 44655, 44744, 44824, 44825, 44827, 46197, 46199, 47037, 48023, 49193, 51617, 51960, 54726, 54727, 54729, 54903, 58615, 59567, 59568, 59569, 59570, 59571, 59650, 59961, 59976, 59996, 60002, 60021, 60024, 60025, 60099, 61229, 61230, 61289, 61294, 61309, 61442, 61444, 61446, 61451, 61996, 61997, 62048, 63796, 63844, 63956, 63963, 64927, 65439, 66087, 66088, 67336, 69395, 71346, 71347, 71810, 72283, 72284, 72807, 72808, 74854, 74855, 75596, 75973, 75617, 75618, 76153)", 
+local function LoadMountData()
+    WorldDBQueryAsync("SELECT ID, Name_Lang_enUS, SpellIconID FROM spell_dbc WHERE ID IN (3363, 8153, 32235, 32239, 32240, 32242, 32243, 32244, 32245, 32246, 32289, 32290, 32292, 32295, 32296, 32297, 32345, 33943, 37015, 39798, 39800, 39801, 39802, 39803, 39910, 40120, 40192, 40212, 41513, 41514, 41515, 41516, 41517, 41518, 42667, 42668, 42673, 42679, 43810, 43927, 44151, 44153, 44317, 44655, 44744, 44824, 44825, 44827, 46197, 46199, 47037, 48023, 49193, 51617, 51960, 54726, 54727, 54729, 54903, 58615, 59567, 59568, 59569, 59570, 59571, 59650, 59961, 59976, 59996, 60002, 60021, 60024, 60025, 60099, 61229, 61230, 61289, 61294, 61309, 61442, 61444, 61446, 61451, 61996, 61997, 62048, 63796, 63844, 63956, 63963, 64927, 65439, 66087, 66088, 67336, 69395, 71346, 71347, 71810, 72283, 72284, 72807, 72808, 74854, 74855, 75596, 75973, 75617, 75618, 76153)",
    function(result)
        local spellIconIds = {}
        local spellIds = {}
@@ -266,17 +263,43 @@ do
            end
            
            WorldDBQueryAsync(string.format("SELECT ID, SpellIconID FROM spell_dbc WHERE ID IN (%s)", table.concat(spellIds, ",")),
-           function(spellResult)
-               if spellResult then
-                   repeat
-                       local spellId = spellResult:GetUInt32(0)
-                       local iconId = spellResult:GetUInt32(1)
-                       MOUNT_ICONS[spellId] = iconPaths[iconId]
-                   until not spellResult:NextRow()
-               end
-           end)
-       end)
-   end)
+            function(spellResult)
+                if spellResult then
+                    repeat
+                        local spellId = spellResult:GetUInt32(0)
+                        local iconId = spellResult:GetUInt32(1)
+                        MOUNT_ICONS[spellId] = iconPaths[iconId]
+                    until not spellResult:NextRow()
+                end
+                SetWorldData("FeathersMountData", {data = MOUNT_DATA, icons = MOUNT_ICONS})
+            end)
+        end)
+    end)
+end
+
+local function AdoptFeathersMountData()
+    local shared = GetWorldData("FeathersMountData")
+    if type(shared) == "table" and shared.AsTable then
+        shared = shared:AsTable()
+    end
+    if type(shared) ~= "table" or type(shared.data) ~= "table" then
+        return false
+    end
+    for k, v in pairs(shared.data) do MOUNT_DATA[k] = v end
+    if type(shared.icons) == "table" then
+        for k, v in pairs(shared.icons) do MOUNT_ICONS[k] = v end
+    end
+    return true
+end
+
+if Multistate.IsWorld() then
+    LoadMountData()
+else
+    CreateLuaEvent(function(eventId)
+        if AdoptFeathersMountData() then
+            RemoveEventById(eventId)
+        end
+    end, 5000, 0)
 end
 
 local function IsInOldWorld(player)

@@ -1,5 +1,6 @@
--- Multistate: Azshara Mall-only script (mall map 37).
-if not IsCompatibilityMode() and GetStateMapId() ~= 37 then return end
+-- World queries the icon index once and publishes it as serialized world
+-- data; map states adopt the shared copy and never query.
+local Multistate = require("Multistate")
 
 -- WorldDB queries to insert data if not already done
 
@@ -32,15 +33,41 @@ local ItemsPerPage = 11
 
 local icons = {}
 
-WorldDBQueryAsync(string.format([[SELECT Entry, Icon FROM icons WHERE Entry IN (%s)]], table.concat(ItemsToSell, ",")), function(query)
-    if query then
-        repeat
-            local entry = query:GetUInt32(0)
-            local icon = query:GetString(1)
-            icons[entry] = icon
-        until not query:NextRow()
+local function AdoptVanityPetIcons()
+    local shared = GetWorldData("VanityPetIcons")
+    if type(shared) == "table" and shared.AsTable then
+        shared = shared:AsTable()
     end
-end)
+    if type(shared) ~= "table" or type(shared.icons) ~= "table" then
+        return false
+    end
+    icons = shared.icons
+    return true
+end
+
+if Multistate.IsWorld() then
+    WorldDBQueryAsync(string.format([[SELECT Entry, Icon FROM icons WHERE Entry IN (%s)]], table.concat(ItemsToSell, ",")), function(query)
+        if query then
+            repeat
+                local entry = query:GetUInt32(0)
+                local icon = query:GetString(1)
+                icons[entry] = icon
+            until not query:NextRow()
+        end
+        SetWorldData("VanityPetIcons", {icons = icons})
+    end)
+end
+
+-- Multistate: Azshara Mall-only script (mall map 37).
+if not IsCompatibilityMode() and GetStateMapId() ~= 37 then return end
+
+if Multistate.IsMap() then
+    CreateLuaEvent(function(eventId)
+        if AdoptVanityPetIcons() then
+            RemoveEventById(eventId)
+        end
+    end, 5000, 0)
+end
 
 local function GenerateMenu(page, player, object)
     local startIndex = ((page - 1) * ItemsPerPage) + 1

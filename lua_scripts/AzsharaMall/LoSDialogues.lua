@@ -1,5 +1,7 @@
--- Multistate: Azshara Mall-only script (mall map 37).
-if not IsCompatibilityMode() and GetStateMapId() ~= 37 then return end
+-- Multistate: Azshara Mall-only script (mall map 37, plus world state for
+-- the shared FORM_TYPES morph index).
+if not IsCompatibilityMode() and GetStateMapId() ~= 37 and GetStateMapId() ~= -1 then return end
+local Multistate = require("Multistate")
 
 local hasDialogueEvent = {}
 local lastGreeting = {}
@@ -438,7 +440,24 @@ local function populatePlayerMorphCache()
                table.insert(FORM_TYPES[form].morphs, {id = morphId, name = morphName})
            end
        until not results:NextRow()
+       SetWorldData("LoSFormTypes", FORM_TYPES)
    end)
+end
+
+local function AdoptLoSFormTypes()
+    local shared = GetWorldData("LoSFormTypes")
+    if type(shared) == "table" and shared.AsTable then
+        shared = shared:AsTable()
+    end
+    if type(shared) ~= "table" then
+        return false
+    end
+    for form, data in pairs(shared) do
+        if FORM_TYPES[form] and type(data) == "table" and type(data.morphs) == "table" then
+            FORM_TYPES[form].morphs = data.morphs
+        end
+    end
+    return true
 end
 
 -- Function to pick a random form type and return both name and morph ID
@@ -599,6 +618,14 @@ RegisterCreatureEvent(190091, 27, PetRenameDialogue) -- Pet renamer
 RegisterCreatureEvent(190092, 27, Guild) -- Guild guy
 RegisterCreatureEvent(190098, 27, ApproachBear) -- Morph bear
 RegisterCreatureEvent(401250, 6, Feathers) -- feathers event citizen
-populatePlayerMorphCache()
+if Multistate.IsWorld() then
+    populatePlayerMorphCache()
+elseif Multistate.IsMap() then
+    CreateLuaEvent(function(eventId)
+        if AdoptLoSFormTypes() then
+            RemoveEventById(eventId)
+        end
+    end, 5000, 0)
+end
 
 print("[MALL]: Loaded mall dialogues")

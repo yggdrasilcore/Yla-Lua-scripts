@@ -963,6 +963,7 @@ function ItemCache.LoadCache()
 			return a.name < b.name
 		end)
 		baseRows = nil
+		SetWorldData("TransmogItemCache", {cache = ItemCache["Cache"]})
 	end
 
 	local function collectIds(result)
@@ -1551,7 +1552,27 @@ end
 -- Transmog item vendor events
 ---------------------------------------------------------------------------------
 
-ItemCache.LoadCache()
+local function AdoptTransmogItemCache()
+    local shared = GetWorldData("TransmogItemCache")
+    if type(shared) == "table" and shared.AsTable then
+        shared = shared:AsTable()
+    end
+    if type(shared) ~= "table" or type(shared.cache) ~= "table" then
+        return false
+    end
+    ItemCache["Cache"] = shared.cache
+    return true
+end
+
+if Multistate.IsWorld() then
+    ItemCache.LoadCache()
+else
+    CreateLuaEvent(function(eventId)
+        if AdoptTransmogItemCache() then
+            RemoveEventById(eventId)
+        end
+    end, 5000, 0)
+end
 
 RegisterCreatureGossipEvent(TRANSMOG_VENDOR_NPC_ID, 1, MogVendorHello)
 RegisterCreatureGossipEvent(TRANSMOG_VENDOR_NPC_ID, 2, MogVendorSelect)

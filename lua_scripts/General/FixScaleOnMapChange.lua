@@ -1,7 +1,20 @@
--- Multistate: map-only script (all hooks fire in map states).
-if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+-- World queries the shrink-spell index once and publishes it as serialized
+-- world data; map states adopt the shared copy and never query.
+local Multistate = require("Multistate")
 
 local ShrinkSpells = {}
+
+local function AdoptShrinkSpells()
+    local shared = GetWorldData("ShrinkSpells")
+    if type(shared) == "table" and shared.AsTable then
+        shared = shared:AsTable()
+    end
+    if type(shared) ~= "table" then
+        return false
+    end
+    ShrinkSpells = shared
+    return true
+end
 
 local function PopulateShrinkSpells()
     local query = [[
@@ -37,10 +50,19 @@ local function PopulateShrinkSpells()
                 ShrinkSpells[spellId] = true
             until not query:NextRow()
         end
+        SetWorldData("ShrinkSpells", ShrinkSpells)
     end)
 end
 
-PopulateShrinkSpells()
+if Multistate.IsWorld() then
+    PopulateShrinkSpells()
+else
+    CreateLuaEvent(function(eventId)
+        if AdoptShrinkSpells() then
+            RemoveEventById(eventId)
+        end
+    end, 5000, 0)
+end
 
 local function OnChangeMap(event, player)
     player:RegisterEvent(function(e, d, r, player)
