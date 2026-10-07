@@ -1,11 +1,37 @@
--- Multistate: map-only script (all hooks fire in map states).
-if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+-- World queries the index once and publishes it as serialized world data;
+-- map states adopt the shared copy and never query.
+local Multistate = require("Multistate")
 
 local questItemGoCache = {}
 local cachedQuests = {}
 local cachedItems = {}
 local cachedGOs = {}
 
+local function AdoptQuestItemGO()
+    local shared = GetWorldData("QuestItemGO")
+    if type(shared) == "table" and shared.AsTable then
+        shared = shared:AsTable()
+    end
+    if type(shared) ~= "table" or type(shared.cache) ~= "table" then
+        return false
+    end
+    questItemGoCache = shared.cache
+    cachedQuests = type(shared.quests) == "table" and shared.quests or {}
+    cachedItems = type(shared.items) == "table" and shared.items or {}
+    cachedGOs = type(shared.gos) == "table" and shared.gos or {}
+    return true
+end
+
+local function PublishQuestItemGO()
+    SetWorldData("QuestItemGO", {
+        cache = questItemGoCache,
+        quests = cachedQuests,
+        items = cachedItems,
+        gos = cachedGOs,
+    })
+end
+
+if Multistate.IsWorld() then
 WorldDBQueryAsync([[
     SELECT gqi.GameObjectEntry, qt.ID AS QuestID, gqi.ItemId,
         CASE
@@ -64,7 +90,15 @@ WorldDBQueryAsync([[
     for _ in pairs(cachedGOs)    do numGOs    = numGOs    + 1 end
 
     print("[QuestItemGO] Indexed " .. numQuests .. " quests, " .. numItems .. " items, " .. numGOs .. " gameobjects.")
+    PublishQuestItemGO()
 end)
+else
+    CreateLuaEvent(function(eventId)
+        if AdoptQuestItemGO() then
+            RemoveEventById(eventId)
+        end
+    end, 5000, 0)
+end
 
 print("[QuestItemGO] questItemGoCache = {")
 for questId, entries in pairs(questItemGoCache) do
