@@ -272,6 +272,9 @@ local function LoadMountData()
                     until not spellResult:NextRow()
                 end
                 SetWorldData("FeathersMountData", {data = MOUNT_DATA, icons = MOUNT_ICONS})
+                local n = 0
+                for _ in pairs(MOUNT_DATA) do n = n + 1 end
+                print("[Feathers of Azeroth]: Published " .. n .. " mounts to world data")
             end)
         end)
     end)
@@ -288,6 +291,12 @@ local function AdoptFeathersMountData()
     for k, v in pairs(shared.data) do MOUNT_DATA[k] = v end
     if type(shared.icons) == "table" then
         for k, v in pairs(shared.icons) do MOUNT_ICONS[k] = v end
+    end
+    if not _feathersAdoptLogged then
+        _feathersAdoptLogged = true
+        local n = 0
+        for _ in pairs(MOUNT_DATA) do n = n + 1 end
+        print("[Feathers of Azeroth]: Adopted " .. n .. " mounts from world data")
     end
     return true
 end
@@ -364,12 +373,10 @@ local function CheckZ(eventId, delay, repeats, player)
       end
   end
   
-  if not mountId or not ZonesToCheckZ(player) then
-      player:RemoveEventById(eventId)
-      print("[Feathers of Azeroth]: Z check event removed from "..player:GetGUIDLow())
-      player:SetData("MountEvent", false)
-      return
-  end
+   if not mountId or not ZonesToCheckZ(player) then
+       player:SetData("MountEvent", false)
+       return
+   end
   
   local currentLocKey = player:GetData("CurrentLocKey") or "Loc1"
   local nextLocKey = currentLocKey == "Loc1" and "Loc2" or "Loc1"
@@ -430,11 +437,12 @@ local function CheckZ(eventId, delay, repeats, player)
           player:Teleport(mapId, x, y, teleportZ, o)
       end
       
-      if not player:GetData("LastWarning") or os.time() - player:GetData("LastWarning") >= 5 then
-          player:SendBroadcastMessage("You can't fly that high in this area!")
-          player:SetData("LastWarning", os.time())
-      end
-  end
+       if not player:GetData("LastWarning") or os.time() - player:GetData("LastWarning") >= 5 then
+           player:SendBroadcastMessage("You can't fly that high in this area!")
+           player:SetData("LastWarning", os.time())
+       end
+   end
+   player:RegisterEvent(CheckZ, 200, 1)
 end
 
 -- Start gossip management
@@ -475,11 +483,14 @@ local function ShowMountMenu(event, player, item, target, page, isStandardMount)
     
     -- Get available mounts for this player
     local availableMounts = {}
+    local knownMounts = 0
     for spellId, spellName in pairs(MOUNT_DATA) do
+        knownMounts = knownMounts + 1
         if player:HasSpell(spellId) then
             table.insert(availableMounts, spellId)
         end
     end
+    print("[Feathers of Azeroth]: Mount menu for " .. player:GetName() .. ": " .. knownMounts .. " indexed, " .. #availableMounts .. " known")
     
     local totalMounts = #availableMounts
     local maxPages = math.ceil(totalMounts / MOUNTS_PER_PAGE)
@@ -604,7 +615,7 @@ local function checkMount(player)
 		if player:HasAura(id) then
 			if not player:GetData("MountEvent") then
 				player:SetData("MountEvent", true)
-				player:RegisterEvent(CheckZ, 200, 0)
+				player:RegisterEvent(CheckZ, 200, 1)
 				print("[Feathers of Azeroth]: Starting zone-based Z check")
 			end
 		end
