@@ -271,45 +271,22 @@ local function LoadMountData()
                         MOUNT_ICONS[spellId] = iconPaths[iconId]
                     until not spellResult:NextRow()
                 end
-                SetWorldData("FeathersMountData", {data = MOUNT_DATA, icons = MOUNT_ICONS})
+                if Multistate.IsWorld() and SetWorldData then
+                    SetWorldData("FeathersMountData", {data = MOUNT_DATA, icons = MOUNT_ICONS})
+                end
                 local n = 0
                 for _ in pairs(MOUNT_DATA) do n = n + 1 end
-                print("[Feathers of Azeroth]: Published " .. n .. " mounts to world data")
+                print("[Feathers of Azeroth]: Loaded " .. n .. " mounts")
             end)
         end)
     end)
 end
 
-local function AdoptFeathersMountData()
-    local shared = GetWorldData("FeathersMountData")
-    if type(shared) == "table" and shared.AsTable then
-        shared = shared:AsTable()
-    end
-    if type(shared) ~= "table" or type(shared.data) ~= "table" then
-        return false
-    end
-    for k, v in pairs(shared.data) do MOUNT_DATA[k] = v end
-    if type(shared.icons) == "table" then
-        for k, v in pairs(shared.icons) do MOUNT_ICONS[k] = v end
-    end
-    if not _feathersAdoptLogged then
-        _feathersAdoptLogged = true
-        local n = 0
-        for _ in pairs(MOUNT_DATA) do n = n + 1 end
-        print("[Feathers of Azeroth]: Adopted " .. n .. " mounts from world data")
-    end
-    return true
-end
-
-if Multistate.IsWorld() then
-    LoadMountData()
-else
-    CreateLuaEvent(function(eventId)
-        if AdoptFeathersMountData() then
-            RemoveEventById(eventId)
-        end
-    end, 5000, 0)
-end
+-- Every state loads its own copy straight from the DB (DB access works in
+-- all states). The old cross-state world-data adoption is gone: it relied on
+-- a CreateLuaEvent timer, and those only tick in the world state, so map
+-- states never adopted and their menus stayed empty.
+LoadMountData()
 
 local function IsInOldWorld(player)
 	local mapId = player:GetMapId()
@@ -481,11 +458,15 @@ end
 local function ShowMountMenu(event, player, item, target, page, isStandardMount)
     page = page or 1
     
-    -- Get available mounts for this player
+    -- Get available mounts for this player.
+    -- NOTE: iterate the static FLYING_MOUNTS list, not MOUNT_DATA.
+    -- MOUNT_DATA is adopted asynchronously from world state and may be
+    -- empty when adoption fails, which left this menu blank (header only).
+    -- MOUNT_DATA/MOUNT_ICONS are display-only (names/icons) with fallbacks.
     local availableMounts = {}
     local knownMounts = 0
-    for spellId, spellName in pairs(MOUNT_DATA) do
-        knownMounts = knownMounts + 1
+    for _ in pairs(MOUNT_DATA) do knownMounts = knownMounts + 1 end
+    for _, spellId in ipairs(FLYING_MOUNTS) do
         if player:HasSpell(spellId) then
             table.insert(availableMounts, spellId)
         end
@@ -509,13 +490,14 @@ local function ShowMountMenu(event, player, item, target, page, isStandardMount)
     
     for i = startIndex, endIndex do
         local spellId = availableMounts[i]
-        local spellName = MOUNT_DATA[spellId]
+        local spellName = MOUNT_DATA[spellId] or ("Spell " .. tostring(spellId))
         local iconPath = MOUNT_ICONS[spellId]
         if spellId == 75596 then 
             iconPath = "Interface/ICONS/ability_mount_frostyflyingcarpet"
         elseif spellId == 75973 then 
             iconPath = "Interface/ICONS/ability_mount_rocketmount2"
 		end
+        iconPath = iconPath or "Interface/ICONS/inv_misc_questionmark"
         -- Add icon to gossip menu item
         if isStandardMount then
             player:GossipMenuAddItem(4, "|T" .. iconPath .. ":32:32:-22:0|t" .. spellName, 0, 800000 + spellId)
