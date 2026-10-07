@@ -155,6 +155,7 @@ local pushingName = {}
 local reloadGraceTimer = 60 -- No. of secs to allow for long/slow reloads
     
 local function PushInitModule(eventid, delay, repeats)
+    if not pushingName[eventid] then return end
     local player = GetPlayerByName(pushingName[eventid])
     if not player then 
 		RemoveEventById(eventid)
@@ -166,6 +167,7 @@ local function PushInitModule(eventid, delay, repeats)
 		SendAddonInjector(player)
         pushingModule[player:GetGUIDLow()] = nil
         pushingName[eventid] = nil
+		RemoveEventById(eventid)
 		return
 	end
 
