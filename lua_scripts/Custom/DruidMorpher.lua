@@ -49,6 +49,8 @@ local searchResults = {} -- Store search results by player GUID
 
 local ITEMS_PER_PAGE = 13
 
+local NoteDruidCacheDone
+
 local function CacheCreatures()
     druidCachePending = 7
 
@@ -296,8 +298,6 @@ local function CacheCreatures()
     end)
 end
 
-druidCachePending = 0
-
 local function PublishDruidMorpherCaches()
     SetWorldData("DruidMorpherCaches", {
         cat = catCache,
@@ -310,7 +310,7 @@ local function PublishDruidMorpherCaches()
     })
 end
 
-local function NoteDruidCacheDone()
+NoteDruidCacheDone = function()
     druidCachePending = druidCachePending - 1
     if druidCachePending == 0 then
         PublishDruidMorpherCaches()
