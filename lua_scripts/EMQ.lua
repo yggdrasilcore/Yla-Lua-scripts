@@ -31,7 +31,7 @@
 
 local EMQ = {
     config = {
-        frequency = 1000, -- message processing delay timer in ms
+        frequency = 500, -- message processing delay timer in ms
     },
     queues = {}
 }
@@ -121,6 +121,13 @@ local function OnLoad()
         for _, player in pairs(GetPlayersInWorld()) do
             EMQ.RegisterMessageProcessor(eventId, player)
         end
+        -- Pumps registered during the reload storm never tick, so register
+        -- again once the storm has passed. Global timers tick reliably here.
+        CreateLuaEvent(function()
+            for _, player in pairs(GetPlayersInWorld()) do
+                EMQ.RegisterMessageProcessor(3, player)
+            end
+        end, 15000, 1)
     else
         local map = GetStateMap()
         if map then

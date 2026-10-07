@@ -271,7 +271,9 @@ local function LoadMountData()
                         MOUNT_ICONS[spellId] = iconPaths[iconId]
                     until not spellResult:NextRow()
                 end
-                SetWorldData("FeathersMountData", {data = MOUNT_DATA, icons = MOUNT_ICONS})
+                if SetWorldData then
+                    SetWorldData("FeathersMountData", {data = MOUNT_DATA, icons = MOUNT_ICONS})
+                end
                 local n = 0
                 for _ in pairs(MOUNT_DATA) do n = n + 1 end
                 print("[Feathers of Azeroth]: Published " .. n .. " mounts to world data")
@@ -292,23 +294,13 @@ local function AdoptFeathersMountData()
     if type(shared.icons) == "table" then
         for k, v in pairs(shared.icons) do MOUNT_ICONS[k] = v end
     end
-    if not _feathersAdoptLogged then
-        _feathersAdoptLogged = true
-        local n = 0
-        for _ in pairs(MOUNT_DATA) do n = n + 1 end
-        print("[Feathers of Azeroth]: Adopted " .. n .. " mounts from world data")
-    end
     return true
 end
 
+-- World queries names/icons once and publishes them; map states adopt on
+-- demand when a menu opens (world -> map).
 if Multistate.IsWorld() then
     LoadMountData()
-else
-    CreateLuaEvent(function(eventId)
-        if AdoptFeathersMountData() then
-            RemoveEventById(eventId)
-        end
-    end, 5000, 0)
 end
 
 local function IsInOldWorld(player)
@@ -481,11 +473,16 @@ end
 local function ShowMountMenu(event, player, item, target, page, isStandardMount)
     page = page or 1
     
-    -- Get available mounts for this player
+    -- Mount list comes from the static FLYING_MOUNTS table; MOUNT_DATA and
+    -- MOUNT_ICONS are display-only (names/icons) with fallbacks. Shared data
+    -- is adopted on demand (world -> map).
+    if next(MOUNT_DATA) == nil then
+        AdoptFeathersMountData()
+    end
     local availableMounts = {}
     local knownMounts = 0
-    for spellId, spellName in pairs(MOUNT_DATA) do
-        knownMounts = knownMounts + 1
+    for _ in pairs(MOUNT_DATA) do knownMounts = knownMounts + 1 end
+    for _, spellId in ipairs(FLYING_MOUNTS) do
         if player:HasSpell(spellId) then
             table.insert(availableMounts, spellId)
         end
@@ -509,13 +506,14 @@ local function ShowMountMenu(event, player, item, target, page, isStandardMount)
     
     for i = startIndex, endIndex do
         local spellId = availableMounts[i]
-        local spellName = MOUNT_DATA[spellId]
+        local spellName = MOUNT_DATA[spellId] or ("Spell " .. tostring(spellId))
         local iconPath = MOUNT_ICONS[spellId]
         if spellId == 75596 then 
             iconPath = "Interface/ICONS/ability_mount_frostyflyingcarpet"
         elseif spellId == 75973 then 
             iconPath = "Interface/ICONS/ability_mount_rocketmount2"
 		end
+        iconPath = iconPath or "Interface/ICONS/inv_misc_questionmark"
         -- Add icon to gossip menu item
         if isStandardMount then
             player:GossipMenuAddItem(4, "|T" .. iconPath .. ":32:32:-22:0|t" .. spellName, 0, 800000 + spellId)
