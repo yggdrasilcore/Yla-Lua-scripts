@@ -681,7 +681,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
                 return
             end
         end
-        if (player:GetMapId() == 571) and (player:GetZoneId() == 4197) and WG_FightActive then
+        if (player:GetMapId() == 571) and (player:GetZoneId() == 4197) and IsWintergraspWarTime() then
             player:GossipComplete()
             player:SendAreaTriggerMessage("You cannot use shadows during active Wintergasp battles.")
             return
@@ -1508,8 +1508,6 @@ end
 
 function ProcessWintergraspWorldstate(variableID, value) -- Called on init and update worldstate 3801
     if value == 0 then
-        -- Multistate: state-aware enumeration (this runs wherever Tenacity's
-        -- per-state timer fires; the map/zone filter below selects WG players).
         Multistate.ForEachPlayer(function(player)
             if (player:GetMapId() == 571) and (player:GetZoneId() == 4197) then
                 local playerName = player:GetName()
@@ -1542,6 +1540,20 @@ function ProcessWintergraspWorldstate(variableID, value) -- Called on init and u
             end
         end)
     end
+end
+
+-- Dismiss shadows on battle start. Northrend state only.
+local _wgWasWar = false
+local function WGShadowWatch()
+    if not IsCompatibilityMode() and GetStateMapId() ~= 571 then return end
+    local war = IsWintergraspWarTime()
+    if war and not _wgWasWar then
+        ProcessWintergraspWorldstate(3801, 0)
+    end
+    _wgWasWar = war
+end
+if IsCompatibilityMode() or GetStateMapId() == 571 then
+    CreateLuaEvent(WGShadowWatch, 15000, 0)
 end
 
 SetActiveVars()
