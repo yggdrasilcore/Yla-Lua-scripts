@@ -1425,7 +1425,9 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
 end
 
 -- Function to check and update referee status
+-- Re-resolves inside: event objects expire after their dispatch, so the callback must not touch the captured one.
 local function CheckRefereeStatus(player)
+    local playerName = player:GetName()
     local accountId = player:GetAccountId()
     local MaxRAFDuration = os.time() - RAFDuration
     local playerIP = player:GetPlayerIP()
@@ -1435,6 +1437,8 @@ local function CheckRefereeStatus(player)
         WHERE account_id = %d AND status = 2 AND date > %d
     ]], accountId, MaxRAFDuration), function(query)
 
+		local player = playerName and Multistate.FindPlayerByName(playerName) or nil
+		if not player then return end
 		if query then
 			AuthDBExecute(string.format([[
 				UPDATE account_raf SET IP = '%s' WHERE account_id = %d
