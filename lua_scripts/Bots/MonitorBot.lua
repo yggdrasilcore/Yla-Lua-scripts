@@ -81,7 +81,7 @@ end
 
 -- Core function
 local function CacheDataPoints()
-	if EnableDebug then print("[Eluna Server Logger]: Storing data point ".. DataPointCount .. " for session ".. SessionID .." to database...") end
+	if EnableDebug and Multistate.IsWorld() then print("[Eluna Server Logger]: Storing data point ".. DataPointCount .. " for session ".. SessionID .." to database...") end
 	local values = {}
 	
 	table.insert(values, "('pCount', " .. Multistate.CountPlayers() .. ", NULL, " .. os.time() .. ")")
@@ -180,7 +180,7 @@ local function CacheDataPoints()
 	
 	if #values > 0 then
 		local query = "INSERT INTO statistics (event, param1, param2, param3) VALUES " .. table.concat(values, ",") .. ";"
-		if EnableDebug then print("[Eluna Server Logger]: Inserting query - "..query) end
+		if EnableDebug and Multistate.IsWorld() then print("[Eluna Server Logger]: Inserting query - "..query) end
 		CharDBExecute(query)
 	end
 
@@ -386,14 +386,14 @@ if EnableLogger then
 		error("[Eluna Server Logger]: Fatal error - Logging is enabled but all loggers are disabled. Aborting.")
 	end
 	CreateLuaEvent(CacheDataPoints, LoggingInterval * 60 * 1000, 0)
-if EnableDebug then print("[Eluna Server Logger]: Server logger loaded with session ID "..SessionID..". Storing data every "..LoggingInterval.." minutes. Truncating enabled: "..tostring(EnableTruncate)) end
+if EnableDebug and Multistate.IsWorld() then print("[Eluna Server Logger]: Server logger loaded with session ID "..SessionID..". Storing data every "..LoggingInterval.." minutes. Truncating enabled: "..tostring(EnableTruncate)) end
 end
 
 if EnableTruncate then
 	if TruncateOnStartup then
 		CleanOldData()
 	end
-	if not EnableLogger then
+	if not EnableLogger and Multistate.IsWorld() then
 		print("[Eluna Server Logger]: Warning - Truncate is enabled but nothing is being logged.")
 	end
 	CreateLuaEvent(CleanOldData, DeleteInterval * 60 * 1000, 0)
