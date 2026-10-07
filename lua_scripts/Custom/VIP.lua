@@ -34,7 +34,7 @@ local function CheckVIPOnLoad()
         end
         
         for _, name in ipairs(playerNames) do
-            local player = GetPlayerByName(name)
+            local player = Multistate.FindPlayerByName(name)
             if player and vipTimeMap[accountIdMap[name]] then
                 Multistate.SetData(player, "VIPTime", vipTimeMap[accountIdMap[name]])
 				print("VIP found: "..player:GetName()..", acc "..player:GetAccountId()..".")
@@ -51,7 +51,7 @@ local function CheckVIP(event, player)
     if ShadowGetMaster(name) then return end
 	
 	AuthDBQueryAsync("SELECT viptime FROM accounts_vip WHERE account = " .. player:GetAccountId() .. ";", function(result)
-		local player = GetPlayerByName(name)
+		local player = Multistate.FindPlayerByName(name)
 		if not player then return end
 		if result then
 			Multistate.SetData(player, "VIPTime", result:GetUInt32(0))
