@@ -271,22 +271,37 @@ local function LoadMountData()
                         MOUNT_ICONS[spellId] = iconPaths[iconId]
                     until not spellResult:NextRow()
                 end
-                if Multistate.IsWorld() and SetWorldData then
+                if SetWorldData then
                     SetWorldData("FeathersMountData", {data = MOUNT_DATA, icons = MOUNT_ICONS})
                 end
                 local n = 0
                 for _ in pairs(MOUNT_DATA) do n = n + 1 end
-                print("[Feathers of Azeroth]: Loaded " .. n .. " mounts")
+                print("[Feathers of Azeroth]: Published " .. n .. " mounts to world data")
             end)
         end)
     end)
 end
 
--- Every state loads its own copy straight from the DB (DB access works in
--- all states). The old cross-state world-data adoption is gone: it relied on
--- a CreateLuaEvent timer, and those only tick in the world state, so map
--- states never adopted and their menus stayed empty.
-LoadMountData()
+local function AdoptFeathersMountData()
+    local shared = GetWorldData("FeathersMountData")
+    if type(shared) == "table" and shared.AsTable then
+        shared = shared:AsTable()
+    end
+    if type(shared) ~= "table" or type(shared.data) ~= "table" then
+        return false
+    end
+    for k, v in pairs(shared.data) do MOUNT_DATA[k] = v end
+    if type(shared.icons) == "table" then
+        for k, v in pairs(shared.icons) do MOUNT_ICONS[k] = v end
+    end
+    return true
+end
+
+-- World queries names/icons once and publishes them; map states adopt on
+-- demand when a menu opens (world -> map).
+if Multistate.IsWorld() then
+    LoadMountData()
+end
 
 local function IsInOldWorld(player)
 	local mapId = player:GetMapId()
@@ -458,11 +473,12 @@ end
 local function ShowMountMenu(event, player, item, target, page, isStandardMount)
     page = page or 1
     
-    -- Get available mounts for this player.
-    -- NOTE: iterate the static FLYING_MOUNTS list, not MOUNT_DATA.
-    -- MOUNT_DATA is adopted asynchronously from world state and may be
-    -- empty when adoption fails, which left this menu blank (header only).
-    -- MOUNT_DATA/MOUNT_ICONS are display-only (names/icons) with fallbacks.
+    -- Mount list comes from the static FLYING_MOUNTS table; MOUNT_DATA and
+    -- MOUNT_ICONS are display-only (names/icons) with fallbacks. Shared data
+    -- is adopted on demand (world -> map).
+    if next(MOUNT_DATA) == nil then
+        AdoptFeathersMountData()
+    end
     local availableMounts = {}
     local knownMounts = 0
     for _ in pairs(MOUNT_DATA) do knownMounts = knownMounts + 1 end
