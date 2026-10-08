@@ -508,6 +508,10 @@ local function ShowLoadingMenu(player, text)
 end
 
 local function DoSummon(player, accountId, botNames)
+    if not botNames or #botNames == 0 then
+        player:SendAreaTriggerMessage("You have no active shadows.")
+        return
+    end
     for _, botName in ipairs(botNames or {}) do
         local bot = Multistate.FindPlayerByName(botName)
         if bot then
