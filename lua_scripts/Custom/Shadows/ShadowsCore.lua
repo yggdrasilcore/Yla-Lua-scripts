@@ -13,6 +13,33 @@ activeBots       		=   {}
 local addCmdTimer       =   {}
 local logoutEvent       =   {}
 local botsAvailable     =   {}
+local botsLoading       =   {}
+
+local function FillBotsAvailable(accountId, query)
+    botsAvailable[accountId] = {}
+    if query then
+        repeat
+            local name = query:GetString(0)
+            local race = query:GetUInt8(1)
+            local class = query:GetUInt8(2)
+            local gender = query:GetUInt8(3)
+            local level = query:GetUInt8(4)
+
+            table.insert(botsAvailable[accountId], {
+                name = name,
+                race = race,
+                class = class,
+                gender = gender,
+                level = level
+            })
+
+        until not query:NextRow()
+
+        table.sort(botsAvailable[accountId], function(a, b)
+            return a.level > b.level
+        end)
+    end
+end
 local botTeleTime       =   {}
 local botMasters        =   {}
 local botSummonTime     =   {}
@@ -403,6 +430,59 @@ local commandCategories = {
    },
 }
 
+local function ShowAvailableShadows(player)
+    local accountId = player:GetAccountId()
+    local group = player:GetGroup()
+    local groupMembers = {}
+    local groupNames = {}
+    
+    player:GossipClearMenu()
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAvailable shadows:\n \n ", 0, 10)
+    
+    if group then
+        -- Multistate: Group member listing is world-only. On map states the
+        -- already-grouped exclusion is skipped (re-inviting is harmless).
+        if GetStateMapId() == -1 then
+            groupMembers = group:GetMembers()
+        end
+        for _, member in pairs(groupMembers) do
+            if member then
+                groupNames[member:GetName()] = true
+            end
+        end
+    end
+    
+    if botsAvailable[accountId] then
+        local found = false
+        for index, charInfo in ipairs(botsAvailable[accountId]) do
+            if charInfo.name ~= player:GetName() then
+                local className = GetClassName(charInfo.class)
+                local raceName = GetRaceName(charInfo.race)
+                
+                local raceIcon = GetRaceIconPath(charInfo.race, charInfo.gender)
+                local classIcon = GetClassIconPath(charInfo.class)
+                
+                if charInfo.name and not groupNames[charInfo.name] then
+                    if charInfo.level >= minShadowsLevel and charInfo.level > 9 and math.abs(player:GetLevel() - charInfo.level) <= 10 then
+                        player:GossipMenuAddItem(4, "|TInterface/ICONS/" .. raceIcon .. ":40:40:-24:0|t |TInterface/ICONS/" .. classIcon .. ":40:40:-24:0|t |TInterface/ICONS/achievement_level_" .. (math.floor(charInfo.level / 10) * 10) .. ":40:40:-24:0|t \n \n \n \nName:  " .. charInfo.name .. "\n \nLevel:  " .. charInfo.level .. "\n \nRace:  " .. raceName .. "\n \nClass:  " .. className .. "\n ", 0, 100 + index)
+                        found = true
+                    elseif charInfo.level >= minShadowsLevel and math.abs(player:GetLevel() - charInfo.level) <= 10 then
+                        player:GossipMenuAddItem(4, "|TInterface/ICONS/" .. raceIcon .. ":40:40:-24:0|t |TInterface/ICONS/" .. classIcon .. ":40:40:-24:0|t |TInterface/ICONS/inv_misc_desecrated_clothchest:40:40:-24:0|t\n \n \n \nName:  " .. charInfo.name .. "\n \nLevel:  " .. charInfo.level .. "\n \nRace:  " .. raceName .. "\n \nClass:  " .. className .. "\n ", 0, 100 + index)
+                        found = true
+                    end
+                end
+            end
+        end
+        if not found then
+            player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_rogue_shadowstep:40:40:-24:0|tNo available shadows \n \nThere are no shadows available in the range you can mind control. Your shadows must be within ten levels of you and at least level 15.\n \n", 0, 10)
+        end
+    end
+            
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:40:40:-24:0|tBack", 0, 999)
+    
+    player:GossipSendMenu(12, player, 200)
+end
+
 local function ShadowsHello(player)
     player:GossipClearMenu()
     local accountId = player:GetAccountId()
@@ -415,33 +495,7 @@ local function ShadowsHello(player)
 	
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_gizmo_02:40:40:-24:0|tHow to use shadows", 0, 2)
         
-    if not botsAvailable[accountId] then
-        botsAvailable[accountId] = {}
-        CharDBQueryAsync("SELECT name, race, class, gender, level FROM characters WHERE account = " .. accountId, function(query)
-            if query then
-                repeat
-                    local name = query:GetString(0)
-                    local race = query:GetUInt8(1)
-                    local class = query:GetUInt8(2)
-                    local gender = query:GetUInt8(3)
-                    local level = query:GetUInt8(4)
-                    
-                    table.insert(botsAvailable[accountId], {
-                        name = name,
-                        race = race,
-                        class = class,
-                        gender = gender,
-                        level = level
-                    })
-                    
-                until not query:NextRow()
-
-                table.sort(botsAvailable[accountId], function(a, b)
-                    return a.level > b.level
-                end)
-            end
-        end)
-    end
+    -- Available shadows load on demand in the Add-shadow menu below.
 
     if Multistate.GetData(player, "VIPTime") and Multistate.GetData(player, "VIPTime") > os.time() then -- Increased bot limit for VIP
         maxBotsForPlayer = maxVIPCount
@@ -623,55 +677,25 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
            ListActiveShadows(player)
         end
     elseif intid == 10 then  -- "Add bot" option
-        local group = player:GetGroup()
-        local groupMembers = {}
-        local groupNames = {}
-        
-        player:GossipClearMenu()
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAvailable shadows:\n \n ", 0, 10)
-        
-        if group then
-            -- Multistate: Group member listing is world-only. On map states the
-            -- already-grouped exclusion is skipped (re-inviting is harmless).
-            if GetStateMapId() == -1 then
-                groupMembers = group:GetMembers()
-            end
-            for _, member in pairs(groupMembers) do
-                if member then
-                    groupNames[member:GetName()] = true
-                end
-            end
-        end
-        
-        if botsAvailable[accountId] then
-            local found = false
-            for index, charInfo in ipairs(botsAvailable[accountId]) do
-                if charInfo.name ~= player:GetName() then
-                    local className = GetClassName(charInfo.class)
-                    local raceName = GetRaceName(charInfo.race)
-                    
-                    local raceIcon = GetRaceIconPath(charInfo.race, charInfo.gender)
-                    local classIcon = GetClassIconPath(charInfo.class)
-                    
-                    if charInfo.name and not groupNames[charInfo.name] then
-                        if charInfo.level >= minShadowsLevel and charInfo.level > 9 and math.abs(player:GetLevel() - charInfo.level) <= 10 then
-                            player:GossipMenuAddItem(4, "|TInterface/ICONS/" .. raceIcon .. ":40:40:-24:0|t |TInterface/ICONS/" .. classIcon .. ":40:40:-24:0|t |TInterface/ICONS/achievement_level_" .. (math.floor(charInfo.level / 10) * 10) .. ":40:40:-24:0|t \n \n \n \nName:  " .. charInfo.name .. "\n \nLevel:  " .. charInfo.level .. "\n \nRace:  " .. raceName .. "\n \nClass:  " .. className .. "\n ", 0, 100 + index)
-                            found = true
-                        elseif charInfo.level >= minShadowsLevel and math.abs(player:GetLevel() - charInfo.level) <= 10 then
-                            player:GossipMenuAddItem(4, "|TInterface/ICONS/" .. raceIcon .. ":40:40:-24:0|t |TInterface/ICONS/" .. classIcon .. ":40:40:-24:0|t |TInterface/ICONS/inv_misc_desecrated_clothchest:40:40:-24:0|t\n \n \n \nName:  " .. charInfo.name .. "\n \nLevel:  " .. charInfo.level .. "\n \nRace:  " .. raceName .. "\n \nClass:  " .. className .. "\n ", 0, 100 + index)
-                            found = true
-                        end
+        if botsAvailable[accountId] == nil or botsLoading[accountId] then
+            if not botsLoading[accountId] then
+                botsLoading[accountId] = true
+                CharDBQueryAsync("SELECT name, race, class, gender, level FROM characters WHERE account = " .. accountId, function(query)
+                    FillBotsAvailable(accountId, query)
+                    botsLoading[accountId] = nil
+                    local p = Multistate.FindPlayerByName(name)
+                    if p then
+                        ShadowsGossipSelect(event, p, object, sender, 10, code, menu_id)
                     end
-                end
+                end)
             end
-            if not found then
-                player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_rogue_shadowstep:40:40:-24:0|tNo available shadows \n \nThere are no shadows available in the range you can mind control. Your shadows must be within ten levels of you and at least level 15.\n \n", 0, 10)
-            end
+            player:GossipClearMenu()
+            player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tLoading available shadows, one moment...\n \n", 0, 10)
+            player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:40:40:-24:0|tBack", 0, 999)
+            player:GossipSendMenu(12, player, 200)
+            return
         end
-                
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:40:40:-24:0|tBack", 0, 999)
-        
-        player:GossipSendMenu(12, player, 200)
+        ShowAvailableShadows(player)
     elseif intid >= 100 and intid < 199 then  -- Bot selection
         player:GossipClearMenu()
         for _, zone in pairs(disallowedZones) do
@@ -705,6 +729,13 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
                 local selectedChar = botsAvailable[accountId][selectedIndex]
                 -- Pending state only; the ".playerbots bot add" command below
                 -- round-trips through OnBotCommand, which commits the mapping.
+                -- Consume the entry and bump the count now so this render is
+                -- already fresh; OnBotCommand reconciles the bump on commit.
+                table.remove(botsAvailable[accountId], selectedIndex)
+                local pendingAdds = Multistate.GetData(player, "ShadowsPendingAdds") or {}
+                pendingAdds[selectedChar.name] = true
+                Multistate.SetData(player, "ShadowsPendingAdds", pendingAdds)
+                ShadowAddBotCount(player, 1)
                 ShadowSetBotSummonTime(player, os.time())
                 ShadowsRunCommand(player, ".playerbots bot add " .. selectedChar.name) -- Add bot
                 ShadowSetDontKick(player, selectedChar.name, os.time() + 3)
@@ -1266,15 +1297,33 @@ local function OnBotCommand(event, player, command)
             for _, char in ipairs(ShadowGetBots(name)) do
                 if char == selectedChar then
                     exists = true
+                    break
+                end
+            end
+
+            -- Reconcile with an optimistic gossip-side bump if present.
+            local pendingAdds = Multistate.GetData(player, "ShadowsPendingAdds") or {}
+            if pendingAdds[selectedChar] then
+                pendingAdds[selectedChar] = nil
+                if next(pendingAdds) == nil then
+                    Multistate.ClearData(player, "ShadowsPendingAdds")
+                else
+                    Multistate.SetData(player, "ShadowsPendingAdds", pendingAdds)
+                end
+                if exists then
+                    ShadowAddBotCount(player, -1)
                     return false
                 end
+            elseif exists then
+                return false
+            else
+                ShadowAddBotCount(player, 1)
             end
 
             if not exists then
                 ShadowSetMaster(selectedChar, name)
             end
 
-            ShadowAddBotCount(player, 1)
             Multistate.SetData(player, "ShadowsAddCmd", GetCurrTime())
             if ShadowGetBotCount(player) > 4 then
                 local shadowsGroup = player:GetGroup()
