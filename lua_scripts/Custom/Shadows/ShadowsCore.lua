@@ -468,9 +468,11 @@ local function ShowAvailableShadows(player)
                 
                 -- Exclude owned shadows and in-flight adds so a just-added
                 -- entry does not reappear when the list repopulates.
+                -- row.owned comes from the batched lookup in the refresh
+                -- callback (no per-row SQL here).
                 local pendingAt = tonumber(pendingAdds[charInfo.name]) or 0
                 local freshPending = pendingAt > 0 and (os.time() - pendingAt < PendingAddTTL)
-                if charInfo.name and not groupNames[charInfo.name] and ShadowGetMaster(charInfo.name) == nil and not freshPending then
+                if charInfo.name and not groupNames[charInfo.name] and not charInfo.owned and not freshPending then
                     if charInfo.level >= minShadowsLevel and charInfo.level > 9 and math.abs(player:GetLevel() - charInfo.level) <= 10 then
                         player:GossipMenuAddItem(4, "|TInterface/ICONS/" .. raceIcon .. ":40:40:-24:0|t |TInterface/ICONS/" .. classIcon .. ":40:40:-24:0|t |TInterface/ICONS/achievement_level_" .. (math.floor(charInfo.level / 10) * 10) .. ":40:40:-24:0|t \n \n \n \nName:  " .. charInfo.name .. "\n \nLevel:  " .. charInfo.level .. "\n \nRace:  " .. raceName .. "\n \nClass:  " .. className .. "\n ", 0, 100 + index)
                         found = true
@@ -570,6 +572,18 @@ local function RefreshAvailableShadows(player, accountId, playerName, thenMenu)
     ShowLoadingMenu(player, "Loading available shadows, one moment...")
     CharDBQueryAsync("SELECT name, race, class, gender, level FROM characters WHERE account = " .. accountId, function(query)
         FillBotsAvailable(accountId, query)
+        -- Single batched owned lookup so renders cost 1 async + 1 sync
+        -- query instead of N per-row queries.
+        local owned = {}
+        local ownedQuery = CharDBQuery("SELECT bot_name FROM shadows_bots WHERE master_name = '" .. playerName .. "'")
+        if ownedQuery then
+            repeat
+                owned[ownedQuery:GetString(0)] = true
+            until not ownedQuery:NextRow()
+        end
+        for _, row in ipairs(botsAvailable[accountId] or {}) do
+            row.owned = owned[row.name] or nil
+        end
         botsCacheTime[accountId] = os.time()
         botsLoading[accountId] = nil
         if thenMenu == "silent" then
@@ -603,18 +617,22 @@ local function ShadowIsPendingAdd(player, botName)
     return t and t > 0 and (os.time() - t < PendingAddTTL) or false
 end
 
-local function SyncBotCount(player)
-    local bots = #ShadowGetBots(player:GetName())
-    local pending = Multistate.GetData(player, "ShadowsPendingAdds")
+local function ShadowFreshPendingCount(player)
+    local n = 0
+    local pending = player and Multistate.GetData(player, "ShadowsPendingAdds")
     if pending then
-        for botName, t in pairs(pending) do
+        for _, t in pairs(pending) do
             t = tonumber(t) or 0
             if t > 0 and os.time() - t < PendingAddTTL then
-                bots = bots + 1
+                n = n + 1
             end
         end
     end
-    ShadowSetBotCount(player, bots)
+    return n
+end
+
+local function SyncBotCount(player)
+    ShadowSetBotCount(player, #ShadowGetBots(player:GetName()) + ShadowFreshPendingCount(player))
 end
 
 -- Entry point for the `shadowsmenu` command: re-sync the counter, then
@@ -773,7 +791,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
            -- is already correct; the world-side OnBotCommand reconcile is
            -- idempotent (it only decrements when it still finds the mapping).
            ShadowSetMaster(selectedBot, nil)
-           ShadowAddBotCount(player, -1)
+           ShadowSetBotCount(player, #ShadowGetBots(name) + ShadowFreshPendingCount(player))
            ShadowsRunCommand(player, ".playerbots bot remove " .. selectedBot)
            -- Mapping already committed above, so the sync re-read is
            -- instantly correct; the world-side reconcile is a no-op.
@@ -813,15 +831,30 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
             
             if botsAvailable[accountId] and botsAvailable[accountId][selectedIndex] then
                 local selectedChar = botsAvailable[accountId][selectedIndex]
+                -- Authoritative cap from canonical owned + in-flight, never
+                -- the drifted counter, so rapid clicks can't exceed max.
+                local trueCount = #ShadowGetBots(name) + ShadowFreshPendingCount(player)
+                if trueCount >= maxBotsForPlayer then
+                    player:SendAreaTriggerMessage("You can't summon more shadows until you remove one.")
+                    ShadowSetBotCount(player, trueCount)
+                    ShadowsHello(player)
+                    return
+                end
+                -- Re-verify still unowned: rapid stale-index clicks may target
+                -- an already-added bot.
+                if selectedChar.owned or ShadowGetMaster(selectedChar.name) ~= nil or ShadowIsPendingAdd(player, selectedChar.name) then
+                    RefreshAvailableShadows(player, accountId, name, "hello")
+                    return
+                end
                 -- Pending state only; the ".playerbots bot add" command below
                 -- round-trips through OnBotCommand, which commits the mapping.
-                -- Consume the entry and bump the count now so this render is
-                -- already fresh; OnBotCommand reconciles the bump on commit.
+                -- Consume the entry and assign the count from truth so this
+                -- render is already fresh; OnBotCommand re-derives on commit.
                 table.remove(botsAvailable[accountId], selectedIndex)
                 local pendingAdds = Multistate.GetData(player, "ShadowsPendingAdds") or {}
                 pendingAdds[selectedChar.name] = os.time()
                 Multistate.SetData(player, "ShadowsPendingAdds", pendingAdds)
-                ShadowAddBotCount(player, 1)
+                ShadowSetBotCount(player, trueCount + 1)
                 ShadowSetBotSummonTime(player, os.time())
                 ShadowsRunCommand(player, ".playerbots bot add " .. selectedChar.name) -- Add bot
                 ShadowSetDontKick(player, selectedChar.name, os.time() + 3)
@@ -1389,7 +1422,9 @@ local function OnBotCommand(event, player, command)
                 end
             end
 
-            -- Reconcile with an optimistic gossip-side bump if present.
+            -- Consume the gossip-side pending entry if present, commit the
+            -- mapping if missing, then derive the count from truth. Never
+            -- blind-increments, so rapid clicks can't drift past max.
             local pendingAdds = Multistate.GetData(player, "ShadowsPendingAdds") or {}
             if pendingAdds[selectedChar] then
                 pendingAdds[selectedChar] = nil
@@ -1398,19 +1433,12 @@ local function OnBotCommand(event, player, command)
                 else
                     Multistate.SetData(player, "ShadowsPendingAdds", pendingAdds)
                 end
-                if exists then
-                    ShadowAddBotCount(player, -1)
-                    return false
-                end
-            elseif exists then
-                return false
-            else
-                ShadowAddBotCount(player, 1)
             end
 
             if not exists then
                 ShadowSetMaster(selectedChar, name)
             end
+            ShadowSetBotCount(player, #ShadowGetBots(name) + ShadowFreshPendingCount(player))
 
             Multistate.SetData(player, "ShadowsAddCmd", GetCurrTime())
             if ShadowGetBotCount(player) > 4 then
@@ -1448,10 +1476,10 @@ local function OnBotCommand(event, player, command)
             for i, botName in ipairs(ShadowGetBots(name)) do
                 if botName == selectedChar then
                     ShadowSetMaster(selectedChar, nil)
-                    ShadowAddBotCount(player, -1)
                     break
                 end
             end
+            ShadowSetBotCount(player, #ShadowGetBots(name) + ShadowFreshPendingCount(player))
 
             return true
         end
@@ -1667,8 +1695,8 @@ function ProcessWintergraspWorldstate(variableID, value) -- Called on init and u
                                 end
                                 ShadowsRunCommand(master, ".playerbots bot remove " .. botName)
                                 ShadowSetMaster(botName, nil)
-                                ShadowAddBotCount(master, -1)
                             end
+                            ShadowSetBotCount(master, #ShadowGetBots(master:GetName()) + ShadowFreshPendingCount(master))
                             master:SendBroadcastMessage("Shadows are not permitted during active Wintergrasp battles. Your shadows have logged off.")
                             master:SendAreaTriggerMessage("Shadows are not permitted during active Wintergrasp battles. Your shadows have logged off.")
                         end
