@@ -1,8 +1,4 @@
 -- Multistate: map-only script (all hooks fire in map states).
-if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
-
--- Multistate: map-only script (all hooks fire in map states).
-if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
 
 -- ----------------------------------------------------------------------------------------------
 -- ACCOUNTWIDE CURRENCY CONFIG 
@@ -130,6 +126,10 @@ local function AccountWideCurrency(event, player)
     end
 end
 
-print("[AccountCurrency] Script loaded - registering events")
-RegisterPlayerEvent(25, AccountWideCurrency) -- EVENT_ON_SAVE
-RegisterPlayerEvent(28, AccountWideCurrency) -- PLAYER_EVENT_ON_MAP_CHANGE
+if not IsCompatibilityMode() and GetStateMapId() == -1 then
+    print("[AccountCurrency] Script loaded - registering events")
+end
+if IsCompatibilityMode() or GetStateMapId() ~= -1 then
+    RegisterPlayerEvent(25, AccountWideCurrency) -- EVENT_ON_SAVE
+    RegisterPlayerEvent(28, AccountWideCurrency) -- PLAYER_EVENT_ON_MAP_CHANGE
+end
