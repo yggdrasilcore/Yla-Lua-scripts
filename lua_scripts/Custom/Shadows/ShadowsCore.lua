@@ -469,7 +469,7 @@ local function ShadowsHello(player, view)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAdd shadow (" .. count .. "/"..maxBotsForPlayer..")", 0, 10)
     if count > 0 then
         player:GossipMenuAddItem(4, "|TINTERFACE/ICONS/spell_unused2:40:40:-24:0|tSummon shadows", 0, 5, false, "Are you sure you want to summon your shadow(s) here?\n \nThis will induce a "..(BotSummonCD/60).."-minute summon cooldown.")
-        player:GossipMenuAddItem(4, "|TINTERFACE/ICONS/PaperDollInfoFrame/UI-GearManager-Undo:40:40:-24:0|tRemove shadow", 0, 6)
+        player:GossipMenuAddItem(4, "|TInterface/PaperDollInfoFrame/UI-GearManager-Undo:40:40:-24:0|tRemove shadow", 0, 6)
     end
     player:GossipMenuAddItem(4, "|TINTERFACE/ICONS/spell_shadow_darksummoning:40:40:-24:0|tShadow bar settings", 0, 7)
     player:GossipMenuAddItem(4, "|TINTERFACE/ICONS/Trade_Engineering:40:40:-24:0|tExit", 0, 1000)
