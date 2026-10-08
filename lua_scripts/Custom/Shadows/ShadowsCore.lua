@@ -1297,6 +1297,35 @@ local function WorldSendView(player, payload)
     end
 end
 
+-- Intent-aware hello: the REPLACE/DELETE above rides the async Execute
+-- queue, so a sync re-read may predate it. Fold the intent into the
+-- response so the menu is instantly correct and converges with the DB.
+local function WorldIntentHello(player, seq, addedName, removedName)
+    local name = player:GetName()
+    local bots = {}
+    for _, b in ipairs(ShadowGetBots(name)) do
+        if b ~= removedName then
+            table.insert(bots, b)
+        end
+    end
+    if addedName then
+        local seen = false
+        for _, b in ipairs(bots) do
+            if b == addedName then seen = true break end
+        end
+        if not seen then table.insert(bots, addedName) end
+    end
+    table.sort(bots)
+    ShadowSetBotCount(player, #bots)
+    return {
+        view = "hello", seq = seq, playerName = name,
+        count = #bots,
+        max = WorldMaxBots(player),
+        barReady = Multistate.GetData(player, "ShadowBarStatusChecked") and true or false,
+        bots = bots,
+    }
+end
+
 -- Single committer for bot adds. Derives the count from truth; duplicate
 -- rapid EMQs hit the exists check and become recount-only no-ops.
 local function WorldAddBot(player, botName, seq, viaMenu, reqTime)
@@ -1339,7 +1368,6 @@ local function WorldAddBot(player, botName, seq, viaMenu, reqTime)
         return false
     end
     ShadowSetMaster(botName, name)
-    ShadowSetBotCount(player, #ShadowGetBots(name))
     ShadowSetBotSummonTime(player, os.time())
     ShadowSetDontKick(player, botName, os.time() + 3)
     Multistate.SetData(player, "ShadowsAddCmd", GetCurrTime())
@@ -1364,12 +1392,15 @@ local function WorldAddBot(player, botName, seq, viaMenu, reqTime)
             pl:GroupInvite(bot)
         end
     end, 200, 1)
-    answer()
+    -- Intent-aware answer: count/bots include the just-added name even if
+    -- the queued REPLACE has not applied yet, so the (n/max) never lags.
+    if seq then WorldSendView(player, WorldIntentHello(player, seq, botName, nil)) end
     return true
 end
 
 -- Single committer for bot removes. Idempotent: missing mappings still
--- recount and repopulate.
+-- recount and repopulate. Intent-aware like the add path: the queued
+-- DELETE may not have applied when the response is built.
 local function WorldRemoveBot(player, botName, seq)
     local name = player:GetName()
     if botName and botName ~= "" then
@@ -1379,15 +1410,12 @@ local function WorldRemoveBot(player, botName, seq)
         Multistate.SetData(player, "ShadowsInternalCmd", botName)
         player:RunCommand(".playerbots bot remove " .. botName)
     end
-    ShadowSetBotCount(player, #ShadowGetBots(name))
     if seq then
-        WorldSendView(player, {
-            view = "remove", seq = seq, playerName = name,
-            count = #ShadowGetBots(name),
-            max = WorldMaxBots(player),
-            barReady = Multistate.GetData(player, "ShadowBarStatusChecked") and true or false,
-            bots = ShadowGetBots(name),
-        })
+        local v = WorldIntentHello(player, seq, nil, botName)
+        v.view = "remove"
+        WorldSendView(player, v)
+    else
+        ShadowSetBotCount(player, #ShadowGetBots(name))
     end
     return true
 end
@@ -1413,7 +1441,7 @@ HandleWorldOp = function(player, data)
         local accountId = player:GetAccountId()
         local seq = data.seq
         local guidLow = player:GetGUIDLow()
-        CharDBQueryAsync("SELECT name, race, class, gender, level FROM characters WHERE account = " .. accountId, function(query)
+        CharDBQueryAsync("SELECT name, race, class, gender, level FROM characters WHERE account = " .. accountId .. " ORDER BY level DESC", function(query)
             local p = GetPlayerByName(name)
             if not p then return end
             local owned = {}
