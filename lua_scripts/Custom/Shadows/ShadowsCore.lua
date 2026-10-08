@@ -17,6 +17,7 @@ local mapViewCache      =   {}
 local mapReqSeq         =   {} -- last request seq per player name
 local mapAckSeq         =   {} -- last rendered view seq per player name
 local VIEW_TIMEOUT_MS   =   6000
+local mapPendingAction  =   {} -- deferred click action per player, run on next view
 
 local botTeleTime       =   {}
 local botMasters        =   {}
@@ -506,6 +507,20 @@ local function ShowLoadingMenu(player, text)
     player:GossipSendMenu(12, player, 200)
 end
 
+local function DoSummon(player, accountId, botNames)
+    for _, botName in ipairs(botNames or {}) do
+        local bot = Multistate.FindPlayerByName(botName)
+        if bot then
+            bot:Teleport(player:GetMapId(), player:GetX() + math.random(-3, 3), player:GetY() + math.random(-3, 3), player:GetZ() + math.random(0, 0.1), player:GetO() + math.random(-6, 6))
+            player:CastSpell(bot, BOT_TELE_VISUAL, true)
+            bot:RegisterEvent(function(eventId, delay, repeats, b)
+                if b then b:CastSpell(b, BOT_TELE_VISUAL, true) end
+            end, 500, 1)
+        end
+    end
+    botTeleTime[accountId] = os.time() + (BotSummonCD)
+end
+
 -- Map -> world request. Only the matching answer renders.
 local function MapSendToWorld(player, op, params)
     local name = player:GetName()
@@ -520,6 +535,7 @@ local function MapSendToWorld(player, op, params)
     player:SendEMQMessage("ShadowsToWorld", data)
     player:RegisterEvent(function(eventId, delay, repeats, pl)
         if pl and mapAckSeq[pl:GetName()] ~= seq and mapReqSeq[pl:GetName()] == seq then
+            mapPendingAction[pl:GetName()] = nil
             pl:SendAreaTriggerMessage("Shadows service timed out, please reopen the menu.")
             local c = mapViewCache[pl:GetName()]
             if c and c.hello then
@@ -548,7 +564,14 @@ HandleMapView = function(player, data)
     elseif data.view == "add" then
         ShowAvailableShadows(player, data)
     elseif data.view == "remove" then
-        ListActiveShadows(player, data)
+        if mapPendingAction[name] == "summon" then
+            mapPendingAction[name] = nil
+            DoSummon(player, player:GetAccountId(), data.bots)
+            local c = mapViewCache[name]
+            if c and c.hello then ShadowsHello(player, c.hello) end
+        else
+            ListActiveShadows(player, data)
+        end
     elseif data.view == "follow" then
         for _, botName in ipairs(data.bots or {}) do
             local bot = Multistate.FindPlayerByName(botName)
@@ -658,26 +681,21 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
             end
         end
         if cache.hello then ShadowsHello(player, cache.hello) end
-    elseif intid == 5 then -- Summon (cached bots, map-local cooldown)
+    elseif intid == 5 then -- Summon from the active list, fetching it first if empty
         local accountId = player:GetAccountId()
         if not botTeleTime[accountId] then botTeleTime[accountId] = 0 end
 
-        if botTeleTime[accountId] < os.time() then
-            for _, botName in ipairs(cache.bots or {}) do
-                local bot = Multistate.FindPlayerByName(botName)
-                if bot then
-                    bot:Teleport(player:GetMapId(), player:GetX() + math.random(-3, 3), player:GetY() + math.random(-3, 3), player:GetZ() + math.random(0, 0.1), player:GetO() + math.random(-6, 6))
-                    player:CastSpell(bot, BOT_TELE_VISUAL, true)
-                    bot:RegisterEvent(function(eventId, delay, repeats, b)
-                        if b then b:CastSpell(b, BOT_TELE_VISUAL, true) end
-                    end, 500, 1)
-                end
-            end
-            botTeleTime[accountId] = os.time() + (BotSummonCD)
-        else
+        if botTeleTime[accountId] >= os.time() then
             player:SendAreaTriggerMessage("Your shadows summon is on cooldown for " .. math.floor((botTeleTime[accountId] - os.time()) / 60) .. " minutes and " .. ((botTeleTime[accountId] - os.time()) % 60) .. " seconds.")
+            if cache.hello then ShadowsHello(player, cache.hello) end
+        elseif cache.bots and #cache.bots > 0 then
+            DoSummon(player, accountId, cache.bots)
+            if cache.hello then ShadowsHello(player, cache.hello) end
+        else
+            mapPendingAction[name] = "summon"
+            ShowLoadingMenu(player, "Loading your active shadows, one moment...")
+            MapSendToWorld(player, "removemenu")
         end
-        if cache.hello then ShadowsHello(player, cache.hello) end
     elseif intid == 6 then  -- Remove list: placeholder, world repopulates
         ShowLoadingMenu(player, "Loading your active shadows, one moment...")
         MapSendToWorld(player, "removemenu")
