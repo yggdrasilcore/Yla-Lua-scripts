@@ -12,9 +12,7 @@ isPlayerBot		        =   {} -- Global table referenced in VIP script as well
 activeBots       		=   {}
 local addCmdTimer       =   {}
 local logoutEvent       =   {}
--- Map-side view cache: last payload delivered by world, per player name.
--- The map NEVER touches the DB; menus render from this cache, clicks resolve
--- names from it and forward via EMQ. World owns all DB and shared vars.
+-- Last world payload per player. Map renders from here, never touches DB.
 local mapViewCache      =   {}
 local mapReqSeq         =   {} -- last request seq per player name
 local mapAckSeq         =   {} -- last rendered view seq per player name
@@ -182,11 +180,7 @@ function ShadowSetLastTeleTime(player, t)
     Multistate.SetData(player, "ShadowsLastTele", t)
 end
 
--- Cross-state transport. Map NEVER touches the DB: it renders from cached
--- view payloads and forwards clicks via EMQ; world owns all DB and shared
--- vars and answers with view payloads. Handlers are defined below (world ops
--- near OnBotCommand, map rendering near the gossip builders) and assigned
--- here through forward declarations so registration order is load-safe.
+-- Handlers defined below, assigned here so registration order is load-safe.
 local HandleWorldOp   -- (player, data): runs in world, owns DB + RunCommand
 local HandleMapView   -- (player, data): runs on map, pure render from payload
 EMQ.RegisterQueue("ShadowsToWorld", function(player, data)
@@ -408,9 +402,7 @@ local commandCategories = {
    },
 }
 
--- Pure map-side renders. World delivers every value in the view payload;
--- NOTHING here touches the DB or shared vars. Clicks resolve names from the
--- per-player cache below and forward via EMQ.
+-- Pure map-side renders from world payloads. No DB or shared vars.
 
 local function CacheView(playerName, view)
     local c = mapViewCache[playerName] or {}
@@ -505,9 +497,7 @@ local function ListActiveShadows(player, view)
     player:GossipSendMenu(12, player, 200)
 end
 
--- Replaces the menu with a "loading..." placeholder. Shown first for every
--- world-mutating flow, populated once the EMQ answer arrives. Intid 11 is a
--- dedicated no-op so clicking the header can never trigger an action.
+-- Loading placeholder. Intid 11 is a dedicated no-op.
 local function ShowLoadingMenu(player, text)
     text = text or "Loading, one moment..."
     player:GossipClearMenu()
@@ -516,8 +506,7 @@ local function ShowLoadingMenu(player, text)
     player:GossipSendMenu(12, player, 200)
 end
 
--- Map -> world request. Bumps the per-player seq, shows no menu itself (the
--- caller already showed the placeholder); renders only the matching answer.
+-- Map -> world request. Only the matching answer renders.
 local function MapSendToWorld(player, op, params)
     local name = player:GetName()
     local seq = (mapReqSeq[name] or 0) + 1
@@ -542,15 +531,13 @@ local function MapSendToWorld(player, op, params)
     end, VIEW_TIMEOUT_MS, 1)
 end
 
--- Map-side view dispatcher (HandleMapView assignment). Renders only answers
--- matching the latest request seq; stale answers are dropped.
+-- Map-side view dispatcher. Stale answers are dropped.
 HandleMapView = function(player, data)
     if not player or not data then
         return
     end
     local name = data.playerName or player:GetName()
-    -- Unsolicited views (nil seq, e.g. fresh shadowsmenu) always render;
-    -- answers render only when they match the latest request.
+    -- Unsolicited views (nil seq) always render.
     if data.seq ~= nil and data.seq ~= mapReqSeq[name] then
         return
     end
@@ -581,10 +568,8 @@ end
 
 
 local function ShadowsGossipSelect(event, player, object, sender, intid, code, menu_id)
-    -- Map side: NO DB and NO shared vars here. Every click resolves a NAME
-    -- from the cached view (exactly what the player sees) and forwards via
-    -- EMQ; world answers with a fresh view that re-renders. Cache and screen
-    -- stay in sync, so rapid clicks can never act on shifted rows.
+    -- Map side: no DB or shared vars. Clicks resolve names from the
+    -- cached view and forward via EMQ.
     local name = player:GetName()
     local cache = mapViewCache[name] or {}
 
@@ -921,9 +906,7 @@ local function ShadowsLogin(event, player) -- Lazy persistent storage solution. 
 end
 
 local function LogoutOrSave(event, player)
-    -- Multistate: event 4 (logout) fires globally and owns everything below.
-    -- Event 25 (save) fires in map states: no DB here, world persists the
-    -- bar flag (it reads the shared value itself).
+    -- Event 4 (logout) is global. Event 25 (map save) forwards to world.
     if event == 25 then
         player:SendEMQMessage("ShadowsToWorld", { op = "savebar", playerName = player:GetName() })
         return
@@ -1282,9 +1265,7 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
     bot:SendUnitWhisper(fallback[math.random(#fallback)], 0, player)
 end
 
--- World side: owns ALL DB and shared vars. Runs in the world state via the
--- ShadowsToWorld EMQ queue (map requests) or the chat command event.
--- Mutating answers always carry a fresh view so the map repopulates.
+-- World side: owns ALL DB and shared vars. Answers carry a fresh view.
 
 local function WorldMaxBots(player)
     if Multistate.GetData(player, "VIPTime") and Multistate.GetData(player, "VIPTime") > os.time() then
@@ -1310,9 +1291,8 @@ local function WorldSendView(player, payload)
     end
 end
 
--- Intent-aware hello: the REPLACE/DELETE above rides the async Execute
--- queue, so a sync re-read may predate it. Fold the intent into the
--- response so the menu is instantly correct and converges with the DB.
+-- Folds the add/remove intent into the response: the queued write may
+-- not have applied when the re-read runs.
 local function WorldIntentHello(player, seq, addedName, removedName)
     local name = player:GetName()
     local bots = {}
@@ -1411,9 +1391,7 @@ local function WorldAddBot(player, botName, seq, viaMenu, reqTime)
     return true
 end
 
--- Single committer for bot removes. Idempotent: missing mappings still
--- recount and repopulate. Intent-aware like the add path: the queued
--- DELETE may not have applied when the response is built.
+-- Single committer for bot removes. Idempotent; intent-aware.
 local function WorldRemoveBot(player, botName, seq)
     local name = player:GetName()
     if botName and botName ~= "" then
