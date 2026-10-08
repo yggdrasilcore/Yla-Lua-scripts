@@ -430,7 +430,7 @@ end
 local function ShowAvailableShadows(player, view)
     local rows = (view and view.available) or (mapViewCache[player:GetName()] or {}).available or {}
     player:GossipClearMenu()
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAvailable shadows:\n \n ", 0, 10)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAvailable shadows:\n \n ", 0, 11)
 
     local found = false
     for index, charInfo in ipairs(rows) do
@@ -449,7 +449,7 @@ local function ShowAvailableShadows(player, view)
         end
     end
     if not found then
-        player:GossipMenuAddItem(4, "|TINTERFACE/ICONS/ability_rogue_shadowstep:40:40:-24:0|tNo available shadows \n \nThere are no shadows available in the range you can mind control. Your shadows must be within ten levels of you and at least level 15.\n \n", 0, 10)
+        player:GossipMenuAddItem(4, "|TINTERFACE/ICONS/ability_rogue_shadowstep:40:40:-24:0|tNo available shadows \n \nThere are no shadows available in the range you can mind control. Your shadows must be within ten levels of you and at least level 15.\n \n", 0, 11)
     end
 
     player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:40:40:-24:0|tBack", 0, 999)
@@ -480,7 +480,11 @@ local function ListActiveShadows(player, view)
     local bots = (view and view.bots) or (mapViewCache[player:GetName()] or {}).bots or {}
     player:GossipClearMenu()
 
-    player:GossipMenuAddItem(0, "|TInterface/PaperDollInfoFrame/UI-GearManager-Undo:40:40:-24:0|tActive shadows:\n \n ", 0, 6)
+    local activeHeader = "Active shadows:"
+    if #bots == 0 then
+        activeHeader = "You have no active shadows."
+    end
+    player:GossipMenuAddItem(0, "|TInterface/PaperDollInfoFrame/UI-GearManager-Undo:40:40:-24:0|t" .. activeHeader .. "\n \n ", 0, 6)
 
     for index, botName in ipairs(bots) do
         local menuText = string.format(
@@ -730,13 +734,12 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
         end
         ShowLoadingMenu(player, "Adding shadow, one moment...")
         MapSendToWorld(player, "add", { botName = row.name, reqTime = os.time() })
-    elseif intid == 999 then  -- "Back" option: render from cache
+    elseif intid == 999 then  -- "Back" option: cached hello only, never an op
         if cache.hello then
             player:GossipClearMenu()
             ShadowsHello(player, cache.hello)
         else
-            ShowLoadingMenu(player, "Loading, one moment...")
-            MapSendToWorld(player, "open")
+            player:GossipComplete()
         end
     elseif intid == 1000 then  -- "Exit" option
         player:GossipComplete()
