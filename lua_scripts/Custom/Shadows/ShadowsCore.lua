@@ -98,7 +98,7 @@ function ShadowGetBots(masterName)
     if not masterName then
         return bots
     end
-    local query = CharDBQuery("SELECT bot_name FROM shadows_bots WHERE master_name = '" .. masterName .. "'")
+    local query = CharDBQuery("SELECT bot_name FROM shadows_bots WHERE master_name = '" .. masterName .. "' ORDER BY bot_name")
     if query then
         repeat
             table.insert(bots, query:GetString(0))
@@ -464,7 +464,9 @@ local function ShowAvailableShadows(player)
                 local raceIcon = GetRaceIconPath(charInfo.race, charInfo.gender)
                 local classIcon = GetClassIconPath(charInfo.class)
                 
-                if charInfo.name and not groupNames[charInfo.name] then
+                -- Exclude already-owned shadows so a just-added entry does not
+                -- reappear when the list repopulates from the async refresh.
+                if charInfo.name and not groupNames[charInfo.name] and ShadowGetMaster(charInfo.name) == nil then
                     if charInfo.level >= minShadowsLevel and charInfo.level > 9 and math.abs(player:GetLevel() - charInfo.level) <= 10 then
                         player:GossipMenuAddItem(4, "|TInterface/ICONS/" .. raceIcon .. ":40:40:-24:0|t |TInterface/ICONS/" .. classIcon .. ":40:40:-24:0|t |TInterface/ICONS/achievement_level_" .. (math.floor(charInfo.level / 10) * 10) .. ":40:40:-24:0|t \n \n \n \nName:  " .. charInfo.name .. "\n \nLevel:  " .. charInfo.level .. "\n \nRace:  " .. raceName .. "\n \nClass:  " .. className .. "\n ", 0, 100 + index)
                         found = true
@@ -733,13 +735,8 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
             player:SendAreaTriggerMessage("Your shadows summon is on cooldown for " .. math.floor((botTeleTime[accountId] - os.time()) / 60) .. " minutes and " .. ((botTeleTime[accountId] - os.time()) % 60) .. " seconds.")
         end
         ShadowsHello(player)
-    elseif intid == 6 then  -- Show list of active shadows to remove (callback-based repopulate)
-        ShowLoadingMenu(player, "Loading your active shadows, one moment...")
-        player:RegisterEvent(function(eventId, delay, repeats, pl)
-            if pl then
-                ListActiveShadows(pl)
-            end
-        end, 500, 1)
+    elseif intid == 6 then  -- Show list of active shadows to remove
+        ListActiveShadows(player)
 	elseif intid == 7 then
 		if Multistate.GetData(player, "ShadowBarStatusChecked") then
 			player:SendAddonMessage("ShadowsBar", "SETTINGS", 7, player)
@@ -760,12 +757,9 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
            ShadowSetMaster(selectedBot, nil)
            ShadowAddBotCount(player, -1)
            ShadowsRunCommand(player, ".playerbots bot remove " .. selectedBot)
-           ShowLoadingMenu(player, "Removing shadow, refreshing...")
-           player:RegisterEvent(function(eventId, delay, repeats, pl)
-               if pl then
-                   ListActiveShadows(pl)
-               end
-           end, 750, 1)
+           -- Mapping already committed above, so the sync re-read is
+           -- instantly correct; the world-side reconcile is a no-op.
+           ListActiveShadows(player)
         end
     elseif intid == 10 then  -- "Add bot" option: always callback-based refresh
         RefreshAvailableShadows(player, accountId, name, "add")
