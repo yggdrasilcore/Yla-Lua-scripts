@@ -14,6 +14,8 @@ local addCmdTimer       =   {}
 local logoutEvent       =   {}
 local botsAvailable     =   {}
 local botsLoading       =   {}
+local botsCacheTime     =   {} -- per-state timestamp of last available-shadows refresh, by accountId
+local BotCacheTTL       =   15 * 60 -- re-do the async account-chars caching if older than this
 
 local function FillBotsAvailable(accountId, query)
     botsAvailable[accountId] = {}
@@ -534,6 +536,80 @@ local function ListActiveShadows(player)
     player:GossipSendMenu(12, player, 200)
 end
 
+-- Replaces the menu with a "loading..." placeholder. Every callback-based
+-- refresh shows this first, then populates once its callback arrives.
+local function ShowLoadingMenu(player, text)
+    text = text or "Loading, one moment..."
+    player:GossipClearMenu()
+    player:GossipMenuAddItem(4, "|TINTERFACE/ICONS/inv_misc_groupneedmore:40:40:-24:0|t" .. text .. "\n \n", 0, 10)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:40:40:-24:0|tBack", 0, 999)
+    player:GossipSendMenu(12, player, 200)
+end
+
+local function IsCacheFresh(accountId)
+    return botsAvailable[accountId] ~= nil
+        and botsCacheTime[accountId] ~= nil
+        and (os.time() - botsCacheTime[accountId] < BotCacheTTL)
+end
+
+-- Always callback-based: shows loading now, re-queries the account's
+-- characters, then renders `thenMenu` ("add", "hello", "remove", "silent")
+-- once the DB callback arrives.
+local function RefreshAvailableShadows(player, accountId, playerName, thenMenu)
+    if botsLoading[accountId] then
+        ShowLoadingMenu(player, "Loading available shadows, one moment...")
+        return
+    end
+    botsLoading[accountId] = true
+    ShowLoadingMenu(player, "Loading available shadows, one moment...")
+    CharDBQueryAsync("SELECT name, race, class, gender, level FROM characters WHERE account = " .. accountId, function(query)
+        FillBotsAvailable(accountId, query)
+        botsCacheTime[accountId] = os.time()
+        botsLoading[accountId] = nil
+        if thenMenu == "silent" then
+            return
+        end
+        local p = Multistate.FindPlayerByName(playerName)
+        if not p then
+            return
+        end
+        if thenMenu == "add" then
+            ShowAvailableShadows(p)
+        elseif thenMenu == "remove" then
+            ListActiveShadows(p)
+        else
+            ShadowsHello(p)
+        end
+    end)
+end
+
+-- Re-syncs the displayed (n/max) counter against the canonical CharDB
+-- mapping plus any in-flight optimistic adds, since gossip clicks may
+-- have gone stale.
+local function SyncBotCount(player)
+    local bots = #ShadowGetBots(player:GetName())
+    local pending = Multistate.GetData(player, "ShadowsPendingAdds")
+    if pending then
+        for _ in pairs(pending) do
+            bots = bots + 1
+        end
+    end
+    ShadowSetBotCount(player, bots)
+end
+
+-- Entry point for the `shadowsmenu` command: re-sync the counter, then
+-- render hello immediately when the cache is fresh or loading-first when
+-- it is older than BotCacheTTL.
+local function OpenShadowsMenu(player)
+    SyncBotCount(player)
+    local accountId = player:GetAccountId()
+    if botsLoading[accountId] or not IsCacheFresh(accountId) then
+        RefreshAvailableShadows(player, accountId, player:GetName(), "hello")
+    else
+        ShadowsHello(player)
+    end
+end
+
 local function ShadowsGossipSelect(event, player, object, sender, intid, code, menu_id)
     local accountId = player:GetAccountId()
     local guid = player:GetGUIDLow()
@@ -657,8 +733,13 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
             player:SendAreaTriggerMessage("Your shadows summon is on cooldown for " .. math.floor((botTeleTime[accountId] - os.time()) / 60) .. " minutes and " .. ((botTeleTime[accountId] - os.time()) % 60) .. " seconds.")
         end
         ShadowsHello(player)
-    elseif intid == 6 then  -- Show list of active shadows to remove
-        ListActiveShadows(player)
+    elseif intid == 6 then  -- Show list of active shadows to remove (callback-based repopulate)
+        ShowLoadingMenu(player, "Loading your active shadows, one moment...")
+        player:RegisterEvent(function(eventId, delay, repeats, pl)
+            if pl then
+                ListActiveShadows(pl)
+            end
+        end, 500, 1)
 	elseif intid == 7 then
 		if Multistate.GetData(player, "ShadowBarStatusChecked") then
 			player:SendAddonMessage("ShadowsBar", "SETTINGS", 7, player)
@@ -673,29 +754,22 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
         local botList = ShadowGetBots(name)
         if botList[selectedIndex] then
            local selectedBot = botList[selectedIndex]
+           -- Commit the mapping on the map side now so the re-render below
+           -- is already correct; the world-side OnBotCommand reconcile is
+           -- idempotent (it only decrements when it still finds the mapping).
+           ShadowSetMaster(selectedBot, nil)
+           ShadowAddBotCount(player, -1)
            ShadowsRunCommand(player, ".playerbots bot remove " .. selectedBot)
-           ListActiveShadows(player)
+           ShowLoadingMenu(player, "Removing shadow, refreshing...")
+           player:RegisterEvent(function(eventId, delay, repeats, pl)
+               if pl then
+                   ListActiveShadows(pl)
+               end
+           end, 750, 1)
         end
-    elseif intid == 10 then  -- "Add bot" option
-        if botsAvailable[accountId] == nil or botsLoading[accountId] then
-            if not botsLoading[accountId] then
-                botsLoading[accountId] = true
-                CharDBQueryAsync("SELECT name, race, class, gender, level FROM characters WHERE account = " .. accountId, function(query)
-                    FillBotsAvailable(accountId, query)
-                    botsLoading[accountId] = nil
-                    local p = Multistate.FindPlayerByName(name)
-                    if p then
-                        ShadowsGossipSelect(event, p, object, sender, 10, code, menu_id)
-                    end
-                end)
-            end
-            player:GossipClearMenu()
-            player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tLoading available shadows, one moment...\n \n", 0, 10)
-            player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:40:40:-24:0|tBack", 0, 999)
-            player:GossipSendMenu(12, player, 200)
-            return
-        end
-        ShowAvailableShadows(player)
+    elseif intid == 10 then  -- "Add bot" option: always callback-based refresh
+        RefreshAvailableShadows(player, accountId, name, "add")
+        return
     elseif intid >= 100 and intid < 199 then  -- Bot selection
         player:GossipClearMenu()
         for _, zone in pairs(disallowedZones) do
@@ -739,7 +813,9 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
                 ShadowSetBotSummonTime(player, os.time())
                 ShadowsRunCommand(player, ".playerbots bot add " .. selectedChar.name) -- Add bot
                 ShadowSetDontKick(player, selectedChar.name, os.time() + 3)
-                ShadowsHello(player)
+                -- Loading-first: refresh the available cache, then render
+                -- hello with the bumped (n/max) counter once it arrives.
+                RefreshAvailableShadows(player, accountId, name, "hello")
             end
         else
             player:SendAreaTriggerMessage("You can't summon more shadows until you remove one.")
@@ -1281,7 +1357,7 @@ end
 
 local function OnBotCommand(event, player, command)
     if command == "shadowsmenu" then
-        ShadowsHello(player)
+        OpenShadowsMenu(player)
         return false
     end
     if string.find(command, "^playerb") then
