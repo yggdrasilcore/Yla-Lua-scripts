@@ -1441,7 +1441,7 @@ HandleWorldOp = function(player, data)
         local accountId = player:GetAccountId()
         local seq = data.seq
         local guidLow = player:GetGUIDLow()
-        CharDBQueryAsync("SELECT name, race, class, gender, level FROM characters WHERE account = " .. accountId .. " ORDER BY level DESC", function(query)
+        CharDBQueryAsync("SELECT name, race, class, gender, level FROM characters WHERE account = " .. accountId .. " ORDER BY level DESC, name ASC", function(query)
             local p = GetPlayerByName(name)
             if not p then return end
             local owned = {}
