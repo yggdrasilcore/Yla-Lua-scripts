@@ -430,7 +430,7 @@ end
 local function ShowAvailableShadows(player, view)
     local rows = (view and view.available) or (mapViewCache[player:GetName()] or {}).available or {}
     player:GossipClearMenu()
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAvailable shadows:\n \n ", 0, 11)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAvailable shadows:\n \n ", 0, 10)
 
     local found = false
     for index, charInfo in ipairs(rows) do
@@ -449,7 +449,7 @@ local function ShowAvailableShadows(player, view)
         end
     end
     if not found then
-        player:GossipMenuAddItem(4, "|TINTERFACE/ICONS/ability_rogue_shadowstep:40:40:-24:0|tNo available shadows \n \nThere are no shadows available in the range you can mind control. Your shadows must be within ten levels of you and at least level 15.\n \n", 0, 11)
+        player:GossipMenuAddItem(4, "|TINTERFACE/ICONS/ability_rogue_shadowstep:40:40:-24:0|tNo available shadows \n \nThere are no shadows available in the range you can mind control. Your shadows must be within ten levels of you and at least level 15.\n \n", 0, 10)
     end
 
     player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:40:40:-24:0|tBack", 0, 999)
