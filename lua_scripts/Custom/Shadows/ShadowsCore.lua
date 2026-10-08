@@ -16,6 +16,7 @@ local botsAvailable     =   {}
 local botsLoading       =   {}
 local botsCacheTime     =   {} -- per-state timestamp of last available-shadows refresh, by accountId
 local BotCacheTTL       =   15 * 60 -- re-do the async account-chars caching if older than this
+local PendingAddTTL     =   120 -- hide in-flight adds this long; a lost commit can't hide them forever
 
 local function FillBotsAvailable(accountId, query)
     botsAvailable[accountId] = {}
@@ -456,6 +457,7 @@ local function ShowAvailableShadows(player)
     
     if botsAvailable[accountId] then
         local found = false
+        local pendingAdds = Multistate.GetData(player, "ShadowsPendingAdds") or {}
         for index, charInfo in ipairs(botsAvailable[accountId]) do
             if charInfo.name ~= player:GetName() then
                 local className = GetClassName(charInfo.class)
@@ -464,9 +466,11 @@ local function ShowAvailableShadows(player)
                 local raceIcon = GetRaceIconPath(charInfo.race, charInfo.gender)
                 local classIcon = GetClassIconPath(charInfo.class)
                 
-                -- Exclude already-owned shadows so a just-added entry does not
-                -- reappear when the list repopulates from the async refresh.
-                if charInfo.name and not groupNames[charInfo.name] and ShadowGetMaster(charInfo.name) == nil then
+                -- Exclude owned shadows and in-flight adds so a just-added
+                -- entry does not reappear when the list repopulates.
+                local pendingAt = tonumber(pendingAdds[charInfo.name]) or 0
+                local freshPending = pendingAt > 0 and (os.time() - pendingAt < PendingAddTTL)
+                if charInfo.name and not groupNames[charInfo.name] and ShadowGetMaster(charInfo.name) == nil and not freshPending then
                     if charInfo.level >= minShadowsLevel and charInfo.level > 9 and math.abs(player:GetLevel() - charInfo.level) <= 10 then
                         player:GossipMenuAddItem(4, "|TInterface/ICONS/" .. raceIcon .. ":40:40:-24:0|t |TInterface/ICONS/" .. classIcon .. ":40:40:-24:0|t |TInterface/ICONS/achievement_level_" .. (math.floor(charInfo.level / 10) * 10) .. ":40:40:-24:0|t \n \n \n \nName:  " .. charInfo.name .. "\n \nLevel:  " .. charInfo.level .. "\n \nRace:  " .. raceName .. "\n \nClass:  " .. className .. "\n ", 0, 100 + index)
                         found = true
@@ -588,12 +592,26 @@ end
 -- Re-syncs the displayed (n/max) counter against the canonical CharDB
 -- mapping plus any in-flight optimistic adds, since gossip clicks may
 -- have gone stale.
+-- True while a bot add is in flight (clicked, world commit not yet
+-- landed). Timestamped so a lost commit can't hide the entry forever.
+local function ShadowIsPendingAdd(player, botName)
+    if not player or not botName then
+        return false
+    end
+    local pending = Multistate.GetData(player, "ShadowsPendingAdds")
+    local t = pending and tonumber(pending[botName]) or nil
+    return t and t > 0 and (os.time() - t < PendingAddTTL) or false
+end
+
 local function SyncBotCount(player)
     local bots = #ShadowGetBots(player:GetName())
     local pending = Multistate.GetData(player, "ShadowsPendingAdds")
     if pending then
-        for _ in pairs(pending) do
-            bots = bots + 1
+        for botName, t in pairs(pending) do
+            t = tonumber(t) or 0
+            if t > 0 and os.time() - t < PendingAddTTL then
+                bots = bots + 1
+            end
         end
     end
     ShadowSetBotCount(player, bots)
@@ -801,7 +819,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
                 -- already fresh; OnBotCommand reconciles the bump on commit.
                 table.remove(botsAvailable[accountId], selectedIndex)
                 local pendingAdds = Multistate.GetData(player, "ShadowsPendingAdds") or {}
-                pendingAdds[selectedChar.name] = true
+                pendingAdds[selectedChar.name] = os.time()
                 Multistate.SetData(player, "ShadowsPendingAdds", pendingAdds)
                 ShadowAddBotCount(player, 1)
                 ShadowSetBotSummonTime(player, os.time())
