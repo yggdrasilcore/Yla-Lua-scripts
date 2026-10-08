@@ -9,21 +9,6 @@ EMQ.RegisterQueue("TwiggyRunCommand", function(player, data)
     end
 end)
 
--- Mall teleport runs on a world verdict: map closes gossip first, world
--- owns the cooldown and answers allow/deny.
-local HandleTwiggyWorld
-local HandleTwiggyView
-EMQ.RegisterQueue("TwiggyToWorld", function(player, data)
-    if HandleTwiggyWorld and (Multistate.IsWorld() or Multistate.IsCompat()) then
-        HandleTwiggyWorld(player, data)
-    end
-end)
-EMQ.RegisterQueue("TwiggyToMap", function(player, data)
-    if HandleTwiggyView and (Multistate.IsMap() or Multistate.IsCompat()) then
-        HandleTwiggyView(player, data)
-    end
-end)
-
 local function TwiggyRunCommand(player, cmd)
     if not player or not cmd then
         return
@@ -39,6 +24,7 @@ end
 -- Start Mall TP vars
 local ITEM_ID = 37430 -- Old mall stone. Currently used as index for mall CD in DB
 local COOLDOWN = 30 * 60 -- 30 minutes
+local MallTeleCD = {}
 local MAP_ID = 37
 local X = 888.082
 local Y = 119.53
@@ -255,26 +241,6 @@ local function TwiggyGossipHello(event, player, creature)
 	end
 end
 
-HandleTwiggyWorld = function(player, data)
-    if not player or not data or data.op ~= "malltele" then return end
-    if player:GetMapId() == MAP_ID then
-        player:SendAreaTriggerMessage("You are already at the mall.")
-        return
-    end
-    local remaining = (Multistate.GetData(player, "MallTeleCD") or 0) - os.time()
-    if remaining > 0 then
-        player:SendAreaTriggerMessage("Your mall teleport is on cooldown for " .. math.floor((remaining % 3600) / 60) .. " minutes and " .. math.floor(remaining % 60) .. " seconds.")
-        return
-    end
-    Multistate.SetData(player, "MallTeleCD", os.time() + COOLDOWN)
-    player:SendEMQMessage("TwiggyToMap", { map = MAP_ID, x = X, y = Y, z = Z, o = ORIENTATION })
-end
-
-HandleTwiggyView = function(player, data)
-    if not player or not data or not data.map then return end
-    player:Teleport(data.map, data.x, data.y, data.z, data.o)
-end
-
 local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
 	intIdChoice[player:GetGUIDLow()] = intId
     if intId == 1 then
@@ -446,9 +412,23 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
 			player:SendAreaTriggerMessage("You have to be at least level 10 to teleport to the mall.")
 			mainMenu(player, creature)
 		else
-			player:GossipComplete()
-			player:SendEMQMessage("TwiggyToWorld", { op = "malltele", playerName = player:GetName() })
-			return true
+		
+			local currentTime = os.time()
+			local cooldownEnd = MallTeleCD[player:GetGUIDLow()] or 0
+			local remainingCooldown = cooldownEnd - currentTime
+
+			if remainingCooldown > 0 then
+				local hours = math.floor(remainingCooldown / 3600)
+				local minutes = math.floor((remainingCooldown % 3600) / 60)
+				local seconds = math.floor(remainingCooldown % 60)
+				player:SendAreaTriggerMessage("Your mall teleport is on cooldown for " .. minutes .. " minutes and " .. seconds .. " seconds.")
+				mainMenu(player, creature)
+			else
+				cooldownEnd = currentTime + COOLDOWN
+				MallTeleCD[player:GetGUIDLow()] = cooldownEnd
+				player:Teleport(MAP_ID, X, Y, Z, ORIENTATION)
+				return true
+			end
 		end
     elseif intId == 12 then
 		player:DurabilityRepairAll(false)
