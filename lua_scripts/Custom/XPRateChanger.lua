@@ -52,7 +52,7 @@ local function OnTalkToGreetingTwig(event, player, object)
         if player:GetLevel() == 80 and not (player:GetClass() == 3) then
             player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/achievement_level_80:40:40:-28:0|tNo services available\n \nThere are no experience services available at level 80.\n \n ", 0, 12)
         else
-            player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/spell_fire_burningspeed:40:40:-28:0|tYour experience rate is: x"..currentRate, 0, 2)
+            player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/spell_fire_burningspeed:40:40:-28:0|tYour experience rate is: x"..currentRate, 0, 12)
             player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/Achievement_Quests_Completed_08:40:40:-28:0|tSet rates x1", 0, 1, false, "Are you sure you want to change your experience rate to: x1?")
             player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/Achievement_Quests_Completed_08:40:40:-28:0|tSet rates x2", 0, 2, false, "Are you sure you want to change your experience rate to: x2?")
             player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/Achievement_Quests_Completed_08:40:40:-28:0|tSet rates x3", 0, 3, false, "Are you sure you want to change your experience rate to: x3?")
@@ -168,7 +168,7 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
         if player:GetLevel() == 80 and not (player:GetClass() == 3) then
             player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/achievement_level_80:40:40:-28:0|tNo services available\n \nThere are no experience services available at level 80.\n \n ", 0, 12)
         else
-            player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/spell_fire_burningspeed:40:40:-28:0|tYour experience rate is: x"..currentRate, 0, 2)
+            player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/spell_fire_burningspeed:40:40:-28:0|tYour experience rate is: x"..currentRate, 0, 12)
             player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/Achievement_Quests_Completed_08:40:40:-28:0|tSet rates x1", 0, 1, false, "Are you sure you want to change your experience rate to: x1?")
             player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/Achievement_Quests_Completed_08:40:40:-28:0|tSet rates x2", 0, 2, false, "Are you sure you want to change your experience rate to: x2?")
             player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/Achievement_Quests_Completed_08:40:40:-28:0|tSet rates x3", 0, 3, false, "Are you sure you want to change your experience rate to: x3?")
