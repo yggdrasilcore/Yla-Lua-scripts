@@ -5,22 +5,19 @@
 local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
-EMQ.RegisterQueue("RAFRunCommand", function(player, data)
-    if player and data and data.cmd then
-        player:RunCommand(data.cmd)
+-- Handlers defined below, assigned here so registration order is load-safe.
+local HandleRAFWorld -- (player, data): runs in world, owns DB + commands
+local HandleRAFView  -- (player, data): runs on map, pure render from payload
+EMQ.RegisterQueue("RAFToWorld", function(player, data)
+    if HandleRAFWorld and (Multistate.IsWorld() or Multistate.IsCompat()) then
+        HandleRAFWorld(player, data)
     end
 end)
-
-local function RAFRunCommand(player, cmd)
-    if not player or not cmd then
-        return
+EMQ.RegisterQueue("RAFToMap", function(player, data)
+    if HandleRAFView and (Multistate.IsMap() or Multistate.IsCompat()) then
+        HandleRAFView(player, data)
     end
-    if Multistate.IsCompat() or Multistate.IsWorld() then
-        player:RunCommand(cmd)
-    else
-        player:SendEMQMessage("RAFRunCommand", { cmd = cmd })
-    end
-end
+end)
 
 -- Welcome to Yggdrasil's RAF system, by mostly nick :)
 
@@ -46,25 +43,12 @@ local TokenName 			= "Community Tokens"
 local TokenReward 			= 5
 -- END VARS
  
--- CACHE TABLES
-local RAFreferee = {}
-local ClaimStatus0 = {}
-local ClaimStatus1 = {}
-local ClaimStatus2 = {}
-local ClaimStatus3 = {}
-local ClaimStatus4 = {}
-local CompletionStatus0 = {}
-local CompletionStatus1 = {}
-local CompletionStatus2 = {}
-local CompletionStatus3 = {}
-local CompletionStatus4 = {}
-local referraltable = {}
-local eligibleSummon = {}
-local summonCD = {}
-local requestsender = {}
-local requesttime = {}
-local summonerGraceTimer = {}
-local summonrequest = ""
+-- Map-side view cache: last payload delivered by world, per player name.
+-- Menus render from here; clicks resolve rows here and forward via EMQ.
+local rafViewCache        =   {}
+local rafReqSeq           =   {}
+local rafAckSeq           =   {}
+local RAF_VIEW_TIMEOUT_MS =   6000
 local playerProgress = {}
 
 -- Create the account_raf table if it doesn't exist
@@ -119,228 +103,129 @@ local function PlayerHasEnoughFreeSlots(player, requiredSlots)
 	return freeSlots >= requiredSlots
 end
 
-local function ShowReferralInfoMenu(player, page)
-    player:GossipClearMenu()
-	
-    page = page or 1
-    local accountId = player:GetAccountId()
-	local name = player:GetName()
-	
-    AuthDBQueryAsync(string.format([[SELECT account_id, status, date, progress FROM account_raf WHERE referer_id = %d]], accountId), function(query)
-		player = Multistate.FindPlayerByName(name)
-		if query then
-			local entries = {}
-			repeat
-				local refereeAccountId = query:GetUInt32(0)
-				local status = query:GetUInt32(1)
-				local date = query:GetUInt32(2)
-				local progress = query:GetUInt32(3)
-				table.insert(entries, {refereeAccountId = refereeAccountId, status = status, date = date, progress = progress})
-			until not query:NextRow()
-			
-			local totalPages = math.ceil(#entries / ENTRIES_PER_PAGE)
-			local startIndex = (page - 1) * ENTRIES_PER_PAGE + 1
-			local endIndex = math.min(startIndex + ENTRIES_PER_PAGE - 1, #entries)
-			
-			for i = startIndex, endIndex do
-				local entry = entries[i]
-				local statusText = (entry.status == 2) and "In progress" or "Completed"
-				local currentTime = os.time()
-                local timeLeft = (entry.date + RAFDuration) - currentTime
-                if timeLeft <= 0 then
-                    timeLeftText = "Expired"
-                else
-                    local daysLeft = math.floor(timeLeft / (24 * 60 * 60))
-                    local hoursLeft = math.floor((timeLeft % (24 * 60 * 60)) / 3600)
-                    
-                    if daysLeft > 0 then
-                        timeLeftText = string.format("%d days", daysLeft)
-                    elseif hoursLeft > 0 then
-                        timeLeftText = string.format("%d hours", hoursLeft)
-                    else
-                        timeLeftText = "less than 1 hour"
-                    end
-                end
-				local progressText
-				if not entry.progress or (entry.progress == 0 and statusText ~= "Completed") then
-					progressText = 0
-				elseif statusText == "Completed" then
-					progressText = 100
-				else
-					progressText = string.format("%.2f", math.min(100, (entry.progress / RAFRewardReq * 100)))
-				end
-				player:GossipMenuAddItem(0, string.format("|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|tReferral ID: %d\n \nStatus: %s \nProgress: %d%% \nRAF active for: %s\n \n ", 
-					entry.refereeAccountId, statusText, progressText, timeLeftText), 1, 2)
-			end
-			
-			if totalPages > 1 then
-				if page > 1 then
-					player:GossipMenuAddItem(0, "|TInterface/ICONS/Ability_Spy:32:32:-22:0|tPrevious Page", 1, PAGINATION_INTID_START + page - 1)
-				end
-				if page < totalPages then
-					player:GossipMenuAddItem(0, "|TInterface/ICONS/Ability_Spy:32:32:-22:0|tNext Page", 1, PAGINATION_INTID_START + page + 1)
-				end
-				player:GossipMenuAddItem(0, string.format("|TInterface/ICONS/INV_Misc_Book_11:32:32:-22:0|tPage %d of %d", page, totalPages), 1, 2)
-			end
-			
-			player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
-			player:GossipSendMenu(12, player, 1)
-		else
-			player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:32:32:-22:0|tYou have no referrals.", 1, 2)
-			player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
-			player:GossipSendMenu(12, player, 1)
-		end
-	end)
+-- Pure map-side renders. World delivers every value in the view payload;
+-- NOTHING here touches the DB or shared vars.
+local function RAFTimeLeftText(date)
+    local timeLeft = (date + RAFDuration) - os.time()
+    if timeLeft <= 0 then
+        return "Expired"
+    end
+    local daysLeft = math.floor(timeLeft / (24 * 60 * 60))
+    local hoursLeft = math.floor((timeLeft % (24 * 60 * 60)) / 3600)
+    if daysLeft > 0 then
+        return string.format("%d days", daysLeft)
+    elseif hoursLeft > 0 then
+        return string.format("%d hours", hoursLeft)
+    else
+        return "less than 1 hour"
+    end
 end
 
-local function ShowSummonFriendsMenu(player, page)
-    page = page or 1
-    local playerName = player:GetName()
-    local accountId = player:GetAccountId()
+local function ShowReferralInfoMenu(player, view)
     player:GossipClearMenu()
+    local rows = (view and view.rows) or {}
+    if #rows == 0 then
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:32:32:-22:0|tYou have no referrals.", 1, 2)
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
+        player:GossipSendMenu(12, player, 1)
+        return
+    end
+    local page = (view and view.page) or 1
+    local totalPages = (view and view.totalPages) or 1
+    for _, entry in ipairs(rows) do
+        local statusText = (entry.status == 2) and "In progress" or "Completed"
+        local progressText
+        if not entry.progress or (entry.progress == 0 and statusText ~= "Completed") then
+            progressText = 0
+        elseif statusText == "Completed" then
+            progressText = 100
+        else
+            progressText = string.format("%.2f", math.min(100, (entry.progress / RAFRewardReq * 100)))
+        end
+        player:GossipMenuAddItem(0, string.format("|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|tReferral ID: %d\n \nStatus: %s \nProgress: %d%% \nRAF active for: %s\n \n ",
+            entry.refereeAccountId, statusText, progressText, RAFTimeLeftText(entry.date)), 1, 2)
+    end
+    if totalPages > 1 then
+        if page > 1 then
+            player:GossipMenuAddItem(0, "|TInterface/ICONS/Ability_Spy:32:32:-22:0|tPrevious Page", 1, PAGINATION_INTID_START + page - 1)
+        end
+        if page < totalPages then
+            player:GossipMenuAddItem(0, "|TInterface/ICONS/Ability_Spy:32:32:-22:0|tNext Page", 1, PAGINATION_INTID_START + page + 1)
+        end
+        player:GossipMenuAddItem(0, string.format("|TInterface/ICONS/INV_Misc_Book_11:32:32:-22:0|tPage %d of %d", page, totalPages), 1, 2)
+    end
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
+    player:GossipSendMenu(12, player, 1)
+end
 
-    local summonCDUntil = Multistate.GetData(player, "RAFSummonCD") or 0
-    local summonGraceUntil = Multistate.GetData(player, "RAFSummonGrace") or 0
-    if summonGraceUntil > os.time() then
-        local timeLeft = summonCDUntil - os.time()
-        local minutesLeft = math.floor(timeLeft / 60)
-        local secondsLeft = timeLeft % 60
+local function ShowSummonFriendsMenu(player, view)
+    player:GossipClearMenu()
+    local cdSec = (view and view.cdSec) or 0
+    local graceSec = (view and view.graceSec) or 0
+    if graceSec > 0 then
+        local minutesLeft = math.floor(cdSec / 60)
+        local secondsLeft = cdSec % 60
         player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_pocketwatch_01:48:48:-26:0|tSummon grace timer!\n \nYou recently requested to summon someone. Time until you can send next request:\n\n"..minutesLeft.." minutes and "..secondsLeft.." seconds\n \nClick here to refresh cooldown.\n \n \n", 1, 7)
         player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:48:48:-26:0|tBack", 1, 998)
         player:GossipSendMenu(12, player, 1)
-    elseif summonCDUntil > os.time() then
-        local timeLeft = summonCDUntil - os.time()
-        local minutesLeft = math.floor(timeLeft / 60)
-        local secondsLeft = timeLeft % 60
+    elseif cdSec > 0 then
+        local minutesLeft = math.floor(cdSec / 60)
+        local secondsLeft = cdSec % 60
         player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_holy_borrowedtime:48:48:-26:0|tRAF summon cooldown:\n \n "..minutesLeft.." minutes and "..secondsLeft.." seconds\n \n", 1, 7)
         player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:48:48:-26:0|tBack", 1, 998)
         player:GossipSendMenu(12, player, 1)
     else
-	    local MaxRAFDuration = os.time() - RAFDuration
-        local friendsToSummon = {}
-		local name = player:GetName()
-        local totalPages = math.ceil(#friendsToSummon / ENTRIES_PER_PAGE)
-        local startIndex = (page - 1) * ENTRIES_PER_PAGE + 1
-        local endIndex = math.min(startIndex + ENTRIES_PER_PAGE - 1, #friendsToSummon)
-		
-		AuthDBQueryAsync(string.format([[
-			SELECT account_id, referer_id
-			FROM account_raf
-			WHERE (referer_id = %d AND date > %d) OR (account_id = %d AND date > %d)
-		]], accountId, MaxRAFDuration, accountId, MaxRAFDuration), function(query)
-			player = Multistate.FindPlayerByName(name)
-			if query then
-				repeat
-					local friendAccountId = query:GetUInt32(0)
-					local referrerAccountId = query:GetUInt32(1)
-					-- Multistate: resolve online friends from the DB so this works
-					-- in map states too (GetPlayersInWorld is world-only).
-					local onlineFriends = CharDBQuery(string.format("SELECT name, guid FROM characters WHERE online = 1 AND account IN (%d, %d)", friendAccountId, referrerAccountId))
-					if onlineFriends then
-						repeat
-							local friendName = onlineFriends:GetString(0)
-							local friendGuid = onlineFriends:GetUInt32(1)
-							if friendName ~= playerName then
-								table.insert(friendsToSummon, {name = friendName, guid = friendGuid})
-							end
-						until not onlineFriends:NextRow()
-					end
-				until not query:NextRow()
-				if not query:NextRow() then
-					if #friendsToSummon > 0 then
-						for i = startIndex, endIndex do
-							local friend = friendsToSummon[i]
-							Multistate.SetData(player, "RAFSummonOffers", friend.name)
-							player:GossipMenuAddItem(0, string.format("|TInterface/ICONS/spell_unused2:48:48:-26:0|tSummon %s", friend.name), 1, (friend.guid + 1000))
-						end
-						if totalPages > 1 then
-							if page > 1 then
-								player:GossipMenuAddItem(0, "|TInterface/ICONS/Ability_Spy:48:48:-26:0|tPrevious Page", 1, SUMMON_PAGINATION_INTID_START + page - 1)
-							end
-							if page < totalPages then
-								player:GossipMenuAddItem(0, "|TInterface/ICONS/Ability_Spy:48:48:-26:0|tNext Page", 1, SUMMON_PAGINATION_INTID_START + page + 1)
-							end
-							player:GossipMenuAddItem(0, string.format("|TInterface/ICONS/INV_Misc_Book_11:32:32:-22:0|tPage %d of %d", page, totalPages), 1, 2)
-						end
-						player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:48:48:-26:0|tBack", 1, 998)
-					else
-						player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:48:48:-26:0|tYou have no friends to summon.", 1, 7)
-						player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:48:48:-26:0|tBack", 1, 998)
-					end
-					player:GossipSendMenu(12, player, 1)
-				end
-			else
-				player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:48:48:-26:0|tYou have no friends to summon.", 1, 7)
-				player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:48:48:-26:0|tBack", 1, 998)
-				player:GossipSendMenu(12, player, 1)
-			end
-		end)
+        local rows = (view and view.friends) or {}
+        local page = (view and view.page) or 1
+        local totalPages = (view and view.totalPages) or 1
+        if #rows == 0 then
+            player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:48:48:-26:0|tYou have no friends to summon.", 1, 7)
+            player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:48:48:-26:0|tBack", 1, 998)
+        else
+            for _, friend in ipairs(rows) do
+                player:GossipMenuAddItem(0, string.format("|TInterface/ICONS/spell_unused2:48:48:-26:0|tSummon %s", friend.name), 1, (friend.guid + 1000))
+            end
+            if totalPages > 1 then
+                if page > 1 then
+                    player:GossipMenuAddItem(0, "|TInterface/ICONS/Ability_Spy:48:48:-26:0|tPrevious Page", 1, SUMMON_PAGINATION_INTID_START + page - 1)
+                end
+                if page < totalPages then
+                    player:GossipMenuAddItem(0, "|TInterface/ICONS/Ability_Spy:48:48:-26:0|tNext Page", 1, SUMMON_PAGINATION_INTID_START + page + 1)
+                end
+                player:GossipMenuAddItem(0, string.format("|TInterface/ICONS/INV_Misc_Book_11:32:32:-22:0|tPage %d of %d", page, totalPages), 1, 2)
+            end
+            player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:48:48:-26:0|tBack", 1, 998)
+        end
+        player:GossipSendMenu(12, player, 1)
     end
 end
 
-local function ShowRefereeInfo(player)
+local function ShowRefereeInfo(player, view)
     player:GossipClearMenu()
-    local accountId = player:GetAccountId()
-	local name = player:GetName()
-	
-   AuthDBQueryAsync(string.format([[
-        SELECT referer_id, status, date, progress FROM account_raf WHERE account_id = %d
-    ]], accountId), function(query)
-		player = Multistate.FindPlayerByName(name)
-        if query then
-            local refererAccountId = query:GetUInt32(0)
-            local status = query:GetUInt32(1)
-            local date = query:GetUInt32(2)
-            local progress = query:GetUInt32(3)
-            
-            local statusText = (status == 2) and "In progress" or "Completed"
-            local progressText
-            
-            if progress == 0 and statusText ~= "Completed" then
-                progressText = 0
-            elseif statusText == "Completed" then
-                progressText = 100
-            else
-                progressText = (progress / RAFRewardReq * 100)
-            end
-            
-            if progressText > 100 then
-                progressText = 100
-            end
-            
-            local currentTime = os.time()
-            local timeLeft = (date + RAFDuration) - currentTime
-            local timeLeftText
-            
-            if timeLeft <= 0 then
-                timeLeftText = "Expired"
-            else
-                local daysLeft = math.floor(timeLeft / (24 * 60 * 60))
-                local hoursLeft = math.floor((timeLeft % (24 * 60 * 60)) / 3600)
-                
-                if daysLeft > 0 then
-                    timeLeftText = string.format("%d days", daysLeft)
-                elseif hoursLeft > 0 then
-                    timeLeftText = string.format("%d hours", hoursLeft)
-                else
-                    timeLeftText = "less than 1 hour"
-                end
-            end
-            
-            player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|tReferral status: \n \nYou're registered with the following referral information:\n \nReferer ID: ".. refererAccountId ..". \n \nStatus: " .. statusText .." \n \nProgress towards rewards: " .. progressText .."%.\n \nReferral program time left: " .. timeLeftText..".\n \n", 1, 3)
-            
-            player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
+    if view and view.found then
+        local statusText = (view.status == 2) and "In progress" or "Completed"
+        local progressText
+        if view.progress == 0 and statusText ~= "Completed" then
+            progressText = 0
+        elseif statusText == "Completed" then
+            progressText = 100
         else
-            player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:32:32:-22:0|t Referral status:\n \nYou have not been registered as a referred player.\n \n", 1, 3)
-            player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
+            progressText = (view.progress / RAFRewardReq * 100)
         end
-		player:GossipSendMenu(12, player, 1)
-	end)
+        if progressText > 100 then
+            progressText = 100
+        end
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|tReferral status: \n \nYou're registered with the following referral information:\n \nReferer ID: ".. view.refererAccountId ..". \n \nStatus: " .. statusText .." \n \nProgress towards rewards: " .. progressText .."%.\n \nReferral program time left: " .. RAFTimeLeftText(view.date)..".\n \n", 1, 3)
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
+    else
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:32:32:-22:0|t Referral status:\n \nYou have not been registered as a referred player.\n \n", 1, 3)
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
+    end
+    player:GossipSendMenu(12, player, 1)
 end
 
 local function ShowRAFMenu(player)
     player:GossipClearMenu()
-    --player:GossipMenuAddItem(0, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-22:0|tHow does RAF work?", 1, 6)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_valentinescard02:32:32:-22:0|tRegister referal", 1, 1)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|tSee my referred friends", 1, 2)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:32:32:-22:0|tSee my referee status", 1, 3)
@@ -350,141 +235,40 @@ local function ShowRAFMenu(player)
     player:GossipSendMenu(12, player, 1)
 end
 
-local function ClaimBonuses(player)
+local function ClaimBonuses(player, view)
     player:GossipClearMenu()
-    local GUIDLow = player:GetGUIDLow()
-    local accountId = player:GetAccountId()
-    local ClaimStatus
-    local CompletionStatus
-	local name = player:GetName()
-    
-    if not ClaimStatus0[GUIDLow] then 
-        ClaimStatus0[GUIDLow] = "."
-        ClaimStatus1[GUIDLow] = "."
-        ClaimStatus2[GUIDLow] = "."
-        ClaimStatus3[GUIDLow] = "."
-        ClaimStatus4[GUIDLow] = "."
-        CompletionStatus0[GUIDLow] = "In progress"
-        CompletionStatus1[GUIDLow] = "In progress"
-        CompletionStatus2[GUIDLow] = "In progress"
-        CompletionStatus3[GUIDLow] = "In progress"
-        CompletionStatus4[GUIDLow] = "In progress"
-        
-        AuthDBQueryAsync(string.format([[
-            SELECT claimed FROM account_raf_claimed WHERE account_id = %d
-        ]], accountId),
-        function(claimquery)
-            if claimquery then
-                repeat
-                    local claimed = claimquery:GetUInt32(0)
-                    
-                    if claimed == 1 then
-                        ClaimStatus0[GUIDLow] = ", claimed."
-                    elseif claimed == 5 then
-                        ClaimStatus1[GUIDLow] = ", claimed."
-                    elseif claimed == 10 then
-                        ClaimStatus2[GUIDLow] = ", claimed."
-                    elseif claimed == 15 then
-                        ClaimStatus3[GUIDLow] = ", claimed."
-                    elseif claimed == 25 then
-                        ClaimStatus4[GUIDLow] = ", claimed."
-                    end
-                until not claimquery:NextRow()
-            end
-            
-            AuthDBQueryAsync(string.format([[
-                SELECT COUNT(*) FROM account_raf 
-                WHERE referer_id = %d AND status = 4
-            ]], accountId),
-            function(completionquery)
-                local completioncount = 0
-                if completionquery then
-                    completioncount = completionquery:GetUInt32(0)
-                end
-                
-                if completioncount > 0 then
-                    CompletionStatus0[GUIDLow] = "Completed"
-                    if not (ClaimStatus0[GUIDLow] == ", claimed.") then
-                        ClaimStatus0[GUIDLow] = ", claim now!" 
-                    end
-                end
-                if completioncount > 4 then
-                    CompletionStatus1[GUIDLow] = "Completed"
-                    if not (ClaimStatus1[GUIDLow] == ", claimed.") then
-                        ClaimStatus1[GUIDLow] = ", claim now!" 
-                    end
-                end
-                if completioncount > 9 then
-                    CompletionStatus2[GUIDLow] = "Completed"
-                    if not (ClaimStatus2[GUIDLow] == ", claimed.") then
-                        ClaimStatus2[GUIDLow] = ", claim now!" 
-                    end
-                end
-                if completioncount > 14 then
-                    CompletionStatus3[GUIDLow] = "Completed"
-                    if not (ClaimStatus3[GUIDLow] == ", claimed.") then
-                        ClaimStatus3[GUIDLow] = ", claim now!" 
-                    end
-                end
-                if completioncount > 24 then
-                    CompletionStatus4[GUIDLow] = "Completed"
-                    if not (ClaimStatus4[GUIDLow] == ", claimed.") then
-                        ClaimStatus4[GUIDLow] = ", claim now!" 
-                    end
-                end
-                local player = Multistate.FindPlayerByName(name)
-                player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tFirst referral reward:\n \nStatus: "..CompletionStatus0[GUIDLow]..""..ClaimStatus0[GUIDLow].."\n \nContains: 5 Community Tokens\n \n ", 1, 40)
-                player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_01:32:32:-22:0|tReward box 1:\n \nRequirement: ".. RewardTier1 .." referrals.\nStatus: "..CompletionStatus1[GUIDLow]..""..ClaimStatus1[GUIDLow].."\n \nContains:\n- Rotface and Festergut's Acidic Blood\n- Unobtainable Vanilla mounts\n- Fishing Chair\n- 60 Emblems of Frost\n \n ", 1, 41)
-                player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_02:32:32:-22:0|tReward box 2:\n \nRequirement: ".. RewardTier2 .." referrals.\nStatus: "..CompletionStatus2[GUIDLow]..""..ClaimStatus2[GUIDLow].."\n \nContains:\n- X-53 Touring Rocket\n- Hard-to-get mounts\n- ToC trinkets and cloaks\n- 95 Emblems of Frost\n \n ", 1, 42)
-                player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_03:32:32:-22:0|tReward box 3:\n \nRequirement: ".. RewardTier3 .." referrals.\nStatus: "..CompletionStatus3[GUIDLow]..""..ClaimStatus3[GUIDLow].."\n \nContains:\n- ICC 25 heroic weapons\n- ICC 25 normal trinkets\n- Ashes of Al'ar\n- 95 Emblems of Frost and 1 Sanctification Mark\n \n ", 1, 43)
-                player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_04:32:32:-22:0|tReward box 4:\n \nRequirement: ".. RewardTier4 .." referrals.\nStatus: "..CompletionStatus4[GUIDLow]..""..ClaimStatus4[GUIDLow].."\n \nContains:\n- Sea Turtle mount\n- Unobtainable mounts\n- 50 Community Tokens\n \n ", 1, 44)
-                player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
-                player:GossipSendMenu(12, player, 1)
-            end)
-        end)
-    else
-        -- If the data is already cached, add gossip menu items immediately
-        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tFirst referral reward:\n \nStatus: "..CompletionStatus0[GUIDLow]..""..ClaimStatus0[GUIDLow].."\n \nContains: 5 Community Tokens\n \n ", 1, 40)
-        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_01:32:32:-22:0|tReward box 1:\n \nRequirement: ".. RewardTier1 .." referrals.\nStatus: "..CompletionStatus1[GUIDLow]..""..ClaimStatus1[GUIDLow].."\n \nContains:\n- Rotface and Festergut's Acidic Blood\n- Unobtainable Vanilla mounts\n- Fishing Chair\n- 60 Emblems of Frost\n \n ", 1, 41)
-        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_02:32:32:-22:0|tReward box 2:\n \nRequirement: ".. RewardTier2 .." referrals.\nStatus: "..CompletionStatus2[GUIDLow]..""..ClaimStatus2[GUIDLow].."\n \nContains:\n- X-53 Touring Rocket\n- Hard-to-get mounts\n- ToC trinkets and cloaks\n- 95 Emblems of Frost\n \n ", 1, 42)
-        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_03:32:32:-22:0|tReward box 3:\n \nRequirement: ".. RewardTier3 .." referrals.\nStatus: "..CompletionStatus3[GUIDLow]..""..ClaimStatus3[GUIDLow].."\n \nContains:\n- ICC 25 heroic weapons\n- ICC 25 normal trinkets\n- Ashes of Al'ar\n- 95 Emblems of Frost and 1 Sanctification Mark\n \n ", 1, 43)
-        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_04:32:32:-22:0|tReward box 4:\n \nRequirement: ".. RewardTier4 .." referrals.\nStatus: "..CompletionStatus4[GUIDLow]..""..ClaimStatus4[GUIDLow].."\n \nContains:\n- Sea Turtle mount\n- Unobtainable mounts\n- 50 Community Tokens\n \n ", 1, 44)
-        player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
-        player:GossipSendMenu(12, player, 1)
-    end
+    local comp = (view and view.comp) or {"In progress", "In progress", "In progress", "In progress", "In progress"}
+    local claim = (view and view.claim) or {".", ".", ".", ".", "."}
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tFirst referral reward:\n \nStatus: "..comp[1]..""..claim[1].."\n \nContains: 5 Community Tokens\n \n ", 1, 40)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_01:32:32:-22:0|tReward box 1:\n \nRequirement: ".. RewardTier1 .." referrals.\nStatus: "..comp[2]..""..claim[2].."\n \nContains:\n- Rotface and Festergut's Acidic Blood\n- Unobtainable Vanilla mounts\n- Fishing Chair\n- 60 Emblems of Frost\n \n ", 1, 41)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_02:32:32:-22:0|tReward box 2:\n \nRequirement: ".. RewardTier2 .." referrals.\nStatus: "..comp[3]..""..claim[3].."\n \nContains:\n- X-53 Touring Rocket\n- Hard-to-get mounts\n- ToC trinkets and cloaks\n- 95 Emblems of Frost\n \n ", 1, 42)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_03:32:32:-22:0|tReward box 3:\n \nRequirement: ".. RewardTier3 .." referrals.\nStatus: "..comp[4]..""..claim[4].."\n \nContains:\n- ICC 25 heroic weapons\n- ICC 25 normal trinkets\n- Ashes of Al'ar\n- 95 Emblems of Frost and 1 Sanctification Mark\n \n ", 1, 43)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_04:32:32:-22:0|tReward box 4:\n \nRequirement: ".. RewardTier4 .." referrals.\nStatus: "..comp[5]..""..claim[5].."\n \nContains:\n- Sea Turtle mount\n- Unobtainable mounts\n- 50 Community Tokens\n \n ", 1, 44)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
+    player:GossipSendMenu(12, player, 1)
 end
 
-local function Reward40(player)
+local function ShowRAFLink(player, view)
     player:GossipClearMenu()
-	local GUIDLow = player:GetGUIDLow()
-	local accountId = player:GetAccountId()
-	
-	if CompletionStatus0[GUIDLow] ~= "Completed" then
-		message = "Twiggy: You can't claim this reward yet!"
-		SendPurpleBroadcast(player, message)
-		ClaimBonuses(player)
-	elseif CompletionStatus0[GUIDLow] == "Completed" then
-		if ClaimStatus0[GUIDLow] == ", claimed." then
-			message = "Twiggy: You've already claimed this reward!"
-			SendPurpleBroadcast(player, message)
-			ClaimBonuses(player)
-		else
-			if player:HasItem(19322, 1) or PlayerHasEnoughFreeSlots(player, 1) then
-				player:AddItem(19322, 5)
-				
-				message = "Twiggy: You've been rewarded "..TokenReward.." "..TokenName.."!"
-				SendPurpleBroadcast(player, message)
-				
-				AuthDBExecute(string.format([[
-					INSERT INTO account_raf_claimed (account_id, claimed, date)
-					VALUES (%d, %d, %d)
-				]], accountId, 1, os.time()))
-				
-				ClaimStatus0[GUIDLow] = ", claimed."
-				ClaimBonuses(player)
-			end
-		end
-	end
+    local accountId = player:GetAccountId()
+    if view and view.linked then
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_valentinescard02:32:32:-22:0|tI am a new player\n \nClick here to link up with the friend that refered you.\n \n", 1, 10, true, "You are already linked to a referer!\n\nAre you sure you want to change your link?\n\n Accepting will reset your progress towards your referal reward!")
+    else
+        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_valentinescard02:32:32:-22:0|tI am a new player, link me to my referer", 1, 10, true, "Please enter the referral ID from your friend. Only enter numbers.")
+    end
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|tHow to refer your friends: \n \nTo refer your friends, you must share your friend referral code with them. \n \nYour referral code is: ".. accountId ..".\n \nAfter they create their account, they must log in and speak to their Twiggy to enter this code at the new player button above.\n \n", 1, 1)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
+    player:GossipSendMenu(12, player, 1)
+end
+
+local function ShowSummonRequest(player, view)
+    local summonerName = (view and view.summoner) or ""
+    local area = (view and view.area) or ""
+    player:GossipClearMenu()
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/spell_unused2:48:48:-26:0|tIncoming summon request!\n \n" .. summonerName .. " wants to summon you to "..area.."! Do you accept?\n \n", 1, 500)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_groupneedmore:48:48:-26:0|tYes\n \n", 1, 501)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:48:48:-26:0|tNo\n \n", 1, 502)
+    player:GossipSendMenu(12, player, 1)
 end
 
 local function Reward41(player)
@@ -500,84 +284,6 @@ local function Reward41(player)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 4)
     player:GossipSendMenu(12, player, 1)
 end
-
-local function RewardBase41(player, itemId, itemName)
-    player:GossipClearMenu()
-    local GUIDLow = player:GetGUIDLow()
-    local accountId = player:GetAccountId()
-    
-    if CompletionStatus1[GUIDLow] == "Completed" then
-        if ClaimStatus1[GUIDLow] ~= ", claimed." then
-			if player:PlayerHasEnoughFreeSlots(player, 3) then
-				player:AddItem(19322, 5)
-				if itemId == 50231 then
-					player:AddItem(50226, 1)
-					player:AddItem(50231, 1)
-				elseif itemId == 49426 then
-					player:AddItem(itemId, 60)
-				elseif itemId == 8633 then
-					player:LearnSpell(10788)
-				elseif itemId == 8630 then
-					player:LearnSpell(10790)
-				else
-					player:AddItem(itemId, 1)
-				end
-				
-				itemLink = GetItemLink(itemId)
-				
-				if itemId == 50231 then
-					message = "Twiggy: You've been rewarded "..TokenReward.." "..TokenName..", Rotface's Acidic Blood and Festergut's Acidic Blood!"
-				elseif itemId == 49426 then
-					message = "Twiggy: You've been rewarded "..TokenReward.." "..TokenName.." and 60 " .. itemLink .. "!"
-				else 
-					message = "Twiggy: You've been rewarded "..TokenReward.." "..TokenName.." and " .. itemLink .. "!"
-				end
-				
-				SendPurpleBroadcast(player, message)
-				
-				AuthDBExecute(string.format([[
-					INSERT INTO account_raf_claimed (account_id, claimed, date)
-					VALUES (%d, %d, %d)
-				]], accountId, 5, os.time()))
-				
-				ClaimStatus1[GUIDLow] = ", claimed."
-				ClaimBonuses(player)
-			else
-				player:SendBroadcastMessage("You need at least 3 free bag slots to receive your reward.")
-				ClaimBonuses(player)
-			end
-        end
-    end
-end
-
-local function Reward411(player) -- Rotface and Festergut's bloods
-    RewardBase41(player, 50231, "Rotface blood")
-end
-
-local function Reward412(player) -- Leopard mount
-    RewardBase41(player, 8633, "Leopard mount")
-end
-
-local function Reward413(player) -- Bengal Tiger mount
-    RewardBase41(player, 8630, "Bengal Tiger mount")
-end
-
-local function Reward414(player) -- Brazen Taxi mount
-    RewardBase41(player, 20221, "Brazen Taxi mount")
-end
-
-local function Reward415(player) -- Fishing Chair
-    RewardBase41(player, 33223, "Fishing Chair")
-end
-
-local function Reward416(player) -- Naxxramas Deathcharger mount
-    RewardBase41(player, 23193, "Naxxramas Deathcharger mount")
-end
-
-local function Reward417(player) -- 60 Emblems of Frost
-    RewardBase41(player, 49426, "60 Emblems of Frost")
-end
-
 local function Reward42(player)
     player:GossipClearMenu()
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_02:32:32:-22:0|tReward box 2: ".. RewardTier2 .." friends\n ", 1, 42)
@@ -596,104 +302,6 @@ local function Reward42(player)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 4)
     player:GossipSendMenu(12, player, 1)
 end
-
-local function RewardBase42(player, itemId)
-    player:GossipClearMenu()
-    local GUIDLow = player:GetGUIDLow()
-    local accountId = player:GetAccountId()
-	local race = player:GetRace()
-    
-    if CompletionStatus2[GUIDLow] == "Completed" then
-        if ClaimStatus2[GUIDLow] ~= ", claimed." then
-			if PlayerHasEnoughFreeSlots(player, 3) then
-				player:AddItem(19322, 5)
-				if itemId == 48668 and (race == 1  or race == 3 or race == 4 or race == 7 or race == 11) then
-					player:AddItem(48673, 1)
-				elseif itemId == 47290 and (race == 1  or race == 3 or race == 4 or race == 7 or race == 11) then
-					player:AddItem(47080, 1)
-				elseif itemId == 47303 and (race == 1  or race == 3 or race == 4 or race == 7 or race == 11) then
-					player:AddItem(47115, 1)
-				elseif itemId == 47271 and (race == 1  or race == 3 or race == 4 or race == 7 or race == 11) then
-					player:AddItem(47041, 1)
-				elseif itemId == 49426 then
-					player:AddItem(itemId, 95)
-				else
-					player:AddItem(itemId, 1)
-				end
-				
-				itemLink = GetItemLink(itemId)
-				
-				if itemId == 49426 then
-					message = "Twiggy: You've been rewarded "..TokenReward.." "..TokenName.." and 95 " .. itemLink .. "!"
-				else 
-					message = "Twiggy: You've been rewarded "..TokenReward.." "..TokenName.." and " .. itemLink .. "!"
-				end
-				
-				SendPurpleBroadcast(player, message)
-				
-				AuthDBExecute(string.format([[
-					INSERT INTO account_raf_claimed (account_id, claimed, date)
-					VALUES (%d, %d, %d)
-				]], accountId, 10, os.time()))
-				
-				ClaimStatus2[GUIDLow] = ", claimed."
-				ClaimBonuses(player)
-			else
-				player:SendBroadcastMessage("You need at least 3 free bag slots to receive your reward.")
-				ClaimBonuses(player)
-			end
-        end
-    end
-end
-
-local function Reward421(player)
-    RewardBase42(player, 54860)
-end
-
-local function Reward422(player)
-    RewardBase42(player, 32768)
-end
-
-local function Reward423(player)
-    RewardBase42(player, 19872)
-end
-
-local function Reward424(player)
-    RewardBase42(player, 19902)
-end
-
-local function Reward425(player)
-    RewardBase42(player, 49282)
-end
-
-local function Reward426(player)
-    RewardBase42(player, 44234)
-end
-
-local function Reward427(player)
-    RewardBase42(player, 47271)
-end
-
-local function Reward428(player)
-    RewardBase42(player, 48668)
-end
-
-local function Reward429(player)
-    RewardBase42(player, 47290)
-end
-
-local function Reward460(player)
-    RewardBase42(player, 47303)
-end
-
-local function Reward461(player)
-    RewardBase42(player, 45518)
-end
-
-local function Reward462(player)
-    RewardBase42(player, 49426)
-end
-
 local function Reward43(player)
     player:GossipClearMenu()
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_03:32:32:-22:0|tReward box 3: ".. RewardTier3 .." friends\n \n", 1, 43)
@@ -713,108 +321,6 @@ local function Reward43(player)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 4)
     player:GossipSendMenu(12, player, 1)
 end
-
-local function RewardBase43(player, itemId)
-    player:GossipClearMenu()
-    local GUIDLow = player:GetGUIDLow()
-    local accountId = player:GetAccountId()
-    local race = player:GetRace()
-	local class = player:GetClass()
-    
-    if CompletionStatus3[GUIDLow] == "Completed" then
-        if ClaimStatus3[GUIDLow] ~= ", claimed." then
-			if PlayerHasEnoughFreeSlots(player, 3) then
-				player:AddItem(19322, 5)
-				if itemId == 49426 then
-					player:AddItem(itemId, 95)
-					if class == 4 or class == 6 or class == 8 or class == 11 then
-						player:AddItem(52025, 1) -- Mark of Sanctification
-					elseif class == 1 or class == 3 or class == 7 then
-						player:AddItem(52026, 1) -- Mark of Sanctification
-					else
-						player:AddItem(itemId, 1)
-					end
-				else
-					player:AddItem(itemId, 1)
-				end
-				
-				itemLink = GetItemLink(itemId)
-				
-				if itemId == 49426 then
-					message = "Twiggy: You've been rewarded "..TokenReward.." "..TokenName..", 95 " .. itemLink .. ", and 1x Mark of Sanctification!"
-				else 
-					message = "Twiggy: You've been rewarded "..TokenReward.." "..TokenName.." and " .. itemLink .. "!"
-				end
-				
-				SendPurpleBroadcast(player, message)
-				
-				AuthDBExecute(string.format([[
-					INSERT INTO account_raf_claimed (account_id, claimed, date)
-					VALUES (%d, %d, %d)
-				]], accountId, 15, os.time()))
-				
-				ClaimStatus3[GUIDLow] = ", claimed."
-				ClaimBonuses(player)
-			else
-				player:SendBroadcastMessage("You need at least 3 free bag slots to receive your reward.")
-				ClaimBonuses(player)
-			end
-        end
-    end
-end
-
-local function Reward431(player)
-    RewardBase43(player, 50725)
-end
-
-local function Reward432(player)
-    RewardBase43(player, 50709)
-end
-
-local function Reward433(player)
-    RewardBase43(player, 50638)
-end
-
-local function Reward434(player)
-    RewardBase43(player, 50641)
-end
-
-local function Reward435(player)
-    RewardBase43(player, 50692)
-end
-
-local function Reward436(player)
-    RewardBase43(player, 50695)
-end
-
-local function Reward437(player)
-    RewardBase43(player, 50725)
-end
-
-local function Reward438(player)
-    RewardBase43(player, 32458)
-end
-
-local function Reward439(player)
-    RewardBase43(player, 50362)
-end
-
-local function Reward470(player)
-    RewardBase43(player, 50366)
-end
-
-local function Reward471(player)
-    RewardBase43(player, 50353)
-end
-
-local function Reward472(player)
-    RewardBase43(player, 50364)
-end
-
-local function Reward473(player)
-    RewardBase43(player, 49426)
-end
-
 local function Reward44(player)
     player:GossipClearMenu()
     player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_box_04:32:32:-22:0|tReward box 4: ".. RewardTier4 .." referrals:\n.", 1, 44)
@@ -828,397 +334,651 @@ local function Reward44(player)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 4)
     player:GossipSendMenu(12, player, 1)
 end
+-- Option intid -> item for tiers with plain item grants.
+local function RAFClaimItem(tier, option)
+    local tables = {
+        [2] = { [421] = 54860, [422] = 32768, [423] = 19872, [424] = 19902,
+                [425] = 49282, [426] = 44234, [427] = 47271, [428] = 48668,
+                [429] = 47290, [460] = 47303, [461] = 45518 },
+        [3] = { [431] = 50725, [432] = 50709, [433] = 50638, [434] = 50641,
+                [435] = 50692, [436] = 50695, [437] = 50725, [438] = 32458,
+                [439] = 50362, [470] = 50366, [471] = 50353, [472] = 50364 },
+        [4] = { [441] = 46109, [442] = 44164, [443] = 35226, [444] = 30609,
+                [445] = 37676, [446] = 34092 },
+    }
+    return tables[tier] and tables[tier][option] or nil
+end
 
-local function RewardBase44(player, itemId)
-    player:GossipClearMenu()
-    local GUIDLow = player:GetGUIDLow()
-    local accountId = player:GetAccountId()
-    local race = player:GetRace()
-    
-    if CompletionStatus4[GUIDLow] == "Completed" then
-        if ClaimStatus4[GUIDLow] ~= ", claimed." then
-			if PlayerHasEnoughFreeSlots(player, 3) then
-				if itemId == 19322 then
-					player:AddItem(19322, 50)
-				else
-					player:AddItem(itemId, 1)
-					player:AddItem(19322, 5)
-				end
-				
-				itemLink = GetItemLink(itemId)
-				
-				if itemId == 49426 then
-					message = "Twiggy: You've been rewarded "..TokenReward.." "..TokenName..", 95 " .. itemLink .. ", and 2x Mark of Sanctification!"
-				else 
-					message = "Twiggy: You've been rewarded "..TokenReward.." "..TokenName.." and " .. itemLink .. "!"
-				end
-				
-				SendPurpleBroadcast(player, message)
-				
-				AuthDBExecute(string.format([[
-					INSERT INTO account_raf_claimed (account_id, claimed, date)
-					VALUES (%d, %d, %d)
-				]], accountId, 25, os.time()))
-				
-				ClaimStatus4[GUIDLow] = ", claimed."
-				ClaimBonuses(player)
-			else
-				player:SendBroadcastMessage("You need at least 3 free bag slots to receive your reward.")
-				ClaimBonuses(player)
-			end
+-- Grants the approved claim on the map (entity APIs only). World verified
+-- eligibility and recorded the claim before approving.
+local function GrantRAFReward(player, tier, option)
+    if tier == 0 then
+        player:AddItem(19322, 5)
+        SendPurpleBroadcast(player, "Twiggy: You've been rewarded "..TokenReward.." "..TokenName.."!")
+    elseif tier == 1 then
+        player:AddItem(19322, 5)
+        if option == 411 then
+            player:AddItem(50226, 1)
+            player:AddItem(50231, 1)
+            SendPurpleBroadcast(player, "Twiggy: You've been rewarded "..TokenReward.." "..TokenName..", Rotface's Acidic Blood and Festergut's Acidic Blood!")
+        elseif option == 412 then
+            player:LearnSpell(10788)
+            SendPurpleBroadcast(player, "Twiggy: You've been rewarded "..TokenReward.." "..TokenName.." and " .. GetItemLink(8633) .. "!")
+        elseif option == 413 then
+            player:LearnSpell(10790)
+            SendPurpleBroadcast(player, "Twiggy: You've been rewarded "..TokenReward.." "..TokenName.." and " .. GetItemLink(8630) .. "!")
+        elseif option == 417 then
+            player:AddItem(49426, 60)
+            SendPurpleBroadcast(player, "Twiggy: You've been rewarded "..TokenReward.." "..TokenName.." and 60 " .. GetItemLink(49426) .. "!")
+        else
+            local items = { [414] = 20221, [415] = 33223, [416] = 23193 }
+            local itemId = items[option]
+            if itemId then
+                player:AddItem(itemId, 1)
+                SendPurpleBroadcast(player, "Twiggy: You've been rewarded "..TokenReward.." "..TokenName.." and " .. GetItemLink(itemId) .. "!")
+            end
+        end
+    elseif tier == 2 then
+        local race = player:GetRace()
+        player:AddItem(19322, 5)
+        if option == 428 and (race == 1 or race == 3 or race == 4 or race == 7 or race == 11) then
+            player:AddItem(48673, 1)
+        elseif option == 429 and (race == 1 or race == 3 or race == 4 or race == 7 or race == 11) then
+            player:AddItem(47080, 1)
+        elseif option == 460 and (race == 1 or race == 3 or race == 4 or race == 7 or race == 11) then
+            player:AddItem(47115, 1)
+        elseif option == 461 and (race == 1 or race == 3 or race == 4 or race == 7 or race == 11) then
+            player:AddItem(47041, 1)
+        elseif option == 462 then
+            player:AddItem(49426, 95)
+        elseif option ~= nil then
+            player:AddItem(RAFClaimItem(option), 1)
+        end
+        local itemLink = GetItemLink(RAFClaimItem(option))
+        if option == 462 then
+            SendPurpleBroadcast(player, "Twiggy: You've been rewarded "..TokenReward.." "..TokenName.." and 95 " .. itemLink .. "!")
+        else
+            SendPurpleBroadcast(player, "Twiggy: You've been rewarded "..TokenReward.." "..TokenName.." and " .. itemLink .. "!")
+        end
+    elseif tier == 3 then
+        local class = player:GetClass()
+        player:AddItem(19322, 5)
+        if option == 473 then
+            player:AddItem(49426, 95)
+            if class == 4 or class == 6 or class == 8 or class == 11 then
+                player:AddItem(52025, 1)
+            elseif class == 1 or class == 3 or class == 7 then
+                player:AddItem(52026, 1)
+            else
+                player:AddItem(49426, 1)
+            end
+            SendPurpleBroadcast(player, "Twiggy: You've been rewarded "..TokenReward.." "..TokenName..", 95 Emblems of Frost, and 1x Mark of Sanctification!")
+        else
+            player:AddItem(RAFClaimItem(option), 1)
+            SendPurpleBroadcast(player, "Twiggy: You've been rewarded "..TokenReward.." "..TokenName.." and " .. GetItemLink(RAFClaimItem(option)) .. "!")
+        end
+    elseif tier == 4 then
+        if option == 447 then
+            player:AddItem(19322, 50)
+            SendPurpleBroadcast(player, "Twiggy: You've been rewarded 50 "..TokenName.."!")
+        else
+            player:AddItem(RAFClaimItem(option), 1)
+            player:AddItem(19322, 5)
+            SendPurpleBroadcast(player, "Twiggy: You've been rewarded "..TokenReward.." "..TokenName.." and " .. GetItemLink(RAFClaimItem(option)) .. "!")
         end
     end
 end
 
-local function Reward441(player)
-    RewardBase44(player, 46109)
-end
-
-local function Reward442(player)
-    RewardBase44(player, 44164)
-end
-
-local function Reward443(player)
-    RewardBase44(player, 35226)
-end
-
-local function Reward444(player)
-    RewardBase44(player, 30609) 
-end
-
-local function Reward445(player)
-    RewardBase44(player, 37676) 
-end
-
-local function Reward446(player)
-    RewardBase44(player, 34092) 
-end
-
-local function Reward447(player)
-    RewardBase44(player, 19322)
-end
-
-local function ShowRAFLink(player)
+-- Loading placeholder. Intid 11 is a dedicated no-op.
+local function RAFShowLoading(player, text)
+    text = text or "Loading, one moment..."
     player:GossipClearMenu()
-    local accountId = player:GetAccountId()
-	
-	local result = string.format([[
-		SELECT account_id FROM account_raf WHERE account_id = %d
-	]], accountId)
-	
-	if result and #result > 0 then
-		player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_valentinescard02:32:32:-22:0|tI am a new player\n \nClick here to link up with the friend that refered you.\n \n", 1, 10, true, "You are already linked to a referer!\n\nAre you sure you want to change your link?\n\n Accepting will reset your progress towards your referal reward!")		
-	else
-		player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_valentinescard02:32:32:-22:0|tI am a new player, link me to my referer", 1, 10, true, "Please enter the referral ID from your friend. Only enter numbers.")
-	end
-    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|tHow to refer your friends: \n \nTo refer your friends, you must share your friend referral code with them. \n \nYour referral code is: ".. player:GetAccountId() ..".\n \nAfter they create their account, they must log in and speak to their Twiggy to enter this code at the new player button above.\n \n", 1, 1)
+    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|t" .. text .. "\n \n", 1, 11)
     player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
     player:GossipSendMenu(12, player, 1)
 end
 
-local function ShowSummonRequest(friend)
-	friend:GossipClearMenu()
+local function RAFCacheView(playerName, view)
+    local c = rafViewCache[playerName] or {}
+    if view.view == "referralinfo" then
+        c.referral = view
+    elseif view.view == "summonfriends" then
+        c.summon = view
+    elseif view.view == "refereeinfo" then
+        c.referee = view
+    elseif view.view == "raflink" then
+        c.link = view
+    elseif view.view == "bonuses" or view.view == "claimapproved" then
+        c.bonuses = view
+    elseif view.view == "summonrequest" then
+        c.request = view
+    end
+    rafViewCache[playerName] = c
+    rafAckSeq[playerName] = view.seq
+end
 
-	-- Multistate: the accept/decline menu runs on the friend's map state.
-	Multistate.SetData(friend, "RAFSummonTime", os.time() + 120)
+-- Map -> world request. Only the matching answer renders.
+local function MapSendRAF(player, op, params)
+    local name = player:GetName()
+    local seq = (rafReqSeq[name] or 0) + 1
+    rafReqSeq[name] = seq
+    local data = { op = op, seq = seq, playerName = name }
+    if params then
+        for k, v in pairs(params) do
+            data[k] = v
+        end
+    end
+    player:SendEMQMessage("RAFToWorld", data)
+    player:RegisterEvent(function(eventId, delay, repeats, pl)
+        if pl and rafAckSeq[pl:GetName()] ~= seq and rafReqSeq[pl:GetName()] == seq then
+            pl:SendAreaTriggerMessage("RAF service timed out, please reopen the menu.")
+            ShowRAFMenu(pl)
+        end
+    end, RAF_VIEW_TIMEOUT_MS, 1)
+end
 
-	if not Multistate.GetData(friend, "RAFSummonRequest") then
-		Multistate.SetData(friend, "RAFSummonRequest", summonrequest)
-	end
-	summonerName = Multistate.GetData(friend, "RAFSummonRequest")
-	summoner = Multistate.FindPlayerByName(summonerName)
-	friend:GossipMenuAddItem(0, "|TInterface/ICONS/spell_unused2:48:48:-26:0|tIncoming summon request!\n \n" .. summonerName .. " wants to summon you to "..GetAreaName(summoner:GetAreaId()).."! Do you accept?\n \n", 1, 500)
-	friend:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_groupneedmore:48:48:-26:0|tYes\n \n", 1, 501)
-	friend:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_grouplooking:48:48:-26:0|tNo\n \n", 1, 502)
-	friend:GossipSendMenu(12, friend, 1)
+-- Map-side view dispatcher. Stale answers are dropped.
+HandleRAFView = function(player, data)
+    if not player or not data then
+        return
+    end
+    local name = data.playerName or player:GetName()
+    if data.seq ~= nil and data.seq ~= rafReqSeq[name] then
+        return
+    end
+    RAFCacheView(name, data)
+    rafAckSeq[name] = rafReqSeq[name]
+    if data.view == "hub" then
+        ShowRAFMenu(player)
+    elseif data.view == "referralinfo" then
+        ShowReferralInfoMenu(player, data)
+    elseif data.view == "summonfriends" then
+        ShowSummonFriendsMenu(player, data)
+    elseif data.view == "refereeinfo" then
+        ShowRefereeInfo(player, data)
+    elseif data.view == "raflink" then
+        ShowRAFLink(player, data)
+    elseif data.view == "bonuses" then
+        ClaimBonuses(player, data)
+    elseif data.view == "claimapproved" then
+        GrantRAFReward(player, data.tier, data.option)
+        ClaimBonuses(player, data)
+    elseif data.view == "summonrequest" then
+        ShowSummonRequest(player, data)
+    elseif data.view == "teleport" then
+        player:Teleport(data.map, data.x, data.y, data.z, data.o)
+        player:GossipComplete()
+    end
+end
+
+
+-- Claim option intid -> reward tier. Unknown intids claim nothing.
+local RAFClaimTiers = {}
+for _, i in ipairs({411,412,413,414,415,416,417}) do RAFClaimTiers[i] = 1 end
+for _, i in ipairs({421,422,423,424,425,426,427,428,429,460,461,462}) do RAFClaimTiers[i] = 2 end
+for _, i in ipairs({431,432,433,434,435,436,437,438,439,470,471,472,473}) do RAFClaimTiers[i] = 3 end
+for _, i in ipairs({441,442,443,444,445,446,447}) do RAFClaimTiers[i] = 4 end
+local function RAFClaimIntid(intid)
+    return RAFClaimTiers[intid]
 end
 
 local function OnGossipSelect(event, player, object, sender, intid, code, menu_id)
-    local GUIDLow = player:GetGUIDLow()
-	local accountId = player:GetAccountId()
-	if intid > 1000 then
-		local friendGUIDLow = intid - 1000
-		if player:IsFlying() or player:IsOnVehicle()
-		or player:IsFalling()or player:IsInCombat()
-		or player:IsDead() or player:InArena()
-		or player:InBattleground() then -- Simple sanity check
-			player:SendAreaTriggerMessage("You can't summon your friend right now!")
-		elseif (Multistate.GetData(player, "RAFSummonCD") or 0) > os.time() then
-			local timeLeft = Multistate.GetData(player, "RAFSummonCD") - os.time()
-			local minutesLeft = math.floor(timeLeft / 60)
-			local secondsLeft = timeLeft % 60
-			player:SendAreaTriggerMessage(string.format("Your RAF summon is on cooldown for %d minutes and %d seconds.", minutesLeft, secondsLeft))
-		else
-			RAFRunCommand(player, string.format("rafsummonfriend %s", friendGUIDLow))
-		end
-		ShowSummonFriendsMenu(player)
-	elseif intid >= PAGINATION_INTID_START and intid < PAGINATION_INTID_START + 99 then
-        local page = intid - PAGINATION_INTID_START
-        ShowReferralInfoMenu(player, page)
-	elseif intid == 500 then
-		ShowSummonRequest(player)
-	elseif intid == 501 then
-		if os.time() >= (Multistate.GetData(player, "RAFSummonTime") or 0) + 120 then
-			player:SendAreaTriggerMessage("You have not accepted the summon in time!")
-			player:GossipComplete()
-		else
-			summonerName = Multistate.GetData(player, "RAFSummonRequest")
-			summoner = summonerName and Multistate.FindPlayerByName(summonerName) or nil
-			if not summoner then
-				player:SendAreaTriggerMessage("Your friend isn't available to summon you anymore.")
-				player:GossipComplete()
-			elseif summoner:IsFlying() or summoner:IsOnVehicle()
-			or summoner:IsFalling() or summoner:IsInCombat()
-			or summoner:IsDead() or summoner:InArena()
-			or summoner:InBattleground() then -- Simple sanity check on acceptance
-				summoner:SendAreaTriggerMessage("You can't summon your friend right now!")
-				player:SendAreaTriggerMessage("Your friend isn't available to summon you anymore.")
-				summoner:GossipComplete()
-				player:GossipComplete()
-			else
-				player:Teleport(summoner:GetMapId(), summoner:GetX(), summoner:GetY(), summoner:GetZ(), summoner:GetO())
-				Multistate.SetData(player, "RAFSummonTime", os.time() + 120)
-				Multistate.ClearData(player, "RAFSummonRequest")
-				summoner:SendAreaTriggerMessage(player:GetName().." has accepted your summon request.")
-				Multistate.ClearData(summoner, "RAFSummonGrace")
-				Multistate.SetData(summoner, "RAFSummonCD", os.time() + summonCDLength * 60)
-				summoner:GossipComplete()
-				player:GossipComplete()
-			end
-		end
-	elseif intid == 502 then
-		summonerName = Multistate.GetData(player, "RAFSummonRequest")
-		summoner = summonerName and Multistate.FindPlayerByName(summonerName) or nil
-		if summoner then
-			summoner:SendAreaTriggerMessage(player:GetName().." has denied your summon request.")
-		end
-		Multistate.ClearData(player, "RAFSummonRequest")
+    -- Map side: no DB or shared vars. Static navigation renders directly;
+    -- everything else resolves rows from the cached view and forwards via EMQ.
+    local name = player:GetName()
+    local cache = rafViewCache[name] or {}
+
+    if intid == 11 then -- loading-header no-op
+        return
+    end
+
+    if intid > 1000 then -- summon friend: guid -> name from cache
+        local friendGUIDLow = intid - 1000
+        local target
+        for _, f in ipairs(((cache.summon or {}).friends) or {}) do
+            if f.guid == friendGUIDLow then target = f break end
+        end
+        if not target then
+            RAFShowLoading(player, "Loading, one moment...")
+            MapSendRAF(player, "open-summon", { page = 1 })
+            return
+        end
+        if player:IsFlying() or player:IsOnVehicle()
+        or player:IsFalling() or player:IsInCombat()
+        or player:IsDead() or player:InArena()
+        or player:InBattleground() then
+            player:SendAreaTriggerMessage("You can't summon your friend right now!")
+            return
+        end
+        RAFShowLoading(player, "Sending summon request, one moment...")
+        MapSendRAF(player, "summon", { guid = friendGUIDLow })
+    elseif intid >= PAGINATION_INTID_START and intid < PAGINATION_INTID_START + 99 then
+        RAFShowLoading(player, "Loading, one moment...")
+        MapSendRAF(player, "open-info", { page = intid - PAGINATION_INTID_START })
+    elseif intid >= SUMMON_PAGINATION_INTID_START and intid < SUMMON_PAGINATION_INTID_START + 99 then
+        RAFShowLoading(player, "Loading, one moment...")
+        MapSendRAF(player, "open-summon", { page = intid - SUMMON_PAGINATION_INTID_START })
+    elseif intid == 500 then
+        if cache.request then
+            ShowSummonRequest(player, cache.request)
+        else
+            player:GossipComplete()
+        end
+    elseif intid == 501 then
+        RAFShowLoading(player, "Accepting summon, one moment...")
+        MapSendRAF(player, "accept", {})
+    elseif intid == 502 then
         player:GossipComplete()
+        player:SendEMQMessage("RAFToWorld", { op = "decline", playerName = name })
     elseif intid == 1 then
-        ShowRAFLink(player)
+        RAFShowLoading(player, "Loading, one moment...")
+        MapSendRAF(player, "open-link", {})
     elseif intid == 10 then
-        local accountId = player:GetAccountId()
-		local name = player:GetName()
-		
-        AuthDBQueryAsync(string.format([[
-            SELECT totaltime FROM account WHERE id = %d
-        ]], accountId), function(timeplayedquery)
-			player = Multistate.FindPlayerByName(name)
-			if timeplayedquery then
-				local timeplayed = timeplayedquery:GetUInt32(0)
-
-				if timeplayed < 3600 * RegisterRAFTimeLimit then
-					local referer_id = tonumber(code)
-					if not referer_id then
-						player:SendAreaTriggerMessage("Please enter a valid number for the referral ID.")
-						ShowRAFLink(player)
-						return
-					end
-
-					-- Verify that the referer ID exists in the account table
-					AuthDBQueryAsync(string.format([[
-						SELECT id FROM account WHERE id = %d
-					]], referer_id), function(refererquerycheck)
-						if refererquerycheck then
-							player = Multistate.FindPlayerByName(name)
-							local refererQuery = refererquerycheck:GetUInt32(0)
-							if not refererQuery then
-								player:SendAreaTriggerMessage("The entered referral ID does not exist. Please check and try again.")
-								ShowRAFLink(player)
-								return
-							end
-
-							if accountId == referer_id then
-								player:SendBroadcastMessage("You can't refer yourself!")
-								ShowRAFLink(player)
-								return
-							end
-
-							local currentTime = os.time()
-							local playerIP = player:GetPlayerIP()
-
-							AuthDBQueryAsync(string.format([[
-								SELECT last_ip FROM account WHERE id = %d
-							]], referer_id), function(lookforrefererIP)
-
-								if lookforrefererIP then
-									player = Multistate.FindPlayerByName(name)
-									local refererIP = lookforrefererIP:GetString(0)
-
-									AuthDBExecute(string.format([[
-										INSERT INTO account_raf (account_id, referer_id, status, progress, date, IP, IP_referer)
-										VALUES (%d, %d, 2, 0, %d, '%s', '%s')
-										ON DUPLICATE KEY UPDATE referer_id = %d, status = 2, progress = 0, date = %d, IP = '%s', IP_referer = '%s'
-									]], accountId, referer_id, currentTime, playerIP, refererIP, referer_id, currentTime, playerIP, refererIP))
-
-									Multistate.SetData(player, "RAFreferee", true)
-									player:SendAreaTriggerMessage(string.format("Successfully linked to referrer with ID: %d. Remember to relog to use the summon function.", referer_id))
-									ShowRAFLink(player)
-								end
-							end)
-						end
-					end)
-				else 
-					local message = "|cFFFF0000You can't register or change your referral link if you have played for more than one hour.|r"
-					player:SendAreaTriggerMessage(message)
-					player:SendBroadcastMessage(message)
-					ShowRAFLink(player)
-				end
-			end
-        end)
+        RAFShowLoading(player, "Linking, one moment...")
+        MapSendRAF(player, "register", { code = code })
     elseif intid == 2 then
-        ShowReferralInfoMenu(player)
+        RAFShowLoading(player, "Loading, one moment...")
+        MapSendRAF(player, "open-info", { page = 1 })
     elseif intid == 3 then
-        ShowRefereeInfo(player)
+        RAFShowLoading(player, "Loading, one moment...")
+        MapSendRAF(player, "open-referee", {})
     elseif intid == 4 then
-		ClaimBonuses(player)
+        RAFShowLoading(player, "Loading, one moment...")
+        MapSendRAF(player, "open-bonuses", {})
     elseif intid == 5 then
         player:GossipComplete()
-    elseif intid == 6 then -- Learn about RAF
+    elseif intid == 6 then
         player:GossipComplete()
-    elseif intid == 7 then -- Summon friend
-        ShowSummonFriendsMenu(player)
-	elseif intid >= SUMMON_PAGINATION_INTID_START and intid < SUMMON_PAGINATION_INTID_START + 99 then
-        local page = intid - SUMMON_PAGINATION_INTID_START
-        ShowSummonFriendsMenu(player, page)
+    elseif intid == 7 then
+        RAFShowLoading(player, "Loading, one moment...")
+        MapSendRAF(player, "open-summon", { page = 1 })
     elseif intid == 40 then
-        Reward40(player)
+        if player:HasItem(19322, 1) or PlayerHasEnoughFreeSlots(player, 1) then
+            RAFShowLoading(player, "Claiming, one moment...")
+            MapSendRAF(player, "claim", { tier = 0 })
+        end
     elseif intid == 41 then
-	    if CompletionStatus1[GUIDLow] ~= "Completed" then
-			message = "Twiggy: You can't claim this reward yet!"
-			SendPurpleBroadcast(player, message)
-			ClaimBonuses(player)
-		elseif CompletionStatus1[GUIDLow] == "Completed" then
-			if ClaimStatus1[GUIDLow] == ", claimed." then
-				message = "Twiggy: You've already claimed this reward!"
-				SendPurpleBroadcast(player, message)
-				ClaimBonuses(player)
-			else
-				Reward41(player)
-			end
-		end		
-    elseif intid == 411 then
-        Reward411(player)
-    elseif intid == 412 then
-        Reward412(player)
-    elseif intid == 413 then
-        Reward413(player)
-    elseif intid == 414 then
-        Reward414(player)
-    elseif intid == 415 then
-        Reward415(player)
-    elseif intid == 416 then
-        Reward416(player)
-    elseif intid == 417 then
-        Reward417(player)
+        Reward41(player)
     elseif intid == 42 then
-		if CompletionStatus2[GUIDLow] ~= "Completed" then
-			message = "Twiggy: You can't claim this reward yet!"
-			SendPurpleBroadcast(player, message)
-			ClaimBonuses(player)
-		elseif CompletionStatus2[GUIDLow] == "Completed" then
-			if ClaimStatus2[GUIDLow] == ", claimed." then
-				message = "Twiggy: You've already claimed this reward!"
-				SendPurpleBroadcast(player, message)
-				ClaimBonuses(player)
-			else
-				Reward42(player)
-			end
-		end	
-    elseif intid == 421 then
-        Reward421(player)
-    elseif intid == 422 then
-        Reward422(player)
-    elseif intid == 423 then
-        Reward423(player)
-    elseif intid == 424 then
-        Reward424(player)
-    elseif intid == 425 then
-        Reward425(player)
-    elseif intid == 426 then
-        Reward426(player)
-    elseif intid == 427 then
-        Reward427(player)
-    elseif intid == 428 then
-        Reward428(player)
-    elseif intid == 429 then
-        Reward429(player)
-    elseif intid == 460 then
-        Reward460(player)
-    elseif intid == 461 then
-        Reward461(player)
-    elseif intid == 462 then
-        Reward462(player)
+        Reward42(player)
     elseif intid == 43 then
-		if CompletionStatus3[GUIDLow] ~= "Completed" then
-			message = "Twiggy: You can't claim this reward yet!"
-			SendPurpleBroadcast(player, message)
-			ClaimBonuses(player)
-		elseif CompletionStatus3[GUIDLow] == "Completed" then
-			if ClaimStatus3[GUIDLow] == ", claimed." then
-				message = "Twiggy: You've already claimed this reward!"
-				SendPurpleBroadcast(player, message)
-				ClaimBonuses(player)
-			else
-				Reward43(player)
-			end
-		end	
-    elseif intid == 431 then
-        Reward431(player)
-    elseif intid == 432 then
-        Reward432(player)
-    elseif intid == 433 then
-        Reward433(player)
-    elseif intid == 434 then
-        Reward434(player)
-    elseif intid == 435 then
-        Reward435(player)
-    elseif intid == 436 then
-        Reward436(player)
-    elseif intid == 437 then
-        Reward437(player)
-    elseif intid == 438 then
-        Reward438(player)
-    elseif intid == 439 then
-        Reward439(player)
-    elseif intid == 470 then
-        Reward470(player)
-    elseif intid == 471 then
-        Reward471(player)
-    elseif intid == 472 then
-        Reward472(player)
-    elseif intid == 473 then
-        Reward473(player)
+        Reward43(player)
     elseif intid == 44 then
-		if CompletionStatus4[GUIDLow] ~= "Completed" then
-			message = "Twiggy: You can't claim this reward yet!"
-			SendPurpleBroadcast(player, message)
-			ClaimBonuses(player)
-		elseif CompletionStatus4[GUIDLow] == "Completed" then
-			if ClaimStatus4[GUIDLow] == ", claimed." then
-				message = "Twiggy: You've already claimed this reward!"
-				SendPurpleBroadcast(player, message)
-				ClaimBonuses(player)
-			else
-				Reward44(player)
-			end
-		end	
-	elseif intid == 441 then
-        Reward441(player)
-    elseif intid == 442 then
-        Reward442(player)
-    elseif intid == 443 then
-        Reward443(player)
-    elseif intid == 444 then
-        Reward444(player)
-    elseif intid == 445 then
-        Reward445(player)
-    elseif intid == 446 then
-        Reward446(player)
-    elseif intid == 447 then
-        Reward447(player)
+        Reward44(player)
+    elseif RAFClaimIntid(intid) then
+        local tier = RAFClaimIntid(intid)
+        if PlayerHasEnoughFreeSlots(player, 3) then
+            RAFShowLoading(player, "Claiming, one moment...")
+            MapSendRAF(player, "claim", { tier = tier, option = intid })
+        else
+            player:SendBroadcastMessage("You need at least 3 free bag slots to receive your reward.")
+            if cache.bonuses then
+                ClaimBonuses(player, cache.bonuses)
+            else
+                ShowRAFMenu(player)
+            end
+        end
     elseif intid == 998 then
         ShowRAFMenu(player)
+    end
+end
+
+
+-- World side: owns ALL DB and shared vars. Answers map requests with views.
+local worldRAFClaimed = {}
+
+local RAFTiers = {
+    [0] = { need = 0, claimed = 1 },
+    [1] = { need = 4, claimed = 5 },
+    [2] = { need = 9, claimed = 10 },
+    [3] = { need = 14, claimed = 15 },
+    [4] = { need = 24, claimed = 25 },
+}
+
+local function WorldRAFView(player, seq, view)
+    if not player or not view then return end
+    view.seq = seq
+    view.playerName = view.playerName or player:GetName()
+    player:SendEMQMessage("RAFToMap", view)
+end
+
+local function RAFBonusStrings(claimed, n)
+    local needs = {0, 4, 9, 14, 24}
+    local vals = {1, 5, 10, 15, 25}
+    local comp, claim = {}, {}
+    for i = 1, 5 do
+        if n > needs[i] then
+            comp[i] = "Completed"
+            claim[i] = claimed[vals[i]] and ", claimed." or ", claim now!"
+        else
+            comp[i] = "In progress"
+            claim[i] = claimed[vals[i]] and ", claimed." or "."
+        end
+    end
+    return comp, claim
+end
+
+local function WorldRAFBonuses(player, seq, extra)
+    local accountId = player:GetAccountId()
+    local name = player:GetName()
+    AuthDBQueryAsync(string.format("SELECT claimed FROM account_raf_claimed WHERE account_id = %d", accountId), function(claimquery)
+        local claimed = {}
+        if claimquery then
+            repeat claimed[claimquery:GetUInt32(0)] = true until not claimquery:NextRow()
+        end
+        AuthDBQueryAsync(string.format("SELECT COUNT(*) FROM account_raf WHERE referer_id = %d AND status = 4", accountId), function(cq)
+            local p = GetPlayerByName(name)
+            if not p then return end
+            local n = 0
+            if cq then n = cq:GetUInt32(0) end
+            local comp, claim = RAFBonusStrings(claimed, n)
+            local v = { view = "bonuses", comp = comp, claim = claim }
+            if extra then for k, vv in pairs(extra) do v[k] = vv end end
+            WorldRAFView(p, seq, v)
+        end)
+    end)
+end
+
+-- Single committer for claims. Serial in world; memory guard plus async DB
+-- recheck means rapid double-clicks grant exactly once.
+local function WorldRAFClaim(player, tier, option, seq)
+    local accountId = player:GetAccountId()
+    local name = player:GetName()
+    local t = RAFTiers[tier]
+    local function deny(msg)
+        local p = GetPlayerByName(name)
+        if not p then return end
+        if msg then SendPurpleBroadcast(p, msg) end
+        WorldRAFBonuses(p, seq, nil)
+    end
+    if not t then
+        WorldRAFBonuses(player, seq, nil)
+        return
+    end
+    if worldRAFClaimed[accountId .. ":" .. tier] then
+        deny("Twiggy: You've already claimed this reward!")
+        return
+    end
+    AuthDBQueryAsync(string.format("SELECT claimed FROM account_raf_claimed WHERE account_id = %d", accountId), function(claimquery)
+        local already = false
+        if claimquery then
+            repeat if claimquery:GetUInt32(0) == t.claimed then already = true end until not claimquery:NextRow()
+        end
+        if already then
+            deny("Twiggy: You've already claimed this reward!")
+            return
+        end
+        AuthDBQueryAsync(string.format("SELECT COUNT(*) FROM account_raf WHERE referer_id = %d AND status = 4", accountId), function(cq)
+            local p = GetPlayerByName(name)
+            if not p then return end
+            local n = 0
+            if cq then n = cq:GetUInt32(0) end
+            if n <= t.need then
+                deny("Twiggy: You can't claim this reward yet!")
+                return
+            end
+            AuthDBExecute(string.format("INSERT INTO account_raf_claimed (account_id, claimed, date) VALUES (%d, %d, %d)", accountId, t.claimed, os.time()))
+            worldRAFClaimed[accountId .. ":" .. tier] = true
+            local claimed = {}
+            claimed[t.claimed] = true
+            local comp, claim = RAFBonusStrings(claimed, n)
+            WorldRAFView(p, seq, { view = "claimapproved", tier = tier, option = option, comp = comp, claim = claim })
+        end)
+    end)
+end
+
+-- Summon menu payload. Online resolved authoritatively in world.
+local function WorldRAFSummonMenu(player, seq, page)
+    page = page or 1
+    local accountId = player:GetAccountId()
+    local name = player:GetName()
+    local cdSec = math.max(0, (Multistate.GetData(player, "RAFSummonCD") or 0) - os.time())
+    local graceSec = math.max(0, (Multistate.GetData(player, "RAFSummonGrace") or 0) - os.time())
+    local MaxRAFDuration = os.time() - RAFDuration
+    AuthDBQueryAsync(string.format([[
+        SELECT account_id, referer_id FROM account_raf
+        WHERE (referer_id = %d AND date > %d) OR (account_id = %d AND date > %d)
+    ]], accountId, MaxRAFDuration, accountId, MaxRAFDuration), function(query)
+        local p = GetPlayerByName(name)
+        if not p then return end
+        local linked = {}
+        if query then
+            repeat
+                linked[query:GetUInt32(0)] = true
+                linked[query:GetUInt32(1)] = true
+            until not query:NextRow()
+        end
+        local friends = {}
+        for _, pl in ipairs(GetPlayersInWorld()) do
+            if pl and linked[pl:GetAccountId()] and pl:GetName() ~= name then
+                table.insert(friends, { name = pl:GetName(), guid = pl:GetGUIDLow() })
+            end
+        end
+        table.sort(friends, function(a, b) return a.name < b.name end)
+        local totalPages = math.max(1, math.ceil(#friends / ENTRIES_PER_PAGE))
+        if page > totalPages then page = totalPages end
+        local rows = {}
+        for i = (page - 1) * ENTRIES_PER_PAGE + 1, math.min(page * ENTRIES_PER_PAGE, #friends) do
+            table.insert(rows, friends[i])
+        end
+        WorldRAFView(p, seq, { view = "summonfriends", friends = rows, page = page, totalPages = totalPages, cdSec = cdSec, graceSec = graceSec })
+    end)
+end
+
+-- Shared summon execution for the EMQ op and the chat command.
+local function WorldRAFSummon(requester, friend, seq)
+    local reqName = requester:GetName()
+    local function ackMenu()
+        if seq then WorldRAFSummonMenu(requester, seq, 1) end
+    end
+    if not friend then
+        requester:SendBroadcastMessage("Your friend isn't online right now.")
+        ackMenu()
+        return
+    end
+    if (Multistate.GetData(requester, "RAFSummonCD") or 0) > os.time() then
+        ackMenu()
+        return
+    end
+    if friend and friend:IsAlive() and not friend:IsInCombat()
+    and not friend:IsOnVehicle() and not friend:IsFalling()
+    and not friend:InArena() and not friend:InBattleground() then
+        Multistate.SetData(friend, "RAFSummonRequest", reqName)
+        Multistate.SetData(friend, "RAFSummonTime", os.time() + 120)
+        Multistate.SetData(requester, "RAFSummonCD", os.time() + 2 * 60)
+        Multistate.SetData(requester, "RAFSummonGrace", os.time() + 2 * 60)
+        WorldRAFView(friend, nil, { view = "summonrequest", summoner = reqName, area = GetAreaName(requester:GetAreaId()) })
+        ackMenu()
+    elseif friend then
+        requester:SendBroadcastMessage(friend:GetName().." isn't able to receive summon requests right now.")
+        ackMenu()
+    else
+        requester:SendBroadcastMessage("Your friend isn't online right now.")
+        ackMenu()
+    end
+end
+
+local function WorldRAFAccept(target, seq)
+    local name = target:GetName()
+    if os.time() >= (Multistate.GetData(target, "RAFSummonTime") or 0) + 120 then
+        target:SendAreaTriggerMessage("You have not accepted the summon in time!")
+        if seq then WorldRAFView(target, seq, { view = "hub" }) end
+        return
+    end
+    local summonerName = Multistate.GetData(target, "RAFSummonRequest")
+    local summoner = summonerName and GetPlayerByName(summonerName) or nil
+    if not summoner then
+        target:SendAreaTriggerMessage("Your friend isn't available to summon you anymore.")
+        if seq then WorldRAFView(target, seq, { view = "hub" }) end
+        return
+    end
+    if summoner:IsFlying() or summoner:IsOnVehicle()
+    or summoner:IsFalling() or summoner:IsInCombat()
+    or summoner:IsDead() or summoner:InArena()
+    or summoner:InBattleground() then
+        summoner:SendAreaTriggerMessage("You can't summon your friend right now!")
+        target:SendAreaTriggerMessage("Your friend isn't available to summon you anymore.")
+        if seq then WorldRAFView(target, seq, { view = "hub" }) end
+        return
+    end
+    Multistate.SetData(target, "RAFSummonTime", os.time() + 120)
+    Multistate.ClearData(target, "RAFSummonRequest")
+    summoner:SendAreaTriggerMessage(target:GetName().." has accepted your summon request.")
+    Multistate.ClearData(summoner, "RAFSummonGrace")
+    Multistate.SetData(summoner, "RAFSummonCD", os.time() + summonCDLength * 60)
+    WorldRAFView(target, seq, { view = "teleport", map = summoner:GetMapId(), x = summoner:GetX(), y = summoner:GetY(), z = summoner:GetZ(), o = summoner:GetO() })
+end
+
+local function WorldRAFDecline(target)
+    local summonerName = Multistate.GetData(target, "RAFSummonRequest")
+    local summoner = summonerName and GetPlayerByName(summonerName) or nil
+    if summoner then
+        summoner:SendAreaTriggerMessage(target:GetName().." has denied your summon request.")
+    end
+    Multistate.ClearData(target, "RAFSummonRequest")
+end
+
+local function WorldRAFLinkView(player, seq)
+    local accountId = player:GetAccountId()
+    local name = player:GetName()
+    AuthDBQueryAsync(string.format("SELECT account_id FROM account_raf WHERE account_id = %d", accountId), function(query)
+        local p = GetPlayerByName(name)
+        if not p then return end
+        WorldRAFView(p, seq, { view = "raflink", linked = query ~= nil })
+    end)
+end
+
+local function WorldRAFRegister(player, code, seq)
+    local accountId = player:GetAccountId()
+    local name = player:GetName()
+    local function linkview()
+        WorldRAFLinkView(player, seq)
+    end
+    AuthDBQueryAsync(string.format("SELECT totaltime FROM account WHERE id = %d", accountId), function(tq)
+        local p = GetPlayerByName(name)
+        if not p or not tq then
+            if p then linkview() end
+            return
+        end
+        if tq:GetUInt32(0) >= 3600 * RegisterRAFTimeLimit then
+            local message = "|cFFFF0000You can't register or change your referral link if you have played for more than one hour.|r"
+            p:SendAreaTriggerMessage(message)
+            p:SendBroadcastMessage(message)
+            WorldRAFLinkView(p, seq)
+            return
+        end
+        local referer_id = tonumber(code)
+        if not referer_id then
+            p:SendAreaTriggerMessage("Please enter a valid number for the referral ID.")
+            WorldRAFLinkView(p, seq)
+            return
+        end
+        AuthDBQueryAsync(string.format("SELECT id FROM account WHERE id = %d", referer_id), function(rq)
+            local p2 = GetPlayerByName(name)
+            if not p2 or not rq or not rq:GetUInt32(0) then
+                if p2 then
+                    p2:SendAreaTriggerMessage("The entered referral ID does not exist. Please check and try again.")
+                    WorldRAFLinkView(p2, seq)
+                end
+                return
+            end
+            if accountId == referer_id then
+                p2:SendBroadcastMessage("You can't refer yourself!")
+                WorldRAFLinkView(p2, seq)
+                return
+            end
+            local currentTime = os.time()
+            local playerIP = p2:GetPlayerIP()
+            AuthDBQueryAsync(string.format("SELECT last_ip FROM account WHERE id = %d", referer_id), function(ipq)
+                local p3 = GetPlayerByName(name)
+                if not p3 or not ipq then
+                    if p3 then WorldRAFLinkView(p3, seq) end
+                    return
+                end
+                local refererIP = ipq:GetString(0)
+                AuthDBExecute(string.format([[
+                    INSERT INTO account_raf (account_id, referer_id, status, progress, date, IP, IP_referer)
+                    VALUES (%d, %d, 2, 0, %d, '%s', '%s')
+                    ON DUPLICATE KEY UPDATE referer_id = %d, status = 2, progress = 0, date = %d, IP = '%s', IP_referer = '%s'
+                ]], accountId, referer_id, currentTime, playerIP, refererIP, referer_id, currentTime, playerIP, refererIP))
+                Multistate.SetData(p3, "RAFreferee", true)
+                p3:SendAreaTriggerMessage(string.format("Successfully linked to referrer with ID: %d. Remember to relog to use the summon function.", referer_id))
+                WorldRAFLinkView(p3, seq)
+            end)
+        end)
+    end)
+end
+
+local function WorldRAFInfo(player, seq, page)
+    page = page or 1
+    local accountId = player:GetAccountId()
+    local name = player:GetName()
+    AuthDBQueryAsync(string.format("SELECT account_id, status, date, progress FROM account_raf WHERE referer_id = %d", accountId), function(query)
+        local p = GetPlayerByName(name)
+        if not p then return end
+        local rows = {}
+        if query then
+            repeat
+                table.insert(rows, {
+                    refereeAccountId = query:GetUInt32(0),
+                    status = query:GetUInt32(1),
+                    date = query:GetUInt32(2),
+                    progress = query:GetUInt32(3),
+                })
+            until not query:NextRow()
+        end
+        local totalPages = math.max(1, math.ceil(#rows / ENTRIES_PER_PAGE))
+        if page > totalPages then page = totalPages end
+        local slice = {}
+        for i = (page - 1) * ENTRIES_PER_PAGE + 1, math.min(page * ENTRIES_PER_PAGE, #rows) do
+            table.insert(slice, rows[i])
+        end
+        WorldRAFView(p, seq, { view = "referralinfo", rows = slice, page = page, totalPages = totalPages })
+    end)
+end
+
+local function WorldRAFReferee(player, seq)
+    local accountId = player:GetAccountId()
+    local name = player:GetName()
+    AuthDBQueryAsync(string.format("SELECT referer_id, status, date, progress FROM account_raf WHERE account_id = %d", accountId), function(query)
+        local p = GetPlayerByName(name)
+        if not p then return end
+        if query then
+            WorldRAFView(p, seq, { view = "refereeinfo", found = true,
+                refererAccountId = query:GetUInt32(0), status = query:GetUInt32(1),
+                date = query:GetUInt32(2), progress = query:GetUInt32(3) })
+        else
+            WorldRAFView(p, seq, { view = "refereeinfo", found = false })
+        end
+    end)
+end
+
+HandleRAFWorld = function(player, data)
+    if not player or not data or not data.op then return end
+    if data.op == "open-info" then
+        WorldRAFInfo(player, data.seq, data.page)
+    elseif data.op == "open-summon" then
+        WorldRAFSummonMenu(player, data.seq, data.page)
+    elseif data.op == "open-referee" then
+        WorldRAFReferee(player, data.seq)
+    elseif data.op == "open-link" then
+        WorldRAFLinkView(player, data.seq)
+    elseif data.op == "open-bonuses" then
+        WorldRAFBonuses(player, data.seq, nil)
+    elseif data.op == "register" then
+        WorldRAFRegister(player, data.code, data.seq)
+    elseif data.op == "claim" then
+        WorldRAFClaim(player, data.tier, data.option, data.seq)
+    elseif data.op == "summon" then
+        local friend
+        for _, pl in ipairs(GetPlayersInWorld()) do
+            if pl and pl:GetGUIDLow() == data.guid then friend = pl break end
+        end
+        WorldRAFSummon(player, friend, data.seq)
+    elseif data.op == "accept" then
+        WorldRAFAccept(player, data.seq)
+    elseif data.op == "decline" then
+        WorldRAFDecline(player)
     end
 end
 
@@ -1235,22 +995,25 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
 			return false
 		end
 		
-		local accountCheck = AuthDBQuery("SELECT 1 FROM account WHERE id IN (" .. accountId .. ", " .. refererId .. ")") -- Async exempt
-
-		if not accountCheck or accountCheck:GetRowCount() < 2 then
-			player:SendBroadcastMessage("Error: One or both account IDs are invalid.")
-			return false
-		end
-				
-		local linkCheck = AuthDBQuery(string.format("SELECT 1 FROM account_raf WHERE (account_id = %s AND referer_id = %s) OR (account_id = %s AND referer_id = %s)", accountId, refererId, refererId, accountId)) -- Async exempt
-
-		if linkCheck and linkCheck:GetRowCount() > 0 then
-			player:SendBroadcastMessage("Error: These accounts are already linked in RAF.")
-			return false
-		end
-		
-		AuthDBExecute(string.format("INSERT INTO account_raf (account_id, referer_id, status, progress, date) VALUES (%s, %s, 2, 0, %d)", accountId, refererId, os.time()))
-		player:SendBroadcastMessage("RAF: Friend " .. accountId .. " successfully linked to referer " .. refererId .. ".")
+		local gmName = player:GetName()
+		AuthDBQueryAsync("SELECT 1 FROM account WHERE id IN (" .. accountId .. ", " .. refererId .. ")", function(accountCheck)
+			local gm = GetPlayerByName(gmName)
+			if not gm then return end
+			if not accountCheck or accountCheck:GetRowCount() < 2 then
+				gm:SendBroadcastMessage("Error: One or both account IDs are invalid.")
+				return
+			end
+			AuthDBQueryAsync(string.format("SELECT 1 FROM account_raf WHERE (account_id = %s AND referer_id = %s) OR (account_id = %s AND referer_id = %s)", accountId, refererId, refererId, accountId), function(linkCheck)
+				local gm2 = GetPlayerByName(gmName)
+				if not gm2 then return end
+				if linkCheck and linkCheck:GetRowCount() > 0 then
+					gm2:SendBroadcastMessage("Error: These accounts are already linked in RAF.")
+					return
+				end
+				AuthDBExecute(string.format("INSERT INTO account_raf (account_id, referer_id, status, progress, date) VALUES (%s, %s, 2, 0, %d)", accountId, refererId, os.time()))
+				gm2:SendBroadcastMessage("RAF: Friend " .. accountId .. " successfully linked to referer " .. refererId .. ".")
+			end)
+		end)
 
 		return false
 	end
@@ -1259,53 +1022,19 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
         if not param or param == "" then
             return false
         end
-		
         local friendGUIDLow = tonumber(param)
-        -- Multistate: offers were stored in shared Data by the summon menu.
-        local offers = Multistate.GetData(player, "RAFSummonOffers")
-        if offers then
-            if type(offers) == "table" then  -- table in case there's multiple people in summon queue
-                for friendName, friendGUID in pairs(offers) do
-                    if friendGUID == friendGUIDLow then
-                        local friend = Multistate.FindPlayerByName(friendName)
-                        if friend and friend:IsAlive() and not friend:IsInCombat()
-						and not friend:IsOnVehicle() and not friend:IsFalling()
-						and not friend:InArena() and not friend:InBattleground() then -- simple sanity check
-							Multistate.ClearData(player, "RAFSummonOffers")
-							summonrequest = player:GetName()
-							ShowSummonRequest(friend)
-							Multistate.SetData(player, "RAFSummonCD", os.time() + 2 * 60) -- 2 min cd between summons
-							Multistate.SetData(player, "RAFSummonGrace", os.time() + 2 * 60) -- Probably a duplicate but I'm tired so who cares
-                        elseif friend then
-                            player:SendBroadcastMessage(friend:GetName().." isn't able to receive summon requests right now.")
-                        else
-                            player:SendBroadcastMessage("Your friend isn't online right now.")
-                        end
-					end
-                end
-            else
-                local friendName = offers -- in case there's only one person in summon queue we don't need the table
-                local friend = Multistate.FindPlayerByName(friendName)
-				if friend and friend:IsAlive() and not friend:IsInCombat()
-				and not friend:IsOnVehicle() and not friend:IsFalling()
-				and not friend:InArena() and not friend:InBattleground() then -- simple sanity check
-					Multistate.ClearData(player, "RAFSummonOffers")
-					summonrequest = player:GetName()
-					ShowSummonRequest(friend)
-					Multistate.SetData(player, "RAFSummonCD", os.time() + 2 * 60) -- 2 min cd between summons
-					Multistate.SetData(player, "RAFSummonGrace", os.time() + 2 * 60) -- Probably a duplicate but I'm tired so who cares
-				elseif friend then
-                    player:SendBroadcastMessage(friend:GetName().." isn't able to receive summon requests right now.")
-				else
-                    player:SendBroadcastMessage("Your friend isn't online right now.")
-				end
+        if friendGUIDLow then
+            local friend
+            for _, pl in ipairs(GetPlayersInWorld()) do
+                if pl and pl:GetGUIDLow() == friendGUIDLow then friend = pl break end
             end
-		end
+            WorldRAFSummon(player, friend, nil)
+        end
         return false
     end
-	
+
     if command:lower() == "rafmenu" or command:lower() == "referalmenu" then
-        ShowRAFMenu(player)
+        WorldRAFView(player, nil, { view = "hub" })
         return false -- Prevent further command processing
     end
 
@@ -1533,7 +1262,7 @@ local function CheckCompletedReferrals()
     -- Multistate: driven by the DB (pending referrals) instead of the per-state
     -- RAFreferee table, so every pending referral is checked exactly once from
     -- the global sweep. The status flip to 3 inside makes this idempotent.
-    local pending = AuthDBQuery("SELECT account_id FROM account_raf WHERE status = 2")
+    AuthDBQueryAsync("SELECT account_id FROM account_raf WHERE status = 2", function(pending)
     if not pending then
         return
     end
@@ -1589,6 +1318,7 @@ local function CheckCompletedReferrals()
 								end
 								
 								-- Send message to the referer if they're online
+								local refererOnline = false
 								for _, player in ipairs(players) do
 									if player:GetAccountId() == refererId then
 										SendPurpleBroadcast(player, message)
@@ -1605,11 +1335,11 @@ local function CheckCompletedReferrals()
 												-- Create and send mail to each character
 												local subject = "Refer a Friend Reward"
 												if referralCount == 0 then
-													body = "Dear ".. charName .."! I bear happy news!\n\nYour first referral with ID ".. refereeAccountId .." has qualified for Refer a Friend rewards! You first special reward is ".. TokenReward .." ".. TokenName.. ", speak with me to claim it.\n\nYour personal branch of Yggdrasil,\nTwiggy"
+													local body = "Dear ".. charName .."! I bear happy news!\n\nYour first referral with ID ".. refereeAccountId .." has qualified for Refer a Friend rewards! You first special reward is ".. TokenReward .." ".. TokenName.. ", speak with me to claim it.\n\nYour personal branch of Yggdrasil,\nTwiggy"
 												elseif referralCount == RewardTier1 or referralCount == RewardTier2 or referralCount == RewardTier3 or referralCount == RewardTier4 then
-													body = "Dear ".. charName .."! I bear happy news!\n\nYour referee with ID ".. refereeAccountId .." has fulfilled the the requirements to earn you another special Refer a Friend reward of your choice! You have earned ".. TokenReward .." ".. TokenName.. " and a special reward, speak with me to claim it.\n\nYour personal branch of Yggdrasil,\nTwiggy"
+													local body = "Dear ".. charName .."! I bear happy news!\n\nYour referee with ID ".. refereeAccountId .." has fulfilled the the requirements to earn you another special Refer a Friend reward of your choice! You have earned ".. TokenReward .." ".. TokenName.. " and a special reward, speak with me to claim it.\n\nYour personal branch of Yggdrasil,\nTwiggy"
 												else
-													body = "Dear ".. charName .."! I bear happy news!\n\nCongratulations! Your referee with ID ".. refereeAccountId .." has qualified for Refer a Friend rewards! You have earned ".. TokenReward .." ".. TokenName.. ". Check in with me any time to see how your referrals are going.\n\nYour personal branch of Yggdrasil,\nTwiggy"
+													local body = "Dear ".. charName .."! I bear happy news!\n\nCongratulations! Your referee with ID ".. refereeAccountId .." has qualified for Refer a Friend rewards! You have earned ".. TokenReward .." ".. TokenName.. ". Check in with me any time to see how your referrals are going.\n\nYour personal branch of Yggdrasil,\nTwiggy"
 												end
 												-- Send mail to the character
 												SendMail(subject, body, charGUIDLow, 0, 61)
@@ -1624,6 +1354,7 @@ local function CheckCompletedReferrals()
 			end
 		end)
     until not pending:NextRow()
+    end)
 end
 
 -- Multistate: the referral sweep touches every account and enumerates the world;
