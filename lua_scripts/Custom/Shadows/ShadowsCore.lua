@@ -429,6 +429,8 @@ end
 
 local function ShowAvailableShadows(player, view)
     local rows = (view and view.available) or (mapViewCache[player:GetName()] or {}).available or {}
+    local cc = mapViewCache[player:GetName()]
+    if cc then cc.lastMenu = "add" end
     player:GossipClearMenu()
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAvailable shadows:\n \n ", 0, 10)
 
@@ -459,6 +461,8 @@ end
 
 local function ShadowsHello(player, view)
     local hello = view or (mapViewCache[player:GetName()] or {}).hello or {}
+    local cc = mapViewCache[player:GetName()]
+    if cc then cc.lastMenu = "hello" end
     local count = hello.count or 0
     local maxBotsForPlayer = hello.max or maxBotCount
 
@@ -478,6 +482,8 @@ end
 
 local function ListActiveShadows(player, view)
     local bots = (view and view.bots) or (mapViewCache[player:GetName()] or {}).bots or {}
+    local cc = mapViewCache[player:GetName()]
+    if cc then cc.lastMenu = "remove" end
     player:GossipClearMenu()
 
     local activeHeader = "Active shadows:"
@@ -704,9 +710,13 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
             ShowLoadingMenu(player, "Removing shadow, one moment...")
             MapSendToWorld(player, "remove", { botName = botName })
         end
-    elseif intid == 10 then  -- Add list: placeholder, world populates
-        ShowLoadingMenu(player, "Loading available shadows, one moment...")
-        MapSendToWorld(player, "addmenu")
+    elseif intid == 10 then  -- Add entry: fresh fetch from hello, instant re-render inside the list
+        if cache.lastMenu == "add" and cache.available then
+            ShowAvailableShadows(player)
+        else
+            ShowLoadingMenu(player, "Loading available shadows, one moment...")
+            MapSendToWorld(player, "addmenu")
+        end
     elseif intid >= 100 and intid < 199 then  -- Bot add: name from cache, world commits
         local row = (cache.available or {})[intid - 100]
         if not row then
