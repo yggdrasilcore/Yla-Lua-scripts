@@ -714,7 +714,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
         if cache.lastMenu == "add" and cache.available then
             ShowAvailableShadows(player)
         else
-            ShowLoadingMenu(player, "Loading available shadows, one moment...")
+            ShowLoadingMenu(player, "Loading available shadows...")
             MapSendToWorld(player, "addmenu")
         end
     elseif intid >= 100 and intid < 199 then  -- Bot add: name from cache, world commits
