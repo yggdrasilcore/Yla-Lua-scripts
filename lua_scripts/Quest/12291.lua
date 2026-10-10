@@ -4,10 +4,13 @@ local bindingLifeTimer = {}
 local SPELL_BINDING_LIFE = 48809
 local bindingLifeCheck = {}
 
--- Packet 0x2A5 fires globally only; item/zone handlers run on map 571. Timestamps are shared.
 local Multistate = require("Multistate")
 
-local function RemoveBindingLife(event, packet, player)
+local function ReapplyBindingLife(event, unit, aura, mode)
+    if not unit:IsPlayer() then
+        return
+    end
+    local player = unit:ToPlayer()
     if not (player:GetAreaId() == FORGOTTENSHORE) then
         return
     end
@@ -55,10 +58,8 @@ local function onAreaChange(event, player, newArea, oldArea)
     end
 end
 
-if Multistate.IsWorld() then
-    RegisterPacketEvent(0x2A5, 7, RemoveBindingLife)
-end
 if Multistate.IsCompat() or (Multistate.IsMap() and GetStateMapId() == 571) then
     RegisterItemEvent(37570, 2, OnBindingLife)
     RegisterPlayerEvent(27, onAreaChange)
+    RegisterAuraEvent(SPELL_BINDING_LIFE, 2, ReapplyBindingLife)
 end
