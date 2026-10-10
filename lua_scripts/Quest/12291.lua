@@ -3,6 +3,12 @@ local FORGOTTENSHORE = 4185
 local SPELL_BINDING_LIFE = 48809
 local MODE_DEFAULT = 1
 
+local Multistate = require("Multistate")
+
+if not (Multistate.IsCompat() or (Multistate.IsMap() and GetStateMapId() == 571)) then
+    return
+end
+
 RegisterAuraEvent(SPELL_BINDING_LIFE, 2, function(event, unit, aura, mode)
     if mode ~= MODE_DEFAULT then
         return
