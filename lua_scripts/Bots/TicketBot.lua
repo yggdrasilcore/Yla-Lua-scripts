@@ -43,17 +43,11 @@ local function OnTicketCreate(event, ticket)
 end
 
 local function OnTicketClosed(event, ticket)
-    local closer = ticket:GetAssignedPlayer()
-    local closerName = closer and closer:GetName() or ("GUID: " .. tostring(ticket:GetAssignedToGUID()))
-    SendToDiscord(string.format("**Ticket with ID: %d closed.** \nClosed by: %s",
-        ticket:GetId(), closerName))
+    SendToDiscord(string.format("**Ticket with ID: %d closed.**", ticket:GetId()))
 end
 
 local function OnTicketResolved(event, ticket)
-    local resolver = ticket:GetAssignedPlayer()
-    local resolverName = resolver and resolver:GetName() or ("GUID: " .. tostring(ticket:GetAssignedToGUID()))
-    SendToDiscord(string.format("**Ticket with ID: %d resolved.** \nResolved by: %s",
-        ticket:GetId(), resolverName))
+    SendToDiscord(string.format("**Ticket with ID: %d resolved.**", ticket:GetId()))
 end
 
 RegisterTicketEvent(1, OnTicketCreate)
