@@ -1,3 +1,4 @@
+local Multistate = require("Multistate")
 local EVENT_INTERVAL_MIN = 10 * 60 * 1000 -- 10 minutes in milliseconds
 local EVENT_INTERVAL_MAX = 20 * 60 * 1000 -- 20 minutes in milliseconds
 local SPAWN_NPC_ID = 32838
@@ -57,7 +58,7 @@ local function NormalBonkTime(eventId, delay, repeats)
             npc:SetSpeed(1, 0.4)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
-                chosenPlayer = GetPlayerByName(targetplayer)
+                chosenPlayer = Multistate.FindPlayerByName(targetplayer)
                 if chosenPlayer then
                     npc:MoveFollow(chosenPlayer, 0.2, 2.8)
                     if chosenPlayer:IsMounted() then
@@ -69,7 +70,7 @@ local function NormalBonkTime(eventId, delay, repeats)
             end, 10000, 1)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
-                chosenPlayer = GetPlayerByName(targetplayer)
+                chosenPlayer = Multistate.FindPlayerByName(targetplayer)
                 if chosenPlayer then
                     npc:SetRooted(true)
                     npc:SendUnitEmote("Minigob Manabonk tickles ".. chosenPlayer:GetName()..".")
@@ -78,7 +79,7 @@ local function NormalBonkTime(eventId, delay, repeats)
             end, 12000, 1)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
-                chosenPlayer = GetPlayerByName(targetplayer)
+                chosenPlayer = Multistate.FindPlayerByName(targetplayer)
                 if chosenPlayer then
                     npc:EmoteState(11) -- laugh
                     npc:SetFaction(1194)
@@ -86,7 +87,7 @@ local function NormalBonkTime(eventId, delay, repeats)
             end, 12500, 1)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
-                chosenPlayer = GetPlayerByName(targetplayer)
+                chosenPlayer = Multistate.FindPlayerByName(targetplayer)
                 if chosenPlayer then
                     npc:SetRooted(false)
                     npc:SetSpeed(0, 2)
@@ -144,7 +145,7 @@ local function BonkTime(eventId, delay, repeats)
             npc:SetSpeed(1, 0.4)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
-                chosenPlayer = GetPlayerByName(targetplayer)
+                chosenPlayer = Multistate.FindPlayerByName(targetplayer)
                 if chosenPlayer then
                     npc:MoveFollow(chosenPlayer, 0.2, 2.8)
                     if chosenPlayer:IsMounted() then
@@ -156,7 +157,7 @@ local function BonkTime(eventId, delay, repeats)
             end, 10000, 1)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
-                chosenPlayer = GetPlayerByName(targetplayer)
+                chosenPlayer = Multistate.FindPlayerByName(targetplayer)
                 if chosenPlayer then
                     npc:SetRooted(true)
                     npc:SendUnitSay("Trick or treat!", 0)
@@ -164,7 +165,7 @@ local function BonkTime(eventId, delay, repeats)
             end, 12000, 1)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
-                chosenPlayer = GetPlayerByName(targetplayer)
+                chosenPlayer = Multistate.FindPlayerByName(targetplayer)
                 if chosenPlayer then
                     npc:EmoteState(11)
                     npc:SetFaction(679)
@@ -172,7 +173,7 @@ local function BonkTime(eventId, delay, repeats)
             end, 12500, 1)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
-                chosenPlayer = GetPlayerByName(targetplayer)
+                chosenPlayer = Multistate.FindPlayerByName(targetplayer)
                 if chosenPlayer then
                     npc:SetRooted(false)
                     npc:SetSpeed(0, 2)
