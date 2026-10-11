@@ -1,6 +1,5 @@
--- World queries the icon index once and publishes it as serialized world
--- data; map states adopt the shared copy and never query.
-local Multistate = require("Multistate")
+-- Azshara Mall-only script (mall map 37).
+if GetStateMapId() ~= 37 then return end
 
 -- WorldDB queries to insert data if not already done
 
@@ -31,43 +30,61 @@ local ItemsToSell = {
 local VotePointCost = 50
 local ItemsPerPage = 11
 
-local icons = {}
-
-local function AdoptVanityPetIcons()
-    local shared = GetWorldData("VanityPetIcons")
-    if type(shared) == "table" and shared.AsTable then
-        shared = shared:AsTable()
-    end
-    if type(shared) ~= "table" or type(shared.icons) ~= "table" then
-        return false
-    end
-    icons = shared.icons
-    return true
-end
-
-if Multistate.IsWorld() then
-    WorldDBQueryAsync(string.format([[SELECT Entry, Icon FROM acore_eluna.icons WHERE Entry IN (%s)]], table.concat(ItemsToSell, ",")), function(query)
-        if query then
-            repeat
-                local entry = query:GetUInt32(0)
-                local icon = query:GetString(1)
-                icons[entry] = icon
-            until not query:NextRow()
-        end
-        SetWorldData("VanityPetIcons", {icons = icons})
-    end)
-end
-
--- Multistate: Azshara Mall-only script (mall map 37).
-if not IsCompatibilityMode() and GetStateMapId() ~= 37 then return end
-
-if Multistate.IsMap() then
-    CreateLuaEvent(function(eventId)
-        if AdoptVanityPetIcons() then
-            RemoveEventById(eventId)
-        end
-    end, 5000, 0)
-end
+-- Static icon index, dumped from acore_eluna.icons (see SQL below).
+local icons = {
+[11903]="INV_Box_PetCarrier_01",
+[13582]="Spell_Shadow_SummonFelHunter",
+[13583]="INV_Belt_05",
+[13584]="INV_DiabloStone",
+[18964]="INV_Egg_02",
+[19054]="INV_Misc_Orb_05",
+[19055]="INV_Misc_Orb_01",
+[19450]="INV_Egg_04",
+[20371]="INV_Egg_03",
+[20651]="INV_Egg_03",
+[21168]="inv_pet_babyshark",
+[22114]="inv_pet_pinkmurlocegg",
+[25535]="INV_Netherwhelp",
+[32233]="INV_Drink_13",
+[32588]="INV_Misc_Food_24",
+[32616]="inv_pet_egbert",
+[32617]="inv_pet_sleepywilly",
+[32622]="INV_Belt_16",
+[33816]="INV_Drink_19",
+[33818]="INV_Drink_19",
+[33993]="Spell_Shaman_Hex",
+[34492]="INV_Misc_EngGizmos_RocketChicken",
+[34493]="INV_Misc_DragonKite_02",
+[34518]="INV_Misc_Coin_01",
+[34519]="INV_Misc_Coin_03",
+[34955]="inv_pet_scorchedstone",
+[35349]="INV_Drink_19",
+[35350]="INV_Drink_19",
+[37297]="INV_Jewelry_Amulet_03",
+[37298]="INV_Jewelry_Talisman_10",
+[38050]="Spell_Nature_GroundingTotem",
+[38658]="Ability_Hunter_Pet_Bat",
+[39656]="INV_Sword_07",
+[41133]="inv_misc_penguinpet",
+[43517]="inv_misc_penguinpet",
+[43698]="INV_Misc_MonsterTail_03",
+[45180]="INV_Spear_05",
+[45942]="achievement_boss_xt002deconstructor_01",
+[46767]="INV_Misc_Key_05",
+[46802]="INV_Egg_03",
+[48527]="INV_Misc_QirajiCrystal_05",
+[49343]="ability_mount_spectraltiger",
+[49362]="INV_Misc_Head_Dragon_Black",
+[49646]="ability_hunter_pet_corehound",
+[49662]="inv_misc_pet_02",
+[49663]="inv_misc_pet_04",
+[49665]="inv_misc_pet_03",
+[49693]="INV_Misc_Urn_01",
+[54810]="inv_pet_celestialdragon",
+[54847]="achievement_boss_xt002deconstructor_01",
+[54857]="INV_Spear_05",
+[56806]="t_roboticon",
+}
 
 local function GenerateMenu(page, player, object)
     local startIndex = ((page - 1) * ItemsPerPage) + 1
