@@ -1,50 +1,5 @@
 local ITEM_ENTRY = 41415
--- Multistate: item gossip handlers fire in map states, but Group member listing
--- is world-only, so group-wide buffs are forwarded to the global state via EMQ.
-local Multistate = require("Multistate")
-local EMQ = require("EMQ")
-
--- Global executor (Group API is world-only).
-local function DoCastOnGroup(player, data)
-    if not player or not data or not data.spellId then
-        return
-    end
-    local spellId = data.spellId
-    local group = player:GetGroup()
-    if not group then
-        player:CastSpell(player, spellId, true)
-        local pet = player:GetPet()
-        if pet then
-            player:CastSpell(pet, spellId, true)
-        end
-        return
-    end
-    local members = nil
-    -- Multistate: Group member listing is world-only; this executor runs in the
-    -- global state (or compat mode), where it exists.
-    if GetStateMapId() == -1 then
-        members = group:GetMembers()
-    end
-    if not members then
-        player:CastSpell(player, spellId, true)
-        return
-    end
-    for _, member in ipairs(members) do
-        if member and member:IsAlive() and member:IsInWorld() then
-            player:CastSpell(member, spellId, true)
-            local pet = member:GetPet()
-            if pet then
-                player:CastSpell(pet, spellId, true)
-            end
-        end
-    end
-end
-
-EMQ.RegisterQueue("TwiggyWisdomGroupBuff", DoCastOnGroup)
-
--- Multistate: map-only script (all hooks fire in map states; the EMQ queue
--- above must still register in every state, hence the gate sits below it).
-if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+if GetStateMapId() == -1 then return end
 
 local SCROLL_SPELLS = {
     [1] = 58449, -- Strength VIII
@@ -89,11 +44,20 @@ local function OnUse(event, player, item, target)
 end
 
 local function CastOnGroup(player, spellId)
-    local data = { spellId = spellId }
-    if Multistate.IsCompat() or Multistate.IsWorld() then
-        DoCastOnGroup(player, data)
-    else
-        player:SendEMQMessage("TwiggyWisdomGroupBuff", data)
+    player:CastSpell(player, spellId, true)
+    local playerPet = player:GetPet()
+    if playerPet then
+        player:CastSpell(playerPet, spellId, true)
+    end
+    for _, member in pairs(player:GetPlayersInRange(100)) do
+        if member and member ~= player and member:IsAlive() and member:IsInWorld()
+            and (player:IsInSameGroupWith(member) or player:IsInSameRaidWith(member)) then
+            player:CastSpell(member, spellId, true)
+            local pet = member:GetPet()
+            if pet then
+                player:CastSpell(pet, spellId, true)
+            end
+        end
     end
 end
 
