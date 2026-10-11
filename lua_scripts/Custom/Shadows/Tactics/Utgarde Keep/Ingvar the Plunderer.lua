@@ -165,7 +165,10 @@ local function OnEnterUtgardeKeep(event, player)
 end
 
 RegisterPlayerEvent(28, OnEnterUtgardeKeep)
-for _, player in ipairs(GetStateMap():GetPlayers()) do OnEnterUtgardeKeep(nil, player) end
+local map = GetStateMap()
+if map then
+    for _, player in ipairs(map:GetPlayers()) do OnEnterUtgardeKeep(nil, player) end
+end
 
 local function OnRoarPrepare(event, caster, spell)
     caster:SetData("RoarActive", true)
