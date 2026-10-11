@@ -1,7 +1,3 @@
--- Multistate: PLAYER_EVENT_ON_COMMAND (42) fires in the global state.
--- player:Teleport is safe to call from here: YLA routes it through
--- YlaDefer (same-map offsets run inline, cross-map is queued and
--- drained on world update), so no EMQ forwarding is needed.
 if GetStateMapId() ~= -1 then return end
 
 -- Define the command prefix and name
@@ -11,34 +7,36 @@ local commandName = "offset"
 -- Helper function to parse input and convert to numbers
 local function ParseCommand(message)
     local _, _, x, y, z = string.find(message, commandPrefix .. " " .. commandName .. " ([%d%-%.]+) ([%d%-%.]+) ([%d%-%.]+)")
-    return tonumber(x), tonumber(y), tonumber(z)
+    if x and y and z then
+        return tonumber(x), tonumber(y), tonumber(z)
+    end
+    local _, _, forward = string.find(message, commandPrefix .. " " .. commandName .. " ([%d%-%.]+)")
+    if forward then
+        return tonumber(forward)
+    end
+    return nil
 end
 
--- Function to handle the command
 local function TeleportOffset(event, player, message, type, language)
-    -- Check if the message starts with the command
     if (message:lower():match("^" .. commandPrefix .. " " .. commandName)) then
-        -- Only allow GMs to use this command
         if player:GetGMRank() > 0 then
-            -- Parse the message to get the X, Y, Z offsets
             local x, y, z = ParseCommand(message)
 
             if x and y and z then
-                -- Get the player's current position
                 local px, py, pz, po = player:GetLocation()
-
-                -- Calculate the new position
                 local newX = px + x
                 local newY = py + y
                 local newZ = pz + z
-
-                -- Teleport the player to the new position
                 player:Teleport(player:GetMapId(), newX, newY, newZ, po)
-
-                -- Notify the player
                 player:SendBroadcastMessage("Teleported to offset location: (" .. newX .. ", " .. newY .. ", " .. newZ .. ")")
+            elseif x then
+                local px, py, pz, po = player:GetLocation()
+                local newX = px + x * math.cos(po)
+                local newY = py + x * math.sin(po)
+                player:Teleport(player:GetMapId(), newX, newY, pz, po)
+                player:SendBroadcastMessage("Teleported " .. x .. " yards forward: (" .. newX .. ", " .. newY .. ", " .. pz .. ")")
             else
-                player:SendBroadcastMessage("Invalid command format. Use: " .. commandPrefix .. " " .. commandName .. " X Y Z")
+                player:SendBroadcastMessage("Invalid command format. Use: " .. commandPrefix .. " " .. commandName .. " X Y Z or " .. commandPrefix .. " " .. commandName .. " DISTANCE")
             end
 
             -- Block the command from being sent to the chat
