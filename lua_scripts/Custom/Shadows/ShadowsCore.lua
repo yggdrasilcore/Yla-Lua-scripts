@@ -1112,10 +1112,16 @@ local validCommands = buildCommandList()
 
 local function OnGroup(event, player, msg, Type, lang, group)
     if msg ~= "repair" then return end
-    
-	player:RegisterEvent(function(e, d, r, player)
-		local playerName = player:GetName()
+
+    -- Multistate: this chat handler runs world-side, but player:RegisterEvent
+    -- timers can tick in map states where the Group API is unavailable.
+    -- Defer on a world (global) timer and re-resolve everything by name.
+    local playerName = player:GetName()
+	CreateLuaEvent(function()
+		local player = GetPlayerByName(playerName)
+		if not player then return end
 		local group = player:GetGroup()
+		if not group then return end
 
 		local groupPlayers = group:GetMembers()
 		for _, groupMember in ipairs(groupPlayers) do
@@ -1707,7 +1713,14 @@ local function OnGroupChangeLeader(event, packet, player)
             if group:IsLeader(player:GetGUID()) then
                 if player:IsInSameGroupWith(master) or player:IsInSameRaidWith(master) then
 
-                    player:RegisterEvent(function(e, d, r, player)
+                    -- Multistate: the packet handler runs world-side, but
+                    -- player:RegisterEvent timers can tick in map states where
+                    -- the Group API is unavailable. Defer on a world (global)
+                    -- timer and re-resolve everything by name.
+                    local playerName = player:GetName()
+                    CreateLuaEvent(function()
+                        local player = GetPlayerByName(playerName)
+                        if not player then return end
                         local group = player:GetGroup()
                         if not group then return end
 
