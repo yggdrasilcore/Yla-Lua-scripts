@@ -1,5 +1,5 @@
 -- Multistate: Forge of Souls-only script (map 632).
-if not IsCompatibilityMode() and GetStateMapId() ~= 632 then return end
+if GetStateMapId() ~= 632 then return end
 
 local BRONJAHM_ID           = 36497
 local BRONJAHM_CENTER_POS   = { 5297, 2506, 686.07 }

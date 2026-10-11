@@ -1,5 +1,5 @@
 -- Multistate: Ulduar-only script (map 603).
-if not IsCompatibilityMode() and GetStateMapId() ~= 603 then return end
+if GetStateMapId() ~= 603 then return end
 
 local function OnEnterCombat(event, player, enemy)
 	if enemy and enemy:GetEntry() == 34133 then

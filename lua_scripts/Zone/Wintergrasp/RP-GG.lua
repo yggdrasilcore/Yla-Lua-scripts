@@ -1,5 +1,5 @@
 -- Multistate: Northrend-only script (map 571).
-if not IsCompatibilityMode() and GetStateMapId() ~= 571 then return end
+if GetStateMapId() ~= 571 then return end
 
 local RP_GG_ITEM = 42986
 local RP_GG_SPELL = 49761

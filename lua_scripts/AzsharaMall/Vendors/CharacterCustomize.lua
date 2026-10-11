@@ -1,5 +1,5 @@
 -- Multistate: Azshara Mall-only script (mall map 37).
-if not IsCompatibilityMode() and GetStateMapId() ~= 37 then return end
+if GetStateMapId() ~= 37 then return end
 
 local communityTokenItemId 	= 19322 -- ID for Community Tokens
 local voteTokenItemId		= 20880 -- ID for Vote Tokens

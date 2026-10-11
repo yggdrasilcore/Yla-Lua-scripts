@@ -13,43 +13,14 @@
 -- in one context (WORLD-only: GetPlayersInWorld, GetPlayerByGUID, GetPlayerByName,
 -- GetMapById, Group/Guild methods; MAP-only: GetStateMap). GetStateMapId() and
 -- GetStateInstanceId() exist in every state (-1 / 0 in the world state), so state
--- gates use them directly with no probing. Use the helpers below to write
--- context-safe code.
+-- gates use them directly with no probing:
+--   GetStateMapId() == -1     -- global ("world") state
+--   GetStateMapId() ~= -1     -- map state
 --
 -- Usable via: local Multistate = require("Multistate")
 -- (Keep this file dependency-free: it must load in every state, first or last.)
 
 local Multistate = {}
-
--- True when the engine runs a single global state (legacy behaviour).
-function Multistate.IsCompat()
-    return IsCompatibilityMode()
-end
-
--- True when this code executes in the global ("world") state.
--- GetStateMapId() returns -1 there (and in compatibility mode, which is a
--- single world state).
-function Multistate.IsWorld()
-    return GetStateMapId() == -1
-end
-
--- True when this code executes in a map state (never true in compat mode).
-function Multistate.IsMap()
-    return GetStateMapId() ~= -1
-end
-
--- File-scope guards. Idiom (placed before registrations/logic, after definitions
--- that other files may rely on):
---   local Multistate = require("Multistate")
---   if Multistate.SkipMap() then return end    -- global-only script (world events/timers/APIs)
---   if Multistate.SkipWorld() then return end  -- map-only script (map events/APIs)
-function Multistate.SkipMap()
-    return Multistate.IsMap()
-end
-
-function Multistate.SkipWorld()
-    return (not Multistate.IsCompat()) and Multistate.IsWorld()
-end
 
 -- Iterate all players visible from the current state: every online player in the
 -- global state (or compat mode), otherwise the players on this state's map.
@@ -75,7 +46,7 @@ function Multistate.FindPlayerByName(name)
     if not name then
         return nil
     end
-    if Multistate.IsWorld() then
+    if GetStateMapId() == -1 then
         return GetPlayerByName(name)
     end
     local found = nil
@@ -94,7 +65,7 @@ function Multistate.FindPlayerByGUID(guid)
     if guid == nil then
         return nil
     end
-    if Multistate.IsWorld() then
+    if GetStateMapId() == -1 then
         return GetPlayerByGUID(guid)
     end
     local low = nil

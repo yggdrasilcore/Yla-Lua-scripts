@@ -1,5 +1,5 @@
 -- Multistate: Northrend-only script (map 571).
-if not IsCompatibilityMode() and GetStateMapId() ~= 571 then return end
+if GetStateMapId() ~= 571 then return end
 
 function OnEnterCombat(event, creature, target)
    local auraOwner = creature:GetNearestCreature(20, 31262)

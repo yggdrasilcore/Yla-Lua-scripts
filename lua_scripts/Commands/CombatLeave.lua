@@ -17,7 +17,7 @@ EMQ.RegisterQueue("CombatLeaveStop", function(player, data)
 end)
 
 local function requestCombatStop(player)
-    if Multistate.IsCompat() or Multistate.IsWorld() then
+    if GetStateMapId() == -1 then
         player:RunCommand("combatstop")
     else
         player:SendEMQMessage("CombatLeaveStop", {})

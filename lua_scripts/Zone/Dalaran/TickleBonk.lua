@@ -235,7 +235,7 @@ end
 -- re-arms itself, so it runs exactly once in the global state. The creature
 -- combat handlers below stay active in every state.
 local initialDelay = math.random(EVENT_INTERVAL_MIN, EVENT_INTERVAL_MAX)
-if require("Multistate").IsCompat() or require("Multistate").IsWorld() then
+if GetStateMapId() == -1 then
     CreateLuaEvent(BonkTime, initialDelay, 1)
 end
 RegisterCreatureEvent(SPAWN_NPC_ID, 1, OnEnterCombat)

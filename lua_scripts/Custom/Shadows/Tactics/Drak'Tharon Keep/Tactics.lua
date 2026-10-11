@@ -1,5 +1,5 @@
 -- Multistate: Drak'Tharon Keep-only script (map 600).
-if not IsCompatibilityMode() and GetStateMapId() ~= 600 then return end
+if GetStateMapId() ~= 600 then return end
 
 local MAP_ID       = 600
 local TICK_TIMER   = 100 -- ms

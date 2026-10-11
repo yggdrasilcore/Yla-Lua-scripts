@@ -277,9 +277,7 @@ local function BrewfestScheduler()
 end
 
 -- Coarse poll: every 15 min check if Brewfest is active, then arm per-minute window checks.
--- Multistate: the Brewfest sweep uses GetPlayersInWorld and must run exactly once
--- server-wide in the global state (the item handler above stays map-side).
-if require("Multistate").IsCompat() or require("Multistate").IsWorld() then
+if GetStateMapId() == 0 or GetStateMapId() == 1 then
     CreateLuaEvent(BrewfestScheduler, 15 * 60 * 1000, 0)
     BrewfestScheduler() -- initial check at load so we don't wait 15 min after restart/reload
 end

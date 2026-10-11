@@ -1,5 +1,5 @@
 -- Multistate: Halls of Reflection-only script (map 668).
-if not IsCompatibilityMode() and GetStateMapId() ~= 668 then return end
+if GetStateMapId() ~= 668 then return end
 
 -- HOR TACTICS
 

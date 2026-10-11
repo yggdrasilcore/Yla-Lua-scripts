@@ -9,12 +9,12 @@ local EMQ = require("EMQ")
 local HandleRAFWorld -- (player, data): runs in world, owns DB + commands
 local HandleRAFView  -- (player, data): runs on map, pure render from payload
 EMQ.RegisterQueue("RAFToWorld", function(player, data)
-    if HandleRAFWorld and (Multistate.IsWorld() or Multistate.IsCompat()) then
+    if HandleRAFWorld and (GetStateMapId() == -1) then
         HandleRAFWorld(player, data)
     end
 end)
 EMQ.RegisterQueue("RAFToMap", function(player, data)
-    if HandleRAFView and (Multistate.IsMap() or Multistate.IsCompat()) then
+    if HandleRAFView and (GetStateMapId() ~= -1) then
         HandleRAFView(player, data)
     end
 end)
@@ -1360,7 +1360,7 @@ end
 -- Multistate: the referral sweep touches every account and enumerates the world;
 -- it runs exactly once server-wide in the global state (DB status flips make it
 -- idempotent anyway).
-if Multistate.IsCompat() or Multistate.IsWorld() then
+if GetStateMapId() == -1 then
     CreateLuaEvent(CheckCompletedReferrals, ProgressCheckTimer * 60 * 1000, 0)
 end
 RegisterPlayerEvent(3, OnPlayerLogin)

@@ -32,6 +32,8 @@ local function GetFactionCommand(event, player, command)
         local target = player:GetSelection()
         if target and target:IsPlayer() then
             player:SendBroadcastMessage("Selected player's faction is: " .. target:GetFaction())
+        elseif target then
+            player:SendBroadcastMessage("Selected unit's faction is: " .. target:GetFaction())
         else
             player:SendBroadcastMessage("Your faction is: " .. player:GetFaction())
         end
@@ -65,11 +67,7 @@ local function SetFactionCommand(event, player, command)
             data.targetGuidLow = target:GetGUIDLow()
             data.targetName = target:GetName()
         end
-        if Multistate.IsCompat() then
-            DoSetFaction(player, data)
-        else
-            player:SendEMQMessage("CmdSetFaction", data)
-        end
+        player:SendEMQMessage("CmdSetFaction", data)
         return false
     end
 end

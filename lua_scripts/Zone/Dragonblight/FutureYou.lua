@@ -1,5 +1,5 @@
 -- Multistate: Northrend-only script (map 571).
-if not IsCompatibilityMode() and GetStateMapId() ~= 571 then return end
+if GetStateMapId() ~= 571 then return end
 
 local function CheckForEnemies(eventId, delay, repeats, creature)
     local nearestEnemy = creature:GetNearestCreature(50, 27896)

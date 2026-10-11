@@ -14,12 +14,12 @@ end)
 local HandleTwiggyWorld
 local HandleTwiggyView
 EMQ.RegisterQueue("TwiggyToWorld", function(player, data)
-    if HandleTwiggyWorld and (Multistate.IsWorld() or Multistate.IsCompat()) then
+    if HandleTwiggyWorld and (GetStateMapId() == -1) then
         HandleTwiggyWorld(player, data)
     end
 end)
 EMQ.RegisterQueue("TwiggyToMap", function(player, data)
-    if HandleTwiggyView and (Multistate.IsMap() or Multistate.IsCompat()) then
+    if HandleTwiggyView and (GetStateMapId() ~= -1) then
         HandleTwiggyView(player, data)
     end
 end)
@@ -28,7 +28,7 @@ local function TwiggyRunCommand(player, cmd)
     if not player or not cmd then
         return
     end
-    if Multistate.IsCompat() or Multistate.IsWorld() then
+    if GetStateMapId() == -1 then
         player:RunCommand(cmd)
     else
         player:SendEMQMessage("TwiggyRunCommand", { cmd = cmd })

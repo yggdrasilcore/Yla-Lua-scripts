@@ -1,5 +1,5 @@
 
-if not IsCompatibilityMode() and GetStateMapId() ~= 571 then return end
+if GetStateMapId() ~= 571 then return end
 
 local NPC_ID = 26083
 local HOME_X = 2484

@@ -299,7 +299,7 @@ end
 
 -- World queries names/icons once and publishes them; map states adopt on
 -- demand when a menu opens (world -> map).
-if Multistate.IsWorld() then
+if GetStateMapId() == -1 then
     LoadMountData()
 end
 
@@ -753,11 +753,7 @@ local function OnCommand(event, player, command)
             -- Multistate: the cast and the follow-up zone check must run on the
             -- player's map state.
             local data = { spellId = spellId }
-            if Multistate.IsCompat() then
-                DoCastMountCommand(player, data)
-            else
-                player:SendEMQMessage("FeathersCastMount", data)
-            end
+            player:SendEMQMessage("FeathersCastMount", data)
             return false
         end
     end

@@ -126,10 +126,10 @@ local function AccountWideCurrency(event, player)
     end
 end
 
-if not IsCompatibilityMode() and GetStateMapId() == -1 then
+if GetStateMapId() == -1 then
     print("[AccountCurrency] Script loaded - registering events")
 end
-if IsCompatibilityMode() or GetStateMapId() ~= -1 then
+if GetStateMapId() ~= -1 then
     RegisterPlayerEvent(25, AccountWideCurrency) -- EVENT_ON_SAVE
     RegisterPlayerEvent(28, AccountWideCurrency) -- PLAYER_EVENT_ON_MAP_CHANGE
 end

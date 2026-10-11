@@ -1,5 +1,5 @@
 -- Multistate: map-only script (all hooks fire in map states).
-if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+if GetStateMapId() == -1 then return end
 
 -- Multistate: the map-change handler and lifebloom ticks run in map states, where
 -- the Group API does not exist. Group-wide scanning is replaced with a

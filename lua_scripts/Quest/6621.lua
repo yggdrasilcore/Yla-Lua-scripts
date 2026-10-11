@@ -1,5 +1,5 @@
 -- Multistate: map-only script (all hooks fire in map states).
-if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+if GetStateMapId() == -1 then return end
 
 local QUEST_ID = 6621
 local CHECK_RANGE = 100

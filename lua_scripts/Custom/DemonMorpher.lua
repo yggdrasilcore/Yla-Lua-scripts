@@ -816,7 +816,7 @@ local function OnPlayerLogout(event, player)
 	morphIdCache[guid] = nil
 end
 
-if Multistate.IsWorld() then
+if GetStateMapId() == -1 then
     CacheCreatures()
 else
     CreateLuaEvent(function(eventId)

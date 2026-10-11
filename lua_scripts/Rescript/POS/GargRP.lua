@@ -1,5 +1,5 @@
 -- Multistate: Pit of Saron-only script (map 658).
-if not IsCompatibilityMode() and GetStateMapId() ~= 658 then return end
+if GetStateMapId() ~= 658 then return end
 
 -- POS Gargoyle event on the 4 slaves between Ick and the entrance (the ones without a ball and chain)
 -- Made for Yggdrasil WoW by mostly nick :)

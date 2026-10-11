@@ -1621,7 +1621,7 @@ local function DBMMorph(event, player, command)
     end
 end
 
-if Multistate.IsWorld() then
+if GetStateMapId() == -1 then
     CacheCreatures() -- Caching available creatures from world DB on script initialization
 else
     CreateLuaEvent(function(eventId)

@@ -1,5 +1,5 @@
 -- Multistate: map-only script (all hooks fire in map states).
-if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+if GetStateMapId() == -1 then return end
 
 local function TreeFormWatchdogLoop(eventId, delay, repeats, player)
     if not player:IsBot() then player:RemoveEventById(eventId) return end

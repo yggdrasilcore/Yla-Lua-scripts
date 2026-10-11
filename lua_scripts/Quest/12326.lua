@@ -1,5 +1,5 @@
 -- Multistate: map-only script (all hooks fire in map states).
-if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+if GetStateMapId() == -1 then return end
 
 local AREA_CARRION_WASTES = 4188 -- Area to trigger script in
 local PLAYER_BUFF_ID = 49078 -- Tank buff

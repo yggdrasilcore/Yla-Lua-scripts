@@ -1,5 +1,5 @@
 -- Multistate: Icecrown Citadel-only script (map 631).
-if not IsCompatibilityMode() and GetStateMapId() ~= 631 then return end
+if GetStateMapId() ~= 631 then return end
 
 local NPC_ID = 37698
 local SPELL_SHOCKWAVE = 72149

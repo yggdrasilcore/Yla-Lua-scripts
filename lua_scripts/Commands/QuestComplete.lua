@@ -52,7 +52,7 @@ EMQ.RegisterQueue("CmdQuestComplete", DoQuestComplete)
 
 if GetStateMapId() ~= -1 then return end
 
-local function QuestAutoComplete(event, player, msg, Type, lang)
+function QuestAutoComplete(event, player, msg, Type, lang)
     local gmRank = player:GetGMRank()
     if gmRank >= 3 then
         local name = player:GetName()
@@ -76,11 +76,7 @@ local function QuestAutoComplete(event, player, msg, Type, lang)
                     end
                     if result then
                         local data = { questID = questID, targetGuidLow = targetGuidLow, targetName = targetName }
-                        if Multistate.IsCompat() then
-                            DoQuestComplete(player, data)
-                        else
-                            player:SendEMQMessage("CmdQuestComplete", data)
-                        end
+                        player:SendEMQMessage("CmdQuestComplete", data)
                     else
                         player:SendBroadcastMessage("Non-existent quest ID: " .. questID)
                     end

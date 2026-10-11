@@ -31,7 +31,7 @@ local function PublishQuestItemGO()
     })
 end
 
-if Multistate.IsWorld() then
+if GetStateMapId() == -1 then
 WorldDBQueryAsync([[
     SELECT gqi.GameObjectEntry, qt.ID AS QuestID, gqi.ItemId,
         CASE

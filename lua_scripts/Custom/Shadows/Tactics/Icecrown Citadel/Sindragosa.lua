@@ -1,5 +1,5 @@
 -- Multistate: Icecrown Citadel-only script (map 631).
-if not IsCompatibilityMode() and GetStateMapId() ~= 631 then return end
+if GetStateMapId() ~= 631 then return end
 
 function CombatCheck(eventId, delay, repeats, sindragosa)
     if sindragosa:IsDead() or not sindragosa:IsInCombat() then

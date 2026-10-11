@@ -185,12 +185,12 @@ end
 local HandleWorldOp   -- (player, data): runs in world, owns DB + RunCommand
 local HandleMapView   -- (player, data): runs on map, pure render from payload
 EMQ.RegisterQueue("ShadowsToWorld", function(player, data)
-    if HandleWorldOp and (Multistate.IsWorld() or Multistate.IsCompat()) then
+    if HandleWorldOp and (GetStateMapId() == -1) then
         HandleWorldOp(player, data)
     end
 end)
 EMQ.RegisterQueue("ShadowsToMap", function(player, data)
-    if HandleMapView and (Multistate.IsMap() or Multistate.IsCompat()) then
+    if HandleMapView and (GetStateMapId() ~= -1) then
         HandleMapView(player, data)
     end
 end)
@@ -793,7 +793,7 @@ function SetActiveVars()
     -- Multistate: only the global state prunes stale mappings. This mirrors the
     -- original full table reset: any link involving an offline player is dropped,
     -- then co-online same-account links are re-detected below.
-    if Multistate.IsWorld() then
+    if GetStateMapId() == -1 then
         CharDBExecute("DELETE FROM acore_eluna.shadows_bots WHERE bot_name NOT IN (SELECT name FROM characters WHERE online = 1) OR master_name NOT IN (SELECT name FROM characters WHERE online = 1)")
     end
 
@@ -1769,7 +1769,7 @@ end
 local _wgWasWar = false
 local _wgWasWarWorld = false -- world-state edge flag for the EMQ-driven check
 local function WGShadowWatch()
-    if not IsCompatibilityMode() and GetStateMapId() ~= 571 then return end
+    if GetStateMapId() ~= 571 then return end
     local war = IsWintergraspWarTime()
     if war and not _wgWasWar then
         -- World executes; map only triggers (no DB here).
@@ -1785,7 +1785,7 @@ local function WGShadowWatch()
     end
     _wgWasWar = war
 end
-if IsCompatibilityMode() or GetStateMapId() == 571 then
+if GetStateMapId() == 571 then
     CreateLuaEvent(WGShadowWatch, 15000, 0)
 end
 

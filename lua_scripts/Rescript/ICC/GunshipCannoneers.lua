@@ -1,5 +1,5 @@
 -- Multistate: Icecrown Citadel-only script (map 631).
-if not IsCompatibilityMode() and GetStateMapId() ~= 631 then return end
+if GetStateMapId() ~= 631 then return end
 
 local CREATURE_ID_1 = 36978
 local CREATURE_ID_2 = 36982

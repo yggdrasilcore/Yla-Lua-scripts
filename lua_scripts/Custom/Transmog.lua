@@ -1564,7 +1564,7 @@ local function AdoptTransmogItemCache()
     return true
 end
 
-if Multistate.IsWorld() then
+if GetStateMapId() == -1 then
     ItemCache.LoadCache()
 else
     CreateLuaEvent(function(eventId)

@@ -41,11 +41,7 @@ local function OnRootCommand(event, player, command)
             data.targetGuidLow = target:GetGUIDLow()
             data.targetName = target:GetName()
         end
-        if Multistate.IsCompat() then
-            DoRootCommand(player, data)
-        else
-            player:SendEMQMessage("CmdRoot", data)
-        end
+        player:SendEMQMessage("CmdRoot", data)
         return false
     elseif command == "unroot" then
         if player:GetGMRank() == 0 then return false end
@@ -55,11 +51,7 @@ local function OnRootCommand(event, player, command)
             data.targetGuidLow = target:GetGUIDLow()
             data.targetName = target:GetName()
         end
-        if Multistate.IsCompat() then
-            DoRootCommand(player, data)
-        else
-            player:SendEMQMessage("CmdRoot", data)
-        end
+        player:SendEMQMessage("CmdRoot", data)
         return false
     end
 end

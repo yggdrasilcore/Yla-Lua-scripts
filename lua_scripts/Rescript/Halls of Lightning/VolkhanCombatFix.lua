@@ -1,5 +1,5 @@
 -- Multistate: Halls of Lightning-only script (map 602).
-if not IsCompatibilityMode() and GetStateMapId() ~= 602 then return end
+if GetStateMapId() ~= 602 then return end
 
 local function OnKillVolkhan(event, player, killed)
     if killed:GetEntry() == 28587 then

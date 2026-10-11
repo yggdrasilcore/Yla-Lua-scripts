@@ -1,5 +1,5 @@
 -- Multistate: Icecrown Citadel-only script (map 631).
-if not IsCompatibilityMode() and GetStateMapId() ~= 631 then return end
+if GetStateMapId() ~= 631 then return end
 
 function ManageInsect(eventId, delay, repeats, player)
     local insectGUID = player:GetData("AssignedInsectGUID")

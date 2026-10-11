@@ -63,11 +63,7 @@ local function onCommand(event, player, command)
                 data.targetGuidLow = sel:GetGUIDLow()
                 data.targetName = sel:GetName()
             end
-            if Multistate.IsCompat() then
-                DoLearnSpell(player, data)
-            else
-                player:SendEMQMessage("CmdLearnSpell", data)
-            end
+            player:SendEMQMessage("CmdLearnSpell", data)
         else
             player:SendBroadcastMessage("Invalid spell ID. Please provide a valid number.")
         end

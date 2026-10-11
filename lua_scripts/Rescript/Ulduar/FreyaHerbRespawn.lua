@@ -1,5 +1,5 @@
 -- Multistate: Ulduar-only script (map 603).
-if not IsCompatibilityMode() and GetStateMapId() ~= 603 then return end
+if GetStateMapId() ~= 603 then return end
 
 local lastPlayerHeartbeat = {}
 local ULDUAR_MAP_ID = 603

@@ -1,5 +1,5 @@
 -- Multistate: map-only script (all hooks fire in map states).
-if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+if GetStateMapId() == -1 then return end
 
 SpellsUsingSoulShards = {
     30146, 30842, 67514, 691, 8722, 712, 12746, 25112, 43896, 697, 11017, 45789,

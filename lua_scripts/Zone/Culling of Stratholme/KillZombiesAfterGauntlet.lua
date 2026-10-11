@@ -1,5 +1,5 @@
 -- Multistate: Culling of Stratholme-only script (map 595).
-if not IsCompatibilityMode() and GetStateMapId() ~= 595 then return end
+if GetStateMapId() ~= 595 then return end
 
 local ARTHAS_ENTRY = 26499
 local ZOMBIE_ENTRY = 27737

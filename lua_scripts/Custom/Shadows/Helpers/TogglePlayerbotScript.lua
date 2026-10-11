@@ -1,5 +1,5 @@
 -- Multistate: map-only script (combat hooks fire in map states).
-if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+if GetStateMapId() == -1 then return end
 
 function ToggleShadowsScript(player, script, state)
     local masterName = ShadowGetMaster(player:GetName())
