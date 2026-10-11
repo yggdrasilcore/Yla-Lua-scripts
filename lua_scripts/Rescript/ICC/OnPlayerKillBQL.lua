@@ -1,11 +1,9 @@
-if not IsCompatibilityMode() and GetStateMapId() ~= 631 then return end
+if not (GetStateMapId() == 631) then return end
 
 local AURAS = { 70877, 72151, 72649, 71949, 70867, 70879, 70923 }
 
 local function OnPlayerKillBQL(event, player, killed)
-    if killed:GetEntry() ~= 37955 then
-        return
-    end
+    if killed:GetEntry() ~= 37955 then return end
 
     -- Fix buggy minchar quest completion
     local minchar = killed:GetNearestCreature(200, 38558, 0, 1)
@@ -21,9 +19,8 @@ local function OnPlayerKillBQL(event, player, killed)
     end
 
     local map = killed:GetMap()
-    if not map then
-        return
-    end
+    if not map then return end
+    
     local instanceId = killed:GetInstanceId()
     for _, member in pairs(map:GetPlayers()) do
         if member and (not instanceId or member:GetInstanceId() == instanceId) then
