@@ -1,27 +1,5 @@
--- Multistate: creature events fire in map states, but Group member listing is
--- world-only, so group-wide quest credit is forwarded via EMQ.
-local Multistate = require("Multistate")
-local EMQ = require("EMQ")
-
-EMQ.RegisterQueue("Quest11183Credit", function(player, data)
-    if not player then
-        return
-    end
-    local group = player:GetGroup()
-    if group then
-        for _, member in ipairs(group:GetMembers()) do
-            if member:IsPlayer() then
-                member:CompleteQuest(QUEST_ID)
-            end
-        end
-    elseif player:IsPlayer() then
-        player:CompleteQuest(QUEST_ID)
-    end
-end)
-
--- Multistate: map-only script (all hooks fire in map states; the EMQ queue
--- above must still register in every state, hence the gate sits below it).
-if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+-- Map-only script (all hooks fire in map states).
+if GetStateMapId() == -1 then return end
 
 local SPELL_ID = 42521
 local ITEM_ID = 33113
@@ -79,26 +57,27 @@ local function origZelSpawn(event, creature)
     end
 end
 
+local CREDIT_RANGE = 250
+
 local function OnCreatureDeath(event, creature, killer)
     creature:RemoveEvents()
     origZel = creature:GetNearestCreature(200, 23864)
     if origZel then
         origZel:DespawnOrUnsummon()
     end
-    local groupMembers = killer:GetGroup()
-    if groupMembers then
-        if Multistate.IsCompat() or Multistate.IsWorld() then
-            for _, member in ipairs(groupMembers:GetMembers()) do
-                if member:IsPlayer() then
-                    member:CompleteQuest(QUEST_ID)
-                end
-            end
-        elseif killer:IsPlayer() then
-            killer:SendEMQMessage("Quest11183Credit", {})
-        end
-    else
-        if killer:IsPlayer() then
-            killer:CompleteQuest(QUEST_ID)
+    if not (killer and killer:IsPlayer()) then return end
+    local map = creature:GetMap()
+    if not map then
+        killer:CompleteQuest(QUEST_ID)
+        return
+    end
+    local instanceId = creature:GetInstanceId()
+    for _, member in pairs(map:GetPlayers()) do
+        if member and member:IsPlayer() and member:IsInWorld()
+            and (not instanceId or member:GetInstanceId() == instanceId)
+            and creature:GetDistance(member) <= CREDIT_RANGE
+            and (member == killer or killer:IsInSameGroupWith(member) or killer:IsInSameRaidWith(member)) then
+            member:CompleteQuest(QUEST_ID)
         end
     end
 end
