@@ -34,4 +34,4 @@ local function OnMapEnter(event, healer)
 end
 
 RegisterPlayerEvent(28, OnMapEnter)
-for _, player in ipairs(GetPlayersInWorld()) do OnMapEnter(nil, player) end
+for _, player in ipairs(GetStateMap():GetPlayers()) do OnMapEnter(nil, player) end
