@@ -5,7 +5,6 @@ local function antiGMIslandCheat(event, player, newZone, newArea)
         player:Teleport(13, 0, 0, 0, 0)
         player:SendAreaTriggerMessage("You have been detected in an area you're not supposed to be in!")
         print("[Anticheat] Player " .. player:GetName() .. " has been detected on GM island with too low GM rank!")
-        end
     end
 end
 
