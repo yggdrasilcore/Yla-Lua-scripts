@@ -428,7 +428,7 @@ local FORM_TYPES = {
 local FORM_IDS = {1, 2, 3, 5, 6}
 
 local function populatePlayerMorphCache()
-   CharDBQueryAsync("SELECT DISTINCT id, form, name FROM character_morphs", function(results)
+   CharDBQueryAsync("SELECT DISTINCT id, form, name FROM acore_eluna.character_morphs", function(results)
        if not results then return end
        
        repeat

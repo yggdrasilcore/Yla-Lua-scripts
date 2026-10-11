@@ -3,7 +3,7 @@ local Multistate = require("Multistate")
 -- XP changer script start
 -------------------------------------------------------------------------------------------------------------------------
 
-CharDBExecute("CREATE TABLE IF NOT EXISTS `character_rate_xp` (`guid` int(11) unsigned NOT NULL, `rate` int(11) NOT NULL DEFAULT 0, `max_paid_rate` int(11) NOT NULL DEFAULT 0, PRIMARY KEY (`guid`)) ENGINE=InnoDB DEFAULT CHARSET=utf8;")
+CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.character_rate_xp (`guid` int(11) unsigned NOT NULL, `rate` int(11) NOT NULL DEFAULT 0, `max_paid_rate` int(11) NOT NULL DEFAULT 0, PRIMARY KEY (`guid`)) ENGINE=InnoDB DEFAULT CHARSET=utf8;")
 
 local currencyID = 20880
 local currencyNameSingular = "Vote Token"
@@ -195,7 +195,7 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
         local guid = player:GetGUIDLow()
         if currentRate > intid then
             XPCache[guid] = intid
-            CharDBExecute("REPLACE INTO character_rate_xp (guid, rate, max_paid_rate) VALUES ('"..guid.."', '"..intid.."', '"..(MaxPaidCache[guid] or 0).."')")
+            CharDBExecute("REPLACE INTO acore_eluna.character_rate_xp (guid, rate, max_paid_rate) VALUES ('"..guid.."', '"..intid.."', '"..(MaxPaidCache[guid] or 0).."')")
             messagestring = "Congratulations, you changed your experience rate to: x"..intid
             if object == player then
                 player:SendBroadcastMessage(messagestring)
@@ -223,7 +223,7 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
             end
         end
         XPCache[guid] = intid
-        CharDBExecute("REPLACE INTO character_rate_xp (guid, rate, max_paid_rate) VALUES ('"..guid.."', '"..intid.."', '"..(MaxPaidCache[guid] or 0).."')")
+        CharDBExecute("REPLACE INTO acore_eluna.character_rate_xp (guid, rate, max_paid_rate) VALUES ('"..guid.."', '"..intid.."', '"..(MaxPaidCache[guid] or 0).."')")
         messagestring = "Congratulations, you changed your experience rate to: x"..intid
         if object == player then
             player:SendBroadcastMessage(messagestring)
@@ -243,7 +243,7 @@ local function OnGiveXP(event, player, amount, victim)
 end 
 
 local function LoadXPCache()
-   CharDBQueryAsync("SELECT guid, rate, max_paid_rate FROM character_rate_xp", function(result)
+   CharDBQueryAsync("SELECT guid, rate, max_paid_rate FROM acore_eluna.character_rate_xp", function(result)
        if result then
            repeat
                XPCache[result:GetUInt32(0)] = result:GetUInt8(1)

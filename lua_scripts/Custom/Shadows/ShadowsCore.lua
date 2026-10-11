@@ -43,14 +43,14 @@ local disallowedZones   =   {4298}--, 4197, 3628, 3666} -- Scarlet Enclave (DK s
 local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
-CharDBExecute("CREATE TABLE IF NOT EXISTS shadows_bots (bot_name VARCHAR(12) NOT NULL PRIMARY KEY, master_name VARCHAR(12) NOT NULL)")
+CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.shadows_bots (bot_name VARCHAR(12) NOT NULL PRIMARY KEY, master_name VARCHAR(12) NOT NULL)")
 
 -- Returns the master name for a bot name, or nil. Works in every state.
 function ShadowGetMaster(botName)
     if not botName then
         return nil
     end
-    local query = CharDBQuery("SELECT master_name FROM shadows_bots WHERE bot_name = '" .. botName .. "'")
+    local query = CharDBQuery("SELECT master_name FROM acore_eluna.shadows_bots WHERE bot_name = '" .. botName .. "'")
     if query then
         return query:GetString(0)
     end
@@ -63,9 +63,9 @@ function ShadowSetMaster(botName, masterName)
         return
     end
     if masterName then
-        CharDBExecute("REPLACE INTO shadows_bots (bot_name, master_name) VALUES ('" .. botName .. "', '" .. masterName .. "')")
+        CharDBExecute("REPLACE INTO acore_eluna.shadows_bots (bot_name, master_name) VALUES ('" .. botName .. "', '" .. masterName .. "')")
     else
-        CharDBExecute("DELETE FROM shadows_bots WHERE bot_name = '" .. botName .. "'")
+        CharDBExecute("DELETE FROM acore_eluna.shadows_bots WHERE bot_name = '" .. botName .. "'")
     end
 end
 
@@ -75,7 +75,7 @@ function ShadowGetBots(masterName)
     if not masterName then
         return bots
     end
-    local query = CharDBQuery("SELECT bot_name FROM shadows_bots WHERE master_name = '" .. masterName .. "' ORDER BY bot_name")
+    local query = CharDBQuery("SELECT bot_name FROM acore_eluna.shadows_bots WHERE master_name = '" .. masterName .. "' ORDER BY bot_name")
     if query then
         repeat
             table.insert(bots, query:GetString(0))
@@ -87,7 +87,7 @@ end
 -- Returns the whole mapping as { [masterName] = { botNames } }. Works in every state.
 function ShadowGetAllBots()
     local all = {}
-    local query = CharDBQuery("SELECT bot_name, master_name FROM shadows_bots")
+    local query = CharDBQuery("SELECT bot_name, master_name FROM acore_eluna.shadows_bots")
     if query then
         repeat
             local botName = query:GetString(0)
@@ -794,14 +794,14 @@ function SetActiveVars()
     -- original full table reset: any link involving an offline player is dropped,
     -- then co-online same-account links are re-detected below.
     if Multistate.IsWorld() then
-        CharDBExecute("DELETE FROM shadows_bots WHERE bot_name NOT IN (SELECT name FROM characters WHERE online = 1) OR master_name NOT IN (SELECT name FROM characters WHERE online = 1)")
+        CharDBExecute("DELETE FROM acore_eluna.shadows_bots WHERE bot_name NOT IN (SELECT name FROM characters WHERE online = 1) OR master_name NOT IN (SELECT name FROM characters WHERE online = 1)")
     end
 
     if #allGuids > 0 then
         local guidString = table.concat(allGuids, ",")
 			
 	    CharDBQueryAsync(
-		    string.format("SELECT guid, data FROM character_custom_data WHERE guid IN (%s) AND type = 98", guidString),
+		    string.format("SELECT guid, data FROM acore_eluna.character_custom_data WHERE guid IN (%s) AND type = 98", guidString),
 		    function(result)
 				if result then
 					repeat
@@ -821,7 +821,7 @@ function SetActiveVars()
 		
 			
         CharDBQueryAsync(string.format(
-            "SELECT guid, cooldown_end FROM character_cooldowns WHERE guid IN (%s) AND item_id = 0",
+            "SELECT guid, cooldown_end FROM acore_eluna.character_cooldowns WHERE guid IN (%s) AND item_id = 0",
             guidString
         ),
         function(query)
@@ -876,7 +876,7 @@ local function ShadowsLogin(event, player) -- Lazy persistent storage solution. 
     local guid = player:GetGUIDLow()
     local name = player:GetName()
 
-	CharDBExecute("REPLACE INTO character_cooldowns (guid, item_id, cooldown_end) VALUES (" .. guid .. ", 0, " .. os.time() .. ")");
+	CharDBExecute("REPLACE INTO acore_eluna.character_cooldowns (guid, item_id, cooldown_end) VALUES (" .. guid .. ", 0, " .. os.time() .. ")");
 
     if ShadowGetMaster(name) then
 
@@ -913,7 +913,7 @@ local function ShadowsLogin(event, player) -- Lazy persistent storage solution. 
 
 	ShadowSetLoginTime(player, os.time())
 
-	CharDBQueryAsync("SELECT data FROM character_custom_data WHERE guid = "..guid.." AND type = 98", function(result)
+	CharDBQueryAsync("SELECT data FROM acore_eluna.character_custom_data WHERE guid = "..guid.." AND type = 98", function(result)
 		if result then
 			local data = result:GetString(0)
 			local player = Multistate.FindPlayerByGUID(GetPlayerGUID(guid))
@@ -937,9 +937,9 @@ local function LogoutOrSave(event, player)
     local name = player:GetName()
 
 	if ShadowGetBarData(player) then
-		CharDBExecute("REPLACE INTO character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'ENABLED')")
+		CharDBExecute("REPLACE INTO acore_eluna.character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'ENABLED')")
 	else
-		CharDBExecute("REPLACE INTO character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'DISABLED')")
+		CharDBExecute("REPLACE INTO acore_eluna.character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'DISABLED')")
 	end
 
     -- Check if the player was anyone's bot and unlink them.
@@ -1458,7 +1458,7 @@ HandleWorldOp = function(player, data)
             local p = GetPlayerByName(name)
             if not p then return end
             local owned = {}
-            local ownedQuery = CharDBQuery("SELECT bot_name FROM shadows_bots WHERE master_name = '" .. name .. "'")
+            local ownedQuery = CharDBQuery("SELECT bot_name FROM acore_eluna.shadows_bots WHERE master_name = '" .. name .. "'")
             if ownedQuery then
                 repeat owned[ownedQuery:GetString(0)] = true until not ownedQuery:NextRow()
             end
@@ -1537,9 +1537,9 @@ HandleWorldOp = function(player, data)
     elseif op == "savebar" then
         local guid = player:GetGUIDLow()
         if ShadowGetBarData(player) then
-            CharDBExecute("REPLACE INTO character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'ENABLED')")
+            CharDBExecute("REPLACE INTO acore_eluna.character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'ENABLED')")
         else
-            CharDBExecute("REPLACE INTO character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'DISABLED')")
+            CharDBExecute("REPLACE INTO acore_eluna.character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'DISABLED')")
         end
     elseif op == "wgcheck" then
         local war = IsWintergraspWarTime()

@@ -353,7 +353,7 @@ local function EnsureDruidSelection(player)
         or morphSelection7[guid] then
         return
     end
-    local result = CharDBQuery("SELECT id, form FROM character_morphs WHERE guid = " .. guid .. " AND active = 1")
+    local result = CharDBQuery("SELECT id, form FROM acore_eluna.character_morphs WHERE guid = " .. guid .. " AND active = 1")
     if result then
         repeat
             local id = result:GetUInt32(0)
@@ -379,7 +379,7 @@ local function EnsureDruidCache(player)
         return
     end
     creatureCache[guid] = {}
-    local results = CharDBQuery("SELECT name, id, form FROM character_morphs WHERE guid = " .. guid)
+    local results = CharDBQuery("SELECT name, id, form FROM acore_eluna.character_morphs WHERE guid = " .. guid)
     if results then
         repeat
             local name = results:GetString(0)
@@ -403,7 +403,7 @@ local function LoadPlayerMorphs(player)
         creatureCache[guid] = {}
     end
     
-    CharDBQueryAsync("SELECT name, id, form FROM character_morphs WHERE guid = "..guid, function(results)
+    CharDBQueryAsync("SELECT name, id, form FROM acore_eluna.character_morphs WHERE guid = "..guid, function(results)
         if results then
             repeat
                 local name = results:GetString(0)
@@ -434,7 +434,7 @@ local function SavePlayerMorph(player, name, displayId, formIndex)
     if player:GetClass() ~= 11 then return end
     local guid = player:GetGUIDLow()
     local escapedName = string.gsub(name, "'", "''") -- Fixes crashes on Loque'Nahak and other NPCs with ' in name
-    CharDBExecute("REPLACE INTO character_morphs (guid, name, id, form) VALUES ("..guid..", '"..escapedName.."', "..displayId..", "..formIndex..")")
+    CharDBExecute("REPLACE INTO acore_eluna.character_morphs (guid, name, id, form) VALUES ("..guid..", '"..escapedName.."', "..displayId..", "..formIndex..")")
 end
 
 local function CountTotalMorphs(player)
@@ -808,13 +808,13 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         local guid = player:GetGUIDLow()
         if player:HasAura(768) then -- Cat
             morphSelection1[guid] = 0
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 1")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 1")
             player:RemoveAura(768)
             player:AddAura(768, player)
             
         elseif player:HasAura(9634) or player:HasAura(5487) then -- Bear
             morphSelection2[guid] = 0
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 2")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 2")
             if player:HasAura(9634) then
                 player:RemoveAura(9634)
                 player:AddAura(9634, player)
@@ -825,13 +825,13 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
             
         elseif player:HasAura(783) then -- Travel
             morphSelection3[guid] = 0
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 3")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 3")
             player:RemoveAura(783)
             player:AddAura(783, player)
             
         elseif player:HasAura(40120) or player:HasAura(33943) then  -- Bird
             morphSelection4[guid] = 0
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 4")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 4")
             if player:HasAura(40120) then
                 player:RemoveAura(40120)
                 player:AddAura(40120, player)
@@ -842,19 +842,19 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
             
         elseif player:HasAura(33891) then  -- Tree
             morphSelection5[guid] = 0
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 5")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 5")
             player:RemoveAura(33891)
             player:AddAura(33891, player)
             
         elseif player:HasAura(24858) then -- Boomkin 
             morphSelection6[guid] = 0
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 6")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 6")
             player:RemoveAura(24858)
             player:AddAura(24858, player)
             
         elseif player:HasAura(1066) then -- Aquatic 
             morphSelection7[guid] = 0
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 7")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 7")
             player:RemoveAura(1066)
             player:AddAura(1066, player)
         end
@@ -882,16 +882,16 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
             if player:HasAura(768) or player:HasAura(32356) or player:HasAura(3025) then
                 player:SetDisplayId(morphSelection1[guid])
             end
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 1")
-            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection1[guid])
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 1")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection1[guid])
         elseif formId == 2 and creatureCache[formId] then
             morphSelection2[guid] = displayId
             player:SendBroadcastMessage("You have morphed your bear form into "..creatureName..".")
             if player:HasAura(9634) or player:HasAura(5487) then
                 player:SetDisplayId(morphSelection2[guid])
             end
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 2")
-            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection2[guid])
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 2")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection2[guid])
         elseif formId == 3 and creatureCache[formId] then
             morphSelection3[guid] = displayId
             
@@ -911,8 +911,8 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
                 player:SetDisplayId(morphSelection3[guid])
             end
             
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 3")
-            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection3[guid])
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 3")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection3[guid])
         elseif formId == 4 and creatureCache[formId] then
             morphSelection4[guid] = displayId
             if player:HasAura(40120) or player:HasAura(33943)  then
@@ -951,24 +951,24 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
                 player:SendBroadcastMessage("You have morphed your "..formName.." into "..creatureName..".")
             end
          
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 4")
-            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection4[guid])
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 4")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection4[guid])
         elseif formId == 5 and creatureCache[formId] then
             morphSelection5[guid] = displayId
             player:SendBroadcastMessage("You have morphed your tree form into "..creatureName..".")
             if player:HasAura(33891)  then
                 player:SetDisplayId(morphSelection5[guid])
             end
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 5")
-            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection5[guid])
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 5")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection5[guid])
         elseif formId == 6 and creatureCache[formId] then
             morphSelection6[guid] = displayId
             player:SendBroadcastMessage("You have morphed your boomkin form into "..creatureName..".")
             if player:HasAura(24858) then 
                 player:SetDisplayId(morphSelection6[guid])
             end
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 6")
-            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection6[guid])
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 6")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection6[guid])
         elseif formId == 7 and creatureCache[formId] then
             morphSelection7[guid] = displayId
             
@@ -988,8 +988,8 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
                 player:SendBroadcastMessage("You have morphed your aquatic form into "..creatureName..".")
             end
             
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 7")
-            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection7[guid])
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 7")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection7[guid])
         end
         player:GossipComplete()
     elseif intid >= 200000 and intid < 300000 then
@@ -1042,16 +1042,16 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
             if player:HasAura(768) or player:HasAura(32356) or player:HasAura(3025) then
                 player:SetDisplayId(morphSelection1[guid])
             end
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 1")
-            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection1[guid])
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 1")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection1[guid])
         elseif formId == 2 then
             morphSelection2[guid] = displayId
             player:SendBroadcastMessage("You have morphed your bear form into "..creatureName..".")
             if player:HasAura(9634) or player:HasAura(5487) then
                 player:SetDisplayId(morphSelection2[guid])
             end
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 2")
-            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection2[guid])
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 2")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection2[guid])
         elseif formId == 3 then
             morphSelection3[guid] = displayId
             
@@ -1071,8 +1071,8 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
                 player:SetDisplayId(morphSelection3[guid])
             end
             
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 3")
-            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection3[guid])
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 3")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection3[guid])
         elseif formId == 4 then
             morphSelection4[guid] = displayId
             if player:HasAura(40120) or player:HasAura(33943) then
@@ -1111,24 +1111,24 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
                 player:SendBroadcastMessage("You have morphed your "..formName.." into "..creatureName..".")
             end
             
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 4")
-            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection4[guid])
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 4")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection4[guid])
         elseif formId == 5 then
             morphSelection5[guid] = displayId
             player:SendBroadcastMessage("You have morphed your tree form into "..creatureName..".")
             if player:HasAura(33891) then
                 player:SetDisplayId(morphSelection5[guid])
             end
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 5")
-            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection5[guid])
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 5")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection5[guid])
         elseif formId == 6 then
             morphSelection6[guid] = displayId
             player:SendBroadcastMessage("You have morphed your boomkin form into "..creatureName..".")
             if player:HasAura(24858) then 
                 player:SetDisplayId(morphSelection6[guid])
             end
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 6")
-            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection6[guid])
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 6")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection6[guid])
         elseif formId == 7 then
             morphSelection7[guid] = displayId
             
@@ -1148,8 +1148,8 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
                 player:SendBroadcastMessage("You have morphed your aquatic form into "..creatureName..".")
             end
             
-            CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 7")
-            CharDBExecute("UPDATE character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection7[guid])
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = "..guid.." AND form = 7")
+            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 1 WHERE guid = "..guid.." AND id = "..morphSelection7[guid])
         end
         player:GossipComplete()
         
@@ -1183,7 +1183,7 @@ local function DBWfix(eventId, delay, repeats, player)
         local guid = player:GetGUIDLow()
         if (player:HasAura(768) or player:HasAura(32356) or player:HasAura(3025)) then -- Cat
             if not morphSelection1[guid] then
-                local morphdb1 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 1") -- Load active morph status as a failsafe
+                local morphdb1 = CharDBQuery("SELECT id FROM acore_eluna.character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 1") -- Load active morph status as a failsafe
                 if morphdb1 then 
                     morphSelection1[guid] = morphdb1:GetUInt32(0)
                 end
@@ -1192,7 +1192,7 @@ local function DBWfix(eventId, delay, repeats, player)
             player:RemoveEventById(eventId)
         elseif player:HasAura(9634) or player:HasAura(5487) then -- Bear
             if not morphSelection2[guid] then
-                local morphdb2 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 2") -- Load active morph status
+                local morphdb2 = CharDBQuery("SELECT id FROM acore_eluna.character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 2") -- Load active morph status
                 if morphdb2 then 
                     morphSelection2[guid] = morphdb2:GetUInt32(0)
                 end
@@ -1201,7 +1201,7 @@ local function DBWfix(eventId, delay, repeats, player)
             player:RemoveEventById(eventId)
         elseif player:HasAura(783) then -- Travel
             if not morphSelection3[guid] then
-                local morphdb3 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 3") -- Load active morph status
+                local morphdb3 = CharDBQuery("SELECT id FROM acore_eluna.character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 3") -- Load active morph status
                 if morphdb3 then 
                     morphSelection3[guid] = morphdb3:GetUInt32(0)
                 end
@@ -1210,7 +1210,7 @@ local function DBWfix(eventId, delay, repeats, player)
             player:RemoveEventById(eventId)
         elseif player:HasAura(40120) or player:HasAura(33943) then -- Fly
             if not morphSelection4[guid] then
-                local morphdb4 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 4") -- Load active morph status
+                local morphdb4 = CharDBQuery("SELECT id FROM acore_eluna.character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 4") -- Load active morph status
                 if morphdb4 then 
                     morphSelection4[guid] = morphdb4:GetUInt32(0)
                 end
@@ -1219,7 +1219,7 @@ local function DBWfix(eventId, delay, repeats, player)
             player:RemoveEventById(eventId)
         elseif player:HasAura(33891) then -- Tree
             if not morphSelection5[guid] then
-                local morphdb5 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 5") -- Load active morph status
+                local morphdb5 = CharDBQuery("SELECT id FROM acore_eluna.character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 5") -- Load active morph status
                 if morphdb5 then 
                     morphSelection5[guid] = morphdb5:GetUInt32(0)
                 end
@@ -1228,7 +1228,7 @@ local function DBWfix(eventId, delay, repeats, player)
             player:RemoveEventById(eventId)
         elseif player:HasAura(24858) then -- Boomkin
             if not morphSelection6[guid] then
-                local morphdb6 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 6") -- Load active morph status
+                local morphdb6 = CharDBQuery("SELECT id FROM acore_eluna.character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 6") -- Load active morph status
                 if morphdb6 then 
                     morphSelection6[guid] = morphdb6:GetUInt32(0)
                 end
@@ -1237,7 +1237,7 @@ local function DBWfix(eventId, delay, repeats, player)
             player:RemoveEventById(eventId)
         elseif player:HasAura(1066) then -- Aquatic
             if not morphSelection7[guid] then
-                local morphdb7 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 7") -- Load active morph status
+                local morphdb7 = CharDBQuery("SELECT id FROM acore_eluna.character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 7") -- Load active morph status
                 if morphdb7 then 
                     morphSelection7[guid] = morphdb7:GetUInt32(0)
                 end
@@ -1276,7 +1276,7 @@ function Morpher(eventId, delay, repeats, player)
         
         if player:HasAura(3025) then -- Cat
             if not morphSelection1[guid] then
-                local morphdb1 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 1") -- Load active morph status
+                local morphdb1 = CharDBQuery("SELECT id FROM acore_eluna.character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 1") -- Load active morph status
                 if morphdb1 then 
                     morphSelection1[guid] = morphdb1:GetUInt32(0)
                 end
@@ -1291,7 +1291,7 @@ function Morpher(eventId, delay, repeats, player)
             end
         elseif player:HasAura(9634) or player:HasAura(5487) then -- Bear
             if not morphSelection1[guid] then
-                local morphdb2 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 2") -- Load active morph status
+                local morphdb2 = CharDBQuery("SELECT id FROM acore_eluna.character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 2") -- Load active morph status
                 if morphdb2 then 
                     morphSelection2[guid] = morphdb2:GetUInt32(0)
                 end
@@ -1303,7 +1303,7 @@ function Morpher(eventId, delay, repeats, player)
             end
         elseif player:HasAura(783) then -- Travel
             if not morphSelection3[guid] then
-                local morphdb3 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 3")
+                local morphdb3 = CharDBQuery("SELECT id FROM acore_eluna.character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 3")
                 if morphdb3 then 
                     morphSelection3[guid] = morphdb3:GetUInt32(0)
                 end
@@ -1334,7 +1334,7 @@ function Morpher(eventId, delay, repeats, player)
             end
         elseif player:HasAura(40120) or player:HasAura(33943) then -- Fly
             if not morphSelection4[guid] then
-                local morphdb4 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 4")
+                local morphdb4 = CharDBQuery("SELECT id FROM acore_eluna.character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 4")
                 if morphdb4 then 
                     morphSelection4[guid] = morphdb4:GetUInt32(0)
                 end
@@ -1360,7 +1360,7 @@ function Morpher(eventId, delay, repeats, player)
             end
         elseif player:HasAura(33891) then -- Tree
             if not morphSelection5[guid] then
-                local morphdb5 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 5") -- Load active morph status
+                local morphdb5 = CharDBQuery("SELECT id FROM acore_eluna.character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 5") -- Load active morph status
                 if morphdb5 then 
                     morphSelection5[guid] = morphdb5:GetUInt32(0)
                 end
@@ -1372,7 +1372,7 @@ function Morpher(eventId, delay, repeats, player)
             end
         elseif player:HasAura(24858) then -- Boomkin
             if not morphSelection6[guid] then
-                local morphdb6 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 6") -- Load active morph status
+                local morphdb6 = CharDBQuery("SELECT id FROM acore_eluna.character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 6") -- Load active morph status
                 if morphdb6 then 
                     morphSelection6[guid] = morphdb6:GetUInt32(0)
                 end
@@ -1384,7 +1384,7 @@ function Morpher(eventId, delay, repeats, player)
             end
         elseif player:HasAura(1066) then -- Aquatic
             if not morphSelection7[guid] then
-                local morphdb7 = CharDBQuery("SELECT id FROM character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 7") -- Load active morph status
+                local morphdb7 = CharDBQuery("SELECT id FROM acore_eluna.character_morphs WHERE guid = "..guid.." AND active = 1 AND form = 7") -- Load active morph status
                 if morphdb7 then 
                     morphSelection7[guid] = morphdb7:GetUInt32(0)
                 end
@@ -1484,7 +1484,7 @@ local function OnLogin(event, player)
  
         LoadPlayerMorphs(player) -- Load full list of player morphs from db into cache
         
-        CharDBQueryAsync("SELECT id, form FROM character_morphs WHERE guid = "..guid.." AND active = 1", function(morphdb)
+        CharDBQueryAsync("SELECT id, form FROM acore_eluna.character_morphs WHERE guid = "..guid.." AND active = 1", function(morphdb)
             if morphdb then
                 local player = Multistate.FindPlayerByName(playername)
                 if not player then return end
@@ -1533,7 +1533,7 @@ local function ReloadEluna(event)
      
             LoadPlayerMorphs(player) -- Load full list of player morphs from db into cache
             
-            CharDBQueryAsync("SELECT id, form FROM character_morphs WHERE guid = "..guid.." AND active = 1", function(morphdb)
+            CharDBQueryAsync("SELECT id, form FROM acore_eluna.character_morphs WHERE guid = "..guid.." AND active = 1", function(morphdb)
                 if morphdb then
                     local player = Multistate.FindPlayerByName(playername)
                     repeat

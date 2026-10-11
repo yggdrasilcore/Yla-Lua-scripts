@@ -277,7 +277,7 @@ local function DeleteFakeFromDB(itemGUID)
         end
         dataMap[itemGUID] = nil
     end
-    CharDBExecute("DELETE FROM custom_transmogrification WHERE GUID = "..itemGUID)
+    CharDBExecute("DELETE FROM acore_eluna.custom_transmogrification WHERE GUID = "..itemGUID)
 end
 
 local function DeleteFakeEntry(item)
@@ -300,7 +300,7 @@ local function SetFakeEntry(item, entry)
         end
         entryMap[pGUID][iGUID] = entry
         dataMap[iGUID] = pGUID
-        CharDBExecute("REPLACE INTO custom_transmogrification (GUID, FakeEntry, Owner) VALUES ("..iGUID..", "..entry..", "..pGUID..")")
+        CharDBExecute("REPLACE INTO acore_eluna.custom_transmogrification (GUID, FakeEntry, Owner) VALUES ("..iGUID..", "..entry..", "..pGUID..")")
     end
 end
 
@@ -491,7 +491,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
         local guidlow = player:GetGUIDLow()
         sets[guidlow] = {}
         
-        CharDBQueryAsync("SELECT PresetID, SetName, SetData FROM custom_transmogrification_sets WHERE Owner = " .. guidlow, -- Asyncing query as a hybrid between performance and load as I'm too lazy to create a dynamic cache
+        CharDBQueryAsync("SELECT PresetID, SetName, SetData FROM acore_eluna.custom_transmogrification_sets WHERE Owner = " .. guidlow, -- Asyncing query as a hybrid between performance and load as I'm too lazy to create a dynamic cache
             function(result)
                 local player = require("Multistate").FindPlayerByName(playername) -- Refetching current player object
                 if result then
@@ -574,7 +574,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
         local presetID = uiAction
         local guidlow = player:GetGUIDLow()
         if presetID then
-            CharDBExecute("DELETE FROM custom_transmogrification_sets WHERE Owner = " .. guidlow .. " AND PresetID = " .. presetID)
+            CharDBExecute("DELETE FROM acore_eluna.custom_transmogrification_sets WHERE Owner = " .. guidlow .. " AND PresetID = " .. presetID)
         end
         OnGossipHello(event, player, creature)
     
@@ -642,7 +642,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
         local guid = player:GetGUIDLow()
         local playername = player:GetName()
         
-        CharDBQueryAsync("SELECT MAX(PresetID) as PresetID FROM custom_transmogrification_sets WHERE Owner = " .. guid,
+        CharDBQueryAsync("SELECT MAX(PresetID) as PresetID FROM acore_eluna.custom_transmogrification_sets WHERE Owner = " .. guid,
             function(query)
                 local player = require("Multistate").FindPlayerByName(playername)
                 local presetID = 1
@@ -670,7 +670,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
                 end
                 
                 CharDBExecute(string.format(
-                    "INSERT INTO `custom_transmogrification_sets` (`Owner`, `PresetID`, `SetName`, `SetData`) VALUES (%d, %d, '%s', '%s')",
+                    "INSERT INTO acore_eluna.custom_transmogrification_sets (`Owner`, `PresetID`, `SetName`, `SetData`) VALUES (%d, %d, '%s', '%s')",
                     guid,
                     presetID,
                     name,
@@ -695,7 +695,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
         end
         entryMap[pGUID][iGUID] = entry
         dataMap[iGUID] = pGUID
-        CharDBExecute("REPLACE INTO custom_transmogrification (GUID, FakeEntry, Owner) VALUES ("..iGUID..", 21, "..pGUID..")")
+        CharDBExecute("REPLACE INTO acore_eluna.custom_transmogrification (GUID, FakeEntry, Owner) VALUES ("..iGUID..", 21, "..pGUID..")")
 
         player:EmoteState(66)
         player:RegisterEvent(function(eventId, delay, repeats, player) -- Hack to fix non-updating item display IDs
@@ -870,7 +870,7 @@ local function OnLogin(event, player)
     applyMogOnMapChange[playerGUID] = nil
     
     entryMap[playerGUID] = {}
-    CharDBQueryAsync("SELECT GUID, FakeEntry FROM custom_transmogrification WHERE Owner = "..playerGUID, function(result)
+    CharDBQueryAsync("SELECT GUID, FakeEntry FROM acore_eluna.custom_transmogrification WHERE Owner = "..playerGUID, function(result)
         local player = require("Multistate").FindPlayerByName(playername)
         if result then
             repeat
@@ -915,8 +915,8 @@ local function OnEquip(event, player, item, bag, slot)
 end
 
 if PrepareDBTable then
-    CharDBQuery([[CREATE TABLE IF NOT EXISTS `custom_transmogrification` (`GUID` INT(10) UNSIGNED NOT NULL, `FakeEntry` INT(10) UNSIGNED NOT NULL, `Owner` INT(10) UNSIGNED NOT NULL, PRIMARY KEY (`GUID`));]])
-    CharDBQuery("DELETE FROM custom_transmogrification WHERE NOT EXISTS (SELECT 1 FROM item_instance WHERE item_instance.guid = custom_transmogrification.GUID)")
+    CharDBQuery([[CREATE TABLE IF NOT EXISTS acore_eluna.custom_transmogrification (`GUID` INT(10) UNSIGNED NOT NULL, `FakeEntry` INT(10) UNSIGNED NOT NULL, `Owner` INT(10) UNSIGNED NOT NULL, PRIMARY KEY (`GUID`));]])
+    CharDBQuery("DELETE FROM acore_eluna.custom_transmogrification WHERE NOT EXISTS (SELECT 1 FROM item_instance WHERE item_instance.guid = custom_transmogrification.GUID)")
 end
 
 ---------------------------------------------------------------------------------
@@ -1592,7 +1592,7 @@ local function OnRepair(event, packet, player)
     -- asynchronous: a sync query here would stall the world thread on DB latency.
     local playerName = player:GetName()
     local repairOwner = player:GetGUIDLow()
-    CharDBQueryAsync("SELECT GUID, FakeEntry FROM custom_transmogrification WHERE Owner = " .. repairOwner, function(result)
+    CharDBQueryAsync("SELECT GUID, FakeEntry FROM acore_eluna.custom_transmogrification WHERE Owner = " .. repairOwner, function(result)
         local player = GetPlayerByName(playerName)
         if not player then
             return

@@ -53,7 +53,7 @@ local playerProgress = {}
 
 -- Create the account_raf table if it doesn't exist
 AuthDBExecute([[
-    CREATE TABLE IF NOT EXISTS account_raf (
+    CREATE TABLE IF NOT EXISTS acore_eluna.account_raf (
         account_id INT PRIMARY KEY,
         referer_id INT,
         status INT,
@@ -65,7 +65,7 @@ AuthDBExecute([[
 ]])
 
 AuthDBExecute([[
-    CREATE TABLE IF NOT EXISTS account_raf_claimed (
+    CREATE TABLE IF NOT EXISTS acore_eluna.account_raf_claimed (
         account_id INT,
         claimed INT,
 		date INT
@@ -661,12 +661,12 @@ end
 local function WorldRAFBonuses(player, seq, extra)
     local accountId = player:GetAccountId()
     local name = player:GetName()
-    AuthDBQueryAsync(string.format("SELECT claimed FROM account_raf_claimed WHERE account_id = %d", accountId), function(claimquery)
+    AuthDBQueryAsync(string.format("SELECT claimed FROM acore_eluna.account_raf_claimed WHERE account_id = %d", accountId), function(claimquery)
         local claimed = {}
         if claimquery then
             repeat claimed[claimquery:GetUInt32(0)] = true until not claimquery:NextRow()
         end
-        AuthDBQueryAsync(string.format("SELECT COUNT(*) FROM account_raf WHERE referer_id = %d AND status = 4", accountId), function(cq)
+        AuthDBQueryAsync(string.format("SELECT COUNT(*) FROM acore_eluna.account_raf WHERE referer_id = %d AND status = 4", accountId), function(cq)
             local p = GetPlayerByName(name)
             if not p then return end
             local n = 0
@@ -699,7 +699,7 @@ local function WorldRAFClaim(player, tier, option, seq)
         deny("Twiggy: You've already claimed this reward!")
         return
     end
-    AuthDBQueryAsync(string.format("SELECT claimed FROM account_raf_claimed WHERE account_id = %d", accountId), function(claimquery)
+    AuthDBQueryAsync(string.format("SELECT claimed FROM acore_eluna.account_raf_claimed WHERE account_id = %d", accountId), function(claimquery)
         local already = false
         if claimquery then
             repeat if claimquery:GetUInt32(0) == t.claimed then already = true end until not claimquery:NextRow()
@@ -708,7 +708,7 @@ local function WorldRAFClaim(player, tier, option, seq)
             deny("Twiggy: You've already claimed this reward!")
             return
         end
-        AuthDBQueryAsync(string.format("SELECT COUNT(*) FROM account_raf WHERE referer_id = %d AND status = 4", accountId), function(cq)
+        AuthDBQueryAsync(string.format("SELECT COUNT(*) FROM acore_eluna.account_raf WHERE referer_id = %d AND status = 4", accountId), function(cq)
             local p = GetPlayerByName(name)
             if not p then return end
             local n = 0
@@ -717,7 +717,7 @@ local function WorldRAFClaim(player, tier, option, seq)
                 deny("Twiggy: You can't claim this reward yet!")
                 return
             end
-            AuthDBExecute(string.format("INSERT INTO account_raf_claimed (account_id, claimed, date) VALUES (%d, %d, %d)", accountId, t.claimed, os.time()))
+            AuthDBExecute(string.format("INSERT INTO acore_eluna.account_raf_claimed (account_id, claimed, date) VALUES (%d, %d, %d)", accountId, t.claimed, os.time()))
             worldRAFClaimed[accountId .. ":" .. tier] = true
             local claimed = {}
             claimed[t.claimed] = true
@@ -736,7 +736,7 @@ local function WorldRAFSummonMenu(player, seq, page)
     local graceSec = math.max(0, (Multistate.GetData(player, "RAFSummonGrace") or 0) - os.time())
     local MaxRAFDuration = os.time() - RAFDuration
     AuthDBQueryAsync(string.format([[
-        SELECT account_id, referer_id FROM account_raf
+        SELECT account_id, referer_id FROM acore_eluna.account_raf
         WHERE (referer_id = %d AND date > %d) OR (account_id = %d AND date > %d)
     ]], accountId, MaxRAFDuration, accountId, MaxRAFDuration), function(query)
         local p = GetPlayerByName(name)
@@ -841,7 +841,7 @@ end
 local function WorldRAFLinkView(player, seq)
     local accountId = player:GetAccountId()
     local name = player:GetName()
-    AuthDBQueryAsync(string.format("SELECT account_id FROM account_raf WHERE account_id = %d", accountId), function(query)
+    AuthDBQueryAsync(string.format("SELECT account_id FROM acore_eluna.account_raf WHERE account_id = %d", accountId), function(query)
         local p = GetPlayerByName(name)
         if not p then return end
         WorldRAFView(p, seq, { view = "raflink", linked = query ~= nil })
@@ -897,7 +897,7 @@ local function WorldRAFRegister(player, code, seq)
                 end
                 local refererIP = ipq:GetString(0)
                 AuthDBExecute(string.format([[
-                    INSERT INTO account_raf (account_id, referer_id, status, progress, date, IP, IP_referer)
+                    INSERT INTO acore_eluna.account_raf (account_id, referer_id, status, progress, date, IP, IP_referer)
                     VALUES (%d, %d, 2, 0, %d, '%s', '%s')
                     ON DUPLICATE KEY UPDATE referer_id = %d, status = 2, progress = 0, date = %d, IP = '%s', IP_referer = '%s'
                 ]], accountId, referer_id, currentTime, playerIP, refererIP, referer_id, currentTime, playerIP, refererIP))
@@ -913,7 +913,7 @@ local function WorldRAFInfo(player, seq, page)
     page = page or 1
     local accountId = player:GetAccountId()
     local name = player:GetName()
-    AuthDBQueryAsync(string.format("SELECT account_id, status, date, progress FROM account_raf WHERE referer_id = %d", accountId), function(query)
+    AuthDBQueryAsync(string.format("SELECT account_id, status, date, progress FROM acore_eluna.account_raf WHERE referer_id = %d", accountId), function(query)
         local p = GetPlayerByName(name)
         if not p then return end
         local rows = {}
@@ -940,7 +940,7 @@ end
 local function WorldRAFReferee(player, seq)
     local accountId = player:GetAccountId()
     local name = player:GetName()
-    AuthDBQueryAsync(string.format("SELECT referer_id, status, date, progress FROM account_raf WHERE account_id = %d", accountId), function(query)
+    AuthDBQueryAsync(string.format("SELECT referer_id, status, date, progress FROM acore_eluna.account_raf WHERE account_id = %d", accountId), function(query)
         local p = GetPlayerByName(name)
         if not p then return end
         if query then
@@ -1003,14 +1003,14 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
 				gm:SendBroadcastMessage("Error: One or both account IDs are invalid.")
 				return
 			end
-			AuthDBQueryAsync(string.format("SELECT 1 FROM account_raf WHERE (account_id = %s AND referer_id = %s) OR (account_id = %s AND referer_id = %s)", accountId, refererId, refererId, accountId), function(linkCheck)
+			AuthDBQueryAsync(string.format("SELECT 1 FROM acore_eluna.account_raf WHERE (account_id = %s AND referer_id = %s) OR (account_id = %s AND referer_id = %s)", accountId, refererId, refererId, accountId), function(linkCheck)
 				local gm2 = GetPlayerByName(gmName)
 				if not gm2 then return end
 				if linkCheck and linkCheck:GetRowCount() > 0 then
 					gm2:SendBroadcastMessage("Error: These accounts are already linked in RAF.")
 					return
 				end
-				AuthDBExecute(string.format("INSERT INTO account_raf (account_id, referer_id, status, progress, date) VALUES (%s, %s, 2, 0, %d)", accountId, refererId, os.time()))
+				AuthDBExecute(string.format("INSERT INTO acore_eluna.account_raf (account_id, referer_id, status, progress, date) VALUES (%s, %s, 2, 0, %d)", accountId, refererId, os.time()))
 				gm2:SendBroadcastMessage("RAF: Friend " .. accountId .. " successfully linked to referer " .. refererId .. ".")
 			end)
 		end)
@@ -1051,7 +1051,7 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
 		end
 
 		AuthDBQueryAsync(string.format([[
-			SELECT account_id, status, date FROM account_raf WHERE referer_id = %d
+			SELECT account_id, status, date FROM acore_eluna.account_raf WHERE referer_id = %d
 		]], accountId), function(query)
 			player = Multistate.FindPlayerByName(name)
 			if query then
@@ -1115,7 +1115,7 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
 				local playerIP = player:GetPlayerIP()
 
 				AuthDBExecute(string.format([[
-					INSERT INTO account_raf (account_id, referer_id, status, progress, date, IP)
+					INSERT INTO acore_eluna.account_raf (account_id, referer_id, status, progress, date, IP)
 					VALUES (%d, %d, 2, 0, %d, '%s')
 					ON DUPLICATE KEY UPDATE referer_id = %d, status = 2, progress = 0, date = %d, IP = '%s'
 				]], accountId, referer_id, currentTime, playerIP, referer_id, currentTime, playerIP))
@@ -1129,7 +1129,7 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
         if player:GetGMRank() > 0 then
             local account_to_delete = tonumber(param)
             AuthDBExecute(string.format([[
-                DELETE FROM account_raf WHERE account_id = %d
+                DELETE FROM acore_eluna.account_raf WHERE account_id = %d
             ]], account_to_delete))
 
             Multistate.ForEachPlayer(function(p)
@@ -1162,7 +1162,7 @@ local function CheckRefereeStatus(player)
     local playerIP = player:GetPlayerIP()
 
     AuthDBQueryAsync(string.format([[
-        SELECT 1 FROM account_raf
+        SELECT 1 FROM acore_eluna.account_raf
         WHERE account_id = %d AND status = 2 AND date > %d
     ]], accountId, MaxRAFDuration), function(query)
 
@@ -1170,7 +1170,7 @@ local function CheckRefereeStatus(player)
 		if not player then return end
 		if query then
 			AuthDBExecute(string.format([[
-				UPDATE account_raf SET IP = '%s' WHERE account_id = %d
+				UPDATE acore_eluna.account_raf SET IP = '%s' WHERE account_id = %d
 			]], playerIP, accountId))
 			-- Multistate: visible in every state (progress handlers run on maps).
 			Multistate.SetData(player, "RAFreferee", true)
@@ -1205,7 +1205,7 @@ local function UpdateProgress(player)
             player:RegisterEvent(function(eventId, delay, repeats, player)
                 if playerProgress[accountId] and playerProgress[accountId] > 0 then
                     AuthDBExecute(string.format([[
-                        UPDATE account_raf SET progress = progress + %d WHERE account_id = %d
+                        UPDATE acore_eluna.account_raf SET progress = progress + %d WHERE account_id = %d
                     ]], playerProgress[accountId], accountId))
                     playerProgress[accountId] = nil
                 end
@@ -1262,14 +1262,14 @@ local function CheckCompletedReferrals()
     -- Multistate: driven by the DB (pending referrals) instead of the per-state
     -- RAFreferee table, so every pending referral is checked exactly once from
     -- the global sweep. The status flip to 3 inside makes this idempotent.
-    AuthDBQueryAsync("SELECT account_id FROM account_raf WHERE status = 2", function(pending)
+    AuthDBQueryAsync("SELECT account_id FROM acore_eluna.account_raf WHERE status = 2", function(pending)
     if not pending then
         return
     end
     repeat
         local refereeAccountId = pending:GetUInt32(0)
         AuthDBQueryAsync(string.format([[
-            SELECT progress, referer_id FROM account_raf WHERE account_id = %d AND status = 2
+            SELECT progress, referer_id FROM acore_eluna.account_raf WHERE account_id = %d AND status = 2
         ]], refereeAccountId), function(query)
         
 			if query then
@@ -1278,7 +1278,7 @@ local function CheckCompletedReferrals()
 				
 				if progress >= RAFRewardReq then
 					AuthDBExecute(string.format([[
-						UPDATE account_raf SET status = 3 WHERE account_id = %d
+						UPDATE acore_eluna.account_raf SET status = 3 WHERE account_id = %d
 					]], refereeAccountId))
 					
 					local players = GetPlayersInWorld()
@@ -1298,12 +1298,12 @@ local function CheckCompletedReferrals()
 					CreateLuaEvent(function()
 						local players = GetPlayersInWorld()
 						AuthDBQueryAsync(string.format([[
-							SELECT COUNT(*) as count FROM account_raf WHERE referer_id = %d AND status > 2
+							SELECT COUNT(*) as count FROM acore_eluna.account_raf WHERE referer_id = %d AND status > 2
 						]], refererId), function(query2)
 						
 							if query2 then
 								AuthDBExecute(string.format([[
-									UPDATE account_raf SET status = 4 WHERE account_id = %d
+									UPDATE acore_eluna.account_raf SET status = 4 WHERE account_id = %d
 								]], refereeAccountId))
 								local referralCount = query2:GetUInt32(0)
 								print("referral count is "..referralCount)

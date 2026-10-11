@@ -15,7 +15,7 @@ local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 i
         
         itemCache[guid] = {}
         
-        CharDBQueryAsync("SELECT itemid, count, type FROM character_login_transfer WHERE guid = " .. guid, function(result) -- Get queued items to add to character
+        CharDBQueryAsync("SELECT itemid, count, type FROM acore_eluna.character_login_transfer WHERE guid = " .. guid, function(result) -- Get queued items to add to character
             if result then
                 repeat
                     local itemid = result:GetUInt32(0)
@@ -232,7 +232,7 @@ local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 i
                            mailItems[12].itemid, mailItems[12].count)
                    end
                 end
-                CharDBExecute("DELETE FROM character_login_transfer WHERE guid = " .. guid) --Clean up when we're done, unless the script stops at an error preceding this point
+                CharDBExecute("DELETE FROM acore_eluna.character_login_transfer WHERE guid = " .. guid) --Clean up when we're done, unless the script stops at an error preceding this point
                 local player = require("Multistate").FindPlayerByName(name)
                 if not player then return end
                 player:RegisterEvent(function(_,_,_,player)

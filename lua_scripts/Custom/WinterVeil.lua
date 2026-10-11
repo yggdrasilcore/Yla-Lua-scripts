@@ -1,7 +1,7 @@
 -- Run these first:
 
 -- CHAR DB
---CREATE TABLE character_gift_events (
+--CREATE TABLE acore_eluna.character_gift_events (
 --    guid INT NOT NULL,
 --    EVENT VARCHAR(255) NOT NULL,
 --    awarded BOOLEAN NOT NULL,
@@ -164,14 +164,14 @@ local function OnLogin(event, player)
     if isInRange then
         local guid = player:GetGUIDLow()
         
-        CharDBQueryAsync(string.format("SELECT guid FROM character_gift_events WHERE guid = %d AND event = 'Veil2025'", guid), function(result)
+        CharDBQueryAsync(string.format("SELECT guid FROM acore_eluna.character_gift_events WHERE guid = %d AND event = 'Veil2025'", guid), function(result)
             if not result then
                 local player = GetPlayerByName(name)
                 if not player:HasItem(41404, 1, true) then
                     player:AddItem(41404, 1)
                 end
                 if player:HasItem(41404, 1) then
-                    CharDBExecute(string.format("INSERT INTO character_gift_events (guid, event, awarded, date) VALUES (%d, 'Veil2025', 1, '%s')", guid, os.date("%Y-%m-%d %H:%M:%S")))
+                    CharDBExecute(string.format("INSERT INTO acore_eluna.character_gift_events (guid, event, awarded, date) VALUES (%d, 'Veil2025', 1, '%s')", guid, os.date("%Y-%m-%d %H:%M:%S")))
                 end
             end
         end)
