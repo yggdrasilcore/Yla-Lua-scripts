@@ -65,7 +65,7 @@ mailboxtime = {}
 
 
 -- Initiates VIP table if not already present
-AuthDBExecute("CREATE TABLE IF NOT EXISTS accounts_vip (ACCOUNT INT(6) NOT NULL PRIMARY KEY, VIPTIME INT(11) NOT NULL);")
+AuthDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.accounts_vip (ACCOUNT INT(6) NOT NULL PRIMARY KEY, VIPTIME INT(11) NOT NULL);")
 
 -- Prepares Twiggy in the database
 --WorldDBExecute("UPDATE creature_template_model SET CreatureDisplayID = 13098, DisplayScale = 0.33 WHERE CreatureID = 23198;")
@@ -415,7 +415,7 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
             player:RemoveItem(19322, costs[intId])
             local newTime = math.max(os.time(), Multistate.GetData(player, "VIPTime") or 0) + durations[intId] * 24 * 60 * 60
             Multistate.SetData(player, "VIPTime", newTime)
-            AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. player:GetAccountId() .. ", " .. newTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+            AuthDBExecute("INSERT INTO acore_eluna.accounts_vip (account, viptime) VALUES (" .. player:GetAccountId() .. ", " .. newTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
             VIPmenu(player, creature)
         else
             player:SendAreaTriggerMessage("You don't have enough Community Tokens.")

@@ -14,7 +14,7 @@ local function SendBroadcastWithCheck(playerGUID, message, itemEntry, itemCount,
 	player:SendBroadcastMessage(message)
 	print("Awarding currency "..itemEntry.." quantity "..itemCount.." to acc "..acc)
 	if itemEntry == 20880 then
-		CharDBExecute("UPDATE account_currencies SET vp = 0 WHERE id = " .. acc)
+		CharDBExecute("UPDATE acore_eluna.account_currencies SET vp = 0 WHERE id = " .. acc)
 		player:RegisterEvent(function(_, _, _, player)
 			if not player:GetData("CurrSave") then
 				player:SetData("CurrSave")
@@ -22,7 +22,7 @@ local function SendBroadcastWithCheck(playerGUID, message, itemEntry, itemCount,
 			end
 		end, 1000)
 	else
-		CharDBExecute("UPDATE account_currencies SET dp = 0 WHERE id = " .. acc)
+		CharDBExecute("UPDATE acore_eluna.account_currencies SET dp = 0 WHERE id = " .. acc)
 		player:RegisterEvent(function(_, _, _, player)
 			if not player:GetData("CurrSave") then
 				player:SetData("CurrSave")
@@ -40,7 +40,7 @@ local function TokensOnLogin(event, player)
     local communitymessage = false
     local votemessage = false
    
-    CharDBQueryAsync("SELECT dp, vp FROM account_currencies WHERE id = " .. acc, function(query)
+    CharDBQueryAsync("SELECT dp, vp FROM acore_eluna.account_currencies WHERE id = " .. acc, function(query)
         local player = require("Multistate").FindPlayerByGUID(playerGUID)
  	    if not player then return end
  	    player:SetData("LoginChecked", true)

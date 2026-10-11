@@ -46,7 +46,7 @@ local function AdoptVanityPetIcons()
 end
 
 if Multistate.IsWorld() then
-    WorldDBQueryAsync(string.format([[SELECT Entry, Icon FROM icons WHERE Entry IN (%s)]], table.concat(ItemsToSell, ",")), function(query)
+    WorldDBQueryAsync(string.format([[SELECT Entry, Icon FROM acore_eluna.icons WHERE Entry IN (%s)]], table.concat(ItemsToSell, ",")), function(query)
         if query then
             repeat
                 local entry = query:GetUInt32(0)
