@@ -1,5 +1,64 @@
--- Multistate: map-only script (all hooks fire in map states).
-if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+-- Multistate: spell/GO events fire in map states, but cross-map summons relay
+-- through the world state via EMQ, so this file loads in every state.
+local Multistate = require("Multistate")
+local EMQ = require("EMQ")
+
+local HIGHGUID_PLAYER = 0x0000
+
+local function GetSelectionTargetLow(player)
+    if not player then return nil end
+    local guid = player:GetSelectionGUID()
+    if not guid or GetGUIDLow(guid) == 0 then return nil end
+    if GetGUIDType(guid) ~= HIGHGUID_PLAYER then return nil end
+    return GetGUIDLow(guid)
+end
+
+local function GetSelectedPlayer(player)
+    local low = GetSelectionTargetLow(player)
+    if not low then return nil end
+    return Multistate.FindPlayerByGUID(low)
+end
+
+local function RequestCrossMapSummon(caster, targetLow, ritual)
+    if not caster or not targetLow then return end
+    caster:SendEMQMessage("ShadowsSummonRequest", {
+        targetLow = targetLow,
+        map = caster:GetMapId(),
+        x = caster:GetX(), y = caster:GetY(), z = caster:GetZ(), o = caster:GetO(),
+        casterLow = caster:GetGUIDLow(),
+        casterName = caster:GetName(),
+        ritual = ritual and true or false,
+    })
+end
+
+-- World relay: sent from a map state, processed in the global state where both
+-- player objects are visible. Validates group/combat, then forwards to the
+-- target's map for execution.
+EMQ.RegisterQueue("ShadowsSummonRequest", function(caster, data)
+    if not caster or not data or not data.targetLow then return end
+    local target = Multistate.FindPlayerByGUID(data.targetLow)
+    if not target then return end
+    if not (caster:IsInSameGroupWith(target) or caster:IsInSameRaidWith(target)) then
+        caster:SendBroadcastMessage("You can only summon shadows in your group.")
+        return
+    end
+    if target:IsInCombat() then
+        caster:SendBroadcastMessage("You cannot summon a shadow while it is in combat.")
+        return
+    end
+    if not data.ritual and not caster:IsBot() then return end
+    target:SendEMQMessage("ShadowsSummonExecute", {
+        map = data.map, x = data.x, y = data.y, z = data.z, o = data.o,
+    })
+end)
+
+-- Target-map executor: runs on the target's own map state, which always has a
+-- live local object for itself. Far teleports defer safely via YlaDefer.
+EMQ.RegisterQueue("ShadowsSummonExecute", function(target, data)
+    if not target or not data or not data.map then return end
+    if target:IsInCombat() then return end
+    target:Teleport(data.map, data.x, data.y, data.z, data.o)
+end)
 
 local function CompleteSummonIfShadowNearby(event, player, spell, skipCheck)
     local playersInRange = player:GetPlayersInRange(10, 2, 1)
@@ -21,13 +80,16 @@ local function CompleteSummonIfShadowNearby(event, player, spell, skipCheck)
             if not player:IsCasting() then return end
             player:StopSpellCast()
             
-            local targetGuid = player:GetData("Target")
-            if not targetGuid then return end
-    
-            local target = require("Multistate").FindPlayerByGUID(targetGuid)
-            if not target then return end
+            local targetLow = GetSelectionTargetLow(player)
+            if not targetLow then return end
+            local target = Multistate.FindPlayerByGUID(targetLow)
+            if not target then
+                -- Cross-map: caster is a shadow summoning its target, or a
+                -- ritual caster summoning a shadow from another map.
+                RequestCrossMapSummon(player, targetLow, not player:IsBot())
+                return
+            end
 
-            local name = target:GetName()
             if not player:IsBot() then player:CastSpell(target, 7720, true) return end
 
             local bot = target
@@ -45,11 +107,16 @@ end
 RegisterSpellEvent(23598, 2, CompleteSummonIfShadowNearby)
 
 local function SummonShadows(event, player, spell, skipCheck)
-    local targetGuid = player:GetData("Target")
-    if not targetGuid then return end
-    
-    local bot = require("Multistate").FindPlayerByGUID(targetGuid)
-    if not bot then return end
+    local targetLow = GetSelectionTargetLow(player)
+    if not targetLow then return end
+    local bot = Multistate.FindPlayerByGUID(targetLow)
+    if not bot then
+        -- Cross-map: only shadows initiate 7720 summons; the world relay
+        -- validates group/combat before the target map executes.
+        if not player:IsBot() then return end
+        RequestCrossMapSummon(player, targetLow, false)
+        return
+    end
     
     local name = bot:GetName()
     if not player:IsBot() then return end
@@ -60,6 +127,7 @@ local function SummonShadows(event, player, spell, skipCheck)
     
     bot:Teleport(player:GetMapId(), player:GetX(), player:GetY(), player:GetZ(), player:GetO())
 end
+
 RegisterSpellEvent(7720, 2, SummonShadows)
 
 local function OnCastRitualOfSummoning(event, portal)
