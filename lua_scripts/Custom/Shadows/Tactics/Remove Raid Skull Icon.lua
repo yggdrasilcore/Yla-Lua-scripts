@@ -2,7 +2,6 @@
 -- Multistate: the packet handler runs in the global state (Group API is
 -- world-only), while PLAYER_EVENT_ON_KILLED_BY_CREATURE (8) fires in map
 -- states, so the map side forwards to the global state via EMQ.
-local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
 local function DoSkullClear(player)
@@ -31,12 +30,12 @@ end)
 
 -- Multistate: map-only script (death events fire on every map; the EMQ queue
 -- above must still register in every state, hence the gate sits below it).
-if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
+if GetStateMapId() == -1 then return end
 
 local function RemoveRaidIconsOnDeath(event, obj1, player)
     if event == 8 and not player:IsBot() then return end -- Ensures we don't process player death twice as this is in event 7 (packet) anyway
 
-    if Multistate.IsCompat() or Multistate.IsWorld() then
+    if GetStateMapId() == -1 then
         DoSkullClear(player)
     else
         player:SendEMQMessage("SkullIconClear", {})
