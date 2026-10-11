@@ -1,72 +1,14 @@
--- World queries the shrink-spell index once and publishes it as serialized
--- world data; map states adopt the shared copy and never query.
-local Multistate = require("Multistate")
+if GetStateMapId() == -1 then return end
 
-local ShrinkSpells = {}
-
-local function AdoptShrinkSpells()
-    local shared = GetWorldData("ShrinkSpells")
-    if type(shared) == "table" and shared.AsTable then
-        shared = shared:AsTable()
-    end
-    if type(shared) ~= "table" then
-        return false
-    end
-    ShrinkSpells = shared
-    return true
-end
-
-local function PopulateShrinkSpells()
-    local query = [[
-        SELECT Id
-        FROM spell_dbc
-        WHERE (EffectAura_1 IN (61, 239)
-           OR EffectAura_2 IN (61, 239)
-           OR EffectAura_3 IN (61, 239))
-        AND (AttributesEx & 4) = 0
-        AND (AttributesEx & 16) = 0
-        AND (AttributesEx & 16384) = 0
-        AND (AttributesEx & 536870912) = 0
-        AND Name_Lang_enUS NOT IN ("Defile", "Harvested Soul", "Harvest Soul", "Ball of Flames Proc", "Invocation of Blood", "Visual")
-        AND Name_Lang_enUS NOT LIKE "%Bug%"
-        AND Name_Lang_enUS NOT LIKE "% - %"
-        AND Name_Lang_enUS NOT LIKE "%[%"
-        AND Name_Lang_enUS NOT LIKE "%Battle Standard%"
-        AND Name_Lang_enUS NOT LIKE "%\\%%"
-        AND Name_Lang_enUS NOT REGEXP "[0-9]"
-        AND Name_Lang_enUS NOT LIKE "%Effect%"
-        AND Name_Lang_enUS NOT LIKE "%:%"
-        AND Name_Lang_enUS NOT LIKE "%!%"
-        AND LOWER(Name_Lang_enUS) NOT LIKE "%quest%"
-        AND LOWER(Name_Lang_enUS) NOT LIKE "%combat%"
-        AND Name_Lang_enUS NOT LIKE "%(%"
-        AND Name_Lang_enUS NOT LIKE "%Summon%"
-    ]]
-    
-    WorldDBQueryAsync(query, function(query)
-        if query then
-            repeat
-                local spellId = query:GetUInt32(0)
-                ShrinkSpells[spellId] = true
-            until not query:NextRow()
-        end
-        SetWorldData("ShrinkSpells", ShrinkSpells)
-    end)
-end
-
-if Multistate.IsWorld() then
-    PopulateShrinkSpells()
-else
-    CreateLuaEvent(function(eventId)
-        if AdoptShrinkSpells() then
-            RemoveEventById(eventId)
-        end
-    end, 5000, 0)
-end
+-- Static shrink-spell index (spells with EffectAura 61/239, reapplied on map
+-- change). Plain list of spell IDs generated from the world DB query.
+local ShrinkSpells = {
+785,2825,3019,3671,3672,3673,4153,5003,5220,5402,5628,6239,6864,7020,7072,7289,7481,7483,7484,7656,7657,8066,8212,8269,8365,8602,8909,9576,10072,10096,11892,13003,13004,13010,14744,15636,15802,16049,16366,16595,16711,16789,16791,17038,17052,17205,18209,18210,19135,19451,19516,19574,19779,19812,20553,21086,21090,21307,22428,22710,22735,22742,22788,23020,23021,23126,23128,23342,23505,24054,24086,24109,24244,24312,24318,24378,24646,24689,24692,24924,24992,25164,25176,25462,25790,25893,26041,26051,26068,26331,26527,26615,27680,27897,28131,28371,28409,28418,28419,28420,28468,28470,28498,28747,28798,29050,29149,29311,29326,30037,30435,30531,30559,30659,31485,31540,31671,31691,31698,31792,31937,31974,31989,32002,32182,32714,32829,32831,32886,33053,33111,33587,33653,33664,33811,33898,33909,33958,34159,34160,34161,34173,34187,34250,34350,34511,34668,34670,34970,34971,35013,35179,35180,35289,35322,35464,35508,35556,35595,35596,35681,35684,36003,36020,36145,36184,36274,36300,36310,36341,36346,36442,36453,36697,36729,36797,36893,36895,36992,37076,37079,37587,37589,37648,37780,37963,38044,38046,38166,38371,38373,38405,38449,38484,38511,38664,38705,38771,38774,38834,38864,38871,38947,39114,39193,39249,39339,39351,39831,39832,40076,40105,40318,40417,40545,40594,40726,40735,40845,40851,41254,41364,41369,41406,41409,41447,41924,41953,42496,42497,42705,42745,42969,43139,43290,43292,43381,44131,44132,44321,44335,44339,44779,44806,44833,44851,44944,45078,45366,45672,45675,45772,45893,45995,46012,46168,46298,46587,46787,47008,47012,47114,47379,47394,47399,47748,47774,48017,48082,48138,48142,48368,48369,48371,48735,48849,49089,49381,49643,49828,50045,50131,50312,50535,50537,50627,50645,50646,50704,50894,51000,51170,51499,51513,51605,51805,51967,52071,52097,52400,52470,52624,52712,52968,53047,53058,53073,53087,53088,53089,53361,53801,53805,54100,54123,54124,54136,54144,54244,54269,54287,54297,54314,54315,54427,54580,54678,54681,54701,55037,55285,55350,55367,55816,55948,56219,56251,56435,56625,56648,56710,56769,57055,57059,57060,57086,57742,57759,57864,58268,58468,58479,58592,58841,59183,59208,59214,59247,59354,59355,59422,59424,59465,59663,59697,59707,59805,59828,60122,60430,61181,61460,61632,61714,61715,61888,61920,62239,62251,62252,62558,62650,62662,62663,62670,62671,62702,63006,63059,63147,63227,63630,63711,64112,64190,64217,64218,64455,64464,64637,65126,65134,65294,65724,65748,65980,65983,66045,66147,66721,67148,67213,67214,67215,67216,67217,67218,69166,69167,69198,69629,69638,69861,70089,70232,70304,70347,70371,70871,70900,71092,71188,71193,71195,71555,71702,71703,71854,71912,72130,72203,72231,72306,72307,72308,72370,72371,72525,72737,72771,73261,74062,74507,74996,75055,75888,75889,78722
+}
 
 local function OnChangeMap(event, player)
     player:RegisterEvent(function(e, d, r, player)
-        for spellId, _ in pairs(ShrinkSpells) do
+        for _, spellId in ipairs(ShrinkSpells) do
             if player:HasAura(spellId) then
                 local aura = player:GetAura(spellId)
                 if aura then
