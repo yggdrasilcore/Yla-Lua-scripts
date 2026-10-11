@@ -135,6 +135,17 @@ local function OnLoad()
                 EMQ.RegisterMessageProcessor(eventId, player)
             end
         end
+        -- Same reload-storm problem as world side: registrations made
+        -- during reload never tick, so register again once the storm
+        -- has passed.
+        CreateLuaEvent(function()
+            local stormMap = GetStateMap()
+            if stormMap then
+                for _, player in pairs(stormMap:GetPlayers()) do
+                    EMQ.RegisterMessageProcessor(eventId, player)
+                end
+            end
+        end, 15000, 1)
     end
 end
 
