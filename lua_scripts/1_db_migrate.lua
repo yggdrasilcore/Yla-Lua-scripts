@@ -60,10 +60,4 @@ for _, tbl in ipairs(WORLD_TABLES) do
     Migrate(WorldDBExecute, tbl)
 end
 
--- Legacy dup: acore_characters.ACCOUNTS_VIP (uppercase) holds rows that
--- acore_auth.accounts_vip lacks. Merge it into the canonical eluna copy
--- (created above via the AuthDB loop). Same columns (ACCOUNT, VIPTIME);
--- INSERT IGNORE skips existing keys.
-CharDBExecute("INSERT IGNORE INTO acore_eluna.accounts_vip SELECT * FROM ACCOUNTS_VIP")
-
 print("[1_db_migrate] Done.")
