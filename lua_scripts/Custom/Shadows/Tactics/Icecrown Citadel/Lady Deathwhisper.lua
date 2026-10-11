@@ -15,13 +15,11 @@ local function LadyDeathwhisper10Loop(eventId, delay, repeats, deathwhisper)
     if darnavan then
         local nearestPlayer = darnavan:GetNearestPlayer(200)
         if nearestPlayer then
-            local group = nearestPlayer:GetGroup()
-            if group then
-                group:SetTargetIcon(4, darnavan:GetGUID(), nearestPlayer:GetGUID())
-                deathwhisper:RemoveEvents()
-                deathwhisper:SetData("EventActive", nil)
-                return
-            end
+            -- Multistate: Group API is world-only, defer via EMQ (see Helpers/TargetIcon.lua).
+            SetTargetIconDeferred(nearestPlayer, 4, darnavan)
+            deathwhisper:RemoveEvents()
+            deathwhisper:SetData("EventActive", nil)
+            return
         end
     end
 end
@@ -38,13 +36,11 @@ local function LadyDeathwhisper25Loop(eventId, delay, repeats, deathwhisper)
     if darnavan then
         local nearestPlayer = darnavan:GetNearestPlayer(200)
         if nearestPlayer then
-            local group = nearestPlayer:GetGroup()
-            if group then
-                group:SetTargetIcon(4, darnavan:GetGUID(), nearestPlayer:GetGUID())
-                deathwhisper:RemoveEvents()
-                deathwhisper:SetData("EventActive", nil)
-                return
-            end
+            -- Multistate: Group API is world-only, defer via EMQ (see Helpers/TargetIcon.lua).
+            SetTargetIconDeferred(nearestPlayer, 4, darnavan)
+            deathwhisper:RemoveEvents()
+            deathwhisper:SetData("EventActive", nil)
+            return
         end
     end
 end

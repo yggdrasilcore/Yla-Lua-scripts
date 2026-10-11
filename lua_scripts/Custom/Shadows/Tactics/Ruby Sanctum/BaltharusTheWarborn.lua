@@ -15,17 +15,13 @@ end
 
 local function BaltharusLoop(eventId, delay, repeats, baltharus)
     if baltharus:IsDead() or not baltharus:IsInCombat() then
-        local group = nil
         local players = baltharus:GetPlayersInRange(100)
         for _, player in ipairs(players) do
-            if player:IsBot() then
-                group = player:GetGroup()
-                if group then break end
+            if player:IsBot() and player:IsInGroup() then
+                -- Multistate: Group API is world-only, defer via EMQ (see Helpers/TargetIcon.lua).
+                SetTargetIconDeferred(player, 7, nil)
+                break
             end
-        end
-        
-        if group then
-            group:SetTargetIcon(7, 0, 0)
         end
         
         baltharus:SetData("CachedMainTank", nil)
@@ -64,14 +60,14 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
     
     if #botPlayers == 0 then StopLuaEvent(baltharus) return end
     
-    local group = nil
+    local setter = nil
     for _, player in ipairs(botPlayers) do
-        group = player:GetGroup()
-        if group then break end
+        if player:IsInGroup() then setter = player break end
     end
-    
-    if group and not baltharus:GetData("SkullSet") then
-        group:SetTargetIcon(7, baltharus:GetGUID(), botPlayers[1]:GetGUID())
+
+    if setter and not baltharus:GetData("SkullSet") then
+        -- Multistate: Group API is world-only, defer via EMQ (see Helpers/TargetIcon.lua).
+        SetTargetIconDeferred(setter, 7, baltharus)
         baltharus:SetData("SkullSet", true)
     end
     

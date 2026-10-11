@@ -65,12 +65,10 @@ local function BronjahmTactics(player)
         
         -- Always mark Soul Fragments with skull to make shadows focus them
         if SoulFragment then
-            local group = player:GetGroup()
-            if group then
-                if not SoulFragment:GetData("SkullSet") then
-                    SoulFragment:SetData("SkullSet", true)
-                    group:SetTargetIcon(7, SoulFragment:GetGUID(), player:GetGUID())
-                end
+            if not SoulFragment:GetData("SkullSet") then
+                SoulFragment:SetData("SkullSet", true)
+                -- Multistate: Group API is world-only, defer via EMQ (see Helpers/TargetIcon.lua).
+                SetTargetIconDeferred(player, 7, SoulFragment)
             end
         end
         

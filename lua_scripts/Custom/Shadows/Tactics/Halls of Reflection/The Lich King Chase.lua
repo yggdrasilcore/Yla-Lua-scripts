@@ -21,11 +21,8 @@ function OnEnterHoR(event, player)
     local LK = player:GetNearestCreature(4000, LK_ID)
     
     if LK then
-        local group = player:GetGroup()
-        
-        if group then
-            group:SetTargetIcon(4, LK:GetGUID(), player:GetGUID())
-        end
+        -- Multistate: Group API is world-only, defer via EMQ (see Helpers/TargetIcon.lua).
+        SetTargetIconDeferred(player, 4, LK)
     end
 end
 

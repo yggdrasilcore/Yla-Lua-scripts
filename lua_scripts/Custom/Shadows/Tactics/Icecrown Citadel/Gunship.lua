@@ -174,17 +174,15 @@ local function MarkTargetSkull(player, target)
     player:SetData("GunshipMarkTick", tick)
 
     if tick % 30 ~= 0 then return end
-    
-    if not target then return end
 
-    local group = player:GetGroup()
-    if not group then return end
+    if not target then return end
 
     if target:GetData("SkullSet") and (os.time() - (target:GetData("SkullSetTime") or 0)) < 6 then return end
 
     target:SetData("SkullSet", true)
     target:SetData("SkullSetTime", os.time())
-    group:SetTargetIcon(7, target:GetGUID(), player:GetGUID())
+    -- Multistate: Group API is world-only, defer via EMQ (see Helpers/TargetIcon.lua).
+    SetTargetIconDeferred(player, 7, target)
 end
 
 local function GunshipHordeActions(eventId, delay, repeats, player)
