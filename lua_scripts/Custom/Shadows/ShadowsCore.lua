@@ -970,7 +970,7 @@ function CheckActiveBots(eventid, delay, repeats, uninvitedPlayer)
         local bot = Multistate.FindPlayerByName(uninvitedPlayerName)
         if player and bot then
             player:RegisterEvent(function(_, _, _, player)
-                player:RunCommand(".playerbots bot remove " .. uninvitedPlayerName)
+                player:RunCommand(".shadows bot remove " .. uninvitedPlayerName)
                 print("Bot removed: " ..uninvitedPlayerName.. ".")
                 print("Leader: " ..player:GetName())
             end, 100, 1)
@@ -1023,7 +1023,7 @@ local function DisbandGroup(event, group)
             if player and not logoutEvent[botName] then
                 logoutEvent[botName] = player:RegisterEvent(function(_, _, _, player)
 					if ShadowDontKickActive(Multistate.FindPlayerByName(botName)) then return end
-                    player:RunCommand(".playerbots bot remove " .. botName)
+                    player:RunCommand(".shadows bot remove " .. botName)
                     print("Removing "..botName.." from disbanded group")
                     logoutEvent[botName] = nil
                 end, 100, 1)
@@ -1398,7 +1398,7 @@ local function WorldAddBot(player, botName, seq, viaMenu, reqTime)
     end
     -- Engine command; the wrapper below swallows the re-entrant event via marker.
     Multistate.SetData(player, "ShadowsInternalCmd", botName)
-    player:RunCommand(".playerbots bot add " .. botName)
+    player:RunCommand(".shadows bot add " .. botName)
     player:RegisterEvent(function(e, d, r, pl)
         if not pl then return end
         local bot = Multistate.FindPlayerByName(botName)
@@ -1427,7 +1427,7 @@ local function WorldRemoveBot(player, botName, seq)
         if target then target:RemoveEvents() end
         ShadowSetMaster(botName, nil)
         Multistate.SetData(player, "ShadowsInternalCmd", botName)
-        player:RunCommand(".playerbots bot remove " .. botName)
+        player:RunCommand(".shadows bot remove " .. botName)
     end
     if seq then
         local v = WorldIntentHello(player, seq, nil, botName)
@@ -1562,8 +1562,8 @@ local function OnBotCommand(event, player, command)
         return false
     end
     if string.find(command, "^playerb") then
-        if string.find(command, "^playerbots bot add ") then
-            local botName = string.match(command, "^playerbots bot add (.+)$")
+        if string.find(command, "^shadows bot add ") then
+            local botName = string.match(command, "^shadows bot add (.+)$")
             if botName and Multistate.GetData(player, "ShadowsInternalCmd") == botName then
                 Multistate.ClearData(player, "ShadowsInternalCmd")
                 return true
@@ -1571,8 +1571,8 @@ local function OnBotCommand(event, player, command)
             return WorldAddBot(player, botName, nil, false, nil)
         end
 
-        if string.find(command, "^playerbots bot remove ") then
-            local botName = string.match(command, "^playerbots bot remove (.+)$")
+        if string.find(command, "^shadows bot remove ") then
+            local botName = string.match(command, "^shadows bot remove (.+)$")
             if botName and Multistate.GetData(player, "ShadowsInternalCmd") == botName then
                 Multistate.ClearData(player, "ShadowsInternalCmd")
                 return true
@@ -1764,7 +1764,7 @@ function ProcessWintergraspWorldstate(variableID, value) -- Called on init and u
                                 if bot then
                                     bot:RemoveFromGroup()
                                 end
-                                master:RunCommand(".playerbots bot remove " .. botName)
+                                master:RunCommand(".shadows bot remove " .. botName)
                                 ShadowSetMaster(botName, nil)
                             end
                             ShadowSetBotCount(master, #ShadowGetBots(master:GetName()))
