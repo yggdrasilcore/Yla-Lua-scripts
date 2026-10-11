@@ -22,6 +22,9 @@ local function DoSkullClear(player)
     end
 
     group:SetTargetIcon(7, 0, player:GetGUID())
+    -- EMQ icon gating (Helpers/TargetIcon.lua) is per icon+target: drop the
+    -- guards for 7 so the next pull re-marks instead of waiting out the TTL.
+    if ResetTargetIconGuards then ResetTargetIconGuards(7) end
 end
 
 EMQ.RegisterQueue("SkullIconClear", function(player, data)
