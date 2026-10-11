@@ -241,7 +241,10 @@ end
 local granularEventId = nil
 
 local function BrewfestAutoTrigger(eventId, delay, repeats)
-    if not IsGameEventActive(BREWFEST_EVENT_ID) then
+    -- Multistate: IsGameEventActive and GetPlayersInWorld are world-only.
+    -- The world state publishes the live flag (see bottom of file); each
+    -- map ticker reads it and iterates its own map's players.
+    if GetWorldData("BrewfestActive") ~= true then
         return
     end
     if not IsInBrewfestAmbushWindow() then
@@ -249,7 +252,9 @@ local function BrewfestAutoTrigger(eventId, delay, repeats)
     end
 
     local started = 0
-    for _, p in ipairs(GetPlayersInWorld()) do
+    local map = GetStateMap()
+    if not map then return end
+    for _, p in ipairs(map:GetPlayers()) do
         if p and p:IsBot() and not p:GetData("GuzzlerEventStarted") and not p:IsDead() then
             -- GetNearestCreature is cheaper than GetCreaturesInRange, use as pre-filter
             if p:GetNearestCreature(SEARCH_RANGE, GUZZLER_ENTRY) then
@@ -265,7 +270,7 @@ local function BrewfestAutoTrigger(eventId, delay, repeats)
 end
 
 local function BrewfestScheduler()
-    if IsGameEventActive(BREWFEST_EVENT_ID) then
+    if GetWorldData("BrewfestActive") == true then
         if not granularEventId then
             granularEventId = CreateLuaEvent(BrewfestAutoTrigger, 60 * 1000, 0)
             BrewfestAutoTrigger()
@@ -274,6 +279,16 @@ local function BrewfestScheduler()
         RemoveEventById(granularEventId)
         granularEventId = nil
     end
+end
+
+-- Multistate: the live Brewfest flag is published from the world state
+-- (IsGameEventActive is world-only). Map tickers above read it.
+if GetStateMapId() == -1 then
+    local function PublishBrewfestActive()
+        SetWorldData("BrewfestActive", IsGameEventActive(BREWFEST_EVENT_ID))
+    end
+    CreateLuaEvent(PublishBrewfestActive, 60 * 1000, 0)
+    PublishBrewfestActive() -- initial publish at load so maps don't wait a minute
 end
 
 -- Coarse poll: every 15 min check if Brewfest is active, then arm per-minute window checks.
