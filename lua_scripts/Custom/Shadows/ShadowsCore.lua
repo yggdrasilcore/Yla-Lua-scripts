@@ -1111,21 +1111,27 @@ end
 local validCommands = buildCommandList()
 
 local function OnGroup(event, player, msg, Type, lang, group)
-    if msg == "repair" then
-        local group = player:GetGroup()
+    if msg ~= "repair" then return end
 
-        local groupPlayers = group:GetMembers()
-        for _, groupMember in ipairs(groupPlayers) do
-            local groupMemberName = groupMember:GetName()
+    local playerName = player:GetName()
+	CreateLuaEvent(function()
+		local player = GetPlayerByName(playerName)
+		if not player then return end
+		local group = player:GetGroup()
+		if not group then return end
 
-            for _, botName in ipairs(ShadowGetBots(groupMemberName)) do
-                local bot = GetPlayerByName(botName)
-                if bot and player:GetAccountId() == bot:GetAccountId() then
-                    bot:SendUnitWhisper("Repairing!", 0, player)
-                end
-            end
-        end
-    end
+		local groupPlayers = group:GetMembers()
+		for _, groupMember in ipairs(groupPlayers) do
+			local groupMemberName = groupMember:GetName()
+
+			for _, botName in ipairs(ShadowGetBots(groupMemberName)) do
+				local bot = Multistate.FindPlayerByName(botName)
+				if bot and player:GetAccountId() == bot:GetAccountId() then
+					bot:SendUnitWhisper("Repairing!", 0, player)
+				end
+			end
+		end
+	end, 1)
 end
 
 local botWhisperResponses = {
