@@ -1,8 +1,4 @@
--- Multistate: PLAYER_EVENT_ON_COMPLETE_QUEST (54) and PLAYER_EVENT_ON_KILL_CREATURE
--- (7) fire in map states, but Group member listing is world-only, so group-wide
--- awarding is forwarded to the global state via EMQ.
-local Multistate = require("Multistate")
-local EMQ = require("EMQ")
+if GetStateMapId() == -1 then return end
 
 local TRANSMOG_TOKEN_ID = 37742
 local TRANSMOG_TOKEN_COUNT = 1
@@ -14,32 +10,10 @@ local function ShouldReward(playerLevel, bossLevel, isWorldBoss)
         (isWorldBoss or math.abs(playerLevel - bossLevel) <= LEVEL_DIFFERENCE)
 end
 
--- Global executor: awards the killer's group (Group API is world-only).
-local function DoTransmogTokenAward(player, data)
-    if not player or not data then
-        return
-    end
-    if player:IsInGroup() then
-        for _, member in ipairs(player:GetGroup():GetMembers()) do
-            if member:IsInWorld() and member:GetMapId() == data.mapId then
-                local memberLevel = member:GetLevel()
-                if ShouldReward(memberLevel, data.bossLevel, data.isWorldBoss) then
-                    member:AddItem(TRANSMOG_TOKEN_ID, TRANSMOG_TOKEN_COUNT)
-                    member:SendBroadcastMessage("You have been awarded an Activity Token for killing a boss!")
-                end
-            end
-        end
-    elseif ShouldReward(data.killerLevel, data.bossLevel, data.isWorldBoss) then
-        player:AddItem(TRANSMOG_TOKEN_ID, TRANSMOG_TOKEN_COUNT)
-        player:SendBroadcastMessage("You have been awarded an Activity Token for killing a boss!")
-    end
+local function AwardToken(member)
+    member:AddItem(TRANSMOG_TOKEN_ID, TRANSMOG_TOKEN_COUNT)
+    member:SendBroadcastMessage("You have been awarded an Activity Token for killing a boss!")
 end
-
-EMQ.RegisterQueue("TransmogTokenAward", DoTransmogTokenAward)
-
--- Multistate: map-only script (all hooks fire in map states; the EMQ queue
--- above must still register in every state, hence the gate sits below it).
-if not IsCompatibilityMode() and GetStateMapId() == -1 then return end
 
 local function OnQuestComplete(event, player, quest)
     if player:GetLevel() == MAX_LEVEL
@@ -64,22 +38,29 @@ local function OnKillCreature(event, player, killed)
 
         local bossLevel = killed:GetLevel()
         local playerLevel = player:GetLevel()
+        local isWorldBoss = killed:IsWorldBoss()
 
-        if not ShouldReward(playerLevel, bossLevel, killed:IsWorldBoss()) and not player:IsInGroup() then
+        if not ShouldReward(playerLevel, bossLevel, isWorldBoss) and not player:IsInGroup() then
             return
         end
 
-        local data = {
-            bossLevel = bossLevel,
-            killerLevel = playerLevel,
-            isWorldBoss = killed:IsWorldBoss(),
-            mapId = player:GetMapId(),
-        }
-        if Multistate.IsCompat() or Multistate.IsWorld() then
-            -- Compatibility/single-state: the global executor can run inline.
-            DoTransmogTokenAward(player, data)
-        else
-            player:SendEMQMessage("TransmogTokenAward", data)
+        if player:IsInGroup() then
+            local map = player:GetMap()
+            if not map then
+                return
+            end
+            local instanceId = player:GetInstanceId()
+            for _, member in pairs(map:GetPlayers()) do
+                if member and member:IsInWorld()
+                    and (not instanceId or member:GetInstanceId() == instanceId)
+                    and (member == player or player:IsInSameGroupWith(member) or player:IsInSameRaidWith(member)) then
+                    if ShouldReward(member:GetLevel(), bossLevel, isWorldBoss) then
+                        AwardToken(member)
+                    end
+                end
+            end
+        elseif ShouldReward(playerLevel, bossLevel, isWorldBoss) then
+            AwardToken(player)
         end
     end
 end
