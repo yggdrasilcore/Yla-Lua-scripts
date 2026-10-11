@@ -1,14 +1,7 @@
--- Multistate: global-only script (all hooks fire in the world state).
-if GetStateMapId() ~= -1 then return end
-
-local MOVE_TO_POS = {x = 6423, y = 433, z = 511, o = 0.7}
-local HOME_POS = {x = 6409, y = 422, z = 511.348, o = 0.62}
 local eventActive3081 = false
 
-local function HandleQuestAccept(event, packet, player)   
-    local guid = packet:ReadGUID()
-    local questId = packet:ReadULong()
-    local unk1 = packet:ReadULong()
+local function HandleQuestAccept(event, player, quest)   
+    local questId = quest:GetId()
     
     if questId == 13263 or questId == 13389 then
         player:CastSpell(player, 76010, true)
@@ -77,4 +70,4 @@ local function HandleQuestAccept(event, packet, player)
     end
 end
 
-RegisterPacketEvent(0x189, 5, HandleQuestAccept)
+RegisterPlayerEvent(63, HandleQuestAccept)
