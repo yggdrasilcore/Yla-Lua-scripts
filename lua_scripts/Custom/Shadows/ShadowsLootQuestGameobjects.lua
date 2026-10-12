@@ -238,9 +238,11 @@ local function OnMapChange(event, player)
 end
 
 RegisterPlayerEvent(28, OnMapChange)
-
-require("Multistate").ForEachPlayer(function(player)
-    if player:GetData("BotQuestLoopActive") then return end
-    player:SetData("BotQuestLoopActive", true)
-    player:RegisterEvent(CheckForQuestGOs, {20000, 30000}, 0)
-end)
+if GetStateMap() then
+    for _, player in ipairs(GetStateMap():GetPlayers()) do
+        if not player:IsBot() then return end
+        if player:GetData("BotQuestLoopActive") then return end
+        player:SetData("BotQuestLoopActive", true)
+        player:RegisterEvent(CheckForQuestGOs, {20000, 30000}, 0)
+    end
+end
