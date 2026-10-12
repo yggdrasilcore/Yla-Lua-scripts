@@ -1,6 +1,3 @@
--- Multistate: Azshara Mall-only script (mall map 37).
-if GetStateMapId() ~= 37 then return end
-
 local npcid = 190022
 local requiredItemID = 20880
 local requiredItemCount = 5
@@ -161,7 +158,6 @@ local pVar = {};
  
 local function Enchanter(event, plr, unit)
     pVar[plr:GetName()] = nil;
-    plr:SendBroadcastMessage("Enchanting services cost 1 Vote Token per item.")
     for _, v in ipairs(T["Menu"]) do
         plr:GossipMenuAddItem(3, v[1]..".|R", 0, v[2])
     end
@@ -180,7 +176,7 @@ local function EnchanterSelect(event, plr, unit, sender, intid, code)
         if(T[ID]) then
             for i, v in ipairs(T[ID]) do
                 if((not f and not v[3]) or (f and v[3])) then
-                    plr:GossipMenuAddItem(3, v[1].."|R", 0, v[2] + 900, false, "Are you sure you want to pay 1x Vote Token for "..v[1].."?")
+                    plr:GossipMenuAddItem(3, v[1].."|R", 0, v[2] + 900, false, "Are you sure you want to pay\n "..requiredItemCount.." "..GetItemLink(requiredItemID).." for \n \n "..v[1].."?")
                 end
             end
         end
@@ -199,7 +195,7 @@ local function EnchanterSelect(event, plr, unit, sender, intid, code)
                 if item then
                     if plr:GetItemCount(requiredItemID) >= requiredItemCount then
                         plr:RemoveItem(requiredItemID, requiredItemCount)
-                        plr:SendBroadcastMessage("You have paid 1 [Vote Token].")
+                        plr:SendBroadcastMessage("You have paid "..requiredItemCount.." "..GetItemLink(requiredItemID)..".")
                         if v[3] then
                             local WType = item:GetSubClass()
                             if pVar[plr:GetName()] == 151 then
@@ -232,7 +228,7 @@ local function EnchanterSelect(event, plr, unit, sender, intid, code)
                             end
                         end
                     else
-                        plr:SendAreaTriggerMessage("You do not have enough [Vote Token]!")
+                        plr:SendAreaTriggerMessage("You do not have enough "..GetItemLink(requiredItemID).."!")
                     end
                 else
                     plr:SendAreaTriggerMessage("You have no item to enchant in the selected slot!")
