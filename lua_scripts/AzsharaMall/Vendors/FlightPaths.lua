@@ -23,7 +23,7 @@ local function decodeTaximask(taximask)
     local knownNodes = {}
     for i, value in ipairs(taximask) do
         for bit = 0, 31 do
-            if bit32.band(value, bit32.lshift(1, bit)) ~= 0 then
+            if bit_and(value, bit_lshift(1, bit)) ~= 0 then
                 local nodeId = (i - 1) * 32 + bit + 1
                 table.insert(knownNodes, nodeId)
             end
@@ -69,7 +69,7 @@ local function encodeTaximask(nodes)
     for _, nodeId in ipairs(nodes) do
         local index = math.floor((nodeId - 1) / 32) + 1
         local bit = (nodeId - 1) % 32
-        taximask[index] = bit_or(taximask[index], bit32.lshift(1, bit))
+        taximask[index] = bit_or(taximask[index], bit_lshift(1, bit))
     end
     return taximask
 end
