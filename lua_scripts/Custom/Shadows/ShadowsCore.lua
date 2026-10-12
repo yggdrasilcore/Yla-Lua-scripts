@@ -512,6 +512,8 @@ local function DoSummon(player, accountId, botNames)
         player:SendAreaTriggerMessage("You have no active shadows.")
         return
     end
+    -- Same-map fast path (map state CAN see these bots).
+    local missing = {}
     for _, botName in ipairs(botNames or {}) do
         local bot = Multistate.FindPlayerByName(botName)
         if bot then
@@ -520,9 +522,26 @@ local function DoSummon(player, accountId, botNames)
             bot:RegisterEvent(function(eventId, delay, repeats, b)
                 if b then b:CastSpell(b, BOT_TELE_VISUAL, true) end
             end, 500, 1)
+        else
+            -- Cross-map: master's map state cannot resolve it; world relays.
+            table.insert(missing, botName)
         end
     end
-    botTeleTime[accountId] = os.time() + (BotSummonCD)
+    if #missing > 0 then
+        player:SendEMQMessage("ShadowsToWorld", {
+            op = "summon",
+            playerName = player:GetName(),
+            map = player:GetMapId(),
+            x = player:GetX(), y = player:GetY(), z = player:GetZ(), o = player:GetO(),
+            bots = missing,
+        })
+    end
+    -- Shared cooldown (per-state `botTeleTime` table does not survive map changes).
+    Multistate.SetData(player, "ShadowsSummonCD", os.time() + BotSummonCD)
+end
+
+local function GetSummonCooldown(player)
+    return Multistate.GetData(player, "ShadowsSummonCD") or botTeleTime[player:GetAccountId()] or 0
 end
 
 -- Map -> world request. Only the matching answer renders.
@@ -554,6 +573,23 @@ end
 -- Map-side view dispatcher. Stale answers are dropped.
 HandleMapView = function(player, data)
     if not player or not data then
+        return
+    end
+    -- Cross-map self-teleport: queued on the BOT's Data() by the world state,
+    -- so `player` here IS the bot. No cross-map lookup needed; this is the
+    -- whole point of the teleport (master on another map). Handle before the
+    -- seq gate: relay messages carry nil seq and are always actionable.
+    if data.view == "teleport" then
+        if data.map and data.x and data.y and data.z then
+            if player:IsInCombat() then
+                return
+            end
+            if player:GetHealth() == 0 and not player:HasAura(8326) then
+                return -- unreleased ghost corpse stays behind
+            end
+            player:Teleport(data.map, data.x, data.y, data.z, data.o or player:GetO())
+            print("Teleporting shadow " .. player:GetName() .. " to map " .. tostring(data.map))
+        end
         return
     end
     local name = data.playerName or player:GetName()
@@ -687,10 +723,9 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
         if cache.hello then ShadowsHello(player, cache.hello) end
     elseif intid == 5 then -- Summon from the active list, fetching it first if empty
         local accountId = player:GetAccountId()
-        if not botTeleTime[accountId] then botTeleTime[accountId] = 0 end
-
-        if botTeleTime[accountId] >= os.time() then
-            player:SendAreaTriggerMessage("Your shadows summon is on cooldown for " .. math.floor((botTeleTime[accountId] - os.time()) / 60) .. " minutes and " .. ((botTeleTime[accountId] - os.time()) % 60) .. " seconds.")
+        local cd = GetSummonCooldown(player)
+        if cd >= os.time() then
+            player:SendAreaTriggerMessage("Your shadows summon is on cooldown for " .. math.floor((cd - os.time()) / 60) .. " minutes and " .. ((cd - os.time()) % 60) .. " seconds.")
             if cache.hello then ShadowsHello(player, cache.hello) end
         elseif cache.bots and #cache.bots > 0 then
             DoSummon(player, accountId, cache.bots)
@@ -1058,12 +1093,10 @@ function Teleport(player, sameMap)
     for i, botName in ipairs(ShadowGetBots(name)) do
         local bot = Multistate.FindPlayerByName(botName)
         if bot and not player:IsInCombat() then
-			if (bot:GetHealth() == 0) and not bot:HasAura(8326) then -- Stops unreleased ghost corpses from being teleported
-				return
-			end 
-            if bot:GetMapId() ~= player:GetMapId() and sameMap == "yes" then
-                return
-            end
+			if (bot:GetHealth() == 0) and not bot:HasAura(8326) then -- Stops unreleased ghost corpses from being teleported, skip only it
+			elseif bot:GetMapId() ~= player:GetMapId() and sameMap == "yes" then
+                -- same-map pull only: skip bots on other maps, do NOT abort the loop
+            else
             if not bot:IsWithinLoS(player) and
 			(((bot:GetZ() < player:GetZ() - 20) or (bot:GetZ() > player:GetZ() + 20) or (player:GetDistance(bot) > 100))
 			or not ((bot:GetMapId() == player:GetMapId())))
@@ -1073,6 +1106,7 @@ function Teleport(player, sameMap)
 				if bot:HasAura(8326) then RunCommand("revive "..bot:GetName()) end -- handle auto revive of bots on enter instance/raid
                 bot:Teleport(player:GetMapId(), player:GetX() + math.random(-1, 1), player:GetY() + math.random(-1, 1), player:GetZ(), player:GetO() + math.random(-6, 6))
                 print("Teleporting bot "..botName.." to "..name)
+            end
             end
         end
     end
@@ -1512,9 +1546,57 @@ HandleWorldOp = function(player, data)
         if player:IsDead() then return end
         if not player:IsInGroup() then return end
         if player:InArena() or player:InBattleground() then return end
+        if player:IsInCombat() then return end
         if os.time() <= (ShadowGetLastTeleTime(player) or 0) then return end
         ShadowSetLastTeleTime(player, os.time() + 1)
-        WorldSendView(player, { view = "follow", seq = data.seq, playerName = name, bots = bots })
+        -- Cross-map follow: the master is on another map, so the master's
+        -- map state cannot resolve the bots (same-map-only lookup). Relay a
+        -- self-teleport to EACH bot instead (world sees all maps). Uses the
+        -- coords shipped by the map state; falls back to world coords.
+        local destMap = data.map or player:GetMapId()
+        local dx = data.x or player:GetX()
+        local dy = data.y or player:GetY()
+        local dz = data.z or player:GetZ()
+        local do_ = data.o or player:GetO()
+        for _, botName in ipairs(bots) do
+            local bot = Multistate.FindPlayerByName(botName)
+            if bot then
+                if bot:GetHealth() == 0 and not bot:HasAura(8326) then
+                    -- unreleased ghost corpse stays behind, skip only it
+                else
+                    bot:SendEMQMessage("ShadowsToMap", {
+                        view = "teleport", seq = nil, playerName = botName,
+                        map = destMap,
+                        x = dx + math.random(-1, 1),
+                        y = dy + math.random(-1, 1),
+                        z = dz, o = do_ + math.random(-6, 6),
+                    })
+                    print("Teleporting bot " .. botName .. " to " .. name .. " on map " .. tostring(destMap))
+                end
+            end
+        end
+    elseif op == "summon" then
+        -- Manual summon relay: map side queued missing (cross-map) bots.
+        -- World sees every map, so queue a self-teleport on each bot.
+        if ShadowGetMaster(name) then return end
+        local destMap = data.map or player:GetMapId()
+        local dx = data.x or player:GetX()
+        local dy = data.y or player:GetY()
+        local dz = data.z or player:GetZ()
+        local do_ = data.o or player:GetO()
+        Multistate.SetData(player, "ShadowsSummonCD", os.time() + BotSummonCD)
+        for _, botName in ipairs(data.bots or ShadowGetBots(name)) do
+            local bot = Multistate.FindPlayerByName(botName)
+            if bot then
+                bot:SendEMQMessage("ShadowsToMap", {
+                    view = "teleport", seq = nil, playerName = botName,
+                    map = destMap,
+                    x = dx + math.random(-3, 3),
+                    y = dy + math.random(-3, 3),
+                    z = dz, o = do_,
+                })
+            end
+        end
     elseif op == "zonecheck" then
         if ShadowGetMaster(name) then return end
         if ShadowGetBotCount(player) <= 0 then return end
@@ -1677,9 +1759,15 @@ local function OnBotCommand(event, player, command)
 end
 
 local function OnPlayerMapEnter(event, map, player)
-    -- Multistate: server event 21 fires in map states. No DB here; world
-    -- answers with a follow view naming the bots to pull.
-    player:SendEMQMessage("ShadowsToWorld", { op = "mapenter", playerName = player:GetName() })
+    -- Multistate: server event 21 fires in map states. Ship the fresh
+    -- destination coords; the world state relays a self-teleport to each
+    -- bot (queued on the bot's own Data so its own map executes it).
+    player:SendEMQMessage("ShadowsToWorld", {
+        op = "mapenter",
+        playerName = player:GetName(),
+        map = player:GetMapId(),
+        x = player:GetX(), y = player:GetY(), z = player:GetZ(), o = player:GetO(),
+    })
 end
 
 local function OnDisallowedZones(event, player, newZone, newArea)
