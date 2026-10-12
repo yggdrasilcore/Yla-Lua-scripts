@@ -1425,6 +1425,19 @@ local function WorldAddBot(player, botName, seq, viaMenu, reqTime, isBulk)
         return false
     end
     ShadowSetMaster(botName, name)
+    -- Intent-aware recount: the queued REPLACE may not have applied yet,
+    -- and seq==nil paths (attemptaddbot bulk, chat adds) never reach
+    -- WorldIntentHello, so without this BotCount stays 0 and Teleport() /
+    -- zonecheck early-return forever after a relog.
+    do
+        local fresh = ShadowGetBots(name)
+        local seen = false
+        for _, b in ipairs(fresh) do
+            if b == botName then seen = true break end
+        end
+        if not seen then table.insert(fresh, botName) end
+        ShadowSetBotCount(player, #fresh)
+    end
     ShadowSetBotSummonTime(player, os.time())
     ShadowSetDontKick(player, botName, os.time() + 3)
     Multistate.SetData(player, "ShadowsAddCmd", GetCurrTime())
