@@ -8,8 +8,6 @@ EMQ.RegisterQueue("InstanceResetUnbind", function(target, data)
     target:UnbindInstance(data.map, data.difficulty)
 end)
 
-if GetStateMapId() ~= 37 then return end
-
 local NPC_ID = 190090
 local TOKEN_ITEM_ID = 20880
 local MAX_MENU_ITEMS = 8
@@ -175,7 +173,7 @@ local function OnPlayerMapChange(event, player)
                 local command = q:GetString(0)
                 local mapVal, diffVal = command:match("UnbindInstance%((%d+),%s*(%d+)%)")
                 if mapVal and diffVal then
-                    player:UnbindInstance(tonumber(mapVal), tonumber(diffVal))
+                    player:SendEMQMessage("InstanceResetUnbind", {map = tonumber(mapVal), difficulty = tonumber(diffVal)})
                     CharDBExecute("UPDATE acore_eluna.command_queue SET executed = 1 WHERE comment = " .. guid .. " AND command = 'UnbindInstance(" .. mapVal .. ", " .. diffVal .. ")'")
                 end
             until not q:NextRow()
