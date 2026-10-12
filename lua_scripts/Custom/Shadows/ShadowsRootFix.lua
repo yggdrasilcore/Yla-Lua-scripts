@@ -13,8 +13,9 @@ local function OnPlayerMapChange(event, player)
 end
 
 RegisterPlayerEvent(28, OnPlayerMapChange)
-
-require("Multistate").ForEachPlayer(function(player)
-    if not player:IsBot() then return end
-    player:RegisterEvent(RootWatchdogLoop, 5000, 0)
-end)
+if GetStateMap() then
+    for _, player in ipairs(GetStateMap():GetPlayers()) do
+        if not player:IsBot() then return end
+        player:RegisterEvent(RootWatchdogLoop, 5000, 0)
+    end
+end
