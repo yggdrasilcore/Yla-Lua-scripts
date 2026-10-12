@@ -821,7 +821,18 @@ function SetActiveVars()
             }
             table.insert(playersByAccount[accountId], playerData)
             table.insert(allGuids, playerData.guid)
-            ShadowSetBotCount(player, 0)
+            -- World-only: every state shares the same Data() cache, so all
+            -- states writing here race (last writer wins). The world state
+            -- sees everyone, so it rebuilds each master's count from DB
+            -- truth (mappings survive reload) and zeroes bots. Map states
+            -- must not touch it.
+            if GetStateMapId() == -1 then
+                if ShadowGetMaster(name) then
+                    ShadowSetBotCount(player, 0)
+                else
+                    ShadowSetBotCount(player, #ShadowGetBots(name))
+                end
+            end
         end
     end)
 
