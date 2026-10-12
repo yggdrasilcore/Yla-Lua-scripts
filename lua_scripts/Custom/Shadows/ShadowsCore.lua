@@ -1068,7 +1068,9 @@ local function DisbandGroup(event, group)
 end
 
 function Teleport(player, sameMap)
-    -- Multistate: called from global packet handlers and map enter handlers.
+    -- Multistate: packet timers can tick in EITHER state. The world state
+    -- has global lookup + the Group API; map states see only their own map
+    -- and have no Group API. Every guard below is safe in both states.
     local name = player:GetName()
     if ShadowGetMaster(name) then return end
     if ShadowGetBotCount(player) == 0 then
@@ -1077,18 +1079,16 @@ function Teleport(player, sameMap)
     if os.time() <= ShadowGetLastTeleTime(player) then
         return
     end
-    if not player:IsInGroup() then
+    -- Group API is WORLD-only. On maps the non-empty bots list is the guard
+    -- (adds are group-checked world-side at add time).
+    if GetStateMapId() == -1 and not player:IsInGroup() then
         return -- Should probably add a sanity check here to disconnect bots not in your party in case party affiliation fails somehow
     end
     if player:IsDead() then
         return
     end
-    if ((player:GetMapId() == 0 or player:GetMapId() == 1 -- Kalimdor, Eastern Kingdoms
-    or player:GetMapId() == 530 or player:GetMapId() == 571) -- Outlands, Northrend
-    and (sameMap == "yes"))
-    or (player:InArena() or player:InBattleground()) -- PVP exclusions from teleport
-    then
-        return
+    if player:InArena() or player:InBattleground() then
+        return -- PVP exclusions from teleport
     end
     for i, botName in ipairs(ShadowGetBots(name)) do
         local bot = Multistate.FindPlayerByName(botName)
@@ -1097,16 +1097,27 @@ function Teleport(player, sameMap)
 			elseif bot:GetMapId() ~= player:GetMapId() and sameMap == "yes" then
                 -- same-map pull only: skip bots on other maps, do NOT abort the loop
             else
-            if not bot:IsWithinLoS(player) and
-			(((bot:GetZ() < player:GetZ() - 20) or (bot:GetZ() > player:GetZ() + 20) or (player:GetDistance(bot) > 100))
-			or not ((bot:GetMapId() == player:GetMapId())))
-			or
-			(player:GetDistance(bot) > 400)
-			then
-				if bot:HasAura(8326) then RunCommand("revive "..bot:GetName()) end -- handle auto revive of bots on enter instance/raid
-                bot:Teleport(player:GetMapId(), player:GetX() + math.random(-1, 1), player:GetY() + math.random(-1, 1), player:GetZ(), player:GetO() + math.random(-6, 6))
-                print("Teleporting bot "..botName.." to "..name)
-            end
+                -- Distance/LoS are only valid same-map; cross-map bots on the
+                -- openWorld path always need the pull (master changed maps).
+                -- (GetDistance across maps can return nil, so never compare
+                -- it unguarded.)
+                local sameMapNow = (bot:GetMapId() == player:GetMapId())
+                local dist = nil
+                local los = false
+                if sameMapNow then
+                    dist = player:GetDistance(bot)
+                    los = bot:IsWithinLoS(player)
+                end
+                if (not sameMapNow)
+                or (not los and
+                (((bot:GetZ() < player:GetZ() - 20) or (bot:GetZ() > player:GetZ() + 20) or (dist and dist > 100))))
+                or
+                (dist and dist > 400)
+                then
+                    if bot:HasAura(8326) then RunCommand("revive "..bot:GetName()) end -- handle auto revive of bots on enter instance/raid
+                    bot:Teleport(player:GetMapId(), player:GetX() + math.random(-1, 1), player:GetY() + math.random(-1, 1), player:GetZ(), player:GetO() + math.random(-6, 6))
+                    print("Teleporting bot "..botName.." to "..name)
+                end
             end
         end
     end
