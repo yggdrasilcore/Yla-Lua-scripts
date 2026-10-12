@@ -69,7 +69,7 @@ local function encodeTaximask(nodes)
     for _, nodeId in ipairs(nodes) do
         local index = math.floor((nodeId - 1) / 32) + 1
         local bit = (nodeId - 1) % 32
-        taximask[index] = bit32.bor(taximask[index], bit32.lshift(1, bit))
+        taximask[index] = bit_or(taximask[index], bit32.lshift(1, bit))
     end
     return taximask
 end
