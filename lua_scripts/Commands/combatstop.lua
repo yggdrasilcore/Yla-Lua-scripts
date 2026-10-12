@@ -3,8 +3,7 @@
 -- the map-state combat clearer can authorize this command.
 local Multistate = require("Multistate")
 if GetStateMapId() ~= -1 then return end
-
-local Multistate = require("Multistate")
+local debugprint = 0
 
 local function OnCommand(event, player, command)
     if command:lower() == "combatstop" then
