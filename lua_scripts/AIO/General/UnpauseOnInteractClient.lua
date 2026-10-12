@@ -22,11 +22,7 @@ waiter:SetScript("OnUpdate", function(self, elapsed)
         return
     end
     lastSend = GetTime()
-    if IsInGuild() then
-        SendChatMessage(".unpause " .. pendingGuid, "GUILD")
-    else
-        SendChatMessage(".unpause " .. pendingGuid, "SAY")
-    end
+    SendChatMessage(".unpause " .. pendingGuid, "GUILD")
     pendingGuid = nil
 end)
 
