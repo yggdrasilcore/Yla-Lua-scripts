@@ -16,4 +16,8 @@ local function OnPlayerMapChange(event, player)
 end
 
 RegisterPlayerEvent(28, OnPlayerMapChange)
-require("Multistate").ForEachPlayer(function(player) OnPlayerMapChange(nil, player) end)
+if GetStateMap() then
+    for _, player in ipairs(GetStateMap():GetPlayers()) do
+        OnMapChange(nil, player)
+    end
+end
