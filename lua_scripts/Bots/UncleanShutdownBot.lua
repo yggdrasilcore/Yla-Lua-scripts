@@ -2,6 +2,8 @@
 -- global state, so this script is global-only.
 if GetStateMapId() ~= -1 then return end
 
+if not (GetRealmID() == 1) then return end -- Only on prod
+
 local function onStartup(event)
     CharDBQueryAsync("SELECT value FROM acore_eluna.persistent_storage WHERE entry = 'dirty_shutdown'", function(query)
         if query and query:GetString(0) == "1" then
