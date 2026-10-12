@@ -1,4 +1,13 @@
 -- Multistate: Azshara Mall-only script (mall map 37).
+-- UnbindInstance is world-state-only, so the live unbind is relayed via EMQ.
+-- This block loads in every state; only the world-state timer fires the handler.
+local EMQ = require("EMQ")
+
+EMQ.RegisterQueue("InstanceResetUnbind", function(target, data)
+    if not target or not data or not data.map or not data.difficulty then return end
+    target:UnbindInstance(data.map, data.difficulty)
+end)
+
 if GetStateMapId() ~= 37 then return end
 
 local NPC_ID = 190090
@@ -315,7 +324,7 @@ local function ResetInstanceLockout(player, map, difficulty, targetGuid, targetN
 
     local onlineTarget = require("Multistate").FindPlayerByGUID(targetGuid)
     if onlineTarget then
-        onlineTarget:UnbindInstance(map, difficulty)
+        onlineTarget:SendEMQMessage("InstanceResetUnbind", {map = map, difficulty = difficulty})
         CharDBExecute("DELETE FROM character_instance WHERE guid = " .. targetGuid .. " AND instance IN (SELECT id FROM instance WHERE map = " .. map .. " AND difficulty = " .. difficulty .. ")")
     else
         CharDBExecute("DELETE FROM character_instance WHERE guid = " .. targetGuid .. " AND instance IN (SELECT id FROM instance WHERE map = " .. map .. " AND difficulty = " .. difficulty .. ")")
