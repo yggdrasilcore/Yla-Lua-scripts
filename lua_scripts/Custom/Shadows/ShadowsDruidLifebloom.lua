@@ -1,12 +1,6 @@
 -- Multistate: map-only script (all hooks fire in map states).
 if GetStateMapId() == -1 then return end
 
--- Multistate: the map-change handler and lifebloom ticks run in map states, where
--- the Group API does not exist. Group-wide scanning is replaced with a
--- map-native friendly-units-in-range scan; the load-time catch-up sweep is
--- state-aware (GetPlayersInWorld is world-only).
-local Multistate = require("Multistate")
-
 local LIFEBLOOM_SPELLS = {48451, 48450, 33763}
 
 local function GetHighestKnownLifebloom(player)
@@ -22,14 +16,12 @@ local function GetLowestHpMember(player)
     local target = nil
     local lowestHp = math.huge
 
-    for _, member in ipairs(player:GetFriendlyUnitsInRange(40)) do
-        if member and member:IsAlive() then
-            if player:IsWithinLoS(member) then
-                local hp = member:GetHealth()
-                if hp < lowestHp then
-                    lowestHp = hp
-                    target = member
-                end
+    for _, member in ipairs(player:GetPlayersInRange(40, 2, 1)) do
+        if member and player:IsWithinLoS(member) and player:IsInSameGroupWith(member) then
+            local hp = member:GetHealth()
+            if hp < lowestHp then
+                lowestHp = hp
+                target = member
             end
         end
     end
@@ -61,9 +53,8 @@ local function OnMapChange(event, player)
 end
 
 RegisterPlayerEvent(28, OnMapChange)
-
-CreateLuaEvent(function(e, d, r)
-    Multistate.ForEachPlayer(function(player)
+if GetStateMap() then
+    for _, player in ipairs(GetStateMap():GetPlayers()) do
         OnMapChange(nil, player)
-    end)
-end, 2000)
+    end
+end
