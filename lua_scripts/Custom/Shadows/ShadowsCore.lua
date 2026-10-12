@@ -1380,7 +1380,10 @@ end
 
 -- Single committer for bot adds. Derives the count from truth; duplicate
 -- rapid EMQs hit the exists check and become recount-only no-ops.
-local function WorldAddBot(player, botName, seq, viaMenu, reqTime)
+-- isBulk (trusted bulk intents like relog Yes): skips the 5s summon-time
+-- gate (which can never pass on a fresh login) and the per-bot add
+-- throttle (which would block bots 2..n in the same tick).
+local function WorldAddBot(player, botName, seq, viaMenu, reqTime, isBulk)
     local name = player:GetName()
     local function answer()
         if seq then WorldSendView(player, WorldHelloView(player, seq)) end
@@ -1395,14 +1398,16 @@ local function WorldAddBot(player, botName, seq, viaMenu, reqTime)
             answer()
             return false
         end
-    elseif not (ShadowGetBotSummonTime(player) ~= 0 and (os.time() - ShadowGetBotSummonTime(player) < 5)) then
+    elseif not isBulk and not (ShadowGetBotSummonTime(player) ~= 0 and (os.time() - ShadowGetBotSummonTime(player) < 5)) then
         return false
     end
-    local lastAdd = Multistate.GetData(player, "ShadowsAddCmd")
-    if lastAdd and not (GetCurrTime() - lastAdd > 300) then
-        player:SendAreaTriggerMessage("You can't add shadows that fast!")
-        answer()
-        return false
+    if not isBulk then
+        local lastAdd = Multistate.GetData(player, "ShadowsAddCmd")
+        if lastAdd and not (GetCurrTime() - lastAdd > 300) then
+            player:SendAreaTriggerMessage("You can't add shadows that fast!")
+            answer()
+            return false
+        end
     end
     local exists = false
     for _, char in ipairs(ShadowGetBots(name)) do
@@ -1726,31 +1731,38 @@ local function OnBotCommand(event, player, command)
 
 	if string.find(command, "attemptaddbot ") then
 
-	    local bots = string.match(command, "attemptaddbot (.+)$")
+	    local bots = string.match(command, "attemptaddbot (.+)$") or ""
 	    local botNames = {}
 		local maxBotsForPlayer = maxBotCount
-	   
+
 	    for botName in string.gmatch(bots, "([^,]+)") do
 		    botName = string.gsub(botName, "^%s*(.-)%s*$", "%1")
-			table.insert(botNames, botName)
+			if botName ~= "" then
+				table.insert(botNames, botName)
+			end
 	    end
-		
-	   
+
+		if #botNames == 0 then
+			return false
+		end
+
 	   if player:IsInGroup() then
-		   
+
 		   if Multistate.GetData(player, "VIPTime") and Multistate.GetData(player, "VIPTime") > os.time() then
 				maxBotsForPlayer = maxVIPCount
 		   end
-		   
-		   if #botNames > maxBotsForPlayer then
-			   player:SendBroadcastMessage("We could not log in your shadows as the total shadows in your group exceeds your limit of "..maxBotCount..".")
+
+		   if #ShadowGetBots(player:GetName()) + #botNames > maxBotsForPlayer then
+			   player:SendBroadcastMessage("We could not log in your shadows as the total shadows in your group exceeds your limit of "..maxBotsForPlayer..".")
 			   return false
 		   end
-		   
+
 		   local playerGuid = player:GetGUIDLow()
-		   
+
+		   -- Trusted bulk intent (user clicked Yes): bypasses the per-bot
+		   -- spam gates, which can never pass on a fresh relog.
 		   for _, botName in ipairs(botNames) do
-		 	   WorldAddBot(player, botName, nil, false, nil)
+		 	   WorldAddBot(player, botName, nil, false, nil, true)
 		    end
 	    end
 	    return false
