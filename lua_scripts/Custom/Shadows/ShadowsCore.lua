@@ -10,7 +10,6 @@ local BotSummonCD       = 10 * 60 -- 10 minutes
 
 local addCmdTimer       =   {}
 local logoutEvent       =   {}
-local botsAvailable     =   {}
 local disallowedZones   =   {4298}--, 4197, 3628, 3666} -- Scarlet Enclave (DK start area), Wintergrasp, Halaa
 local AllowInBattlefield = false -- Default: False. Prevents usage of shadows in Wintergrasp.
 
@@ -226,43 +225,12 @@ local commandCategories = {
 
 local function ShadowsHello(player)
     player:GossipClearMenu()
-    local accountId = player:GetAccountId()
-    local guidlow = player:GetGUIDLow()
-    local name = player:GetName()
-	local maxBotsForPlayer = maxBotCount
+    local maxBotsForPlayer = maxBotCount
     local botCount = player:GetBotsCount()
 
-	if not player:GetData("LoginTime") then player:SetData("LoginTime", os.time()) end
-	
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_gizmo_02:40:40:-24:0|tHow to use shadows", 0, 2)
-        
-    if not botsAvailable[accountId] then
-        botsAvailable[accountId] = {}
-        CharDBQueryAsync("SELECT name, race, class, gender, level FROM characters WHERE account = " .. accountId, function(query)
-            if query then
-                repeat
-                    local name = query:GetString(0)
-                    local race = query:GetUInt8(1)
-                    local class = query:GetUInt8(2)
-                    local gender = query:GetUInt8(3)
-                    local level = query:GetUInt8(4)
-                    
-                    table.insert(botsAvailable[accountId], {
-                        name = name,
-                        race = race,
-                        class = class,
-                        gender = gender,
-                        level = level
-                    })
-                    
-                until not query:NextRow()
+    if not player:GetData("LoginTime") then player:SetData("LoginTime", os.time()) end
 
-                table.sort(botsAvailable[accountId], function(a, b)
-                    return a.level > b.level
-                end)
-            end
-        end)
-    end
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_gizmo_02:40:40:-24:0|tHow to use shadows", 0, 2)
 
     if player:GetData("VIPTime") and player:GetData("VIPTime") > os.time() then -- Increased bot limit for VIP
         maxBotsForPlayer = maxVIPCount
@@ -437,14 +405,16 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
             end
         end
         
-        if botsAvailable[accountId] then
+        local available = player:Data():Get("ShadowsAvailable")
+        if available and available.AsTable then available = available:AsTable() end
+        if available then
             local found = false
-            for index, charInfo in ipairs(botsAvailable[accountId]) do
+            for index, charInfo in ipairs(available) do
                 if charInfo.name ~= player:GetName() then
                     local className = GetClassName(charInfo.class)
                     local raceName = GetRaceName(charInfo.race)
                     
-                    local raceIcon = GetRaceIconPath(charInfo.race, charInfo.gender)
+                    local raceIcon = GetRaceIconPath(charInfo.race, charInfo.sex)
                     local classIcon = GetClassIconPath(charInfo.class)
                     
                     if charInfo.name and not groupNames[charInfo.name] then
@@ -493,8 +463,10 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
                 return
             end
             
-            if botsAvailable[accountId] and botsAvailable[accountId][selectedIndex] then
-                local selectedChar = botsAvailable[accountId][selectedIndex]
+            local available = player:Data():Get("ShadowsAvailable")
+            if available and available.AsTable then available = available:AsTable() end
+            if available and available[selectedIndex] then
+                local selectedChar = available[selectedIndex]
                 player:Data():Set("ShadowsBotSummonTime", os.time())
                 player:RunCommand(".shadows bot add " .. selectedChar.name) -- Add bot
                 player:Data():Set("ShadowsDontKick:" .. selectedChar.name, os.time() + 3)
@@ -945,6 +917,15 @@ end
 -- World
 local function OnBotCommand(event, player, command)
     if command == "shadowsmenu" then
+        local accountId = player:GetAccountId()
+        local rows = {}
+        for _, char in ipairs(GetCharacterCache()) do
+            if char.accountId == accountId then
+                table.insert(rows, {name = char.name, race = char.race, class = char.class, level = char.level, sex = char.sex})
+            end
+        end
+        table.sort(rows, function(a, b) return a.level > b.level end)
+        player:Data():Set("ShadowsAvailable", rows)
         ShadowsHello(player)
         return false
     end
@@ -1028,22 +1009,13 @@ local function OnBotCommand(event, player, command)
 		if player:GetData("LoginTime") and (player:GetData("LoginTime") < os.time() + 5) then
 			local accountId = player:GetAccountId()
 			local name = player:GetName()
-			
-			CharDBQueryAsync("SELECT name FROM characters WHERE account = " .. accountId .. " AND name != '" .. name .. "'", function(query)
-				if query then
-					local characters = {}
-					repeat
-						local characterName = query:GetString(0)
-						table.insert(characters, characterName)
-					until not query:NextRow()
-					
-					local bots = table.concat(characters, ", ")
-					local player = GetPlayerByName(name)
-					if player then
-						player:SendAddonMessage("Shadows", bots, 7, player)
-					end
+			local characters = {}
+			for _, char in ipairs(GetCharacterCache()) do
+				if char.accountId == accountId and char.name ~= name then
+					table.insert(characters, char.name)
 				end
-			end)
+			end
+			player:SendAddonMessage("Shadows", table.concat(characters, ", "), 7, player)
 		end
 		return false
 	end
