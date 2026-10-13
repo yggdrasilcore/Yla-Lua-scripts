@@ -234,6 +234,7 @@ if not EnabledAuctionHouses then error("[Eluna AH Bot]: Core - No valid auction 
 if not botList or botList == "" or botList:match("[^%d,]") then error("[Eluna AH Bot]: Core - Invalid auction house bots selection! Correct config value 'AHBots' to contain only digits and commas.") end 
 if not houseList or houseList == "" or houseList:match("[^%d,]") then  print("[Eluna AH Bot]: Core - No valid house list given! Defaulting to 2, 6, 7 (ally, horde, and neutral).") houseList = "2,6,7" end
 if not ActionsPerCycle or type(ActionsPerCycle) ~= "number" then print("[Eluna AH Bot]: Core - ActionsPerCycle must be a number! Defaulting to 500.") ActionsPerCycle = 500 end
+table.unpack = table.unpack or unpack
 
 function SendMessageToGMs(message)
     for _, player in pairs(GetPlayersInWorld()) do
@@ -1672,7 +1673,7 @@ local function CheckAuctions(houseId, callback)
     CharDBQueryAsync(string.format("SELECT COUNT(*) FROM auctionhouse WHERE itemowner IN (%s) and houseid = %d", botList, houseId),
 	function(countResult)
 		if countResult then
-			local count = countResult:GetUInt64(0)
+			local count = countResult:GetUInt32(0)
 			postedAuctions[houseId] = count
 			callback(count)
 		end
