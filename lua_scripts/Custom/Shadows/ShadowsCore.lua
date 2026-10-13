@@ -385,28 +385,22 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
 
         if bots[selectedIndex] then
            local selectedBot = bots[selectedIndex]
+           local added = player:Data():Get("ShadowsAdded")
+           if added.AsTable then added = added:AsTable() end
+           added[selectedBot] = nil
+           player:Data():Set("ShadowsAdded", added)
            player:RunCommand(".shadows bot remove " .. selectedBot)
            ListActiveShadows(player)
         end
     elseif intid == 10 then  -- "Add bot" option
-        local group = player:GetGroup()
-        local groupMembers = {}
-        local groupNames = {}
-        
+        local addedNames = player:Data():Get("ShadowsAdded")
+        if addedNames.AsTable then addedNames = addedNames:AsTable() end
+
         player:GossipClearMenu()
         player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAvailable shadows:\n \n ", 0, 10)
-        
-        if group then
-            groupMembers = group:GetMembers()
-            for _, member in pairs(groupMembers) do
-                if member then
-                    groupNames[member:GetName()] = true
-                end
-            end
-        end
-        
+
         local available = player:Data():Get("ShadowsAvailable")
-        if available and available.AsTable then available = available:AsTable() end
+        if available.AsTable then available = available:AsTable() end
         if available then
             local found = false
             for index, charInfo in ipairs(available) do
@@ -417,7 +411,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
                     local raceIcon = GetRaceIconPath(charInfo.race, charInfo.sex)
                     local classIcon = GetClassIconPath(charInfo.class)
                     
-                    if charInfo.name and not groupNames[charInfo.name] then
+                    if charInfo.name and not addedNames[charInfo.name] then
                         if charInfo.level >= minShadowsLevel and charInfo.level > 9 and math.abs(player:GetLevel() - charInfo.level) <= 10 then
                             player:GossipMenuAddItem(4, "|TInterface/ICONS/" .. raceIcon .. ":40:40:-24:0|t |TInterface/ICONS/" .. classIcon .. ":40:40:-24:0|t |TInterface/ICONS/achievement_level_" .. (math.floor(charInfo.level / 10) * 10) .. ":40:40:-24:0|t \n \n \n \nName:  " .. charInfo.name .. "\n \nLevel:  " .. charInfo.level .. "\n \nRace:  " .. raceName .. "\n \nClass:  " .. className .. "\n ", 0, 100 + index)
                             found = true
@@ -464,10 +458,14 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
             end
             
             local available = player:Data():Get("ShadowsAvailable")
-            if available and available.AsTable then available = available:AsTable() end
+            if available.AsTable then available = available:AsTable() end
             if available and available[selectedIndex] then
                 local selectedChar = available[selectedIndex]
                 player:Data():Set("ShadowsBotSummonTime", os.time())
+                local added = player:Data():Get("ShadowsAdded")
+                if added.AsTable then added = added:AsTable() end
+                added[selectedChar.name] = true
+                player:Data():Set("ShadowsAdded", added)
                 player:RunCommand(".shadows bot add " .. selectedChar.name) -- Add bot
                 player:Data():Set("ShadowsDontKick:" .. selectedChar.name, os.time() + 3)
                 ShadowsHello(player)
@@ -926,6 +924,7 @@ local function OnBotCommand(event, player, command)
         end
         table.sort(rows, function(a, b) return a.level > b.level end)
         player:Data():Set("ShadowsAvailable", rows)
+        if not player:Data():Get("ShadowsAdded") then player:Data():Set("ShadowsAdded", {}) end
         ShadowsHello(player)
         return false
     end
