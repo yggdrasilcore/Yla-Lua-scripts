@@ -226,7 +226,10 @@ local commandCategories = {
 local function ShadowsHello(player)
     player:GossipClearMenu()
     local maxBotsForPlayer = maxBotCount
-    local botCount = player:GetBotsCount()
+    local botCount = 0
+    local added = player:Data():Get("ShadowsAdded")
+    if added.AsTable then added = added:AsTable() end
+    for _ in pairs(added) do botCount = botCount + 1 end
 
     if not player:GetData("LoginTime") then player:SetData("LoginTime", os.time()) end
 
