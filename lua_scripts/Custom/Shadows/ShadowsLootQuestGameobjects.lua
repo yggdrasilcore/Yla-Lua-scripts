@@ -237,6 +237,8 @@ local function OnMapChange(event, player)
     player:RegisterEvent(CheckForQuestGOs, {20000, 30000}, 0)
 end
 
+if GetStateMapId() == -1 then return end
+
 RegisterPlayerEvent(28, OnMapChange)
 if GetStateMap() then
     for _, player in ipairs(GetStateMap():GetPlayers()) do
