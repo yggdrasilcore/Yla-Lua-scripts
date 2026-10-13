@@ -2,14 +2,9 @@
 -- Guild API used here is world-only as well).
 if GetStateMapId() ~= -1 then return end
 
-local EVENT_PLAYER_LOGIN = 3
-
--- Function to handle the event
 local function OnLogin(event, player)
-    -- Delay in milliseconds (1 ms = 0.001 seconds)
     local delay = 1
 
-    -- Create a timed event to print the GMOTD
     player:RegisterEvent(function(eventId, delay, repeats, player)
         local guild = player:GetGuild()
         if guild then
@@ -19,5 +14,4 @@ local function OnLogin(event, player)
     end, delay, 1)
 end
 
--- Register the OnLogin event
-RegisterPlayerEvent(EVENT_PLAYER_LOGIN, OnLogin)
+RegisterPlayerEvent(3, OnLogin)
