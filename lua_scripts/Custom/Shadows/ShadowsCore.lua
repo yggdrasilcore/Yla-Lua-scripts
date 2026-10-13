@@ -232,7 +232,7 @@ local function ShadowsHello(player)
 
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_gizmo_02:40:40:-24:0|tHow to use shadows", 0, 2)
 
-    if player:GetData("VIPTime") and player:GetData("VIPTime") > os.time() then -- Increased bot limit for VIP
+    if player:Data():Get("VIPTime") and player:Data():Get("VIPTime") > os.time() then -- Increased bot limit for VIP
         maxBotsForPlayer = maxVIPCount
     end
     
@@ -276,7 +276,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
     local name = player:GetName()
 	local maxBotsForPlayer = maxBotCount
     
-    if player:GetData("VIPTime") and player:GetData("VIPTime") > os.time() then -- Increased bot limit for VIP
+    if player:Data():Get("VIPTime") and player:Data():Get("VIPTime") > os.time() then -- Increased bot limit for VIP
         maxBotsForPlayer = maxVIPCount
     end
     
@@ -509,9 +509,9 @@ function SetShadowsBarData()
 						if data == "ENABLED" then
 				 		    local player = GetPlayerByGUID(GetPlayerGUID(guid))
 				 		    if player then
-								player:SetData("ShadowsBarData", true)
+								player:Data():Set("ShadowsBarData", true)
 		  		 			else
-								player:SetData("ShadowsBarData", false)
+								player:Data():Set("ShadowsBarData", false)
 							end
 		 		 	    end
 		 		    until not result:NextRow()
@@ -539,7 +539,7 @@ local function ShadowsLogin(event, player) -- Lazy persistent storage solution. 
 
         if not master then return end
         
-        if master:GetData("ShadowsBarData") then
+        if master:Data():Get("ShadowsBarData") then
             master:SendAddonMessage("ShadowsBar", "ENABLED", 7, master)
         else
             master:SendAddonMessage("ShadowsBar", "DISABLED", 7, master)
@@ -559,9 +559,9 @@ local function ShadowsLogin(event, player) -- Lazy persistent storage solution. 
                 local player = GetPlayerByGUID(GetPlayerGUID(guid))
                 if not player then return end
                 if data == "ENABLED" then
-                    player:SetData("ShadowsBarData", true)
+                    player:Data():Set("ShadowsBarData", true)
                 else
-                    player:SetData("ShadowsBarData", false)
+                    player:Data():Set("ShadowsBarData", false)
                 end
             end
         end)
@@ -575,7 +575,7 @@ local function LogoutOrSave(event, player)
     local name = player:GetName()
 
 	if event == 4 or event == 25 then
-		if player:GetData("ShadowsBarData") then
+		if player:Data():Get("ShadowsBarData") then
 			CharDBExecute("REPLACE INTO character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'ENABLED')")
 		else
 			CharDBExecute("REPLACE INTO character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'DISABLED')")
@@ -1021,17 +1021,17 @@ local function OnBotCommand(event, player, command)
 	end
 	
 	if command == "shadowsbaron" then
-		player:SetData("ShadowsBarData", true)
+		player:Data():Set("ShadowsBarData", true)
 		player:SendBroadcastMessage("Automatic shadows bar enabled.")
 		return false
 	elseif command == "shadowsbaroff" then
-		player:SetData("ShadowsBarData", false)
+		player:Data():Set("ShadowsBarData", false)
 		player:SendBroadcastMessage("Automatic shadows bar disabled.")
 		return false
 	elseif command == "shadowsbarstatus" then
 		player:SetData("ShadowBarStatusChecked", true)
 		if not player:IsInGroup() then
-			if player:GetData("ShadowsBarData") then
+			if player:Data():Get("ShadowsBarData") then
 				player:SendAddonMessage("ShadowsBar", "OPEN", 7, player)
 			else
 				player:SendAddonMessage("ShadowsBar", "CLOSED", 7, player)
@@ -1043,14 +1043,14 @@ local function OnBotCommand(event, player, command)
 			for _, groupMember in ipairs(groupPlayers) do
 				local memberShadow = groupMember:ToShadow()
 				local memberMaster = memberShadow and memberShadow:GetMaster()
-				if memberMaster and memberMaster:GetName() == player:GetName() and player:GetData("ShadowsBarData") then
+				if memberMaster and memberMaster:GetName() == player:GetName() and player:Data():Get("ShadowsBarData") then
 					player:SendAddonMessage("ShadowsBar", "ENABLED", 7, player)
 					foundBot = true
 					break
 				end
 			end
 			if not foundBot then
-				if player:GetData("ShadowsBarData") then
+				if player:Data():Get("ShadowsBarData") then
 					player:SendAddonMessage("ShadowsBar", "OPEN", 7, player)
 				else
 					player:SendAddonMessage("ShadowsBar", "CLOSED", 7, player)
@@ -1074,7 +1074,7 @@ local function OnBotCommand(event, player, command)
 	   
 	   if player:IsInGroup() then
 		   
-		   if player:GetData("VIPTime") and player:GetData("VIPTime") > os.time() then
+		   if player:Data():Get("VIPTime") and player:Data():Get("VIPTime") > os.time() then
 				maxBotsForPlayer = maxVIPCount
 		   end
 		   
