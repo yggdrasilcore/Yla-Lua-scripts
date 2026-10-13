@@ -33,7 +33,7 @@ local function SendBroadcastWithCheck(playerGUID, message, itemEntry, itemCount,
 end
 
 local function TokensOnLogin(event, player)
-    if ShadowGetMaster(player:GetName()) then return end
+    if player:IsBot() then return end
     if player:GetData("LoginChecked") then return end
     local acc = player:GetAccountId()
     local playerGUID = player:GetGUID()

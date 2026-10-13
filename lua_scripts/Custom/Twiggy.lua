@@ -280,7 +280,7 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
     if intId == 1 then
 		mainMenu(player, creature)
 	elseif intId == 24 then
-		TwiggyRunCommand(player, "xpchangemenu "..os.time())
+		OnTalkToGreetingTwig(event, player, player)
 	elseif intId == 8 then
 		TwiggyRunCommand(player, "shadowsmenu")
 	elseif intId == 7 then

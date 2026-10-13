@@ -52,9 +52,8 @@ end
 local function OnPrepareRidingTurtle(event, player, spell)
     if not player:IsBot() then return end
 
-    local masterName = ShadowGetMaster(player:GetName())
-    local master
-    if masterName then master = require("Multistate").FindPlayerByName(masterName) end
+    local shadow = player:ToShadow()
+    local master = shadow and shadow:GetMaster()
     if not master then return end
 
     if not master:IsMounted() then return end
@@ -67,9 +66,8 @@ local function OnPrepareSeaTurtle(event, player, spell)
     if not player:IsBot() then return end
     if player:IsInWater() then return end
 
-    local masterName = ShadowGetMaster(player:GetName())
-    local master
-    if masterName then master = require("Multistate").FindPlayerByName(masterName) end
+    local shadow = player:ToShadow()
+    local master = shadow and shadow:GetMaster()
     if not master then return end
 
     if not master:IsMounted() then return end

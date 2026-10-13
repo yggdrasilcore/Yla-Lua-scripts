@@ -12,7 +12,7 @@ local currencyName = "Vote Tokens"
 local XPCache = {}
 local MaxPaidCache = {}
 
-local function OnTalkToGreetingTwig(event, player, object)
+function OnTalkToGreetingTwig(event, player, object)
     local guid = player:GetGUIDLow()
     local currentRate = XPCache[guid] or 1
     

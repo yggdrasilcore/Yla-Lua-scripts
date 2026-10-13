@@ -2,9 +2,8 @@
 if GetStateMapId() == -1 then return end
 
 function ToggleShadowsScript(player, script, state)
-    local masterName = ShadowGetMaster(player:GetName())
-    if not masterName then return end
-    local master = require("Multistate").FindPlayerByName(masterName)
+    local shadow = player:ToShadow()
+    local master = shadow and shadow:GetMaster()
     if not master then return end
     local cmd = state and "co +" .. script or "co -" .. script
     master:Whisper(cmd, 0, player)

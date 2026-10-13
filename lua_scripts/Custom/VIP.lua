@@ -48,7 +48,7 @@ end
 local function CheckVIP(event, player)
 	local name = player:GetName()
 	local acc = player:GetAccountId()
-    if ShadowGetMaster(name) then return end
+    if player:IsBot() then return end
 	
 	AuthDBQueryAsync("SELECT viptime FROM acore_eluna.accounts_vip WHERE account = " .. player:GetAccountId() .. ";", function(result)
 		local player = Multistate.FindPlayerByName(name)
@@ -63,7 +63,7 @@ end
 
 local function VIPBotRepairOnResurrect(event, player)
     local name = player:GetName()
-    if not ShadowGetMaster(name) then
+    if not player:IsBot() then
         if IsVIP(player) then
             player:DurabilityRepairAll(false)
             player:SendBroadcastMessage("Your Yggdrasil VIP subscription has repaired your gear.")
@@ -73,11 +73,10 @@ local function VIPBotRepairOnResurrect(event, player)
     
     local bot = player
 
-	-- Find bot's master (multistate: DB-backed lookup works in every state).
-    local botMasterName = ShadowGetMaster(name)
-    if botMasterName then
-				local botMaster = Multistate.FindPlayerByName(botMasterName)
-				if not botMaster then return end
+	-- Find bot's master directly (no DB).
+    local shadow = bot:ToShadow()
+    local botMaster = shadow and shadow:GetMaster()
+    if botMaster then
 				if not IsVIP(botMaster) then
 					bot:SendUnitWhisper('My equipment has taken a 10% durability hit. Please repair my gear by whispering "repair" to me next to a repair vendor.', 0, botMaster)
 					return -- No valid VIP, do not repair
@@ -152,17 +151,9 @@ local function VIPGMCommands(event, player, command)
                         if not onlineCharName then
                             local p = GetPlayerByName(charName)
                             if p then
-                                if ShadowGetMaster(charName) then
-                                    local botMaster = nil
-                                    for masterName, bots in pairs(ShadowGetAllBots()) do
-                                        for i, botName in ipairs(bots) do
-                                            if botName == charName then
-                                                botMaster = GetPlayerByName(masterName)
-                                                break
-                                            end
-                                        end
-                                        if botMaster then break end
-                                    end
+                                local s = p:ToShadow()
+                                if s then
+                                    local botMaster = s:GetMaster()
                                     if botMaster then
                                         onlineCharName = botMaster:GetName()
                                     end
@@ -222,25 +213,17 @@ local function VIPGMCommands(event, player, command)
             local targetAccountId = result:GetUInt32(1)
             local targetPlayer = GetPlayerByName(charName)
             
-            -- Check if target is a bot, if so find its master
-            if targetPlayer and ShadowGetMaster(charName) then
-                local botMaster = nil
-                for masterName, bots in pairs(ShadowGetAllBots()) do
-                    for i, botName in ipairs(bots) do
-                        if botName == charName then
-                            botMaster = GetPlayerByName(masterName)
-                            break
-                        end
-                    end
-                    if botMaster then break end
-                end
+            -- Check if target is a bot, if so find its master directly
+            if targetPlayer then
+                local s = targetPlayer:ToShadow()
+                local botMaster = s and s:GetMaster()
 
                 if botMaster then
                     targetPlayer = botMaster
                     charName = botMaster:GetName()
                     targetAccountId = botMaster:GetAccountId()
                     if gm then gm:SendBroadcastMessage("Adding VIP to " .. targetName .. "'s master: " .. botMaster:GetName()) end
-                else
+                elseif s then
                     if gm then gm:SendBroadcastMessage("Could not find master for bot: " .. targetName) end
                     return
                 end
@@ -290,23 +273,14 @@ local function VIPGMCommands(event, player, command)
             local selectedName = targetPlayer:GetName()
             
             -- Check if selected character is a bot
-            if ShadowGetMaster(selectedName) then
-                -- Find the bot's master
-                local botMaster = nil
-                for masterName, bots in pairs(ShadowGetAllBots()) do
-                    for i, botName in ipairs(bots) do
-                        if botName == selectedName then
-                            botMaster = GetPlayerByName(masterName)
-                            break
-                        end
-                    end
-                    if botMaster then break end
-                end
+            do
+                local s = targetPlayer:ToShadow()
+                local botMaster = s and s:GetMaster()
                 
                 if botMaster then
                     targetPlayer = botMaster
                     player:SendBroadcastMessage("Adding VIP to " .. selectedName .. "'s master: " .. botMaster:GetName())
-                else
+                elseif s then
                     player:SendBroadcastMessage("Could not find master for bot: " .. selectedName)
                     return false
                 end
@@ -349,23 +323,15 @@ local function VIPGMCommands(event, player, command)
             return false
         end
         
-        -- Check if target is a bot, if so find its master
-        if ShadowGetMaster(targetName) then
-            local botMaster = nil
-            for masterName, bots in pairs(ShadowGetAllBots()) do
-                for i, botName in ipairs(bots) do
-                    if botName == targetName then
-                        botMaster = GetPlayerByName(masterName)
-                        break
-                    end
-                end
-                if botMaster then break end
-            end
+        -- Check if target is a bot, if so find its master directly
+        do
+            local s = targetPlayer:ToShadow()
+            local botMaster = s and s:GetMaster()
             
             if botMaster then
                 targetPlayer = botMaster
                 player:SendBroadcastMessage("Removing VIP from " .. targetName .. "'s master: " .. botMaster:GetName())
-            else
+            elseif s then
                 player:SendBroadcastMessage("Could not find master for bot: " .. targetName)
                 return false
             end
@@ -406,23 +372,14 @@ local function VIPGMCommands(event, player, command)
             local selectedName = targetPlayer:GetName()
             
             -- Check if selected character is a bot
-            if ShadowGetMaster(selectedName) then
-                -- Find the bot's master
-                local botMaster = nil
-                for masterName, bots in pairs(ShadowGetAllBots()) do
-                    for i, botName in ipairs(bots) do
-                        if botName == selectedName then
-                            botMaster = GetPlayerByName(masterName)
-                            break
-                        end
-                    end
-                    if botMaster then break end
-                end
+            do
+                local s = targetPlayer:ToShadow()
+                local botMaster = s and s:GetMaster()
                 
                 if botMaster then
                     targetPlayer = botMaster
                     player:SendBroadcastMessage("Removing VIP from " .. selectedName .. "'s master: " .. botMaster:GetName())
-                else
+                elseif s then
                     player:SendBroadcastMessage("Could not find master for bot: " .. selectedName)
                     return false
                 end
@@ -467,23 +424,15 @@ local function VIPGMCommands(event, player, command)
             return false
         end
         
-        -- Check if target is a bot, if so find its master
-        if ShadowGetMaster(targetName) then
-            local botMaster = nil
-            for masterName, bots in pairs(ShadowGetAllBots()) do
-                for i, botName in ipairs(bots) do
-                    if botName == targetName then
-                        botMaster = GetPlayerByName(masterName)
-                        break
-                    end
-                end
-                if botMaster then break end
-            end
+        -- Check if target is a bot, if so find its master directly
+        do
+            local s = targetPlayer:ToShadow()
+            local botMaster = s and s:GetMaster()
             
             if botMaster then
                 targetPlayer = botMaster
                 player:SendBroadcastMessage("Removing all VIP from " .. targetName .. "'s master: " .. botMaster:GetName())
-            else
+            elseif s then
                 player:SendBroadcastMessage("Could not find master for bot: " .. targetName)
                 return false
             end
@@ -508,23 +457,14 @@ local function VIPGMCommands(event, player, command)
             local selectedName = targetPlayer:GetName()
             
             -- Check if selected character is a bot
-            if ShadowGetMaster(selectedName) then
-                -- Find the bot's master
-                local botMaster = nil
-                for masterName, bots in pairs(ShadowGetAllBots()) do
-                    for i, botName in ipairs(bots) do
-                        if botName == selectedName then
-                            botMaster = GetPlayerByName(masterName)
-                            break
-                        end
-                    end
-                    if botMaster then break end
-                end
+            do
+                local s = targetPlayer:ToShadow()
+                local botMaster = s and s:GetMaster()
                 
                 if botMaster then
                     targetPlayer = botMaster
                     player:SendBroadcastMessage("Removing all VIP from " .. selectedName .. "'s master: " .. botMaster:GetName())
-                else
+                elseif s then
                     player:SendBroadcastMessage("Could not find master for bot: " .. selectedName)
                     return false
                 end
@@ -596,26 +536,15 @@ local function VIPGMCommands(event, player, command)
             local selectedChar = player:GetSelection():ToPlayer():GetName()
             
             -- Check if selected character is a bot
-            if ShadowGetMaster(selectedChar) then
-                -- Find the bot's master
-                local botMaster = nil
-                for masterName, bots in pairs(ShadowGetAllBots()) do
-                    for i, botName in ipairs(bots) do
-                        if botName == selectedChar then
-                            botMaster = GetPlayerByName(masterName)
-                            break
-                        end
-                    end
-                    if botMaster then break end
-                end
-                
-                if botMaster then
-                    targetPlayer = botMaster
-                    player:SendBroadcastMessage("Checking VIP status of " .. selectedChar .. "'s master: " .. botMaster:GetName())
-                else
-                    player:SendBroadcastMessage("Could not find master for bot: " .. selectedChar)
-                    return false
-                end
+            local sel = player:GetSelection():ToPlayer()
+            local s = sel and sel:ToShadow()
+            local botMaster = s and s:GetMaster()
+            if botMaster then
+                targetPlayer = botMaster
+                player:SendBroadcastMessage("Checking VIP status of " .. selectedChar .. "'s master: " .. botMaster:GetName())
+            elseif s then
+                player:SendBroadcastMessage("Could not find master for bot: " .. selectedChar)
+                return false
             else
                 targetPlayer = player:GetSelection():ToPlayer()
             end
