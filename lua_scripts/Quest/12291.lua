@@ -1,28 +1,19 @@
-local MAP_NORTHREND = 571
-local FORGOTTENSHORE = 4185
-local SPELL_BINDING_LIFE = 48809
-local MODE_DEFAULT = 1
+if not (GetStateMapId() == 571) then return end
 
-if GetStateMapId() ~= 571 then
-    return
+local function ReApplyBindingLifeAura(event, player, aura, mode)
+    if not (mode == 1) then return end
+    
+    local remaining = aura:GetDuration()
+    
+    player:RegisterEvent(function(eventId, delay, repeats, player)
+        if not (player:GetAreaId() == 4185) then return end
+        
+        player:AddAura(SPELL_BINDING_LIFE, player)
+        local reapplied = player:GetAura(SPELL_BINDING_LIFE)
+        
+        if reapplied then reapplied:SetDuration(remaining) end
+        
+    end, 1, 1)
 end
 
-RegisterAuraEvent(SPELL_BINDING_LIFE, 2, function(event, unit, aura, mode)
-    if mode ~= MODE_DEFAULT then
-        return
-    end
-    if unit:GetMapId() ~= MAP_NORTHREND or unit:GetAreaId() ~= FORGOTTENSHORE then
-        return
-    end
-    local remaining = aura:GetDuration()
-    unit:RegisterEvent(function(eventId, delay, repeats, target)
-        if target:GetMapId() ~= MAP_NORTHREND or target:GetAreaId() ~= FORGOTTENSHORE then
-            return
-        end
-        target:AddAura(SPELL_BINDING_LIFE, target)
-        local reapplied = target:GetAura(SPELL_BINDING_LIFE)
-        if reapplied then
-            reapplied:SetDuration(remaining)
-        end
-    end, 1, 1)
-end)
+RegisterAuraEvent(48809, 2, ReApplyBindingLifeAura)
