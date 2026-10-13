@@ -49,7 +49,7 @@ local function CheckPositions(eventid, delay, repeats, player)
     
     local px, py = player:GetX(), player:GetY()
     local name = player:GetName()
-    if ShadowGetMaster(name) and IsOnLKPlatform(px, py) then
+    if player:IsBot() and IsOnLKPlatform(px, py) then
         local z = player:GetZ()
         if z < 838 then
             local x, y, o = player:GetX(), player:GetY(), player:GetO()

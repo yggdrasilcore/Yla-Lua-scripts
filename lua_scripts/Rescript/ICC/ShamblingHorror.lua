@@ -64,7 +64,7 @@ local function OnUpdateAI(event, creature, diff)
         local playersNearby = creature:GetPlayersInRange(10)
         for _, player in pairs(playersNearby) do
             local name = player:GetName()
-            if ShadowGetMaster(name) then
+            if player:IsBot() then
                 creature:RegisterEvent(function(eventid, delay, repeats, creature)
                     creature:AddAura(17308, creature) -- Some generic 2-sec stun spell
                 end, 500, 1)

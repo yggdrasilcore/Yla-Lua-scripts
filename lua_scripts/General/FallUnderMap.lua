@@ -140,7 +140,7 @@ local function CheckPlayer(eventId, delay, repeats, player)
 end
 
 local function RegisterPlayerCheck(event, player)
-    if ShadowGetMaster(player:GetName()) then return end
+    if player:IsBot() then return end
     local existingEvent = player:GetData("MapGlitchEvent")
     if existingEvent then player:RemoveEventById(existingEvent) end
 
