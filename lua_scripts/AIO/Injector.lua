@@ -179,7 +179,7 @@ local function AwaitInjection(event, player)
 	player:QueueWardenPayload()
 	player:SetData("ModuleInit", false)
     pushingModule[player:GetGUIDLow()] = true
-	local pushId = CreateLuaEvent(PushInitModule, 1000, 0)
+	local pushId = CreateLuaEvent(PushInitModule, 1000, 75)
     pushingName[pushId] = player:GetName()
 end
 
@@ -195,7 +195,7 @@ local function AwaitPacketInjection(event, packet, player)
         player:SetData("ModuleInit", false)
         player:SetData("JustReloaded", nil) -- Remove the reload flag we just set
         pushingModule[player:GetGUIDLow()] = true
-        local pushId = CreateLuaEvent(PushInitModule, 1000, 0)
+        local pushId = CreateLuaEvent(PushInitModule, 1000, 75)
         pushingName[pushId] = player:GetName()
     end
 end
