@@ -137,17 +137,17 @@ local function VIPGMCommands(event, player, command)
             
             local targetAccountId = result:GetUInt32(0)
             local targetUsername = result:GetString(1)
-            
-            CharDBQueryAsync("SELECT name FROM characters WHERE account = " .. targetAccountId .. ";", function(charResult)
+
+            do
                 local gm = GetPlayerByName(gmName)
                 local charNames = {}
                 local onlineCharName = nil
-                
-                if charResult then
-                    repeat
-                        local charName = charResult:GetString(0)
+
+                for _, char in ipairs(GetCharacterCache()) do
+                    if char.accountId == targetAccountId then
+                        local charName = char.name
                         table.insert(charNames, charName)
-                        
+
                         if not onlineCharName then
                             local p = GetPlayerByName(charName)
                             if p then
@@ -162,7 +162,7 @@ local function VIPGMCommands(event, player, command)
                                 end
                             end
                         end
-                    until not charResult:NextRow()
+                    end
                 end
                 
                 AuthDBQueryAsync("SELECT viptime FROM acore_eluna.accounts_vip WHERE account = " .. targetAccountId .. ";", function(vipResult)
@@ -186,7 +186,7 @@ local function VIPGMCommands(event, player, command)
                     
                     if gm then gm:SendBroadcastMessage("Added " .. days .. " VIP days to " .. targetUsername .. " (" .. charListStr .. "). New VIP expires: " .. os.date("%Y-%m-%d %H:%M:%S", newVIPTime)) end
                 end)
-            end)
+            end
         end)
         
         return false
@@ -201,16 +201,26 @@ local function VIPGMCommands(event, player, command)
             return false
         end
         
-        CharDBQueryAsync("SELECT name, account FROM characters WHERE name = '" .. targetName .. "' COLLATE utf8mb4_general_ci;", function(result)
+        do
             local gm = GetPlayerByName(gmName)
-            
-            if not result then
-                if gm then gm:SendBroadcastMessage("Player '" .. targetName .. "' does not exist.") end
-                return
+
+            local row = GetCharacterCacheByName(targetName)
+            if not row then
+                for _, char in ipairs(GetCharacterCache()) do
+                    if char.name:lower() == targetName:lower() then
+                        row = char
+                        break
+                    end
+                end
             end
-            
-            local charName = result:GetString(0)
-            local targetAccountId = result:GetUInt32(1)
+
+            if not row then
+                if gm then gm:SendBroadcastMessage("Player '" .. targetName .. "' does not exist.") end
+                return false
+            end
+
+            local charName = row.name
+            local targetAccountId = row.accountId
             local targetPlayer = GetPlayerByName(charName)
             
             -- Check if target is a bot, if so find its master directly
@@ -254,8 +264,8 @@ local function VIPGMCommands(event, player, command)
                     end
                 end)
             end)
-        end)
-        
+        end
+
         return false
     elseif addSingleMatch then
         local daysStr = addSingleMatch

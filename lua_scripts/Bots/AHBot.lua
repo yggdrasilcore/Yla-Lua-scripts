@@ -251,15 +251,21 @@ function SendMessageToGMs(message)
 end
 
 local function queryBotCharacters() -- Verifies bots' existence
-    local result = CharDBQuery("SELECT guid FROM characters WHERE guid IN (" .. botList .. ")")
-    if not result then CreateLuaEvent(SendMessageToGMs, 15 * 60 * 1000, 0) error("[Eluna AH Bot]: Core - No valid bots found!") end -- Notify GMs every 15 minutes if enabled with erroneous AH bot setup
+    local knownGUIDs = {}
+    for _, char in ipairs(GetCharacterCache()) do
+        knownGUIDs[char.guidLow] = true
+    end
 
     local validGUIDs = {}
 
-    repeat
-        table.insert(validGUIDs, result:GetUInt32(0))
-    until not result:NextRow()
-	
+    for _, guid in ipairs(AHBots) do
+        if knownGUIDs[guid] then
+            table.insert(validGUIDs, guid)
+        end
+    end
+
+    if #validGUIDs == 0 then CreateLuaEvent(SendMessageToGMs, 15 * 60 * 1000, 0) error("[Eluna AH Bot]: Core - No valid bots found!") end -- Notify GMs every 15 minutes if enabled with erroneous AH bot setup
+
     if #validGUIDs < #AHBots then
         print("[Eluna AH Bot]: Error in selected bot list "..botList..", bot(s) not found! Defaulting to "..table.concat(validGUIDs, ",")..".")
 		SendMessageToGMs("Error in bot list "..botList.."! Defaulting to "..table.concat(validGUIDs, ",")..".")

@@ -1327,11 +1327,10 @@ local function CheckCompletedReferrals()
 									end
 								end
 								if not refererOnline then
-									CharDBQueryAsync(string.format([[SELECT guid, name FROM characters WHERE account = %d]], refererId), function(charactersQuery)
-										if charactersQuery then
-											repeat
-												local charGUIDLow = charactersQuery:GetUInt32(0)
-												local charName = charactersQuery:GetString(1)
+									for _, char in ipairs(GetCharacterCache()) do
+										if char.accountId == refererId then
+											local charGUIDLow = char.guidLow
+											local charName = char.name
 												-- Create and send mail to each character
 												local subject = "Refer a Friend Reward"
 												if referralCount == 0 then
@@ -1341,11 +1340,10 @@ local function CheckCompletedReferrals()
 												else
 													local body = "Dear ".. charName .."! I bear happy news!\n\nCongratulations! Your referee with ID ".. refereeAccountId .." has qualified for Refer a Friend rewards! You have earned ".. TokenReward .." ".. TokenName.. ". Check in with me any time to see how your referrals are going.\n\nYour personal branch of Yggdrasil,\nTwiggy"
 												end
-												-- Send mail to the character
-												SendMail(subject, body, charGUIDLow, 0, 61)
-											until not charactersQuery:NextRow()
+											-- Send mail to the character
+											SendMail(subject, body, charGUIDLow, 0, 61)
 										end
-									end)
+									end
 								end
 							end
 						end)

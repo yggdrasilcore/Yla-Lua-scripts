@@ -441,20 +441,16 @@ local function SyncAccountMounts(event, player)
 	local pGUID = player:GetGUIDLow()
 	local pAccountId = player:GetAccountId()
 	local playerName = player:GetName()
-    
+
     if player:GetGMRank() > 0 then return end
-	
-	CharDBQueryAsync("SELECT guid FROM characters WHERE account = "..pAccountId.." and guid <> "..pGUID, function(results)
-		local player = GetPlayerByName(playerName)
-		if not player then return end
-		
-		local guids = {}
-		if (results) then
-			repeat
-				table.insert(guids, results:GetUInt32(0))
-			until not results:NextRow()
+
+	local guids = {}
+	for _, char in ipairs(GetCharacterCache()) do
+		if char.accountId == pAccountId and char.guidLow ~= pGUID then
+			table.insert(guids, char.guidLow)
 		end
-		
+	end
+
 		if (#guids > 0) then
 			local guidstr = guids[1]
 			for i = 2, #guids do
@@ -469,7 +465,7 @@ local function SyncAccountMounts(event, player)
 					local skill = player:GetSkillValue(762)
 					local class = player:GetClass()
 					local team = player:GetTeam()
-					
+
 					repeat
 						local spellId = spellResults:GetUInt32(0)
 						local mount = mount_listing[spellId]
@@ -492,7 +488,6 @@ local function SyncAccountMounts(event, player)
 				end
 			end)
 		end
-	end)
 end
 
 local function OnSendLearnedSpell(event, packet, player)
