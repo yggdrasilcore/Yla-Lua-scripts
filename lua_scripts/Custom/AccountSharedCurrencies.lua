@@ -83,7 +83,7 @@ local function SyncCurrencyOnLogin(player, accountId)
 end
 
 local function AccountWideCurrency(event, player)
-    if ShadowGetMaster(player:GetName()) then return end
+    if player:IsBot() then return end
     
     if player:GetGMRank() > 0 then return end
     

@@ -62,7 +62,7 @@ local function SendAntiCheatChecks(player)
 end
 
 local function StartElunaAnticheat(event, player)
-    if ShadowGetMaster(player:GetName()) then return end
+    if player:IsBot() then return end
     
     if player:GetData("SendAntiCheatChecks") then 
         player:RemoveEventById(player:GetData("SendAntiCheatChecks"))

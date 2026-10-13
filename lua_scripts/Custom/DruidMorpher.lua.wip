@@ -394,7 +394,7 @@ local function EnsureDruidCache(player)
 end
 
 local function LoadPlayerMorphs(player)
-    if ShadowGetMaster(player:GetName()) then return end
+    if player:IsBot() then return end
     if player:GetClass() ~= 11 then return end -- Only proceed for druids
     
     local guid = player:GetGUIDLow()

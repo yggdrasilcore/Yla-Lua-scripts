@@ -89,7 +89,7 @@ local mapCreatures = {
 }
 
 local function OnMapChange(event, player)
-    if ShadowGetMaster(player:GetName()) then return end
+    if player:IsBot() then return end
     local mapId = player:GetMapId()
     if mapCreatures[mapId] then
         mapCreatures[mapId](player)
