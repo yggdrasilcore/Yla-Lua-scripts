@@ -149,6 +149,8 @@ local function RegisterPlayerCheck(event, player)
 end
 
 RegisterPlayerEvent(28, RegisterPlayerCheck)
--- Multistate: state-aware catch-up for already-online players (server start or
--- reload). GetPlayersInWorld() only exists in the global state.
-require("Multistate").ForEachPlayer(function(player) RegisterPlayerCheck(nil, player) end)
+if GetStateMap() then
+    for _, player in ipairs(GetStateMap():GetPlayers()) do
+        player:RegisterEvent(RegisterPlayerCheck, 1000, 0)
+    end
+end
