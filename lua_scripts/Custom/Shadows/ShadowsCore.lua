@@ -146,18 +146,15 @@ function ShadowSetDontKick(masterPlayer, botName, time)
 end
 
 function ShadowDontKickActive(botPlayer)
-    if not botPlayer then
-        return false
-    end
+    if not botPlayer then return false end
     local botName = botPlayer:GetName()
+    
     local masterName = ShadowGetMaster(botName)
-    if not masterName then
-        return false
-    end
+    if not masterName then return false end
+    
     local master = Multistate.FindPlayerByName(masterName)
-    if not master then
-        return false
-    end
+    if not master then return false end
+    
     local t = Multistate.GetData(master, "ShadowsDontKick") or {}
     return t[botName] and t[botName] > os.time()
 end
