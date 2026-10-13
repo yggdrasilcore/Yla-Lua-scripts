@@ -8,189 +8,13 @@ minShadowsLevel = 15 -- Global var also referenced by Twiggy
 local BOT_TELE_VISUAL   = 64446
 local BotSummonCD       = 10 * 60 -- 10 minutes
 
-isPlayerBot		        =   {} -- Global table referenced in VIP script as well
-activeBots       		=   {}
 local addCmdTimer       =   {}
 local logoutEvent       =   {}
--- Last world payload per player. Map renders from here, never touches DB.
-local mapViewCache      =   {}
-local mapReqSeq         =   {} -- last request seq per player name
-local mapAckSeq         =   {} -- last rendered view seq per player name
-local VIEW_TIMEOUT_MS   =   6000
-local mapPendingAction  =   {} -- deferred click action per player, run on next view
-
-local botTeleTime       =   {}
-local botMasters        =   {}
-local botSummonTime     =   {}
-local dontKickTime	    =   {}
-local removalInProgress =   {}
-local lastTeleTime      =   {}
+local botsAvailable     =   {}
 local disallowedZones   =   {4298}--, 4197, 3628, 3666} -- Scarlet Enclave (DK start area), Wintergrasp, Halaa
+local AllowInBattlefield = false -- Default: False. Prevents usage of shadows in Wintergrasp.
 
 -- Shadows Configs End
-
--- Multistate support (mod-ale multistate-shoehorn): the global state runs login,
--- logout, command, chat, group and packet handlers, while map states run gossip,
--- map-enter, zone-change and save handlers. Per-state Lua tables are therefore
--- NOT shared. Cross-state coordination uses:
---   * the `shadows_bots` CharDB table as the canonical bot -> master mapping
---     (synchronous reads work in every state),
---   * shared player Data() (see Multistate.lua) for per-player counters/flags,
---   * EMQ for shipping player commands from the global state to map states.
--- The accessor functions below are global so every Shadows script (and VIP,
--- TokensLogin, etc.) can use them in any state. Never access isPlayerBot /
--- activeBots Lua tables across files anymore; they are gone.
-local Multistate = require("Multistate")
-local EMQ = require("EMQ")
-
-CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.shadows_bots (bot_name VARCHAR(12) NOT NULL PRIMARY KEY, master_name VARCHAR(12) NOT NULL)")
-
--- Returns the master name for a bot name, or nil. Works in every state.
-function ShadowGetMaster(botName)
-    if not botName then
-        return nil
-    end
-    local query = CharDBQuery("SELECT master_name FROM acore_eluna.shadows_bots WHERE bot_name = '" .. botName .. "'")
-    if query then
-        return query:GetString(0)
-    end
-    return nil
-end
-
--- Sets (or clears with nil) the bot -> master mapping. Visible in every state.
-function ShadowSetMaster(botName, masterName)
-    if not botName then
-        return
-    end
-    if masterName then
-        CharDBExecute("REPLACE INTO acore_eluna.shadows_bots (bot_name, master_name) VALUES ('" .. botName .. "', '" .. masterName .. "')")
-    else
-        CharDBExecute("DELETE FROM acore_eluna.shadows_bots WHERE bot_name = '" .. botName .. "'")
-    end
-end
-
--- Returns the list of bot names owned by a master. Works in every state.
-function ShadowGetBots(masterName)
-    local bots = {}
-    if not masterName then
-        return bots
-    end
-    local query = CharDBQuery("SELECT bot_name FROM acore_eluna.shadows_bots WHERE master_name = '" .. masterName .. "' ORDER BY bot_name")
-    if query then
-        repeat
-            table.insert(bots, query:GetString(0))
-        until not query:NextRow()
-    end
-    return bots
-end
-
--- Returns the whole mapping as { [masterName] = { botNames } }. Works in every state.
-function ShadowGetAllBots()
-    local all = {}
-    local query = CharDBQuery("SELECT bot_name, master_name FROM acore_eluna.shadows_bots")
-    if query then
-        repeat
-            local botName = query:GetString(0)
-            local masterName = query:GetString(1)
-            if not all[masterName] then
-                all[masterName] = {}
-            end
-            table.insert(all[masterName], botName)
-        until not query:NextRow()
-    end
-    return all
-end
-
--- Per-player shadows counters/flags in shared Data() (visible in every state).
-function ShadowGetBotCount(player)
-    return Multistate.GetData(player, "ShadowsBotCount") or 0
-end
-
-function ShadowSetBotCount(player, count)
-    count = count or 0
-    if count < 0 then
-        count = 0
-    end
-    Multistate.SetData(player, "ShadowsBotCount", count)
-end
-
-function ShadowAddBotCount(player, delta)
-    ShadowSetBotCount(player, ShadowGetBotCount(player) + (delta or 0))
-end
-
-function ShadowGetLoginTime(player)
-    return Multistate.GetData(player, "ShadowsLoginTime")
-end
-
-function ShadowSetLoginTime(player, t)
-    Multistate.SetData(player, "ShadowsLoginTime", t)
-end
-
--- Shadow bar flag (written on login/global, read in gossip/map and AIO/global).
-function ShadowGetBarData(player)
-    return Multistate.GetData(player, "ShadowsBarData")
-end
-
-function ShadowSetBarData(player, value)
-    Multistate.SetData(player, "ShadowsBarData", value)
-end
-
--- Summon-protection timestamps, stored per master in shared Data().
-function ShadowSetDontKick(masterPlayer, botName, time)
-    if not masterPlayer or not botName then
-        return
-    end
-    local t = Multistate.GetData(masterPlayer, "ShadowsDontKick") or {}
-    t[botName] = time
-    Multistate.SetData(masterPlayer, "ShadowsDontKick", t)
-end
-
-function ShadowDontKickActive(botPlayer)
-    if not botPlayer then return false end
-    local botName = botPlayer:GetName()
-    
-    local masterName = ShadowGetMaster(botName)
-    if not masterName then return false end
-    
-    local master = Multistate.FindPlayerByName(masterName)
-    if not master then return false end
-    
-    local t = Multistate.GetData(master, "ShadowsDontKick") or {}
-    return t[botName] and t[botName] > os.time()
-end
-
--- Bot summon throttle (written in gossip/map, read in command/global).
-function ShadowGetBotSummonTime(player)
-    return Multistate.GetData(player, "ShadowsBotSummonTime") or 0
-end
-
-function ShadowSetBotSummonTime(player, t)
-    Multistate.SetData(player, "ShadowsBotSummonTime", t)
-end
-
--- Follow-teleport throttle (Teleport() runs in both global packet handlers and
--- map enter handlers).
-function ShadowGetLastTeleTime(player)
-    return Multistate.GetData(player, "ShadowsLastTele") or 0
-end
-
-function ShadowSetLastTeleTime(player, t)
-    Multistate.SetData(player, "ShadowsLastTele", t)
-end
-
--- Handlers defined below, assigned here so registration order is load-safe.
-local HandleWorldOp   -- (player, data): runs in world, owns DB + RunCommand
-local HandleMapView   -- (player, data): runs on map, pure render from payload
-EMQ.RegisterQueue("ShadowsToWorld", function(player, data)
-    if HandleWorldOp and (GetStateMapId() == -1) then
-        HandleWorldOp(player, data)
-    end
-end)
-EMQ.RegisterQueue("ShadowsToMap", function(player, data)
-    if HandleMapView and (GetStateMapId() ~= -1) then
-        HandleMapView(player, data)
-    end
-end)
 
 -- Shadows Script Start
 
@@ -400,258 +224,109 @@ local commandCategories = {
    },
 }
 
--- Pure map-side renders from world payloads. No DB or shared vars.
-
-local function CacheView(playerName, view)
-    local c = mapViewCache[playerName] or {}
-    if view.view == "hello" then
-        c.hello = view
-    elseif view.view == "add" then
-        c.available = view.available or {}
-        c.hello = { view = "hello", seq = view.seq, count = view.count, max = view.max, barReady = view.barReady }
-    elseif view.view == "remove" then
-        c.bots = view.bots or {}
-        c.hello = { view = "hello", seq = view.seq, count = view.count, max = view.max, barReady = view.barReady }
-    end
-    mapViewCache[playerName] = c
-    mapAckSeq[playerName] = view.seq
-end
-
-local function ShowAvailableShadows(player, view)
-    local rows = (view and view.available) or (mapViewCache[player:GetName()] or {}).available or {}
-    local cc = mapViewCache[player:GetName()]
-    if cc then cc.lastMenu = "add" end
+local function ShadowsHello(player)
     player:GossipClearMenu()
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAvailable shadows:\n \n ", 0, 10)
+    local accountId = player:GetAccountId()
+    local guidlow = player:GetGUIDLow()
+    local name = player:GetName()
+	local maxBotsForPlayer = maxBotCount
+    local botCount = player:GetBotsCount()
 
-    local found = false
-    for index, charInfo in ipairs(rows) do
-        local className = GetClassName(charInfo.class)
-        local raceName = GetRaceName(charInfo.race)
-
-        local raceIcon = GetRaceIconPath(charInfo.race, charInfo.gender)
-        local classIcon = GetClassIconPath(charInfo.class)
-
-        if charInfo.tier == 1 then
-            player:GossipMenuAddItem(4, "|TINTERFACE/ICONS/" .. raceIcon .. ":40:40:-24:0|t |TINTERFACE/ICONS/" .. classIcon .. ":40:40:-24:0|t |TINTERFACE/ICONS/achievement_level_" .. (math.floor(charInfo.level / 10) * 10) .. ":40:40:-24:0|t \n \n \n \nName:  " .. charInfo.name .. "\n \nLevel:  " .. charInfo.level .. "\n \nRace:  " .. raceName .. "\n \nClass:  " .. className .. "\n ", 0, 100 + index)
-            found = true
-        elseif charInfo.tier == 2 then
-            player:GossipMenuAddItem(4, "|TINTERFACE/ICONS/" .. raceIcon .. ":40:40:-24:0|t |TInterface/ICONS/" .. classIcon .. ":40:40:-24:0|t |TInterface/ICONS/inv_misc_desecrated_clothchest:40:40:-24:0|t\n \n \n \nName:  " .. charInfo.name .. "\n \nLevel:  " .. charInfo.level .. "\n \nRace:  " .. raceName .. "\n \nClass:  " .. className .. "\n ", 0, 100 + index)
-            found = true
-        end
-    end
-    if not found then
-        player:GossipMenuAddItem(4, "|TINTERFACE/ICONS/ability_rogue_shadowstep:40:40:-24:0|tNo available shadows \n \nThere are no shadows available in the range you can mind control. Your shadows must be within ten levels of you and at least level 15.\n \n", 0, 10)
-    end
-
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:40:40:-24:0|tBack", 0, 999)
-
-    player:GossipSendMenu(12, player, 200)
-end
-
-local function ShadowsHello(player, view)
-    local hello = view or (mapViewCache[player:GetName()] or {}).hello or {}
-    local cc = mapViewCache[player:GetName()]
-    if cc then cc.lastMenu = "hello" end
-    local count = hello.count or 0
-    local maxBotsForPlayer = hello.max or maxBotCount
-
-    player:GossipClearMenu()
-
+	if not player:GetData("LoginTime") then player:SetData("LoginTime", os.time()) end
+	
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_gizmo_02:40:40:-24:0|tHow to use shadows", 0, 2)
+        
+    if not botsAvailable[accountId] then
+        botsAvailable[accountId] = {}
+        CharDBQueryAsync("SELECT name, race, class, gender, level FROM characters WHERE account = " .. accountId, function(query)
+            if query then
+                repeat
+                    local name = query:GetString(0)
+                    local race = query:GetUInt8(1)
+                    local class = query:GetUInt8(2)
+                    local gender = query:GetUInt8(3)
+                    local level = query:GetUInt8(4)
+                    
+                    table.insert(botsAvailable[accountId], {
+                        name = name,
+                        race = race,
+                        class = class,
+                        gender = gender,
+                        level = level
+                    })
+                    
+                until not query:NextRow()
 
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAdd shadow (" .. count .. "/"..maxBotsForPlayer..")", 0, 10)
-    if count > 0 then
-        player:GossipMenuAddItem(4, "|TINTERFACE/ICONS/spell_unused2:40:40:-24:0|tSummon shadows", 0, 5, false, "Are you sure you want to summon your shadow(s) here?\n \nThis will induce a "..(BotSummonCD/60).."-minute summon cooldown.")
+                table.sort(botsAvailable[accountId], function(a, b)
+                    return a.level > b.level
+                end)
+            end
+        end)
+    end
+
+    if player:GetData("VIPTime") and player:GetData("VIPTime") > os.time() then -- Increased bot limit for VIP
+        maxBotsForPlayer = maxVIPCount
+    end
+    
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAdd shadow (" .. botCount .. "/"..maxBotsForPlayer..")", 0, 10)
+    if botCount > 0 then
+        --player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_hunter_improvedtracking:40:40:-24:0|tCommand follow", 0, 3)
+        --player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_ghoulfrenzy:40:40:-24:0|tCommand attack", 0, 4)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_unused2:40:40:-24:0|tSummon shadows", 0, 5, false, "Are you sure you want to summon your shadow(s) here?\n \nThis will induce a "..(BotSummonCD/60).."-minute summon cooldown.")
         player:GossipMenuAddItem(4, "|TInterface/PaperDollInfoFrame/UI-GearManager-Undo:40:40:-24:0|tRemove shadow", 0, 6)
     end
-    player:GossipMenuAddItem(4, "|TINTERFACE/ICONS/spell_shadow_darksummoning:40:40:-24:0|tShadow bar settings", 0, 7)
-    player:GossipMenuAddItem(4, "|TINTERFACE/ICONS/Trade_Engineering:40:40:-24:0|tExit", 0, 1000)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_shadow_darksummoning:40:40:-24:0|tShadow bar settings", 0, 7)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:40:40:-24:0|tExit", 0, 1000)
     player:GossipSendMenu(12, player, 200)
 end
 
-local function ListActiveShadows(player, view)
-    local bots = (view and view.bots) or (mapViewCache[player:GetName()] or {}).bots or {}
-    local cc = mapViewCache[player:GetName()]
-    if cc then cc.lastMenu = "remove" end
+local function ListActiveShadows(player)
     player:GossipClearMenu()
 
-    local activeHeader = "Active shadows:"
-    if #bots == 0 then
-        activeHeader = "You have no active shadows."
-    end
-    player:GossipMenuAddItem(0, "|TInterface/PaperDollInfoFrame/UI-GearManager-Undo:40:40:-24:0|t" .. activeHeader .. "\n \n ", 0, 6)
+    player:GossipMenuAddItem(0, "|TInterface/PaperDollInfoFrame/UI-GearManager-Undo:40:40:-24:0|tActive shadows:\n \n ", 0, 6)
 
-    for index, botName in ipairs(bots) do
-        local menuText = string.format(
-            "|TInterface/ICONS/ability_vehicle_loadselfcatapult:40:40:-24:0|t%s\n \n ",
-            botName
-        )
+    local index = 0
+    for _, bot in ipairs(player:GetBots()) do
+        if bot then
+            index = index + 1
+            local menuText = string.format(
+                "|TInterface/ICONS/ability_vehicle_loadselfcatapult:40:40:-24:0|t%s\n \n ",
+                bot:GetName()
+            )
 
-        player:GossipMenuAddItem(0, menuText, 0, 200 + index)
+            player:GossipMenuAddItem(0, menuText, 0, 200 + index)
+        end
     end
 
     player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:40:40:-24:0|tBack", 0, 999)
     player:GossipSendMenu(12, player, 200)
 end
 
--- Loading placeholder. Intid 11 is a dedicated no-op.
-local function ShowLoadingMenu(player, text)
-    text = text or "Loading, one moment..."
-    player:GossipClearMenu()
-    player:GossipMenuAddItem(4, "|TINTERFACE/ICONS/inv_misc_groupneedmore:40:40:-24:0|t" .. text .. "\n \n", 0, 11)
-    player:GossipMenuAddItem(4, "|TINTERFACE/ICONS/Trade_Engineering:40:40:-24:0|tBack", 0, 999)
-    player:GossipSendMenu(12, player, 200)
-end
-
-local function DoSummon(player, accountId, botNames)
-    if not botNames or #botNames == 0 then
-        player:SendAreaTriggerMessage("You have no active shadows.")
-        return
-    end
-    -- Same-map fast path (map state CAN see these bots).
-    local missing = {}
-    for _, botName in ipairs(botNames or {}) do
-        local bot = Multistate.FindPlayerByName(botName)
-        if bot then
-            bot:Teleport(player:GetMapId(), player:GetX() + math.random(-3, 3), player:GetY() + math.random(-3, 3), player:GetZ() + math.random(0, 0.1), player:GetO() + math.random(-6, 6))
-            player:CastSpell(bot, BOT_TELE_VISUAL, true)
-            bot:RegisterEvent(function(eventId, delay, repeats, b)
-                if b then b:CastSpell(b, BOT_TELE_VISUAL, true) end
-            end, 500, 1)
-        else
-            -- Cross-map: master's map state cannot resolve it; world relays.
-            table.insert(missing, botName)
-        end
-    end
-    if #missing > 0 then
-        player:SendEMQMessage("ShadowsToWorld", {
-            op = "summon",
-            playerName = player:GetName(),
-            map = player:GetMapId(),
-            x = player:GetX(), y = player:GetY(), z = player:GetZ(), o = player:GetO(),
-            bots = missing,
-        })
-    end
-    -- Shared cooldown (per-state `botTeleTime` table does not survive map changes).
-    Multistate.SetData(player, "ShadowsSummonCD", os.time() + BotSummonCD)
-end
-
-local function GetSummonCooldown(player)
-    return Multistate.GetData(player, "ShadowsSummonCD") or botTeleTime[player:GetAccountId()] or 0
-end
-
--- Map -> world request. Only the matching answer renders.
-local function MapSendToWorld(player, op, params)
-    local name = player:GetName()
-    local seq = (mapReqSeq[name] or 0) + 1
-    mapReqSeq[name] = seq
-    local data = { op = op, seq = seq, playerName = name }
-    if params then
-        for k, v in pairs(params) do
-            data[k] = v
-        end
-    end
-    player:SendEMQMessage("ShadowsToWorld", data)
-    player:RegisterEvent(function(eventId, delay, repeats, pl)
-        if pl and mapAckSeq[pl:GetName()] ~= seq and mapReqSeq[pl:GetName()] == seq then
-            mapPendingAction[pl:GetName()] = nil
-            pl:SendAreaTriggerMessage("Shadows service timed out, please reopen the menu.")
-            local c = mapViewCache[pl:GetName()]
-            if c and c.hello then
-                ShadowsHello(pl, c.hello)
-            else
-                pl:GossipComplete()
-            end
-        end
-    end, VIEW_TIMEOUT_MS, 1)
-end
-
--- Map-side view dispatcher. Stale answers are dropped.
-HandleMapView = function(player, data)
-    if not player or not data then
-        return
-    end
-    -- Cross-map self-teleport: queued on the BOT's Data() by the world state,
-    -- so `player` here IS the bot. No cross-map lookup needed; this is the
-    -- whole point of the teleport (master on another map). Handle before the
-    -- seq gate: relay messages carry nil seq and are always actionable.
-    if data.view == "teleport" then
-        if data.map and data.x and data.y and data.z then
-            if player:IsInCombat() then
-                return
-            end
-            if player:GetHealth() == 0 and not player:HasAura(8326) then
-                return -- unreleased ghost corpse stays behind
-            end
-            player:Teleport(data.map, data.x, data.y, data.z, data.o or player:GetO())
-            print("Teleporting shadow " .. player:GetName() .. " to map " .. tostring(data.map))
-        end
-        return
-    end
-    local name = data.playerName or player:GetName()
-    -- Unsolicited views (nil seq) always render.
-    if data.seq ~= nil and data.seq ~= mapReqSeq[name] then
-        return
-    end
-    CacheView(name, data)
-    mapAckSeq[name] = mapReqSeq[name]
-    if data.view == "hello" then
-        ShadowsHello(player, data)
-    elseif data.view == "add" then
-        ShowAvailableShadows(player, data)
-    elseif data.view == "remove" then
-        if mapPendingAction[name] == "summon" then
-            mapPendingAction[name] = nil
-            DoSummon(player, player:GetAccountId(), data.bots)
-            local c = mapViewCache[name]
-            if c and c.hello then ShadowsHello(player, c.hello) end
-        else
-            ListActiveShadows(player, data)
-        end
-    elseif data.view == "follow" then
-        for _, botName in ipairs(data.bots or {}) do
-            local bot = Multistate.FindPlayerByName(botName)
-            if bot and bot:GetMapId() == player:GetMapId() then
-                if not bot:IsWithinLoS(player) and
-                (((bot:GetZ() < player:GetZ() - 20) or (bot:GetZ() > player:GetZ() + 20) or (player:GetDistance(bot) > 100))
-                or not ((bot:GetMapId() == player:GetMapId())))
-                or
-                (player:GetDistance(bot) > 400)
-                then
-                    bot:Teleport(player:GetMapId(), player:GetX() + math.random(-1, 1), player:GetY() + math.random(-1, 1), player:GetZ(), player:GetO() + math.random(-6, 6))
-                end
-            end
-        end
-    end
-end
-
-
 local function ShadowsGossipSelect(event, player, object, sender, intid, code, menu_id)
-    -- Map side: no DB or shared vars. Clicks resolve names from the
-    -- cached view and forward via EMQ.
+    local accountId = player:GetAccountId()
+    local guid = player:GetGUIDLow()
     local name = player:GetName()
-    local cache = mapViewCache[name] or {}
-
-    if intid == 11 then -- loading-header no-op
-        return
+	local maxBotsForPlayer = maxBotCount
+    
+    if player:GetData("VIPTime") and player:GetData("VIPTime") > os.time() then -- Increased bot limit for VIP
+        maxBotsForPlayer = maxVIPCount
     end
-
+    
     if intid == 2 then -- Settings main menu
        player:GossipClearMenu()
        player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_gizmo_02:40:40:-24:0|tHow to use shadows\n \nBy reaching through the Twisting Nether, you are able to summon shadows of the other characters on your account.\n \nTo control and summon a shadow, it must be within ten levels of you.\n \nYour active shadows adjust to your faction.\n \nYou may control up to "..maxBotCount.." shadows at a time, or "..maxVIPCount.." shadows at a time if you have VIP.\n \nThe shadow bar offers quick access to most shadows features. See below for in-depth information on how to control your shadows.\n \n", 0, 2)
-
+       
        -- Add main category options
        for _, category in pairs(commandCategories) do
            player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_gizmo_02:40:40:-24:0|t"..category.name, 0, category.intid)
        end
-
+       
        player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:40:40:-24:0|tBack", 0, 999)
        player:GossipSendMenu(12, player, 200)
-
-    elseif intid >= 20 and intid <= 29 then -- Category submenus
+       
+   elseif intid >= 20 and intid <= 29 then -- Category submenus
        player:GossipClearMenu()
-
+       
        -- Find the selected category
        local selectedCategory
        for _, category in pairs(commandCategories) do
@@ -660,7 +335,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
                break
            end
        end
-
+       
         function GetCategoryIcon(categoryName)
            local icons = {
                ["Movement"] = "ability_hunter_improvedtracking",
@@ -676,13 +351,13 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
            return icons[categoryName] or "inv_misc_questionmark"
         end
 
-       if selectedCategory then
+        if selectedCategory then
            -- Header with gizmo icon
            player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_gizmo_02:40:40:-24:0|t"..selectedCategory.name.." Commands:\n \n ", 0, selectedCategory.intid)
-
+           
            -- Get the appropriate icon for this category
            local categoryIcon = GetCategoryIcon(selectedCategory.name)
-
+           
            for _, command in ipairs(selectedCategory.commands) do
                local menuText = string.format(
                    "|TInterface/ICONS/%s:40:40:-24:0|t%s\n \n%s\n \n ",
@@ -692,314 +367,256 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
                )
                player:GossipMenuAddItem(0, menuText, 0, selectedCategory.intid)
            end
-       end
-
+        end
+       
        player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:40:40:-24:0|tBack", 0, 2)
        player:GossipSendMenu(12, player, 200)
-
-    elseif intid == 3 then -- Follow (cached bots, map-safe only)
-        for _, botName in ipairs(cache.bots or {}) do
-            local bot = Multistate.FindPlayerByName(botName)
-            if bot then
-                bot:MoveFollow(player, math.random(-6, 6), math.random(-6, 6))
-                if bot:IsInCombat() and bot:GetSelection() then
-                    bot:GetSelection():ClearInCombat()
+	   
+    elseif intid == 3 then -- Follow
+        for _, member in ipairs(player:GetMap():GetPlayers()) do
+            if member:IsBot() then
+                local master = member:ToShadow():GetMaster()
+                if master and master:GetGUID() == player:GetGUID() then
+                    player:Say("/p follow", 0)
+                    break
                 end
-                bot:ClearInCombat()
             end
         end
         player:SendAreaTriggerMessage("Your shadows are now following you.")
-        if cache.hello then ShadowsHello(player, cache.hello) end
-    elseif intid == 4 then -- Attack (cached bots, map-safe only)
-        for _, botName in ipairs(cache.bots or {}) do
-            if Multistate.FindPlayerByName(botName) then
-                player:Say("/p attack", 0)
-                break
+        ShadowsHello(player)
+    elseif intid == 4 then -- Attack
+        for _, member in ipairs(player:GetMap():GetPlayers()) do
+            if member:IsBot() then
+                local master = member:ToShadow():GetMaster()
+                if master and master:GetGUID() == player:GetGUID() then
+                    player:Say("/p attack", 0)
+                    break
+                end
             end
         end
-        if cache.hello then ShadowsHello(player, cache.hello) end
-    elseif intid == 5 then -- Summon from the active list, fetching it first if empty
-        local accountId = player:GetAccountId()
-        local cd = GetSummonCooldown(player)
-        if cd >= os.time() then
-            player:SendAreaTriggerMessage("Your shadows summon is on cooldown for " .. math.floor((cd - os.time()) / 60) .. " minutes and " .. ((cd - os.time()) % 60) .. " seconds.")
-            if cache.hello then ShadowsHello(player, cache.hello) end
-        elseif cache.bots and #cache.bots > 0 then
-            DoSummon(player, accountId, cache.bots)
-            if cache.hello then ShadowsHello(player, cache.hello) end
-        else
-            mapPendingAction[name] = "summon"
-            ShowLoadingMenu(player, "Loading your active shadows, one moment...")
-            MapSendToWorld(player, "removemenu")
+        ShadowsHello(player)
+    elseif intid == 5 then -- Summon: world thread pulls every bot
+        player:RunCommand(".shadows summon")
+        ShadowsHello(player)
+    elseif intid == 6 then  -- Show list of active shadows to remove
+        ListActiveShadows(player)
+	elseif intid == 7 then
+		if player:GetData("ShadowBarStatusChecked") then
+			player:SendAddonMessage("ShadowsBar", "SETTINGS", 7, player)
+		else
+			player:SendAreaTriggerMessage("Your shadow bar settings are loading, please try again in a few seconds.")
+			player:SendBroadcastMessage("Your shadow bar settings are loading, please try again in a few seconds.")
+		end
+		ShadowsHello(player)
+    elseif intid >= 200 and intid < 299 then  -- Bot removal selection
+        local selectedIndex = intid - 200
+        local bots = {}
+        for _, bot in ipairs(player:GetBots()) do
+            if bot then table.insert(bots, bot:GetName()) end
         end
-    elseif intid == 6 then  -- Remove list: placeholder, world repopulates
-        ShowLoadingMenu(player, "Loading your active shadows, one moment...")
-        MapSendToWorld(player, "removemenu")
-    elseif intid == 7 then -- Bar settings via cached flag
-        if cache.hello and cache.hello.barReady then
-            player:SendAddonMessage("ShadowsBar", "SETTINGS", 7, player)
-        else
-            player:SendAreaTriggerMessage("Your shadow bar settings are loading, please try again in a few seconds.")
-            player:SendBroadcastMessage("Your shadow bar settings are loading, please try again in a few seconds.")
+
+        if bots[selectedIndex] then
+           local selectedBot = bots[selectedIndex]
+           player:RunCommand(".shadows bot remove " .. selectedBot)
+           ListActiveShadows(player)
         end
-        if cache.hello then ShadowsHello(player, cache.hello) end
-    elseif intid >= 200 and intid < 299 then  -- Bot removal: name from cache, world commits
-        local botName = (cache.bots or {})[intid - 200]
-        if botName then
-            ShowLoadingMenu(player, "Removing shadow, one moment...")
-            MapSendToWorld(player, "remove", { botName = botName })
+    elseif intid == 10 then  -- "Add bot" option
+        local group = player:GetGroup()
+        local groupMembers = {}
+        local groupNames = {}
+        
+        player:GossipClearMenu()
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAvailable shadows:\n \n ", 0, 10)
+        
+        if group then
+            groupMembers = group:GetMembers()
+            for _, member in pairs(groupMembers) do
+                if member then
+                    groupNames[member:GetName()] = true
+                end
+            end
         end
-    elseif intid == 10 then  -- Add entry: fresh fetch from hello, instant re-render inside the list
-        if cache.lastMenu == "add" and cache.available then
-            ShowAvailableShadows(player)
-        else
-            ShowLoadingMenu(player, "Loading available shadows...")
-            MapSendToWorld(player, "addmenu")
+        
+        if botsAvailable[accountId] then
+            local found = false
+            for index, charInfo in ipairs(botsAvailable[accountId]) do
+                if charInfo.name ~= player:GetName() then
+                    local className = GetClassName(charInfo.class)
+                    local raceName = GetRaceName(charInfo.race)
+                    
+                    local raceIcon = GetRaceIconPath(charInfo.race, charInfo.gender)
+                    local classIcon = GetClassIconPath(charInfo.class)
+                    
+                    if charInfo.name and not groupNames[charInfo.name] then
+                        if charInfo.level >= minShadowsLevel and charInfo.level > 9 and math.abs(player:GetLevel() - charInfo.level) <= 10 then
+                            player:GossipMenuAddItem(4, "|TInterface/ICONS/" .. raceIcon .. ":40:40:-24:0|t |TInterface/ICONS/" .. classIcon .. ":40:40:-24:0|t |TInterface/ICONS/achievement_level_" .. (math.floor(charInfo.level / 10) * 10) .. ":40:40:-24:0|t \n \n \n \nName:  " .. charInfo.name .. "\n \nLevel:  " .. charInfo.level .. "\n \nRace:  " .. raceName .. "\n \nClass:  " .. className .. "\n ", 0, 100 + index)
+                            found = true
+                        elseif charInfo.level >= minShadowsLevel and math.abs(player:GetLevel() - charInfo.level) <= 10 then
+                            player:GossipMenuAddItem(4, "|TInterface/ICONS/" .. raceIcon .. ":40:40:-24:0|t |TInterface/ICONS/" .. classIcon .. ":40:40:-24:0|t |TInterface/ICONS/inv_misc_desecrated_clothchest:40:40:-24:0|t\n \n \n \nName:  " .. charInfo.name .. "\n \nLevel:  " .. charInfo.level .. "\n \nRace:  " .. raceName .. "\n \nClass:  " .. className .. "\n ", 0, 100 + index)
+                            found = true
+                        end
+                    end
+                end
+            end
+            if not found then
+                player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_rogue_shadowstep:40:40:-24:0|tNo available shadows \n \nThere are no shadows available in the range you can mind control. Your shadows must be within ten levels of you and at least level 15.\n \n", 0, 10)
+            end
         end
-    elseif intid >= 100 and intid < 199 then  -- Bot add: name from cache, world commits
-        local row = (cache.available or {})[intid - 100]
-        if not row then
-            return
-        end
-        local leave = false
+                
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:40:40:-24:0|tBack", 0, 999)
+        
+        player:GossipSendMenu(12, player, 200)
+    elseif intid >= 100 and intid < 199 then  -- Bot selection
+        player:GossipClearMenu()
         for _, zone in pairs(disallowedZones) do
             if player:GetZoneId() == zone or player:GetAreaId() == zone then
                 player:GossipComplete()
                 player:SendAreaTriggerMessage("You cannot use shadows in "..GetAreaName(player:GetAreaId())..".")
-                leave = true
-                break
+                return
             end
         end
-        if leave then return end
-        if (player:GetMapId() == 571) and (player:GetZoneId() == 4197) and IsWintergraspWarTime() then
+        if (not AllowInBattlefield) and (player:GetMapId() == 571) and (player:GetZoneId() == 4197) and IsWintergraspWarTime() then
             player:GossipComplete()
             player:SendAreaTriggerMessage("You cannot use shadows during active Wintergasp battles.")
             return
         end
         if player:GetLevel() < minShadowsLevel then
             player:SendAreaTriggerMessage("You need to be at least level ".. minShadowsLevel .. " to use shadows!")
-            if cache.hello then ShadowsHello(player, cache.hello) end
+            ShadowsHello(player)
             return
         end
-        ShowLoadingMenu(player, "Adding shadow, one moment...")
-        MapSendToWorld(player, "add", { botName = row.name, reqTime = os.time() })
-    elseif intid == 999 then  -- "Back" option: cached hello only, never an op
-        if cache.hello then
-            player:GossipClearMenu()
-            ShadowsHello(player, cache.hello)
+        if player:GetBotsCount() < maxBotsForPlayer then
+            local selectedIndex = intid - 100
+            if addCmdTimer[guid] and not (GetCurrTime() - addCmdTimer[guid] > 300) then
+                player:SendAreaTriggerMessage("You can't add shadows that fast!")
+                ShadowsHello(player)
+                return
+            end
+            
+            if botsAvailable[accountId] and botsAvailable[accountId][selectedIndex] then
+                local selectedChar = botsAvailable[accountId][selectedIndex]
+                player:Data():Set("ShadowsBotSummonTime", os.time())
+                player:RunCommand(".shadows bot add " .. selectedChar.name) -- Add bot
+                player:Data():Set("ShadowsDontKick:" .. selectedChar.name, os.time() + 3)
+                ShadowsHello(player)
+            end
         else
-            player:GossipComplete()
+            player:SendAreaTriggerMessage("You can't summon more shadows until you remove one.")
+            ShadowsHello(player)
         end
+    elseif intid == 999 then  -- "Back" option
+        player:GossipClearMenu()
+        ShadowsHello(player)
     elseif intid == 1000 then  -- "Exit" option
         player:GossipComplete()
     end
 end
 
-
-function SetActiveVars()
-    local playersByAccount = {}
+function SetShadowsBarData()
     local allGuids = {}
 
-    -- Group players visible in this state by account ID and collect all GUIDs.
-    -- Multistate: the global state sees everyone; map states see their own map.
-    -- The shadows_bots table converges because all writes are REPLACE/DELETE.
-    Multistate.ForEachPlayer(function(player)
+    -- Group players by their account ID and collect all GUIDs
+    for _, player in pairs(GetPlayersInWorld()) do
         if player then
-            Multistate.SetData(player, "ShadowBarStatusChecked", true)
-            local accountId = player:GetAccountId()
-            if not playersByAccount[accountId] then
-                playersByAccount[accountId] = {}
-            end
-            local name = player:GetName()
+			player:SetData("ShadowBarStatusChecked", true)
             local guid = player:GetGUIDLow()
-            local playerData = {
-                name = name,
-                guid = guid
-            }
-            table.insert(playersByAccount[accountId], playerData)
-            table.insert(allGuids, playerData.guid)
-            -- World-only: every state shares the same Data() cache, so all
-            -- states writing here race (last writer wins). The world state
-            -- sees everyone, so it rebuilds each master's count from DB
-            -- truth (mappings survive reload) and zeroes bots. Map states
-            -- must not touch it.
-            if GetStateMapId() == -1 then
-                if ShadowGetMaster(name) then
-                    ShadowSetBotCount(player, 0)
-                else
-                    ShadowSetBotCount(player, #ShadowGetBots(name))
-                end
-            end
+            table.insert(allGuids, guid)
         end
-    end)
-
-    -- Multistate: only the global state prunes stale mappings. This mirrors the
-    -- original full table reset: any link involving an offline player is dropped,
-    -- then co-online same-account links are re-detected below.
-    if GetStateMapId() == -1 then
-        CharDBExecute("DELETE FROM acore_eluna.shadows_bots WHERE bot_name NOT IN (SELECT name FROM characters WHERE online = 1) OR master_name NOT IN (SELECT name FROM characters WHERE online = 1)")
     end
 
     if #allGuids > 0 then
         local guidString = table.concat(allGuids, ",")
 			
 	    CharDBQueryAsync(
-		    string.format("SELECT guid, data FROM acore_eluna.character_custom_data WHERE guid IN (%s) AND type = 98", guidString),
+		    string.format("SELECT guid, data FROM character_custom_data WHERE guid IN (%s) AND type = 98", guidString),
 		    function(result)
 				if result then
 					repeat
 						local guid = result:GetUInt32(0)
 						local data = result:GetString(1)
 						if data == "ENABLED" then
-                            -- Multistate: state-aware lookup (callback runs in this state).
-				 		    local player = Multistate.FindPlayerByGUID(GetPlayerGUID(guid))
+				 		    local player = GetPlayerByGUID(GetPlayerGUID(guid))
 				 		    if player then
-								ShadowSetBarData(player, true)
-		  		 			end
+								player:SetData("ShadowsBarData", true)
+		  		 			else
+								player:SetData("ShadowsBarData", false)
+							end
 		 		 	    end
 		 		    until not result:NextRow()
 		 	    end
 		    end
 	    )
-		
-			
-        CharDBQueryAsync(string.format(
-            "SELECT guid, cooldown_end FROM acore_eluna.character_cooldowns WHERE guid IN (%s) AND item_id = 0",
-            guidString
-        ),
-        function(query)
-            local cooldowns = {}
-            
-            if query then
-                repeat
-                    local guid = query:GetUInt32(0)
-                    local cooldownEnd = query:GetUInt32(1)
-                    cooldowns[guid] = cooldownEnd
-                until not query:NextRow()
-            end
+    end
+end
 
-            -- Process each account
-            for accountId, players in pairs(playersByAccount) do
-                if #players > 1 then
-                    local lowestCooldown = nil
-                    local mainPlayer = nil
+-- World
+local function ShadowsLogin(event, player) -- Lazy persistent storage solution. Could probably just use characters table directly. Initially wanted cache-persistent value attached to world but not possible in standard AC ELUNA
+    local guid = player:GetGUIDLow()
+    
+    if player:IsBot() then
+        if player:HasAura(32113) then player:RemoveAura(32113) end
+        
+        if (player:GetClass() == 11) and not player:HasAura(57857) then player:AddAura(57857, player) end -- Fixes Druid shadows stuck on Rebirth without mats
+        
+        if not player:IsInGroup() then return end
+        
+        local group = player:GetGroup()
+        
+        local shadow = player:ToShadow()
+        local master = shadow and shadow:GetMaster()
 
-                    -- Find player with lowest cooldown in this account
-                    for _, playerData in pairs(players) do
-                        local cooldown = cooldowns[playerData.guid] or 0
-                        if not lowestCooldown or cooldown < lowestCooldown then
-                            lowestCooldown = cooldown
-                            mainPlayer = playerData
-                        end
-                    end
-
-                    -- Set up activeBots for the main player
-                    if mainPlayer then
-						local player = Multistate.FindPlayerByName(mainPlayer.name)
-                        activeBots[mainPlayer.name] = {}
-                        player:SetData("BotCount", 0)
-
-                        -- Add other characters as bots
-                        for _, playerData in pairs(players) do
-                            if playerData.guid ~= mainPlayer.guid then
-                                table.insert(activeBots[mainPlayer.name], playerData.name)
-                                player:SetData("BotCount", (player:GetData("BotCount") or 0) + 1)
-                                isPlayerBot[playerData.name] = mainPlayer.name
-                            end
-                        end
-                    end
+        if not master then return end
+        
+        if master:GetData("ShadowsBarData") then
+            master:SendAddonMessage("ShadowsBar", "ENABLED", 7, master)
+        else
+            master:SendAddonMessage("ShadowsBar", "DISABLED", 7, master)
+        end
+        
+        if not group:IsLeader(player:GetGUID()) then return end
+        
+        if player:IsInSameGroupWith(master) or player:IsInSameRaidWith(master) then
+            group:SetLeader(master:GetGUID())
+        end
+    else
+        player:SetData("LoginTime", os.time())
+        
+        CharDBQueryAsync("SELECT data FROM character_custom_data WHERE guid = "..guid.." AND type = 98", function(result)
+            if result then
+                local data = result:GetString(0)
+                local player = GetPlayerByGUID(GetPlayerGUID(guid))
+                if not player then return end
+                if data == "ENABLED" then
+                    player:SetData("ShadowsBarData", true)
+                else
+                    player:SetData("ShadowsBarData", false)
                 end
             end
         end)
     end
 end
 
-local function ShadowsLogin(event, player) -- Lazy persistent storage solution. Could probably just use characters table directly. Initially wanted cache-persistent value attached to world but not possible in standard AC ELUNA
-    -- Multistate: this handler only fires in the global state (event 3).
-    local guid = player:GetGUIDLow()
-    local name = player:GetName()
-
-	CharDBExecute("REPLACE INTO acore_eluna.character_cooldowns (guid, item_id, cooldown_end) VALUES (" .. guid .. ", 0, " .. os.time() .. ")");
-
-    if ShadowGetMaster(name) then
-
-		if player:HasAura(32113) then player:RemoveAura(32113) end
-
-		if (player:GetClass() == 11) and not player:HasAura(57857) then player:AddAura(57857, player) end -- Fixes Druid shadows stuck on Rebirth without mats
-
-        if not player:IsInGroup() then return end
-
-        local group = player:GetGroup()
-
-        local masterName = ShadowGetMaster(name)
-        local master
-        if masterName then master = Multistate.FindPlayerByName(masterName) end
-
-        if not master then return end
-
-		if ShadowGetBarData(master) then
-			master:SendAddonMessage("ShadowsBar", "ENABLED", 7, master)
-		else
-			master:SendAddonMessage("ShadowsBar", "DISABLED", 7, master)
-		end
-
-        if not group:IsLeader(player:GetGUID()) then return end
-
-        if player:IsInSameGroupWith(master) or player:IsInSameRaidWith(master) then
-            group:SetLeader(master:GetGUID())
-        end
-    end
-
-    if ShadowGetMaster(name) then return end
-
-    if ShadowGetBotCount(player) < 0 then ShadowSetBotCount(player, 0) end
-
-	ShadowSetLoginTime(player, os.time())
-
-	CharDBQueryAsync("SELECT data FROM acore_eluna.character_custom_data WHERE guid = "..guid.." AND type = 98", function(result)
-		if result then
-			local data = result:GetString(0)
-			local player = Multistate.FindPlayerByGUID(GetPlayerGUID(guid))
-			if not player then return end
-			if data == "ENABLED" then
-				ShadowSetBarData(player, true)
-			else
-				ShadowSetBarData(player, false)
-			end
-		end
-	end)
-end
-
+-- World
 local function LogoutOrSave(event, player)
-    -- Event 4 (logout) is global. Event 25 (map save) forwards to world.
-    if event == 25 then
-        player:SendEMQMessage("ShadowsToWorld", { op = "savebar", playerName = player:GetName() })
-        return
-    end
+    local accountId = player:GetAccountId()
     local guid = player:GetGUIDLow()
     local name = player:GetName()
 
-	if ShadowGetBarData(player) then
-		CharDBExecute("REPLACE INTO acore_eluna.character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'ENABLED')")
-	else
-		CharDBExecute("REPLACE INTO acore_eluna.character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'DISABLED')")
+	if event == 4 or event == 25 then
+		if player:GetData("ShadowsBarData") then
+			CharDBExecute("REPLACE INTO character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'ENABLED')")
+		else
+			CharDBExecute("REPLACE INTO character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'DISABLED')")
+		end
 	end
+	
+	if event == 25 then return end
 
-    -- Check if the player was anyone's bot and unlink them.
-    local botMaster = ShadowGetMaster(name)
-    ShadowSetMaster(name, nil)
-    -- The departing player can no longer master anyone: unlink their bots.
-    for _, botName in ipairs(ShadowGetBots(name)) do
-        ShadowSetMaster(botName, nil)
-    end
+    local shadow = player:ToShadow()
+    local master = shadow and shadow:GetMaster()
 
-    if botMaster then
-        local master = Multistate.FindPlayerByName(botMaster)
-        if master then
-            ShadowSetBotCount(master, #(ShadowGetBots(botMaster)))
-        end
-
-        if (master and master:GetInstanceId()) or player:GetInstanceId() then
+    if master then
+        if master:GetInstanceId() or player:GetInstanceId() then
             return -- Don't boot players' bots from group if in RHC as it can bug out the instance group
         end
         player:RemoveFromGroup()
@@ -1008,64 +625,77 @@ end
 
 function CheckActiveBots(eventid, delay, repeats, uninvitedPlayer)
     local uninvitedPlayerName = uninvitedPlayer:GetName()
-    if ShadowGetMaster(uninvitedPlayerName) then
-        local player = Multistate.FindPlayerByName(ShadowGetMaster(uninvitedPlayerName))
-        local bot = Multistate.FindPlayerByName(uninvitedPlayerName)
-        if player and bot then
-            player:RegisterEvent(function(_, _, _, player)
-                player:RunCommand(".shadows bot remove " .. uninvitedPlayerName)
-                print("Bot removed: " ..uninvitedPlayerName.. ".")
-                print("Leader: " ..player:GetName())
-            end, 100, 1)
-        end
+    local shadow = uninvitedPlayer:ToShadow()
+    local master = shadow and shadow:GetMaster()
+    if master then
+        master:RegisterEvent(function(_, _, _, player)
+            player:RunCommand(".shadows bot remove " .. uninvitedPlayerName)
+            print("Bot removed: " ..uninvitedPlayerName.. ".")
+            print("Leader: " ..player:GetName())
+        end, 100, 1)
         logoutEvent[uninvitedPlayerName] = nil
     end
 end
 
+-- World
 function UninviteGroupGUID(event, packet, player)
     local guid = packet:ReadGUID()
     local reason = packet:ReadString()
-    local uninvitedPlayer = Multistate.FindPlayerByGUID(guid)
+    local uninvitedPlayer = GetPlayerByGUID(guid)
     if uninvitedPlayer then
         if not logoutEvent[uninvitedPlayer:GetName()] then
-			if ShadowDontKickActive(uninvitedPlayer) then return end
+			local ksh = uninvitedPlayer:ToShadow()
+			local km = ksh and ksh:GetMaster()
+			local kickGuard = km and km:Data():Get("ShadowsDontKick:" .. uninvitedPlayer:GetName())
+			if kickGuard and kickGuard > os.time() then return end
 			--print("shadows debug - uninvited GUID")
             logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
-        end
+        end 
     end
 end
 
+-- World
 function UninviteGroup(event, packet, player)
     local uninvitedPlayerName = packet:ReadString()
-    local uninvitedPlayer = Multistate.FindPlayerByName(uninvitedPlayerName)
+    local uninvitedPlayer = GetPlayerByName(uninvitedPlayerName)
     if uninvitedPlayer then
         if not logoutEvent[uninvitedPlayer:GetName()] then
-			if ShadowDontKickActive(uninvitedPlayer) then return end
+			local ksh = uninvitedPlayer:ToShadow()
+			local km = ksh and ksh:GetMaster()
+			local kickGuard = km and km:Data():Get("ShadowsDontKick:" .. uninvitedPlayer:GetName())
+			if kickGuard and kickGuard > os.time() then return end
 			--print("shadows debug - uninvited group")
             logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
         end
     end
 end
 
+-- World
 local function LeaveGroup(event, group, guid, method, kicker, reason)
-    local uninvitedPlayer = Multistate.FindPlayerByGUID(guid)
+    local uninvitedPlayer = GetPlayerByGUID(guid)
     if uninvitedPlayer then
         if not logoutEvent[uninvitedPlayer:GetName()] then
-			if ShadowDontKickActive(uninvitedPlayer) then return end
+			local ksh = uninvitedPlayer:ToShadow()
+			local km = ksh and ksh:GetMaster()
+			local kickGuard = km and km:Data():Get("ShadowsDontKick:" .. uninvitedPlayer:GetName())
+			if kickGuard and kickGuard > os.time() then return end
 			--print("shadows debug - leaving group")
             logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
         end
     end
 end
 
+-- World
 local function DisbandGroup(event, group)
     for _, member in ipairs (group:GetMembers()) do
-        if ShadowGetMaster(member:GetName()) then
+        local memberShadow = member:ToShadow()
+        local master = memberShadow and memberShadow:GetMaster()
+        if master then
             local botName = member:GetName()
-            local player = Multistate.FindPlayerByName(ShadowGetMaster(botName))
-            if player and not logoutEvent[botName] then
-                logoutEvent[botName] = player:RegisterEvent(function(_, _, _, player)
-					if ShadowDontKickActive(Multistate.FindPlayerByName(botName)) then return end
+            if not logoutEvent[botName] then
+                logoutEvent[botName] = master:RegisterEvent(function(_, _, _, player)
+					local kickGuard = player:Data():Get("ShadowsDontKick:" .. botName)
+					if kickGuard and kickGuard > os.time() then return end
                     player:RunCommand(".shadows bot remove " .. botName)
                     print("Removing "..botName.." from disbanded group")
                     logoutEvent[botName] = nil
@@ -1075,113 +705,79 @@ local function DisbandGroup(event, group)
     end
 end
 
-function Teleport(player, sameMap)
-    -- Multistate: packet timers can tick in EITHER state. The world state
-    -- has global lookup + the Group API; map states see only their own map
-    -- and have no Group API. Every guard below is safe in both states.
-    local name = player:GetName()
-    if ShadowGetMaster(name) then return end
-    if ShadowGetBotCount(player) == 0 then
-        return
-    end
-    if os.time() <= ShadowGetLastTeleTime(player) then
-        return
-    end
-    -- Group API is WORLD-only. On maps the non-empty bots list is the guard
-    -- (adds are group-checked world-side at add time).
-    if GetStateMapId() == -1 and not player:IsInGroup() then
-        return -- Should probably add a sanity check here to disconnect bots not in your party in case party affiliation fails somehow
-    end
-    if player:IsDead() then
-        return
-    end
-    if player:InArena() or player:InBattleground() then
-        return -- PVP exclusions from teleport
-    end
-    for i, botName in ipairs(ShadowGetBots(name)) do
-        local bot = Multistate.FindPlayerByName(botName)
-        if bot and not player:IsInCombat() then
-			if (bot:GetHealth() == 0) and not bot:HasAura(8326) then -- Stops unreleased ghost corpses from being teleported, skip only it
-			elseif bot:GetMapId() ~= player:GetMapId() and sameMap == "yes" then
-                -- same-map pull only: skip bots on other maps, do NOT abort the loop
-            else
-                -- Distance/LoS are only valid same-map; cross-map bots on the
-                -- openWorld path always need the pull (master changed maps).
-                -- (GetDistance across maps can return nil, so never compare
-                -- it unguarded.)
-                local sameMapNow = (bot:GetMapId() == player:GetMapId())
-                local dist = nil
-                local los = false
-                if sameMapNow then
-                    dist = player:GetDistance(bot)
-                    los = bot:IsWithinLoS(player)
+-- World
+local function Teleport(player, sameMap)
+    if player:IsBot() then return end
+    if not player:IsInGroup() then return end
+    if player:IsDead() then return end
+    if player:GetBotsCount() == 0 then return end
+    if os.time() <= (player:Data():Get("ShadowsLastTele") or 0) then return end
+    
+    if ((player:GetMapId() == 0 or player:GetMapId() == 1 -- Kalimdor, Eastern Kingdoms
+    or player:GetMapId() == 530 or player:GetMapId() == 571) -- Outlands, Northrend
+    and (sameMap == "yes"))
+    or (player:InArena() or player:InBattleground()) -- PVP exclusions from teleport
+    then return end
+    
+    for _, bot in ipairs(player:GetMap():GetPlayers()) do
+        if bot:IsBot() then
+            local master = bot:ToShadow():GetMaster()
+            if master and master:GetGUID() == player:GetGUID() and not player:IsInCombat() then
+                if (bot:GetHealth() == 0) and not bot:HasAura(8326) then -- Stops unreleased ghost corpses from being teleported
+                    return
                 end
-                if (not sameMapNow)
-                or (not los and
-                (((bot:GetZ() < player:GetZ() - 20) or (bot:GetZ() > player:GetZ() + 20) or (dist and dist > 100))))
+                if not bot:IsWithinLoS(player) and
+                (((bot:GetZ() < player:GetZ() - 20) or (bot:GetZ() > player:GetZ() + 20) or (player:GetDistance(bot) > 100)))
                 or
-                (dist and dist > 400)
+                (player:GetDistance(bot) > 400)
                 then
                     if bot:HasAura(8326) then RunCommand("revive "..bot:GetName()) end -- handle auto revive of bots on enter instance/raid
                     bot:Teleport(player:GetMapId(), player:GetX() + math.random(-1, 1), player:GetY() + math.random(-1, 1), player:GetZ(), player:GetO() + math.random(-6, 6))
-                    print("Teleporting bot "..botName.." to "..name)
+                    print("Teleporting bot "..bot:GetName().." to "..player:GetName())
                 end
             end
         end
     end
-    ShadowSetLastTeleTime(player, os.time() + 1)
+    if sameMap ~= "yes" and not player:IsInCombat() then
+        for _, shadow in ipairs(player:GetBots()) do
+            if shadow and shadow:GetMapId() ~= player:GetMapId() then
+                shadow:Teleport(player:GetMapId(), player:GetX() + math.random(-1, 1), player:GetY() + math.random(-1, 1), player:GetZ(), player:GetO() + math.random(-6, 6))
+                print("Teleporting bot "..shadow:GetName().." to "..player:GetName())
+            end
+        end
+    end
+    player:Data():Set("ShadowsLastTele", os.time() + 1)
 end
 
+-- World
 local function PacketTeleDelay(_, _, player)
-    local name = player:GetName()
-    if ShadowGetMaster(name) then return end
+    if player:IsBot() then return end
     local sameMap = "openWorld"
     player:RegisterEvent(function(_, _, _, player)
         Teleport(player, sameMap)
     end, 1000, 1)
 end
 
+-- World
 local function PacketMoveDelay(_, _, player)
-    local name = player:GetName()
-    if ShadowGetMaster(name) then return end
+    if player:IsBot() then return end
     local sameMap = "yes"
     player:RegisterEvent(function(_, _, _, player)
         Teleport(player, sameMap)
     end, 1000, 1)
 end
 
-local function buildCommandList()
-    local commands = {}
-    for _, category in pairs(commandCategories) do
-        for _, cmd in ipairs(category.commands) do
-            local cleanCmd = cmd.cmd:gsub("%s*<.+>%s*$", ""):lower()
-            commands[cleanCmd] = true
-        end
-    end
-    return commands
-end
-
-local validCommands = buildCommandList()
-
+-- World
 local function OnGroup(event, player, msg, Type, lang, group)
     if msg ~= "repair" then return end
     
 	player:RegisterEvent(function(e, d, r, player)
-		local playerName = player:GetName()
-		local group = player:GetGroup()
-
-		local groupPlayers = group:GetMembers()
-		for _, groupMember in ipairs(groupPlayers) do
-			local groupMemberName = groupMember:GetName()
-
-			for _, botName in ipairs(ShadowGetBots(groupMemberName)) do
-				local bot = Multistate.FindPlayerByName(botName)
-				if bot and player:GetAccountId() == bot:GetAccountId() then
-					bot:SendUnitWhisper("Repairing!", 0, player)
-				end
+		for _, member in ipairs(GetStateMap():GetPlayers()) do
+			if member:IsBot() and member:IsInSameGroupWith(player) then
+				member:SendUnitWhisper("Repairing!", 0, player)
 			end
 		end
-	end, 1)
+	end, 10)
 end
 
 local botWhisperResponses = {
@@ -1266,17 +862,20 @@ local botWhisperResponses = {
     },
 }
 
+-- World
 local function OnWhisper(event, player, msg, Type, lang, receiver)
     if not player:IsBot() then return end
     
     local receiverName = receiver:GetName()
     local playerName = player:GetName()
 
-    if not ShadowGetMaster(receiverName) then return end
+    if not receiver:IsBot() then return end
 
-    local masterName = ShadowGetMaster(receiverName)
+    local receiverShadow = receiver:ToShadow()
+    local receiverMaster = receiverShadow and receiverShadow:GetMaster()
+    if not receiverMaster then return end
 
-    if not masterName then return end
+    local masterName = receiverMaster:GetName()
 
     if playerName ~= masterName then
         local masterResponses = {
@@ -1301,9 +900,12 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
 
     local msgLower = msg:lower()
 
-    for cmd, _ in pairs(validCommands) do
-        if msgLower:match("^" .. cmd:lower() .. "%s*$") or msgLower:match("^" .. cmd:lower() .. "%s+") then
-            return
+    for _, category in pairs(commandCategories) do
+        for _, cmd in ipairs(category.commands) do
+            local clean = cmd.cmd:gsub("%s*<.+>%s*$", ""):lower()
+            if msgLower:match("^" .. clean .. "%s*$") or msgLower:match("^" .. clean .. "%s+") then
+                return
+            end
         end
     end
 
@@ -1340,363 +942,90 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
     bot:SendUnitWhisper(fallback[math.random(#fallback)], 0, player)
 end
 
--- World side: owns ALL DB and shared vars. Answers carry a fresh view.
-
-local function WorldMaxBots(player)
-    if Multistate.GetData(player, "VIPTime") and Multistate.GetData(player, "VIPTime") > os.time() then
-        return maxVIPCount
-    end
-    return maxBotCount
-end
-
-local function WorldHelloView(player, seq)
-    local name = player:GetName()
-    return {
-        view = "hello", seq = seq, playerName = name,
-        count = #ShadowGetBots(name),
-        max = WorldMaxBots(player),
-        barReady = Multistate.GetData(player, "ShadowBarStatusChecked") and true or false,
-        bots = ShadowGetBots(name),
-    }
-end
-
-local function WorldSendView(player, payload)
-    if player and payload then
-        player:SendEMQMessage("ShadowsToMap", payload)
-    end
-end
-
--- Folds the add/remove intent into the response: the queued write may
--- not have applied when the re-read runs.
-local function WorldIntentHello(player, seq, addedName, removedName)
-    local name = player:GetName()
-    local bots = {}
-    for _, b in ipairs(ShadowGetBots(name)) do
-        if b ~= removedName then
-            table.insert(bots, b)
-        end
-    end
-    if addedName then
-        local seen = false
-        for _, b in ipairs(bots) do
-            if b == addedName then seen = true break end
-        end
-        if not seen then table.insert(bots, addedName) end
-    end
-    table.sort(bots)
-    ShadowSetBotCount(player, #bots)
-    return {
-        view = "hello", seq = seq, playerName = name,
-        count = #bots,
-        max = WorldMaxBots(player),
-        barReady = Multistate.GetData(player, "ShadowBarStatusChecked") and true or false,
-        bots = bots,
-    }
-end
-
--- Single committer for bot adds. Derives the count from truth; duplicate
--- rapid EMQs hit the exists check and become recount-only no-ops.
--- isBulk (trusted bulk intents like relog Yes): skips the 5s summon-time
--- gate (which can never pass on a fresh login) and the per-bot add
--- throttle (which would block bots 2..n in the same tick).
-local function WorldAddBot(player, botName, seq, viaMenu, reqTime, isBulk)
-    local name = player:GetName()
-    local function answer()
-        if seq then WorldSendView(player, WorldHelloView(player, seq)) end
-    end
-    if not botName or botName == "" or botName == name then
-        answer()
-        return false
-    end
-    if viaMenu then
-        if not reqTime or (os.time() - reqTime > 30) then
-            player:SendAreaTriggerMessage("That shadows request expired, please try again.")
-            answer()
-            return false
-        end
-    elseif not isBulk and not (ShadowGetBotSummonTime(player) ~= 0 and (os.time() - ShadowGetBotSummonTime(player) < 5)) then
-        return false
-    end
-    if not isBulk then
-        local lastAdd = Multistate.GetData(player, "ShadowsAddCmd")
-        if lastAdd and not (GetCurrTime() - lastAdd > 300) then
-            player:SendAreaTriggerMessage("You can't add shadows that fast!")
-            answer()
-            return false
-        end
-    end
-    local exists = false
-    for _, char in ipairs(ShadowGetBots(name)) do
-        if char == botName then exists = true break end
-    end
-    if exists then
-        ShadowSetBotCount(player, #ShadowGetBots(name))
-        answer()
-        return true
-    end
-    if #ShadowGetBots(name) >= WorldMaxBots(player) then
-        player:SendAreaTriggerMessage("You can't summon more shadows until you remove one.")
-        ShadowSetBotCount(player, #ShadowGetBots(name))
-        answer()
-        return false
-    end
-    ShadowSetMaster(botName, name)
-    -- Intent-aware recount: the queued REPLACE may not have applied yet,
-    -- and seq==nil paths (attemptaddbot bulk, chat adds) never reach
-    -- WorldIntentHello, so without this BotCount stays 0 and Teleport() /
-    -- zonecheck early-return forever after a relog.
-    do
-        local fresh = ShadowGetBots(name)
-        local seen = false
-        for _, b in ipairs(fresh) do
-            if b == botName then seen = true break end
-        end
-        if not seen then table.insert(fresh, botName) end
-        ShadowSetBotCount(player, #fresh)
-    end
-    ShadowSetBotSummonTime(player, os.time())
-    ShadowSetDontKick(player, botName, os.time() + 3)
-    Multistate.SetData(player, "ShadowsAddCmd", GetCurrTime())
-    if ShadowGetBotCount(player) > 4 then
-        local shadowsGroup = player:GetGroup()
-        if shadowsGroup then shadowsGroup:ConvertToRaid() end
-    end
-    -- Engine command; the wrapper below swallows the re-entrant event via marker.
-    Multistate.SetData(player, "ShadowsInternalCmd", botName)
-    player:RunCommand(".shadows bot add " .. botName)
-    player:RegisterEvent(function(e, d, r, pl)
-        if not pl then return end
-        local bot = Multistate.FindPlayerByName(botName)
-        if not bot then return end
-        local botGroup = bot:GetGroup()
-        local playerGroup = pl:GetGroup()
-        if botGroup and playerGroup and botGroup ~= playerGroup then
-            bot:RemoveFromGroup()
-            pl:GroupInvite(bot)
-        elseif botGroup and not playerGroup then
-            bot:RemoveFromGroup()
-            pl:GroupInvite(bot)
-        end
-    end, 200, 1)
-    -- Intent-aware answer: count/bots include the just-added name even if
-    -- the queued REPLACE has not applied yet, so the (n/max) never lags.
-    if seq then WorldSendView(player, WorldIntentHello(player, seq, botName, nil)) end
-    return true
-end
-
--- Single committer for bot removes. Idempotent; intent-aware.
-local function WorldRemoveBot(player, botName, seq)
-    local name = player:GetName()
-    if botName and botName ~= "" then
-        local target = Multistate.FindPlayerByName(botName)
-        if target then target:RemoveEvents() end
-        ShadowSetMaster(botName, nil)
-        Multistate.SetData(player, "ShadowsInternalCmd", botName)
-        player:RunCommand(".shadows bot remove " .. botName)
-    end
-    if seq then
-        local v = WorldIntentHello(player, seq, nil, botName)
-        v.view = "remove"
-        WorldSendView(player, v)
-    else
-        ShadowSetBotCount(player, #ShadowGetBots(name))
-    end
-    return true
-end
-
--- World op dispatcher (HandleWorldOp assignment). All DB and shared-var
--- work happens here, in the world state. Mutating ops answer with views.
-HandleWorldOp = function(player, data)
-    if not player or not data or not data.op then return end
-    local op = data.op
-    local name = player:GetName()
-
-    if op == "open" then
-        WorldSendView(player, WorldHelloView(player, data.seq))
-    elseif op == "removemenu" then
-        WorldSendView(player, {
-            view = "remove", seq = data.seq, playerName = name,
-            count = #ShadowGetBots(name),
-            max = WorldMaxBots(player),
-            barReady = Multistate.GetData(player, "ShadowBarStatusChecked") and true or false,
-            bots = ShadowGetBots(name),
-        })
-    elseif op == "addmenu" then
-        local accountId = player:GetAccountId()
-        local seq = data.seq
-        local guidLow = player:GetGUIDLow()
-        CharDBQueryAsync("SELECT name, race, class, gender, level FROM characters WHERE account = " .. accountId .. " ORDER BY level DESC, name ASC", function(query)
-            local p = GetPlayerByName(name)
-            if not p then return end
-            local owned = {}
-            local ownedQuery = CharDBQuery("SELECT bot_name FROM acore_eluna.shadows_bots WHERE master_name = '" .. name .. "'")
-            if ownedQuery then
-                repeat owned[ownedQuery:GetString(0)] = true until not ownedQuery:NextRow()
-            end
-            local grouped = {}
-            local grp = p:GetGroup()
-            if grp then
-                for _, m in ipairs(grp:GetMembers()) do grouped[m:GetName()] = true end
-            end
-            local pLevel = p:GetLevel()
-            local rows = {}
-            if query then
-                repeat
-                    local cName = query:GetString(0)
-                    local cLevel = query:GetUInt8(4)
-                    if cName ~= name and not owned[cName] and not grouped[cName] then
-                        local tier = 0
-                        if cLevel >= minShadowsLevel and cLevel > 9 and math.abs(pLevel - cLevel) <= 10 then
-                            tier = 1
-                        elseif cLevel >= minShadowsLevel and math.abs(pLevel - cLevel) <= 10 then
-                            tier = 2
-                        end
-                        if tier > 0 then
-                            table.insert(rows, {
-                                name = cName,
-                                race = query:GetUInt8(1),
-                                class = query:GetUInt8(2),
-                                gender = query:GetUInt8(3),
-                                level = cLevel,
-                                tier = tier,
-                            })
-                        end
-                    end
-                until not query:NextRow()
-            end
-            local hv = WorldHelloView(p, seq)
-            hv.view = "add"
-            hv.available = rows
-            WorldSendView(p, hv)
-        end)
-    elseif op == "add" then
-        WorldAddBot(player, data.botName, data.seq, true, data.reqTime)
-    elseif op == "remove" then
-        WorldRemoveBot(player, data.botName, data.seq)
-    elseif op == "mapenter" then
-        if ShadowGetMaster(name) then return end
-        local bots = ShadowGetBots(name)
-        if #bots == 0 then return end
-        if player:IsDead() then return end
-        if not player:IsInGroup() then return end
-        if player:InArena() or player:InBattleground() then return end
-        if player:IsInCombat() then return end
-        if os.time() <= (ShadowGetLastTeleTime(player) or 0) then return end
-        ShadowSetLastTeleTime(player, os.time() + 1)
-        -- Cross-map follow: the master is on another map, so the master's
-        -- map state cannot resolve the bots (same-map-only lookup). Relay a
-        -- self-teleport to EACH bot instead (world sees all maps). Uses the
-        -- coords shipped by the map state; falls back to world coords.
-        local destMap = data.map or player:GetMapId()
-        local dx = data.x or player:GetX()
-        local dy = data.y or player:GetY()
-        local dz = data.z or player:GetZ()
-        local do_ = data.o or player:GetO()
-        for _, botName in ipairs(bots) do
-            local bot = Multistate.FindPlayerByName(botName)
-            if bot then
-                if bot:GetHealth() == 0 and not bot:HasAura(8326) then
-                    -- unreleased ghost corpse stays behind, skip only it
-                else
-                    bot:SendEMQMessage("ShadowsToMap", {
-                        view = "teleport", seq = nil, playerName = botName,
-                        map = destMap,
-                        x = dx + math.random(-1, 1),
-                        y = dy + math.random(-1, 1),
-                        z = dz, o = do_ + math.random(-6, 6),
-                    })
-                    print("Teleporting bot " .. botName .. " to " .. name .. " on map " .. tostring(destMap))
-                end
-            end
-        end
-    elseif op == "summon" then
-        -- Manual summon relay: map side queued missing (cross-map) bots.
-        -- World sees every map, so queue a self-teleport on each bot.
-        if ShadowGetMaster(name) then return end
-        local destMap = data.map or player:GetMapId()
-        local dx = data.x or player:GetX()
-        local dy = data.y or player:GetY()
-        local dz = data.z or player:GetZ()
-        local do_ = data.o or player:GetO()
-        Multistate.SetData(player, "ShadowsSummonCD", os.time() + BotSummonCD)
-        for _, botName in ipairs(data.bots or ShadowGetBots(name)) do
-            local bot = Multistate.FindPlayerByName(botName)
-            if bot then
-                bot:SendEMQMessage("ShadowsToMap", {
-                    view = "teleport", seq = nil, playerName = botName,
-                    map = destMap,
-                    x = dx + math.random(-3, 3),
-                    y = dy + math.random(-3, 3),
-                    z = dz, o = do_,
-                })
-            end
-        end
-    elseif op == "zonecheck" then
-        if ShadowGetMaster(name) then return end
-        if ShadowGetBotCount(player) <= 0 then return end
-        for _, zone in pairs(disallowedZones) do
-            if data.zone == zone or data.area == zone then
-                local doRemove = false
-                for _, botName in ipairs(ShadowGetBots(name)) do
-                    local bot = Multistate.FindPlayerByName(botName)
-                    if bot then bot:RemoveFromGroup() end
-                    ShadowSetMaster(botName, nil)
-                    doRemove = true
-                end
-                ShadowSetBotCount(player, 0)
-                if doRemove then
-                    player:RegisterEvent(function(eventId, delay, repeats, pl)
-                        if pl then
-                            pl:SendAreaTriggerMessage("You cannot use shadows in "..GetAreaName(pl:GetAreaId())..".")
-                        end
-                    end, 100, 1)
-                end
-            end
-        end
-    elseif op == "savebar" then
-        local guid = player:GetGUIDLow()
-        if ShadowGetBarData(player) then
-            CharDBExecute("REPLACE INTO acore_eluna.character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'ENABLED')")
-        else
-            CharDBExecute("REPLACE INTO acore_eluna.character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'DISABLED')")
-        end
-    elseif op == "wgcheck" then
-        local war = IsWintergraspWarTime()
-        if war and not _wgWasWarWorld then
-            ProcessWintergraspWorldstate(3801, 0)
-        end
-        _wgWasWarWorld = war
-    end
-end
-
+-- World
 local function OnBotCommand(event, player, command)
     if command == "shadowsmenu" then
-        WorldSendView(player, WorldHelloView(player, nil))
+        ShadowsHello(player)
         return false
     end
-    if string.find(command, "^playerb") then
-        if string.find(command, "^shadows bot add ") then
-            local botName = string.match(command, "^shadows bot add (.+)$")
-            if botName and Multistate.GetData(player, "ShadowsInternalCmd") == botName then
-                Multistate.ClearData(player, "ShadowsInternalCmd")
-                return true
-            end
-            return WorldAddBot(player, botName, nil, false, nil)
+    if command == "shadows summon" then
+        local cd = player:Data():Get("ShadowsSummonCD") or 0
+        if cd >= os.time() then
+            player:SendAreaTriggerMessage("Your shadows summon is on cooldown for " .. math.floor((cd - os.time()) / 60) .. " minutes and " .. ((cd - os.time()) % 60) .. " seconds.")
+            return true
         end
-
-        if string.find(command, "^shadows bot remove ") then
-            local botName = string.match(command, "^shadows bot remove (.+)$")
-            if botName and Multistate.GetData(player, "ShadowsInternalCmd") == botName then
-                Multistate.ClearData(player, "ShadowsInternalCmd")
-                return true
+        if player:GetBotsCount() == 0 then
+            player:SendAreaTriggerMessage("You have no active shadows.")
+            return true
+        end
+        for _, bot in ipairs(player:GetBots()) do
+            if bot then
+                bot:Teleport(player:GetMapId(), player:GetX() + math.random(-3, 3), player:GetY() + math.random(-3, 3), player:GetZ() + math.random(0, 0.1), player:GetO() + math.random(-6, 6))
+                player:CastSpell(bot, BOT_TELE_VISUAL, true)
+                bot:RegisterEvent(function(eventId, delay, repeats, b)
+                    if b then b:CastSpell(b, BOT_TELE_VISUAL, true) end
+                end, 500, 1)
             end
-            return WorldRemoveBot(player, botName, nil)
+        end
+        player:Data():Set("ShadowsSummonCD", os.time() + BotSummonCD)
+        return true
+    end
+    if string.find(command, "^shadows bot ") then
+        local guid = player:GetGUIDLow()
+        local name = player:GetName()
+        
+        if (string.find(command, "^shadows bot add ")
+        and (player:Data():Get("ShadowsBotSummonTime") and (os.time() - player:Data():Get("ShadowsBotSummonTime") < 5)))
+        then
+            local selectedChar = string.match(command, "^shadows bot add (.+)$")
+
+            local exists = false
+            for _, bot in ipairs(player:GetBots()) do
+                if bot and bot:GetName() == selectedChar then
+                    exists = true
+                    return false
+                end
+            end
+
+            if player:GetBotsCount() + 1 > 4 then
+                local shadowsGroup = player:GetGroup()
+                if shadowsGroup then
+                    shadowsGroup:ConvertToRaid()
+                end
+            end
+
+            player:RegisterEvent(function(e, d, r, player)
+                local bot = GetPlayerByName(selectedChar)
+                if not bot then return end
+
+                local botGroup = bot:GetGroup()
+                local playerGroup = player:GetGroup()
+
+                if botGroup and playerGroup and botGroup ~= playerGroup then
+                    bot:RemoveFromGroup()
+                    player:GroupInvite(bot)
+                elseif botGroup and not playerGroup then
+                    bot:RemoveFromGroup()
+                    player:GroupInvite(bot)
+                end
+            end, 200, 1)
+
+            return true
+        end
+        
+        if string.find(command, "^shadows bot remove ") then
+            local selectedChar = string.match(command, "^shadows bot remove (.+)$")
+            
+            local selectedCharObj = GetPlayerByName(selectedChar)
+            if selectedCharObj then selectedCharObj:RemoveEvents() end
+
+            return true
         end
         return false
     end
 
 	if command == "shadowslogin" then
-		if ShadowGetLoginTime(player) and (ShadowGetLoginTime(player) < os.time() + 5) then
+		if player:GetData("LoginTime") and (player:GetData("LoginTime") < os.time() + 5) then
 			local accountId = player:GetAccountId()
 			local name = player:GetName()
 			
@@ -1720,17 +1049,17 @@ local function OnBotCommand(event, player, command)
 	end
 	
 	if command == "shadowsbaron" then
-		ShadowSetBarData(player, true)
+		player:SetData("ShadowsBarData", true)
 		player:SendBroadcastMessage("Automatic shadows bar enabled.")
 		return false
 	elseif command == "shadowsbaroff" then
-		ShadowSetBarData(player, false)
+		player:SetData("ShadowsBarData", false)
 		player:SendBroadcastMessage("Automatic shadows bar disabled.")
 		return false
 	elseif command == "shadowsbarstatus" then
-		Multistate.SetData(player, "ShadowBarStatusChecked", true)
+		player:SetData("ShadowBarStatusChecked", true)
 		if not player:IsInGroup() then
-			if ShadowGetBarData(player) then
+			if player:GetData("ShadowsBarData") then
 				player:SendAddonMessage("ShadowsBar", "OPEN", 7, player)
 			else
 				player:SendAddonMessage("ShadowsBar", "CLOSED", 7, player)
@@ -1740,15 +1069,16 @@ local function OnBotCommand(event, player, command)
 			local groupPlayers = group:GetMembers()
 			local foundBot = false
 			for _, groupMember in ipairs(groupPlayers) do
-				local name = groupMember:GetName()
-				if ShadowGetMaster(name) == player:GetName() and ShadowGetBarData(player) then
+				local memberShadow = groupMember:ToShadow()
+				local memberMaster = memberShadow and memberShadow:GetMaster()
+				if memberMaster and memberMaster:GetName() == player:GetName() and player:GetData("ShadowsBarData") then
 					player:SendAddonMessage("ShadowsBar", "ENABLED", 7, player)
 					foundBot = true
 					break
 				end
 			end
 			if not foundBot then
-				if ShadowGetBarData(player) then
+				if player:GetData("ShadowsBarData") then
 					player:SendAddonMessage("ShadowsBar", "OPEN", 7, player)
 				else
 					player:SendAddonMessage("ShadowsBar", "CLOSED", 7, player)
@@ -1760,38 +1090,33 @@ local function OnBotCommand(event, player, command)
 
 	if string.find(command, "attemptaddbot ") then
 
-	    local bots = string.match(command, "attemptaddbot (.+)$") or ""
+	    local bots = string.match(command, "attemptaddbot (.+)$")
 	    local botNames = {}
 		local maxBotsForPlayer = maxBotCount
-
+	   
 	    for botName in string.gmatch(bots, "([^,]+)") do
 		    botName = string.gsub(botName, "^%s*(.-)%s*$", "%1")
-			if botName ~= "" then
-				table.insert(botNames, botName)
-			end
+			table.insert(botNames, botName)
 	    end
-
-		if #botNames == 0 then
-			return false
-		end
-
+		
+	   
 	   if player:IsInGroup() then
-
-		   if Multistate.GetData(player, "VIPTime") and Multistate.GetData(player, "VIPTime") > os.time() then
+		   
+		   if player:GetData("VIPTime") and player:GetData("VIPTime") > os.time() then
 				maxBotsForPlayer = maxVIPCount
 		   end
-
-		   if #ShadowGetBots(player:GetName()) + #botNames > maxBotsForPlayer then
-			   player:SendBroadcastMessage("We could not log in your shadows as the total shadows in your group exceeds your limit of "..maxBotsForPlayer..".")
+		   
+		   if #botNames > maxBotsForPlayer then
+			   player:SendBroadcastMessage("We could not log in your shadows as the total shadows in your group exceeds your limit of "..maxBotCount..".")
 			   return false
 		   end
-
+		   
 		   local playerGuid = player:GetGUIDLow()
-
-		   -- Trusted bulk intent (user clicked Yes): bypasses the per-bot
-		   -- spam gates, which can never pass on a fresh relog.
+		   
 		   for _, botName in ipairs(botNames) do
-		 	   WorldAddBot(player, botName, nil, false, nil, true)
+		 	   player:Data():Set("ShadowsBotSummonTime", os.time())
+		 	   player:Data():Set("ShadowsDontKick:" .. botName, os.time() + 3)
+		 	   player:RunCommand(".shadows bot add " .. botName)
 		    end
 	    end
 	    return false
@@ -1800,24 +1125,64 @@ local function OnBotCommand(event, player, command)
 end
 
 local function OnPlayerMapEnter(event, map, player)
-    -- Multistate: server event 21 fires in map states. Ship the fresh
-    -- destination coords; the world state relays a self-teleport to each
-    -- bot (queued on the bot's own Data so its own map executes it).
-    player:SendEMQMessage("ShadowsToWorld", {
-        op = "mapenter",
-        playerName = player:GetName(),
-        map = player:GetMapId(),
-        x = player:GetX(), y = player:GetY(), z = player:GetZ(), o = player:GetO(),
-    })
+    if player:IsBot() then return end
+    local sameMap = "openWorld"
+    Teleport(player, sameMap)
 end
 
 local function OnDisallowedZones(event, player, newZone, newArea)
-    -- Multistate: player event 27 fires in map states. No DB here; world
-    -- owns the bulk remove and messages the player directly.
     if player:IsDead() then
         return
     end
-    player:SendEMQMessage("ShadowsToWorld", { op = "zonecheck", playerName = player:GetName(), zone = newZone, area = newArea })
+    if player:IsBot() then return end
+    if player:GetBotsCount() <= 0 then
+        return
+    end
+    for _, zone in pairs(disallowedZones) do
+        if newZone == zone or newArea == zone then
+            local botsToRemove = {}
+
+            if player:GetBotsCount() > 0 then
+                for _, bot in ipairs(player:GetBots()) do
+                    if bot then table.insert(botsToRemove, bot:GetName()) end
+                end
+            end
+
+            player:RegisterEvent(function(eventId, delay, repeats, player) 
+                if #botsToRemove > 0 then 
+                    for _, botName in ipairs(botsToRemove) do
+                        local bot = GetPlayerByName(botName)
+                        if bot then
+                            bot:RemoveFromGroup()
+                            player:RunCommand(".shadows bot remove " .. botName)
+                        end
+                    end
+                    player:SendAreaTriggerMessage("You cannot use shadows in "..GetAreaName(player:GetAreaId())..".")
+                end
+            end, 100, 1)
+        end
+    end
+end
+
+local function DismissWintergraspShadows(event, battleId)
+    if battleId == 1 and not AllowInBattlefield then
+        for _, player in pairs(GetPlayersInWorld()) do
+            if (player:GetMapId() == 571) and (player:GetZoneId() == 4197) and not player:IsBot() and player:GetBotsCount() > 0 then
+                local removed = false
+                for _, bot in ipairs(player:GetBots()) do
+                    if bot then
+                        bot:RemoveFromGroup()
+                        player:RunCommand(".shadows bot remove " .. bot:GetName())
+                        removed = true
+                    end
+                end
+                if removed then
+                    player:SendBroadcastMessage("Shadows are not permitted during active Wintergrasp battles. Your shadows have logged off.")
+                    player:SendAreaTriggerMessage("Shadows are not permitted during active Wintergrasp battles. Your shadows have logged off.")
+                end
+            end
+        end
+    end
 end
 
 local function OnGroupChangeLeader(event, packet, player)
@@ -1826,30 +1191,22 @@ local function OnGroupChangeLeader(event, packet, player)
     local group = player:GetGroup()
     
     for _, player in ipairs (group:GetMembers()) do
-        local name = player:GetName()
+        local memberShadow = player:ToShadow()
+        if memberShadow then
 
-        if ShadowGetMaster(name) then
-
-            local masterName = ShadowGetMaster(name)
-            local master
-
-            if masterName then master = Multistate.FindPlayerByName(masterName) end
+            local master = memberShadow:GetMaster()
 
             if not master then return end
             if group:IsLeader(player:GetGUID()) then
                 if player:IsInSameGroupWith(master) or player:IsInSameRaidWith(master) then
-
+                    
                     player:RegisterEvent(function(e, d, r, player)
                         local group = player:GetGroup()
                         if not group then return end
 
-                        local name = player:GetName()
-
-                        local masterName = ShadowGetMaster(name)
-                        local master
-
-                        if masterName then master = Multistate.FindPlayerByName(masterName) end
-            
+                        local ms = player:ToShadow()
+                        local master = ms and ms:GetMaster()
+                        if not master then return end
                         group:SetLeader(master:GetGUID())
 
                     end, 1000)
@@ -1861,82 +1218,41 @@ local function OnGroupChangeLeader(event, packet, player)
     end
 end
 
-function ProcessWintergraspWorldstate(variableID, value) -- Called on init and update worldstate 3801
-    if value == 0 then
-        Multistate.ForEachPlayer(function(player)
-            if (player:GetMapId() == 571) and (player:GetZoneId() == 4197) then
-                local playerName = player:GetName()
+if not (GetStateMapId() == -1) then
+    -- Player map stuff
+    RegisterPlayerEvent(27, OnDisallowedZones)
 
-                if not ShadowGetMaster(playerName) then
-                    local master = player
+    -- Passes map obj directly in hook, as opposed to RegisterPlayerEvent:OnEnterMap
+    RegisterServerEvent(21, OnPlayerMapEnter)
 
-                    if master and ShadowGetBotCount(master) > 0 then
-
-                        local botsToRemove = {}
-                        for i, botName in ipairs(ShadowGetBots(master:GetName())) do
-                            table.insert(botsToRemove, botName)
-                        end
-
-                        if #botsToRemove > 0 then
-                            for _, botName in ipairs(botsToRemove) do
-                                local bot = Multistate.FindPlayerByName(botName)
-                                if bot then
-                                    bot:RemoveFromGroup()
-                                end
-                                master:RunCommand(".shadows bot remove " .. botName)
-                                ShadowSetMaster(botName, nil)
-                            end
-                            ShadowSetBotCount(master, #ShadowGetBots(master:GetName()))
-                            master:SendBroadcastMessage("Shadows are not permitted during active Wintergrasp battles. Your shadows have logged off.")
-                            master:SendAreaTriggerMessage("Shadows are not permitted during active Wintergrasp battles. Your shadows have logged off.")
-                        end
-                    end
-                end
-            end
-        end)
-    end
+    -- Shadows menu
+    RegisterPlayerGossipEvent(200, 2, ShadowsGossipSelect)
 end
 
--- Dismiss shadows on battle start. Northrend state only.
-local _wgWasWar = false
-local _wgWasWarWorld = false -- world-state edge flag for the EMQ-driven check
-local function WGShadowWatch()
-    if GetStateMapId() ~= 571 then return end
-    local war = IsWintergraspWarTime()
-    if war and not _wgWasWar then
-        -- World executes; map only triggers (no DB here).
-        local map = GetStateMap()
-        if map then
-            for _, p in ipairs(map:GetPlayers()) do
-                if p then
-                    p:SendEMQMessage("ShadowsToWorld", { op = "wgcheck", playerName = p:GetName() })
-                    break
-                end
-            end
-        end
-    end
-    _wgWasWar = war
-end
-if GetStateMapId() == 571 then
-    CreateLuaEvent(WGShadowWatch, 15000, 0)
-end
+if GetStateMapId() == -1 then
+    -- Shadows bar vars
+    SetShadowsBarData()
+    
+    -- Player world stuff
+    RegisterPlayerEvent(3, ShadowsLogin)
+    RegisterPlayerEvent(4, LogoutOrSave)
+    RegisterPlayerEvent(19, OnWhisper)
+    RegisterPlayerEvent(20, OnGroup)
+    RegisterPlayerEvent(25, LogoutOrSave)
+    RegisterPlayerEvent(42, OnBotCommand)
+    
+    -- Packet stuff
+    RegisterPacketEvent(0x075, 5, UninviteGroup)
+    RegisterPacketEvent(0x076, 5, UninviteGroupGUID)
+    RegisterPacketEvent(0x0C7, 5, PacketTeleDelay)
+    RegisterPacketEvent(0x0C9, 5, PacketMoveDelay)
+    RegisterPacketEvent(0x0CA, 5, PacketMoveDelay)
+    RegisterPacketEvent(0x0CB, 5, PacketMoveDelay)
+    RegisterPacketEvent(0x079, 7, OnGroupChangeLeader)
+    
+    -- Group stuff
+    RegisterGroupEvent(3, LeaveGroup)
+    RegisterGroupEvent(5, DisbandGroup)
 
-SetActiveVars()
-RegisterPlayerEvent(3, ShadowsLogin)
-RegisterPlayerEvent(4, LogoutOrSave)
-RegisterPlayerEvent(25, LogoutOrSave)
-RegisterPlayerEvent(19, OnWhisper)
-RegisterPlayerEvent(20, OnGroup)
-RegisterServerEvent(21, OnPlayerMapEnter)
-RegisterPlayerEvent(27, OnDisallowedZones)
-RegisterPlayerEvent(42, OnBotCommand)
-RegisterPlayerGossipEvent(200, 2, ShadowsGossipSelect)
-RegisterGroupEvent(3, LeaveGroup)
-RegisterGroupEvent(5, DisbandGroup)
-RegisterPacketEvent(0x075, 5, UninviteGroup)
-RegisterPacketEvent(0x076, 5, UninviteGroupGUID)
-RegisterPacketEvent(0x0C7, 5, PacketTeleDelay)
-RegisterPacketEvent(0x0C9, 5, PacketMoveDelay)
-RegisterPacketEvent(0x0CA, 5, PacketMoveDelay)
-RegisterPacketEvent(0x0CB, 5, PacketMoveDelay)
-RegisterPacketEvent(0x079, 7, OnGroupChangeLeader)
+    RegisterBattlefieldEvent(1, DismissWintergraspShadows)
+end
