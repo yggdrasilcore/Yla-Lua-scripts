@@ -45,23 +45,23 @@ local function AIO_UI_FIX(event, player, command)
 	local guid = player:GetGUIDLow()
 	
 	if event == 28 then -- on login/map change, check reward state
-		if Multistate.GetData(player, "LvlRewardsChecked") then return end
+		if player:Data():Get("LvlRewardsChecked") then return end
 		CharDBQueryAsync("SELECT data FROM acore_eluna.character_custom_data WHERE guid = "..guid.." AND type = 99", function(result)
 			local player = Multistate.FindPlayerByGUID(GetPlayerGUID(guid))
 			if result then
 				local data = result:GetString(0)
 				if not player then return end
 				if data == "DISABLED" then
-					Multistate.SetData(player, "LvlRewardsDisabled", true)
+					player:Data():Set("LvlRewardsDisabled", true)
 				else
-					Multistate.SetData(player, "LvlRewardsDisabled", false)
+					player:Data():Set("LvlRewardsDisabled", false)
 				end
-				Multistate.SetData(player, "LvlRewardsChecked", true)
+				player:Data():Set("LvlRewardsChecked", true)
 			end
 		end)
 	elseif event == 4 or event == 25 then
-		if Multistate.GetData(player, "LvlRewardsChanged") then
-			if Multistate.GetData(player, "LvlRewardsDisabled") then
+		if player:Data():Get("LvlRewardsChanged") then
+			if player:Data():Get("LvlRewardsDisabled") then
 				CharDBExecute("REPLACE INTO acore_eluna.character_custom_data (guid, type, time, data) VALUES ("..guid..", 99, "..os.time()..", 'DISABLED')")
 			else
 				CharDBExecute("REPLACE INTO acore_eluna.character_custom_data (guid, type, time, data) VALUES ("..guid..", 99, "..os.time()..", 'ENABLED')")
@@ -87,16 +87,16 @@ local function AIO_UI_FIX(event, player, command)
 		-- LVL Reward Toggle in features tab
 		elseif command == "lvlrewardsoff" then
 			player:SendBroadcastMessage("Your level-up rewards have been disabled.")
-			Multistate.SetData(player, "LvlRewardsDisabled", true)
-			Multistate.SetData(player, "LvlRewardsChanged", true)
+			player:Data():Set("LvlRewardsDisabled", true)
+			player:Data():Set("LvlRewardsChanged", true)
 			return false
 		elseif command == "lvlrewardson" then
 			player:SendBroadcastMessage("Your level-up rewards have been enabled.")
-			Multistate.SetData(player, "LvlRewardsDisabled", false)
-			Multistate.SetData(player, "LvlRewardsChanged", true)
+			player:Data():Set("LvlRewardsDisabled", false)
+			player:Data():Set("LvlRewardsChanged", true)
 			return false
 		elseif command == "lvlrewardsstatus" then
-			local status = Multistate.GetData(player, "LvlRewardsDisabled")
+			local status = player:Data():Get("LvlRewardsDisabled")
 			if status then
 				player:SendAddonMessage("LvlRewardsDisabled", "DISABLED", 7, player)
 			else
@@ -134,7 +134,7 @@ if not first then
                    local data = result:GetString(1)
                    if data == "DISABLED" then
 					   local player = Multistate.FindPlayerByGUID(GetPlayerGUID(guid))
-					   if player then Multistate.SetData(player, "LvlRewardsDisabled", true) end
+					   if player then player:Data():Set("LvlRewardsDisabled", true) end
 				   end
                until not result:NextRow()
            end

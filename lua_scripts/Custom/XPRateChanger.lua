@@ -1,4 +1,3 @@
-local Multistate = require("Multistate")
 -------------------------------------------------------------------------------------------------------------------------
 -- XP changer script start
 -------------------------------------------------------------------------------------------------------------------------
@@ -24,7 +23,7 @@ function OnTalkToGreetingTwig(event, player, object)
     local cost9 = " (4x "..currencyName..")"
     local cost10 = " (5x "..currencyName..")"
     
-    if object == player or (Multistate.GetData(player, "VIPTime") and Multistate.GetData(player, "VIPTime") > os.time()) then
+    if object == player or (player:Data():Get("VIPTime") and player:Data():Get("VIPTime") > os.time()) then
         cost6 = ""
         cost7 = ""
         cost8 = ""
@@ -149,7 +148,7 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
         local cost9 = " (4x "..currencyName..")"
         local cost10 = " (5x "..currencyName..")"
         
-        if object == player or (Multistate.GetData(player, "VIPTime") and Multistate.GetData(player, "VIPTime") > os.time()) then
+        if object == player or (player:Data():Get("VIPTime") and player:Data():Get("VIPTime") > os.time()) then
             cost6 = ""
             cost7 = ""
             cost8 = ""
@@ -205,7 +204,7 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
             player:CastSpell(player, 47292, true)
             player:GossipComplete()
             return
-        elseif intid > 5 and not (Multistate.GetData(player, "VIPTime") and (Multistate.GetData(player, "VIPTime") > os.time())) then -- Charge if higher tier XP and not VIP
+        elseif intid > 5 and not (player:Data():Get("VIPTime") and (player:Data():Get("VIPTime") > os.time())) then -- Charge if higher tier XP and not VIP
             local maxPaid = MaxPaidCache[guid] or 0
             if intid > maxPaid then
                 if not player:HasItem(currencyID, intid - 5) then

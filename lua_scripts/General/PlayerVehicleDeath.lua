@@ -6,11 +6,11 @@ local function EnterPlayerVehicle(event, packet, player)
     if not player or not player:GetSelection() or not player:GetSelection():IsPlayer() then
         return
     end
-    Multistate.SetData(player, "vehicleName", player:GetSelection():GetName())
+    player:Data():Set("vehicleName", player:GetSelection():GetName())
 end
 
 local function HandlePlayerKill(event, killer, killed)
-    local vehicleName = Multistate.GetData(killed, "vehicleName")
+    local vehicleName = killed:Data():Get("vehicleName")
     if killed:IsOnVehicle() and vehicleName then
         local playerVehicle = Multistate.FindPlayerByName(vehicleName)
         if not playerVehicle then return end

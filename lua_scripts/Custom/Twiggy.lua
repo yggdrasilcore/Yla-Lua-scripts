@@ -1,4 +1,3 @@
-local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
 -- Runs a .command in the global state (ChatHandler parsing must not run on map
@@ -141,8 +140,8 @@ local function ShowCategoryContents(player, creature, category, page)
 end
 
 local function VIPmenu(player, creature)
-	if Multistate.GetData(player, "VIPTime") and Multistate.GetData(player, "VIPTime") > os.time() then
-		local vipTime = Multistate.GetData(player, "VIPTime")
+	if player:Data():Get("VIPTime") and player:Data():Get("VIPTime") > os.time() then
+		local vipTime = player:Data():Get("VIPTime")
 		local remainingTime = vipTime - os.time()
 
 		if remainingTime >= 86400 then
@@ -261,12 +260,12 @@ HandleTwiggyWorld = function(player, data)
         player:SendAreaTriggerMessage("You are already at the mall.")
         return
     end
-    local remaining = (Multistate.GetData(player, "MallTeleCD") or 0) - os.time()
+    local remaining = (player:Data():Get("MallTeleCD") or 0) - os.time()
     if remaining > 0 then
         player:SendAreaTriggerMessage("Your mall teleport is on cooldown for " .. math.floor((remaining % 3600) / 60) .. " minutes and " .. math.floor(remaining % 60) .. " seconds.")
         return
     end
-    Multistate.SetData(player, "MallTeleCD", os.time() + COOLDOWN)
+    player:Data():Set("MallTeleCD", os.time() + COOLDOWN)
     player:SendEMQMessage("TwiggyToMap", { map = MAP_ID, x = X, y = Y, z = Z, o = ORIENTATION })
 end
 
@@ -413,8 +412,8 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
         local durations = {[21]=7, [22]=14, [23]=21, [25]=31}
         if player:HasItem(19322, costs[intId]) then
             player:RemoveItem(19322, costs[intId])
-            local newTime = math.max(os.time(), Multistate.GetData(player, "VIPTime") or 0) + durations[intId] * 24 * 60 * 60
-            Multistate.SetData(player, "VIPTime", newTime)
+            local newTime = math.max(os.time(), player:Data():Get("VIPTime") or 0) + durations[intId] * 24 * 60 * 60
+            player:Data():Set("VIPTime", newTime)
             AuthDBExecute("INSERT INTO acore_eluna.accounts_vip (account, viptime) VALUES (" .. player:GetAccountId() .. ", " .. newTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
             VIPmenu(player, creature)
         else

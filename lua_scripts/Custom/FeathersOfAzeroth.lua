@@ -564,13 +564,13 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         local currentPage = intid - 500000
         ShowMountMenu(event, player, nil, nil, currentPage - 1, true)
     elseif intid == 300002 then
-        Multistate.ClearData(player, "FeathersStandardMount")
+        player:Data():Set("FeathersStandardMount", nil)
         print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is nil")
         player:SendBroadcastMessage("Standard mount removed.")
         CharDBExecute(string.format("DELETE FROM acore_eluna.character_flight WHERE guid = %d", player:GetGUIDLow()))
         ShowManageStandardMount(event, player)
     elseif intid == 300003 then
-        Multistate.ClearData(player, "FeathersStandardMount")
+        player:Data():Set("FeathersStandardMount", nil)
         print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is nil")
         player:SendBroadcastMessage("Standard mount removed.")
         CharDBExecute(string.format("DELETE FROM acore_eluna.character_flight WHERE guid = %d", player:GetGUIDLow()))
@@ -586,8 +586,8 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
     elseif intid >= 800000 then
         -- Mount selected as standard
         local mountId = intid - 800000
-        Multistate.SetData(player, "FeathersStandardMount", mountId)
-        print("[Feathers of Azeroth]: Selecting standard mount for "..player:GetName().." is ".. tostring(Multistate.GetData(player, "FeathersStandardMount")) .." (mount ID "..mountId..")")
+        player:Data():Set("FeathersStandardMount", mountId)
+        print("[Feathers of Azeroth]: Selecting standard mount for "..player:GetName().." is ".. tostring(player:Data():Get("FeathersStandardMount")) .." (mount ID "..mountId..")")
         CharDBExecute(string.format("REPLACE INTO acore_eluna.character_flight (guid, standardmount) VALUES (%d, %d)", player:GetGUIDLow(), mountId))
         player:SendBroadcastMessage("Standard mount set successfully.")
         player:GossipComplete()
@@ -648,7 +648,7 @@ local function OnUseItem(event, player, item, target)
         return false
     end
     
-    local standardMount = Multistate.GetData(player, "FeathersStandardMount")
+    local standardMount = player:Data():Get("FeathersStandardMount")
     if standardMount and not player:IsCasting() then
         player:CastSpell(player, standardMount, false)
         print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is ".. standardMount)
@@ -682,7 +682,7 @@ local function LoadStandardMount(event, player)
     if result then
         local mountId = result:GetUInt32(0)
         if mountId  then
-            Multistate.SetData(player, "FeathersStandardMount", mountId)
+            player:Data():Set("FeathersStandardMount", mountId)
             print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is ".. mountId)
         end
     end
@@ -711,7 +711,7 @@ local function OnLoadScript()
                 local mountId = result:GetUInt32(1)
                 if mountId then
                     local p = Multistate.FindPlayerByGUID(guid)
-                    if p then Multistate.SetData(p, "FeathersStandardMount", mountId) end
+                    if p then p:Data():Set("FeathersStandardMount", mountId) end
                 end
             until not result:NextRow()
         end

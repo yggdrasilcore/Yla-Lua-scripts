@@ -732,8 +732,8 @@ local function WorldRAFSummonMenu(player, seq, page)
     page = page or 1
     local accountId = player:GetAccountId()
     local name = player:GetName()
-    local cdSec = math.max(0, (Multistate.GetData(player, "RAFSummonCD") or 0) - os.time())
-    local graceSec = math.max(0, (Multistate.GetData(player, "RAFSummonGrace") or 0) - os.time())
+    local cdSec = math.max(0, (player:Data():Get("RAFSummonCD") or 0) - os.time())
+    local graceSec = math.max(0, (player:Data():Get("RAFSummonGrace") or 0) - os.time())
     local MaxRAFDuration = os.time() - RAFDuration
     AuthDBQueryAsync(string.format([[
         SELECT account_id, referer_id FROM acore_eluna.account_raf
@@ -776,17 +776,17 @@ local function WorldRAFSummon(requester, friend, seq)
         ackMenu()
         return
     end
-    if (Multistate.GetData(requester, "RAFSummonCD") or 0) > os.time() then
+    if (requester:Data():Get("RAFSummonCD") or 0) > os.time() then
         ackMenu()
         return
     end
     if friend and friend:IsAlive() and not friend:IsInCombat()
     and not friend:IsOnVehicle() and not friend:IsFalling()
     and not friend:InArena() and not friend:InBattleground() then
-        Multistate.SetData(friend, "RAFSummonRequest", reqName)
-        Multistate.SetData(friend, "RAFSummonTime", os.time() + 120)
-        Multistate.SetData(requester, "RAFSummonCD", os.time() + 2 * 60)
-        Multistate.SetData(requester, "RAFSummonGrace", os.time() + 2 * 60)
+        friend:Data():Set("RAFSummonRequest", reqName)
+        friend:Data():Set("RAFSummonTime", os.time() + 120)
+        requester:Data():Set("RAFSummonCD", os.time() + 2 * 60)
+        requester:Data():Set("RAFSummonGrace", os.time() + 2 * 60)
         WorldRAFView(friend, nil, { view = "summonrequest", summoner = reqName, area = GetAreaName(requester:GetAreaId()) })
         ackMenu()
     elseif friend then
@@ -800,12 +800,12 @@ end
 
 local function WorldRAFAccept(target, seq)
     local name = target:GetName()
-    if os.time() >= (Multistate.GetData(target, "RAFSummonTime") or 0) + 120 then
+    if os.time() >= (target:Data():Get("RAFSummonTime") or 0) + 120 then
         target:SendAreaTriggerMessage("You have not accepted the summon in time!")
         if seq then WorldRAFView(target, seq, { view = "hub" }) end
         return
     end
-    local summonerName = Multistate.GetData(target, "RAFSummonRequest")
+    local summonerName = target:Data():Get("RAFSummonRequest")
     local summoner = summonerName and GetPlayerByName(summonerName) or nil
     if not summoner then
         target:SendAreaTriggerMessage("Your friend isn't available to summon you anymore.")
@@ -821,21 +821,21 @@ local function WorldRAFAccept(target, seq)
         if seq then WorldRAFView(target, seq, { view = "hub" }) end
         return
     end
-    Multistate.SetData(target, "RAFSummonTime", os.time() + 120)
-    Multistate.ClearData(target, "RAFSummonRequest")
+    target:Data():Set("RAFSummonTime", os.time() + 120)
+    target:Data():Set("RAFSummonRequest", nil)
     summoner:SendAreaTriggerMessage(target:GetName().." has accepted your summon request.")
-    Multistate.ClearData(summoner, "RAFSummonGrace")
-    Multistate.SetData(summoner, "RAFSummonCD", os.time() + summonCDLength * 60)
+    summoner:Data():Set("RAFSummonGrace", nil)
+    summoner:Data():Set("RAFSummonCD", os.time() + summonCDLength * 60)
     WorldRAFView(target, seq, { view = "teleport", map = summoner:GetMapId(), x = summoner:GetX(), y = summoner:GetY(), z = summoner:GetZ(), o = summoner:GetO() })
 end
 
 local function WorldRAFDecline(target)
-    local summonerName = Multistate.GetData(target, "RAFSummonRequest")
+    local summonerName = target:Data():Get("RAFSummonRequest")
     local summoner = summonerName and GetPlayerByName(summonerName) or nil
     if summoner then
         summoner:SendAreaTriggerMessage(target:GetName().." has denied your summon request.")
     end
-    Multistate.ClearData(target, "RAFSummonRequest")
+    target:Data():Set("RAFSummonRequest", nil)
 end
 
 local function WorldRAFLinkView(player, seq)
@@ -901,7 +901,7 @@ local function WorldRAFRegister(player, code, seq)
                     VALUES (%d, %d, 2, 0, %d, '%s', '%s')
                     ON DUPLICATE KEY UPDATE referer_id = %d, status = 2, progress = 0, date = %d, IP = '%s', IP_referer = '%s'
                 ]], accountId, referer_id, currentTime, playerIP, refererIP, referer_id, currentTime, playerIP, refererIP))
-                Multistate.SetData(p3, "RAFreferee", true)
+                p3:Data():Set("RAFreferee", true)
                 p3:SendAreaTriggerMessage(string.format("Successfully linked to referrer with ID: %d. Remember to relog to use the summon function.", referer_id))
                 WorldRAFLinkView(p3, seq)
             end)
@@ -1120,7 +1120,7 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
 					ON DUPLICATE KEY UPDATE referer_id = %d, status = 2, progress = 0, date = %d, IP = '%s'
 				]], accountId, referer_id, currentTime, playerIP, referer_id, currentTime, playerIP))
 
-				Multistate.SetData(player, "RAFreferee", true)
+				player:Data():Set("RAFreferee", true)
 				player:SendBroadcastMessage(string.format("You have been registered as a referee with referer ID: %d", referer_id))
 			end
 		end
@@ -1134,7 +1134,7 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
 
             Multistate.ForEachPlayer(function(p)
                 if p:GetAccountId() == account_to_delete then
-                    Multistate.ClearData(p, "RAFreferee")
+                    p:Data():Set("RAFreferee", nil)
                 end
             end)
 
@@ -1173,15 +1173,15 @@ local function CheckRefereeStatus(player)
 				UPDATE acore_eluna.account_raf SET IP = '%s' WHERE account_id = %d
 			]], playerIP, accountId))
 			-- Multistate: visible in every state (progress handlers run on maps).
-			Multistate.SetData(player, "RAFreferee", true)
+			player:Data():Set("RAFreferee", true)
 		else
-			Multistate.ClearData(player, "RAFreferee")
+			player:Data():Set("RAFreferee", nil)
 		end
 	end)
 end
 
 local function ClearRefereeStatus(event, player)
-    Multistate.ClearData(player, "RAFreferee")
+    player:Data():Set("RAFreferee", nil)
 end
 
 -- Check referee status on player login and server load
@@ -1198,7 +1198,7 @@ end
 
 local function UpdateProgress(player)
     local accountId = player:GetAccountId()
-    if Multistate.GetData(player, "RAFreferee") then
+    if player:Data():Get("RAFreferee") then
         if not playerProgress[accountId] then
             playerProgress[accountId] = 0
             
@@ -1289,7 +1289,7 @@ local function CheckCompletedReferrals()
 							message = "Twiggy: Congratulations, you've qualified for your referee reward! You have earned ".. TokenReward .." ".. TokenName.. " and a special reward, speak to me to claim it."
 							SendPurpleBroadcast(player, message)
 							player:AddItem(TokenID, TokenReward)
-							Multistate.ClearData(player, "RAFreferee")
+							player:Data():Set("RAFreferee", nil)
 							break
 						end
 					end

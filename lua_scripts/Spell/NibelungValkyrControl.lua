@@ -16,9 +16,9 @@ local function NibelungValkyrFix(event, packet, player)
         local petGuid = packet:ReadGUID()  -- Read the Pet GUID
         local count = packet:ReadUByte()   -- Read the count (uint8)
         if count == 2 then
-            Multistate.SetData(player, "ValkyrAttack", os.time())
+            player:Data():Set("ValkyrAttack", os.time())
         elseif count == 1 then
-            Multistate.SetData(player, "ValkyrFollow", os.time())
+            player:Data():Set("ValkyrFollow", os.time())
         end
     end
 end
@@ -42,8 +42,8 @@ local function OnValkyrSpawn(event, player, pet)
                     RemoveEventById(eventId)
                     return
                 end
-                local attackTime = Multistate.GetData(player, "ValkyrAttack") or 0
-                local followTime = Multistate.GetData(player, "ValkyrFollow") or 0
+                local attackTime = player:Data():Get("ValkyrAttack") or 0
+                local followTime = player:Data():Get("ValkyrFollow") or 0
 
                 if attackTime > followTime and attackTime > os.time() - 1.5 then
                     pet:SetReactState(2)

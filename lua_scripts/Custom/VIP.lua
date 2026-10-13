@@ -1,6 +1,6 @@
 local Multistate = require("Multistate")
 function IsVIP(player)
-    return Multistate.GetData(player, "VIPTime") and Multistate.GetData(player, "VIPTime") > os.time()
+    return player:Data():Get("VIPTime") and player:Data():Get("VIPTime") > os.time()
 end
 
 local function CheckVIPOnLoad()
@@ -36,10 +36,10 @@ local function CheckVIPOnLoad()
         for _, name in ipairs(playerNames) do
             local player = Multistate.FindPlayerByName(name)
             if player and vipTimeMap[accountIdMap[name]] then
-                Multistate.SetData(player, "VIPTime", vipTimeMap[accountIdMap[name]])
+                player:Data():Set("VIPTime", vipTimeMap[accountIdMap[name]])
 				print("VIP found: "..player:GetName()..", acc "..player:GetAccountId()..".")
             elseif player then
-                Multistate.SetData(player, "VIPTime", 0)
+                player:Data():Set("VIPTime", 0)
             end
         end
     end)
@@ -54,9 +54,9 @@ local function CheckVIP(event, player)
 		local player = Multistate.FindPlayerByName(name)
 		if not player then return end
 		if result then
-			Multistate.SetData(player, "VIPTime", result:GetUInt32(0))
+			player:Data():Set("VIPTime", result:GetUInt32(0))
 		else
-			Multistate.SetData(player, "VIPTime", 0)
+			player:Data():Set("VIPTime", 0)
 		end
 	end)
 end
@@ -180,7 +180,7 @@ local function VIPGMCommands(event, player, command)
                     
                     local freshOnlinePlayer = onlineCharName and GetPlayerByName(onlineCharName) or nil
                     if freshOnlinePlayer then
-                        Multistate.SetData(freshOnlinePlayer, "VIPTime", newVIPTime)
+                        freshOnlinePlayer:Data():Set("VIPTime", newVIPTime)
                         freshOnlinePlayer:SendBroadcastMessage("A GM has granted you " .. days .. " VIP days. Your VIP status has been updated!")
                     end
                     
@@ -256,7 +256,7 @@ local function VIPGMCommands(event, player, command)
                     AuthDBExecute("INSERT INTO acore_eluna.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
                     
                     if targetPlayer then
-                        Multistate.SetData(targetPlayer, "VIPTime", newVIPTime)
+                        targetPlayer:Data():Set("VIPTime", newVIPTime)
                         targetPlayer:SendBroadcastMessage("A GM has granted you " .. days .. " VIP days. Your VIP status has been updated!")
                         if gm then gm:SendBroadcastMessage("Added " .. days .. " VIP days to " .. username .. " (" .. targetPlayer:GetName() .. "). New VIP expires: " .. os.date("%Y-%m-%d %H:%M:%S", newVIPTime)) end
                     else
@@ -300,7 +300,7 @@ local function VIPGMCommands(event, player, command)
         end
         
         local targetAccountId = targetPlayer:GetAccountId()
-        local currentVIPTime = Multistate.GetData(targetPlayer, "VIPTime") or 0
+        local currentVIPTime = targetPlayer:Data():Get("VIPTime") or 0
         local currentTime = os.time()
         
         local baseTime = math.max(currentVIPTime, currentTime)
@@ -308,7 +308,7 @@ local function VIPGMCommands(event, player, command)
         
         AuthDBExecute("INSERT INTO acore_eluna.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
         
-        Multistate.SetData(targetPlayer, "VIPTime", newVIPTime)
+        targetPlayer:Data():Set("VIPTime", newVIPTime)
         
         if targetPlayer == player then
             player:SendBroadcastMessage("Added " .. days .. " VIP days to yourself. New VIP expires: " .. os.date("%Y-%m-%d %H:%M:%S", newVIPTime))
@@ -348,14 +348,14 @@ local function VIPGMCommands(event, player, command)
         end
         
         local targetAccountId = targetPlayer:GetAccountId()
-        local currentVIPTime = Multistate.GetData(targetPlayer, "VIPTime") or 0
+        local currentVIPTime = targetPlayer:Data():Get("VIPTime") or 0
         local currentTime = os.time()
         
         local newVIPTime = math.max(currentTime, currentVIPTime - (days * 24 * 60 * 60))
         
         AuthDBExecute("INSERT INTO acore_eluna.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
         
-        Multistate.SetData(targetPlayer, "VIPTime", newVIPTime)
+        targetPlayer:Data():Set("VIPTime", newVIPTime)
         
         if newVIPTime <= currentTime then
             player:SendBroadcastMessage("Removed " .. days .. " VIP days from " .. targetPlayer:GetName() .. ". VIP is now INACTIVE.")
@@ -399,14 +399,14 @@ local function VIPGMCommands(event, player, command)
         end
         
         local targetAccountId = targetPlayer:GetAccountId()
-        local currentVIPTime = Multistate.GetData(targetPlayer, "VIPTime") or 0
+        local currentVIPTime = targetPlayer:Data():Get("VIPTime") or 0
         local currentTime = os.time()
         
         local newVIPTime = math.max(currentTime, currentVIPTime - (days * 24 * 60 * 60))
         
         AuthDBExecute("INSERT INTO acore_eluna.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
         
-        Multistate.SetData(targetPlayer, "VIPTime", newVIPTime)
+        targetPlayer:Data():Set("VIPTime", newVIPTime)
         
         if newVIPTime <= currentTime then
             if targetPlayer == player then
@@ -453,7 +453,7 @@ local function VIPGMCommands(event, player, command)
         
         AuthDBExecute("INSERT INTO acore_eluna.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. currentTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
         
-        Multistate.SetData(targetPlayer, "VIPTime", currentTime)
+        targetPlayer:Data():Set("VIPTime", currentTime)
         
         player:SendBroadcastMessage("Removed all VIP time from " .. targetPlayer:GetName() .. ". VIP is now INACTIVE.")
         targetPlayer:SendBroadcastMessage("A GM has removed all VIP time from your account. Your VIP status has been updated!")
@@ -488,7 +488,7 @@ local function VIPGMCommands(event, player, command)
         
         AuthDBExecute("INSERT INTO acore_eluna.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. currentTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
         
-        Multistate.SetData(targetPlayer, "VIPTime", currentTime)
+        targetPlayer:Data():Set("VIPTime", currentTime)
         
         if targetPlayer == player then
             player:SendBroadcastMessage("Removed all VIP time from yourself. VIP is now INACTIVE.")
@@ -514,7 +514,7 @@ local function VIPGMCommands(event, player, command)
             return false
         end
         
-        local vipTime = Multistate.GetData(targetPlayer, "VIPTime") or 0
+        local vipTime = targetPlayer:Data():Get("VIPTime") or 0
         local currentTime = os.time()
         
         if vipTime > currentTime then
@@ -560,7 +560,7 @@ local function VIPGMCommands(event, player, command)
             end
         end
         
-        local vipTime = Multistate.GetData(targetPlayer, "VIPTime") or 0
+        local vipTime = targetPlayer:Data():Get("VIPTime") or 0
         local currentTime = os.time()
         
         if vipTime > currentTime then
@@ -600,7 +600,7 @@ local function VIPCommands(event, player, command)
     if cmd == "vip" and player:GetGMRank() == 0 then
         if not CheckVIPCmd(player) then return false end
         
-        local vipTime = Multistate.GetData(player, "VIPTime") or 0
+        local vipTime = player:Data():Get("VIPTime") or 0
         local currentTime = os.time()
         
         if vipTime > currentTime then

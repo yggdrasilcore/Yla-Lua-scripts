@@ -4,7 +4,6 @@
 -- every state) instead of per-state SetData. Group iteration stays in the
 -- global command handler (Group API is world-only). The core "combatstop"
 -- command is executed in the global state via EMQ.
-local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
 local CLTime = {}
@@ -36,7 +35,7 @@ local function ClearCombat(event, player, command)
 
         local isInBossFight
 
-        if Multistate.GetData(player, "isInBossFight") then
+        if player:Data():Get("isInBossFight") then
             print(string.format("Player %s is in boss fight", player:GetName()))
             isInBossFight = true
             player:SendBroadcastMessage("You can't do that during a boss fight!")
@@ -47,7 +46,7 @@ local function ClearCombat(event, player, command)
         if group then
             print(string.format("Checking group members for player %s", player:GetName()))
             for _, member in ipairs(group:GetMembers()) do
-                if Multistate.GetData(member, "isInBossFight") then
+                if member:Data():Get("isInBossFight") then
                     print(string.format("Group member %s is in boss fight", member:GetName()))
                     isInBossFight = true
                     break
@@ -63,7 +62,7 @@ local function ClearCombat(event, player, command)
         if not CLTime[player:GetName()] or CLTime[player:GetName()] <= os.time() then
             print(string.format("Clearing combat for player %s", player:GetName()))
             CLTime[player:GetName()] = os.time() + 5 * 60
-            Multistate.SetData(player, "cbstoptime", os.time())
+            player:Data():Set("cbstoptime", os.time())
             requestCombatStop(player)
             player:SendBroadcastMessage("Your combat state has been cleared.")
         else
@@ -80,7 +79,7 @@ local function TimedCBCheck(eventid, delay, repeats, player)
     if not player then return end
 
     if not player:IsInCombat() then
-        Multistate.ClearData(player, "isInBossFight")
+        player:Data():Set("isInBossFight", nil)
         TimedCBCheckTable[player:GetGUIDLow()] = nil
         RemoveEventById(eventid)
         return
@@ -99,13 +98,13 @@ local function TimedCBCheck(eventid, delay, repeats, player)
     end
 
     if not hasCreatureInReasonableRange then
-        Multistate.ClearData(player, "isInBossFight")
+        player:Data():Set("isInBossFight", nil)
         print("scheduling combat clear")
     end
 
     if player:GetInstanceId() and not hasCreatureInReasonableRange then
         print(string.format("Periodic Combat Clear - Player %s is in instance, clearing combat", player:GetName()))
-        Multistate.SetData(player, "cbstoptime", os.time())
+        player:Data():Set("cbstoptime", os.time())
         requestCombatStop(player)
     end
 end
@@ -117,7 +116,7 @@ local function EnterCombat(event, player, enemy)
             return
         end
         if creature:GetRank() > 1 then
-            Multistate.SetData(player, "isInBossFight", true)
+            player:Data():Set("isInBossFight", true)
             if not TimedCBCheckTable[player:GetGUIDLow()] then
                 TimedCBCheckTable[player:GetGUIDLow()] = true
                 player:RegisterEvent(TimedCBCheck, 30000, 0)
