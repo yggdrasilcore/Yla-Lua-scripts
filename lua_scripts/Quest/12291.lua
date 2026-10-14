@@ -8,10 +8,8 @@ local function ReApplyBindingLifeAura(event, player, aura, mode)
     player:RegisterEvent(function(eventId, delay, repeats, player)
         if not (player:GetAreaId() == 4185) then return end
         
-        player:AddAura(SPELL_BINDING_LIFE, player)
-        local reapplied = player:GetAura(SPELL_BINDING_LIFE)
-        
-        if reapplied then reapplied:SetDuration(remaining) end
+        local aura = player:AddAura(48809, player)
+        if aura then aura:SetDuration(remaining) end
         
     end, 1, 1)
 end
