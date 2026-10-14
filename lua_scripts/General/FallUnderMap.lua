@@ -151,6 +151,6 @@ end
 RegisterPlayerEvent(28, RegisterPlayerCheck)
 if GetStateMap() then
     for _, player in ipairs(GetStateMap():GetPlayers()) do
-        player:RegisterEvent(RegisterPlayerCheck, 1000, 0)
+        RegisterPlayerCheck(_, player)
     end
 end
