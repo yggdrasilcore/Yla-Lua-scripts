@@ -18,6 +18,6 @@ end
 RegisterPlayerEvent(28, OnPlayerMapChange)
 if GetStateMap() then
     for _, player in ipairs(GetStateMap():GetPlayers()) do
-        OnMapChange(nil, player)
+        OnPlayerMapChange(nil, player)
     end
 end
