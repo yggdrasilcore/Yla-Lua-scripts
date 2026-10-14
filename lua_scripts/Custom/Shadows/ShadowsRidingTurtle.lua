@@ -55,6 +55,7 @@ local function OnPrepareRidingTurtle(event, player, spell)
     local shadow = player:ToShadow()
     local master = shadow and shadow:GetMaster()
     if not master then return end
+    if master:GetMapId() ~= player:GetMapId() or master:GetInstanceId() ~= player:GetInstanceId() then return end
 
     if not master:IsMounted() then return end
     CastMatchingMasterMount(player, master, spell)
@@ -69,6 +70,7 @@ local function OnPrepareSeaTurtle(event, player, spell)
     local shadow = player:ToShadow()
     local master = shadow and shadow:GetMaster()
     if not master then return end
+    if master:GetMapId() ~= player:GetMapId() or master:GetInstanceId() ~= player:GetInstanceId() then return end
 
     if not master:IsMounted() then return end
     CastMatchingMasterMount(player, master, spell)

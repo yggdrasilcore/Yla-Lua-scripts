@@ -5,6 +5,7 @@ function ToggleShadowsScript(player, script, state)
     local shadow = player:ToShadow()
     local master = shadow and shadow:GetMaster()
     if not master then return end
+    if master:GetMapId() ~= player:GetMapId() or master:GetInstanceId() ~= player:GetInstanceId() then return end
     local cmd = state and "co +" .. script or "co -" .. script
     master:Whisper(cmd, 0, player)
 end
