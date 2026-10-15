@@ -3,20 +3,10 @@ if GetStateMapId() == -1 then return end
 local TRANSMOG_TOKEN_ID = 37742
 local TRANSMOG_TOKEN_COUNT = 1
 local LEVEL_DIFFERENCE = 9
-local MAX_LEVEL = 80
-
-local function ShouldReward(playerLevel, bossLevel, isWorldBoss)
-    return playerLevel == MAX_LEVEL and
-        (isWorldBoss or math.abs(playerLevel - bossLevel) <= LEVEL_DIFFERENCE)
-end
-
-local function AwardToken(member)
-    member:AddItem(TRANSMOG_TOKEN_ID, TRANSMOG_TOKEN_COUNT)
-    member:SendBroadcastMessage("You have been awarded an Activity Token for killing a boss!")
-end
+AWARD_TOKEN_MINIMUM_PLAYER_LEVEL = 1 -- Also referenced by Twiggy dialogue
 
 local function OnQuestComplete(event, player, quest)
-    if player:GetLevel() == MAX_LEVEL
+    if player:GetLevel() == AWARD_TOKEN_MINIMUM_PLAYER_LEVEL
 	and not (quest:GetId() == 3503)
 	and not (quest:GetId() == 3421)
 	then
@@ -26,41 +16,35 @@ local function OnQuestComplete(event, player, quest)
 end
 
 local function OnKillCreature(event, player, killed)
-    local HP_LIMIT = 80000
-    if killed:GetMaxHealth() < HP_LIMIT then return end
+    local hpLimit = 80000
+    if killed:GetMap():IsRaid() then hpLimit = 500000 end
+    if killed:GetMaxHealth() < hpLimit then return end
 
-    local map = killed:GetMap()
-    if map and map:IsRaid() then HP_LIMIT = 500000 end
+    if not (killed:IsDungeonBoss() or killed:IsWorldBoss()) then return end -- Only proceed for bosses
 
-    if killed:GetMaxHealth() < HP_LIMIT then return end
-
-    if killed:IsDungeonBoss() or killed:IsWorldBoss() then
-
-        local bossLevel = killed:GetLevel()
-        local playerLevel = player:GetLevel()
-        local isWorldBoss = killed:IsWorldBoss()
-
-        if not ShouldReward(playerLevel, bossLevel, isWorldBoss) and not player:IsInGroup() then
-            return
+    local recipients = {}
+    if player:IsInGroup() then
+        for _, member in pairs(player:GetMap():GetPlayers()) do
+            if member == player or player:IsInSameGroupWith(member) or player:IsInSameRaidWith(member) then
+                table.insert(recipients, member)
+            end
         end
+    else
+        table.insert(recipients, player)
+    end
 
-        if player:IsInGroup() then
-            local map = player:GetMap()
-            if not map then
-                return
-            end
-            local instanceId = player:GetInstanceId()
-            for _, member in pairs(map:GetPlayers()) do
-                if member and member:IsInWorld()
-                    and (not instanceId or member:GetInstanceId() == instanceId)
-                    and (member == player or player:IsInSameGroupWith(member) or player:IsInSameRaidWith(member)) then
-                    if ShouldReward(member:GetLevel(), bossLevel, isWorldBoss) then
-                        AwardToken(member)
-                    end
-                end
-            end
-        elseif ShouldReward(playerLevel, bossLevel, isWorldBoss) then
-            AwardToken(player)
+    for _, member in pairs(recipients) do
+        if member:GetLevel() < killed:GetLevel() - LEVEL_DIFFERENCE
+        or member:GetLevel() > killed:GetLevel() + LEVEL_DIFFERENCE
+        then
+            return -- If any player too high/low level, don't award tokens
+        end
+    end
+
+    for _, member in pairs(recipients) do
+        if member:GetLevel() == AWARD_TOKEN_MINIMUM_PLAYER_LEVEL then
+            member:AddItem(TRANSMOG_TOKEN_ID, TRANSMOG_TOKEN_COUNT)
+            member:SendBroadcastMessage("You have been awarded an Activity Token for killing a boss!")
         end
     end
 end
