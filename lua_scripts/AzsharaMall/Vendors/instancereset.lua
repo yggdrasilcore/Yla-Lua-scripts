@@ -1,12 +1,20 @@
--- Multistate: Azshara Mall-only script (mall map 37).
--- UnbindInstance is world-state-only, so the live unbind is relayed via EMQ.
--- This block loads in every state; only the world-state timer fires the handler.
-local EMQ = require("EMQ")
-
-EMQ.RegisterQueue("InstanceResetUnbind", function(target, data)
-    if not target or not data or not data.map or not data.difficulty then return end
-    target:UnbindInstance(data.map, data.difficulty)
-end)
+-- Azshara Mall-only script (mall map 37).
+-- UnbindInstance is world-state-only, so unbinds run through a world command.
+local function OnInstanceResetCommand(event, player, command)
+    local targetGuid, map, difficulty = command:lower():match("^instanceresetunbind%s+(%d+)%s+(%d+)%s+(%d+)$")
+    if not targetGuid then return end
+    if not player then return false end
+    if player:Data():Get("InstanceResetExpect") ~= (targetGuid .. ":" .. map .. ":" .. difficulty) then return false end
+    player:Data():Set("InstanceResetExpect", nil)
+    local ok, target = pcall(GetPlayerByGUID, tonumber(targetGuid))
+    if ok and target then
+        target:UnbindInstance(tonumber(map), tonumber(difficulty))
+        player:Data():Set("InstanceResetResult", "done")
+    else
+        player:Data():Set("InstanceResetResult", "absent")
+    end
+    return false
+end
 
 local NPC_ID = 190090
 local TOKEN_ITEM_ID = 20880
@@ -162,10 +170,13 @@ local function OnPlayerMapChange(event, player)
         if player:GetMapId() == 37 then BuildLockoutCacheForAccount(accountId) end
     end, 1000)
     
-    if player:GetData("InstanceResetLockChecked") then return end
+    if player:Data():Get("InstanceResetLockChecked") then return end
     
     CharDBQueryAsync("SELECT command FROM acore_eluna.command_queue WHERE comment = " .. guid .. " AND executed = 0", function(q)
-        local player = require("Multistate").FindPlayerByGUID(guid)
+        local player = nil
+        for _, p in ipairs(GetStateMap():GetPlayers()) do
+            if p:GetGUIDLow() == guid then player = p break end
+        end
         if not player then return end
 
         if q then
@@ -173,13 +184,19 @@ local function OnPlayerMapChange(event, player)
                 local command = q:GetString(0)
                 local mapVal, diffVal = command:match("UnbindInstance%((%d+),%s*(%d+)%)")
                 if mapVal and diffVal then
-                    player:SendEMQMessage("InstanceResetUnbind", {map = tonumber(mapVal), difficulty = tonumber(diffVal)})
-                    CharDBExecute("UPDATE acore_eluna.command_queue SET executed = 1 WHERE comment = " .. guid .. " AND command = 'UnbindInstance(" .. mapVal .. ", " .. diffVal .. ")'")
+                    player:Data():Set("InstanceResetExpect", guid .. ":" .. mapVal .. ":" .. diffVal)
+                    player:Data():Set("InstanceResetResult", nil)
+                    player:RunCommand("instanceresetunbind " .. guid .. " " .. mapVal .. " " .. diffVal)
+                    player:Data():Set("InstanceResetExpect", nil)
+                    if player:Data():Get("InstanceResetResult") == "done" then
+                        CharDBExecute("UPDATE acore_eluna.command_queue SET executed = 1 WHERE comment = " .. guid .. " AND command = 'UnbindInstance(" .. mapVal .. ", " .. diffVal .. ")'")
+                    end
+                    player:Data():Set("InstanceResetResult", nil)
                 end
             until not q:NextRow()
         end
 
-        player:SetData("InstanceResetLockChecked", 1)
+        player:Data():Set("InstanceResetLockChecked", 1)
     end)
 end
 
@@ -320,14 +337,15 @@ local function ResetInstanceLockout(player, map, difficulty, targetGuid, targetN
 
     if not ChargeTokens(player, tokenCost) then return end
 
-    local onlineTarget = require("Multistate").FindPlayerByGUID(targetGuid)
-    if onlineTarget then
-        onlineTarget:SendEMQMessage("InstanceResetUnbind", {map = map, difficulty = difficulty})
-        CharDBExecute("DELETE FROM character_instance WHERE guid = " .. targetGuid .. " AND instance IN (SELECT id FROM instance WHERE map = " .. map .. " AND difficulty = " .. difficulty .. ")")
-    else
-        CharDBExecute("DELETE FROM character_instance WHERE guid = " .. targetGuid .. " AND instance IN (SELECT id FROM instance WHERE map = " .. map .. " AND difficulty = " .. difficulty .. ")")
+    player:Data():Set("InstanceResetExpect", targetGuid .. ":" .. map .. ":" .. difficulty)
+    player:Data():Set("InstanceResetResult", nil)
+    player:RunCommand("instanceresetunbind " .. targetGuid .. " " .. map .. " " .. difficulty)
+    player:Data():Set("InstanceResetExpect", nil)
+    CharDBExecute("DELETE FROM character_instance WHERE guid = " .. targetGuid .. " AND instance IN (SELECT id FROM instance WHERE map = " .. map .. " AND difficulty = " .. difficulty .. ")")
+    if player:Data():Get("InstanceResetResult") ~= "done" then
         CharDBExecute("INSERT INTO acore_eluna.command_queue (comment, command, inserted, executed) VALUES (" .. targetGuid .. ", 'UnbindInstance(" .. map .. ", " .. difficulty .. ")', " .. os.time() .. ", 0)")
     end
+    player:Data():Set("InstanceResetResult", nil)
 
     local key = map * 10 + difficulty
     if accountLockoutCache[accountId] then
@@ -538,13 +556,20 @@ local function OnGossipSelect(event, player, creature, sender, intid, code, menu
     player:GossipComplete()
 end
 
--- Multistate: state-aware catch-up for already-online players (server start or
+-- State-aware catch-up for already-online players (server start or
 -- reload). GetPlayersInWorld() only exists in the global state.
-require("Multistate").ForEachPlayer(function(player)
-    OnPlayerMapChange(nil, player)
-end)
+if GetStateMapId() == -1 then
+    for _, player in ipairs(GetPlayersInWorld()) do
+        OnPlayerMapChange(nil, player)
+    end
+elseif GetStateMap() then
+    for _, player in ipairs(GetStateMap():GetPlayers()) do
+        OnPlayerMapChange(nil, player)
+    end
+end
 
 RegisterPlayerEvent(28, OnPlayerMapChange)
+RegisterPlayerEvent(42, OnInstanceResetCommand)
 RegisterCreatureGossipEvent(NPC_ID, 1, OnGossipHello)
 RegisterCreatureGossipEvent(NPC_ID, 2, OnGossipSelect)
 CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.character_instance_vendor_reset (guid INT NOT NULL, time INT NOT NULL, count INT DEFAULT 0, PRIMARY KEY (guid));")
