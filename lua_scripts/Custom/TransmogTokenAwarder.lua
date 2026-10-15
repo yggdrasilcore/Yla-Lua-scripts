@@ -2,7 +2,7 @@ if GetStateMapId() == -1 then return end
 
 local TRANSMOG_TOKEN_ID = 37742
 local TRANSMOG_TOKEN_COUNT = 1
-local LEVEL_DIFFERENCE = 9
+AWARD_TOKEN_LEVEL_DIFFERENCE = 9
 AWARD_TOKEN_MINIMUM_PLAYER_LEVEL = 1 -- Also referenced by Twiggy dialogue
 
 local function OnQuestComplete(event, player, quest)
@@ -34,8 +34,8 @@ local function OnKillCreature(event, player, killed)
     end
 
     for _, member in pairs(recipients) do
-        if member:GetLevel() < killed:GetLevel() - LEVEL_DIFFERENCE
-        or member:GetLevel() > killed:GetLevel() + LEVEL_DIFFERENCE
+        if member:GetLevel() < killed:GetLevel() - AWARD_TOKEN_LEVEL_DIFFERENCE
+        or member:GetLevel() > killed:GetLevel() + AWARD_TOKEN_LEVEL_DIFFERENCE
         then
             return -- If any player too high/low level, don't award tokens
         end

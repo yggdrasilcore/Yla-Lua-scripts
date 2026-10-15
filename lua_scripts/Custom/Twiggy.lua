@@ -349,7 +349,13 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_travelform:32:32:-22:0|tDruid shapeshifts: \n \nThrough harnessing the powers of ancient Kaldorei magic, druids can learn the form of many unique beasts to apply them onto their own beastial forms. Note: Some creatures share the same creature model. Each model can only be claimed once.\n \nClick here for a full list of applicable creatures. \n ", 0, 500)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_helmet_89:32:32:-22:0|tTransmogrifyer: \n \nYggdrasil sports a transmogrifyer from the Cataclysm era, where you can apply the look of one item onto others by having both items in your bags and paying a transmogrifyer to apply the new look. Transmogrifyers are at the mall and all capital cities' enchanting trainers.\n ", 0, 50)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_bag_07_red:32:32:-22:0|tTransmog Item Vendor: \n \nThis mall vendor can search for almost any item in the world under item level 200 and sell it to you for Activity Tokens.\n ", 0, 50)
-		player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tActivity Tokens: \n \nBy completing quests while at level 80 and killing raid/dungeon bosses while the player is at level 80 and the boss is level 71 or higher, you earn Activity Tokens. These can be used to buy items at the Transmog Item Vendor.\n ", 0, 50)
+        if AWARD_TOKEN_MINIMUM_PLAYER_LEVEL == 80 then
+            player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tActivity Tokens: \n \nBy completing quests while at level "..AWARD_TOKEN_MINIMUM_PLAYER_LEVEL..", and killing raid/dungeon bosses while the player is at level "..AWARD_TOKEN_MINIMUM_PLAYER_LEVEL.." and the boss is level "..AWARD_TOKEN_MINIMUM_PLAYER_LEVEL - AWARD_TOKEN_LEVEL_DIFFERENCE.." or higher, you earn Activity Tokens. These can be used to buy items at the Transmog Item Vendor.\n ", 0, 50)
+        elseif AWARD_TOKEN_MINIMUM_PLAYER_LEVEL == 1 then
+            player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tActivity Tokens: \n \nBy completing quests while and killing raid/dungeon bosses within "..AWARD_TOKEN_LEVEL_DIFFERENCE.." levels of you, you earn Activity Tokens. These can be used to buy items at the Transmog Item Vendor.\n ", 0, 50)
+       else
+            player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tActivity Tokens: \n \nBy completing quests and killing raid/dungeon bosses while the player is above level "..AWARD_TOKEN_MINIMUM_PLAYER_LEVEL - 1..", if the boss is within "..AWARD_TOKEN_LEVEL_DIFFERENCE.." levels of you, you earn Activity Tokens. These can be used to buy items at the Transmog Item Vendor.\n ", 0, 50)
+        end
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 5)
         player:GossipSendMenu(12, creature, 60)
 	elseif intId == 500 then
@@ -430,7 +436,7 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
         player:GossipSendMenu(12, creature, 60)
 	elseif intId == 30 then
         player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tCommunity Token: \n \nEarned through helping build the Yggdrasil community, these tokens can be traded for vanity pets, mounts, account services and more at the mall, or VIP services with Twiggy.\n \n ", 0, 30)
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tActivity Token: \n \nThis currency can be spent at the transmog item vendor to buy items under item level 200 that you can then later wear as gear or transmog onto your higher item level gear. It is earned by completing end-game quests or slaying bosses above level 71 while at level 80.\n \n ", 0, 30)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tActivity Token: \n \nThis currency can be spent at the transmog item vendor to buy items under item level 200 that you can then later wear as gear or transmog onto your higher item level gear. It is earned by completing quests or slaying bosses within 9 levels of you.\n \n ", 0, 30)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_bijou_gold:32:32:-22:0|tVote Token: \n \nEarned through voting for the server, these tokens can be predominantly exchanged for vanity items at the mall, or traded down to Emblems of Frost or Emblems of Triumph at the Mall's exchanger.\n \n ", 0, 30)	
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 3)
         player:GossipSendMenu(12, creature, 60)
