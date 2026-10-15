@@ -354,7 +354,7 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
         elseif AWARD_TOKEN_MINIMUM_PLAYER_LEVEL == 1 then
             player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tActivity Tokens: \n \nBy completing quests while and killing raid/dungeon bosses within "..AWARD_TOKEN_LEVEL_DIFFERENCE.." levels of you, you earn Activity Tokens. These can be used to buy items at the Transmog Item Vendor.\n ", 0, 50)
        else
-            player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tActivity Tokens: \n \nBy completing quests and killing raid/dungeon bosses while the player is above level "..AWARD_TOKEN_MINIMUM_PLAYER_LEVEL - 1..", if the boss is within "..AWARD_TOKEN_LEVEL_DIFFERENCE.." levels of you, you earn Activity Tokens. These can be used to buy items at the Transmog Item Vendor.\n ", 0, 50)
+            player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tActivity Tokens: \n \nBy completing quests and killing raid/dungeon bosses while the player is above level "..(AWARD_TOKEN_MINIMUM_PLAYER_LEVEL - 1)..", if the boss is within "..AWARD_TOKEN_LEVEL_DIFFERENCE.." levels of you, you earn Activity Tokens. These can be used to buy items at the Transmog Item Vendor.\n ", 0, 50)
         end
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 5)
         player:GossipSendMenu(12, creature, 60)
