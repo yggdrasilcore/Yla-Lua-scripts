@@ -1,8 +1,3 @@
--- Multistate: quest flags are read in the global state (chat) but written in
--- map states (map change, item, timers), so per-player progression lives in
--- shared Data(); the throttle stays a per-state local.
-local Multistate = require("Multistate")
-
 -- Constants
 local QUEST_ID = 30000
 local TELEPORT_ITEM = 21878
@@ -18,68 +13,74 @@ local SHADOWFORM_AURA = 58001 -- Makes shadows seem less janky textured
 local IMMUNE_ALL = 29230 -- Prevents premature dragon death
 local HEARTHSTONE = 8690 -- Teleport player away when done, if no cached location saved
 local DespawnTimer = 180000 -- 3 minutes quest time
--- (Multistate: the old/new location singletons and the event throttle were
--- migrated to per-player shared Data(); see MS usages below.)
-local shadowsEvent = os.time()
-local eventState = 0
-local minLevel = 15
-local dkLimit = 70 -- Prevents DKs from zapping toons into the scarlet enclave area
 local EventLocation = {-639.76, -259.62, 352.58, 2.27}
 
--- Item use event
-
-local function ShadowsTeleItem(event, player, item, target)
-    if player:GetAreaId() == AREA_ID then 
-        player:SendAreaTriggerMessage("You can't save your shadows from this location! Try again someplace else.")
-        player:SendBroadcastMessage("You can't save your shadows from this location! Try again someplace else.")
+-- World event onCommand
+local function OnShadowsEventCommand(event, player, command)
+    if command == "startshadowsevent" and player:HasItem(TELEPORT_ITEM) then
+    
+        if (player:GetAreaId() == AREA_ID) then
+            player:SendAreaTriggerMessage("You can't save your shadows from this location! Try again someplace else.")
+            player:SendBroadcastMessage("You can't save your shadows from this location! Try again someplace else.")
+            return false
+        end
+        
+        if GetWorldData("shadowsQuestCooldown") and GetWorldData("shadowsQuestCooldown") > os.time() then
+            player:SendAreaTriggerMessage("You can't save your shadows right now! Try again in a few minutes.")
+            player:SendBroadcastMessage("You can't save your shadows right now! Try again in a few minutes.")
+            return false
+        end
+        
+        player:Data():Set("OldMap", player:GetMapId())
+        player:Data():Set("OldX", player:GetX())
+        player:Data():Set("OldY", player:GetY())
+        player:Data():Set("OldZ", player:GetZ())
+        player:Data():Set("OldO", player:GetO())
+        
+        SetWorldData("shadowsQuestCooldown", os.time() + DespawnTimer / 1000)
+        
+        player:Teleport(MAP_ID, EventLocation[1], EventLocation[2], EventLocation[3], EventLocation[4])
+        return false
+    elseif command == "stopshadowsevent" then
+        if not player:Data():Get("shadowsTeleportReason") or player:Data():Get("shadowsTeleportReason") == "failed" then
+            if player and player:GetAreaId() == AREA_ID and (player:HasItem(TELEPORT_ITEM) or player:HasItem(QUEST_ITEM)) then
+                player:RemoveItem(TELEPORT_ITEM, 1)
+                player:RemoveItem(QUEST_ITEM, 1)
+                player:RemoveQuest(QUEST_ID)
+                player:AddItem(QUEST_ITEM, 1)
+                player:Teleport(player:Data():Get("OldMap"), player:Data():Get("OldX"), player:Data():Get("OldY"), player:Data():Get("OldZ"), player:Data():Get("OldO"))
+                player:SendAreaTriggerMessage("You didn't help your shadows in time and they got pulled into the Twisting Nether! Try again later.")
+                player:SendBroadcastMessage("You didn't help your shadows in time and they got pulled into the Twisting Nether! Try again later.")
+            end
+        else
+            player:Teleport(player:Data():Get("OldMap"), player:Data():Get("OldX"), player:Data():Get("OldY"), player:Data():Get("OldZ"), player:Data():Get("OldO"))
+        end
+        
+        player:Data():Set("shadowsTeleportReason", nil)
+        player:Data():Set("ShadowsQuestState", 0)
+        SetWorldData("shadowsQuestCooldown", os.time() + DespawnTimer / 1000)
+        
         return false
     end
-    
-    local questCooldown = Multistate.GetData(player, "ShadowsQuestCooldown") or 0
-    if questCooldown > os.time() then
-        player:SendAreaTriggerMessage("You can't save your shadows right now! Try again in a few minutes.")
-        player:SendBroadcastMessage("You can't save your shadows right now! Try again in a few minutes.")
-        return false
-    end
-    
-    Multistate.SetData(player, "ShadowsQuestReturn", { map = player:GetMapId(), x = player:GetX(), y = player:GetY(), z = player:GetZ(), o = player:GetO() })
-    
-    player:Teleport(MAP_ID, EventLocation[1], EventLocation[2], EventLocation[3], EventLocation[4])
-
-    return false
 end
 
+-- Map event OnPlayerEnterMap
 local function ShadowsMap(event, player)
     if player:GetAreaId() == AREA_ID then
-        if player:HasQuest(QUEST_ID) and ((Multistate.GetData(player, "ShadowsQuestCooldown") or 0) <= os.time()) then
+        if player:HasQuest(QUEST_ID) and (shadowsEvent <= os.time()) then
         
             local playerLocation = {player:GetLocation()}
             if not ((player:GetX() >= EventLocation[1]-1 and player:GetX() <= EventLocation[1]+1) and
                     (player:GetY() >= EventLocation[2]-1 and player:GetY() <= EventLocation[2]+1)) then
-                    Multistate.ClearData(player, "ShadowsQuestEvent")
+                    player:Data():Set("ShadowsQuestEvent", nil)
                 return
             end
 
-            Multistate.SetData(player, "ShadowsQuestEvent", true)
-
-            Multistate.SetData(player, "ShadowsQuestCooldown", os.time() + 180)
+            player:Data():Set("ShadowsQuestEvent", true)
             
             player:RegisterEvent(function(eventId, delay, repeats, player)
-                if player and player:GetAreaId() == AREA_ID and (player:HasItem(TELEPORT_ITEM) or player:HasItem(QUEST_ITEM)) then
-                    player:RemoveItem(TELEPORT_ITEM, 1)
-                    player:RemoveItem(QUEST_ITEM, 1)
-                    player:RemoveQuest(QUEST_ID)
-                    player:AddItem(QUEST_ITEM, 1)
-                    local ret = Multistate.GetData(player, "ShadowsQuestReturn")
-                    if ret then
-                        player:Teleport(ret.map, ret.x, ret.y, ret.z, ret.o)
-                        Multistate.ClearData(player, "ShadowsQuestReturn")
-                    else
-                        player:CastSpell(player, HEARTHSTONE, true)
-                    end
-                    player:SendAreaTriggerMessage("You didn't help your shadows in time and they got pulled into the Twisting Nether! Try again later.")
-                    player:SendBroadcastMessage("You didn't help your shadows in time and they got pulled into the Twisting Nether! Try again later.")
-                end
+                player:Data():Set("shadowsTeleportReason", "failed")
+                player:RunCommand("stopshadowsevent")
             end, 180000, 1)
             
             local shadows = player:GetCreaturesInRange(50, SHADOW_ENTRY)
@@ -93,7 +94,7 @@ local function ShadowsMap(event, player)
             if timerender then timerender:DespawnOrUnsummon() end
             if swirl then swirl:DespawnOrUnsummon() end
             
-            Multistate.SetData(player, "ShadowsQuestState", 0)
+            player:Data():Set("ShadowsQuestState", 0)
             
             local x, y, z, o = player:GetLocation()
             local facing = player:GetO()
@@ -139,23 +140,24 @@ local function ShadowsMap(event, player)
                 end, 5000)
             end, 5000)
         else
-            player:SetData("ShadowsQuestEvent", nil)
+            player:Data():Set("ShadowsQuestEvent", nil)
             player:RemoveAura(IMMUNE_ALL)
             player:RemoveAura(SHACKLE_AURA)
         end
     end
 end
 
+-- World event
 local function Talk(event, player, msg, Type, lang)
     if player:GetAreaId() ~= AREA_ID then return end
     
-    if not Multistate.GetData(player, "ShadowsQuestEvent") then print("event not active on player") return end
+    if not player:Data():Get("ShadowsQuestEvent") then print("event not active on player") return end
     
     local shadowSpeak = player:GetNearestCreature(50, SHADOW_ENTRY)
     
     if not shadowSpeak then return end
     
-    if msg:lower() == "formation shield" and (Multistate.GetData(player, "ShadowsQuestState") or 0) == 0 then
+    if msg:lower() == "formation shield" and (player:Data():Get("ShadowsQuestState") or 0) == 0 then
         local shadows = player:GetCreaturesInRange(50, SHADOW_ENTRY)
         local timerender = player:GetNearestCreature(50, TIMERENDER_ENTRY)
         if timerender then
@@ -170,10 +172,10 @@ local function Talk(event, player, msg, Type, lang)
             player:RegisterEvent(function(eventId, delay, repeats, player)
                 player:SendAreaTriggerMessage("Say \"attack\" to make your shadows attack the captor!")
                 player:SendBroadcastMessage("Say \"attack\" to make your shadows attack the captor!")
-                Multistate.SetData(player, "ShadowsQuestState", 1)
+                player:Data():Set("ShadowsQuestState", 1)
             end, 2000, 1)
         end, 5000, 1)
-    elseif msg:lower() == "attack" and (Multistate.GetData(player, "ShadowsQuestState") or 0) == 1 then
+    elseif msg:lower() == "attack" and (player:Data():Get("ShadowsQuestState") or 0) == 1 then
         local shadowSpeak = player:GetNearestCreature(50, SHADOW_ENTRY)
         local shadows = player:GetCreaturesInRange(50, SHADOW_ENTRY)
         local timerender = player:GetNearestCreature(50, TIMERENDER_ENTRY)
@@ -193,9 +195,9 @@ local function Talk(event, player, msg, Type, lang)
         player:RegisterEvent(function(eventId, delay, repeats, player)
             player:SendAreaTriggerMessage("Target the Infinite Timerender and say \"cast Frostbolt\"!")
             player:SendBroadcastMessage("Target the Infinite Timerender and say \"cast Frostbolt\"!")
-            Multistate.SetData(player, "ShadowsQuestState", 2)
+            player:Data():Set("ShadowsQuestState", 2)
         end, 4000, 1)
-    elseif msg:lower() == "cast frostbolt" and (Multistate.GetData(player, "ShadowsQuestState") or 0) == 2 and player:GetSelection() then
+    elseif msg:lower() == "cast frostbolt" and (player:Data():Get("ShadowsQuestState") or 0) == 2 and player:GetSelection() then
         local shadows = player:GetCreaturesInRange(50, SHADOW_ENTRY)
         local timerender = player:GetNearestCreature(50, TIMERENDER_ENTRY)
         
@@ -233,12 +235,10 @@ local function Talk(event, player, msg, Type, lang)
                     player:RemoveItem(QUEST_ITEM, 1)
                     player:RemoveItem(TELEPORT_ITEM, 1)
                     player:RewardQuest(QUEST_ID)
-                    Multistate.SetData(player, "ShadowsQuestCooldown", os.time())
                     
                     local shadows = player:GetCreaturesInRange(50, SHADOW_ENTRY)
                     for _, shadow in pairs(shadows) do
                         shadow:CastSpell(shadow, 32783, false)
-                        print("shadows just cast 32783")
                     end
                 end, 12000, 1)
                 
@@ -248,15 +248,8 @@ local function Talk(event, player, msg, Type, lang)
                 end
                 
                 player:RegisterEvent(function(eventId, delay, repeats, player)
-                    print("teleporting player home")
-                    Multistate.SetData(player, "ShadowsQuestState", 0)
-                    local ret2 = Multistate.GetData(player, "ShadowsQuestReturn")
-                    if ret2 then
-                        player:Teleport(ret2.map, ret2.x, ret2.y, ret2.z, ret2.o)
-                        Multistate.ClearData(player, "ShadowsQuestReturn")
-                    else
-                        player:CastSpell(player, HEARTHSTONE, true)
-                    end
+                    player:Data():Set("shadowsTeleportReason", "success")
+                    player:RunCommand("stopshadowsevent")
                 end, 13000, 1)
                 
             end, 4000, 1)
@@ -264,6 +257,7 @@ local function Talk(event, player, msg, Type, lang)
     end
 end
 
+-- Creature events
 local function AddLostAura(event, shadow, target)
     if shadow:GetAreaId() == AREA_ID then
         shadow:RegisterEvent(function(eventId, delay, repeats, shadow)
@@ -272,9 +266,16 @@ local function AddLostAura(event, shadow, target)
     end
 end
 
+-- Item map event onUseItem, bridges to world state through deferred command exec
+local function ShadowsTeleItem(event, player, item, target)
+    player:RunCommand("startshadowsevent")
+    return false
+end
+
+-- Player map event OnLevelUp
 local function OnLevelUp(event, player, oldLevel)
-    if (player:GetClass() == 6 and oldLevel == dkLimit - 1) or
-    (player:GetClass() ~= 6 and oldLevel == minLevel - 1)
+    if player:GetAreaId() == 609 or
+    (player:GetClass() ~= 6 and oldLevel == minShadowsLevel)
     and not (player:GetQuestStatus(QUEST_ID) == 6)
     and not player:HasItem(TELEPORT_ITEM, 1)
     then
@@ -283,9 +284,17 @@ local function OnLevelUp(event, player, oldLevel)
     end
 end
 
+-- Player map event OnQuestAbandon
+local function OnQuestAbandon(event, player, questId)
+    if questId == QUEST_ID then
+        player:AddItem(QUEST_ITEM, 1)
+    end
+end
+
+-- Player world event OnLogin
 local function OnLogin(event, player)
-    if player:GetClass() == 6 and player:GetLevel() < dkLimit then return end
-    if player:GetLevel() < minLevel then return end
+    if player:GetAreaId() == 609 then return end
+    if player:GetLevel() < minShadowsLevel then return end
     
     if player:HasQuest(QUEST_ID) and player:HasItem(TELEPORT_ITEM, 1) and player:HasItem(QUEST_ITEM, 1) then
         player:RemoveItem(QUEST_ITEM, 1)
@@ -316,17 +325,16 @@ local function OnLogin(event, player)
     end
 end
 
-local function OnQuestAbandon(event, player, questId)
-    if questId == QUEST_ID then
-        player:AddItem(QUEST_ITEM, 1)
-    end
+if GetStateMapId() == 37 then -- Only Azshara Mall
+    RegisterPlayerEvent(28, ShadowsMap)
+    RegisterCreatureEvent(SHADOW_ENTRY, 1, AddLostAura)
+    RegisterCreatureEvent(SHADOW_ENTRY, 2, AddLostAura)
+elseif GetStateMapId() == -1 then -- Only world
+    RegisterPlayerEvent(3, OnLogin)
+    RegisterPlayerEvent(18, Talk)
+    RegisterPlayerEvent(42, OnShadowsEventCommand)
+else -- All maps
+    RegisterItemEvent(TELEPORT_ITEM, 2, ShadowsTeleItem)
+    RegisterPlayerEvent(13, OnLevelUp)
+    RegisterPlayerEvent(38, OnQuestAbandon)
 end
-
-RegisterPlayerEvent(3, OnLogin)
-RegisterPlayerEvent(13, OnLevelUp)
-RegisterPlayerEvent(18, Talk)
-RegisterPlayerEvent(28, ShadowsMap)
-RegisterPlayerEvent(38, OnQuestAbandon)
-RegisterItemEvent(TELEPORT_ITEM, 2, ShadowsTeleItem)
-RegisterCreatureEvent(SHADOW_ENTRY, 1, AddLostAura)
-RegisterCreatureEvent(SHADOW_ENTRY, 2, AddLostAura)
