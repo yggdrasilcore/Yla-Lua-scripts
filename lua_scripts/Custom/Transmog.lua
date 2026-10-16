@@ -27,10 +27,9 @@ Forked by mostly nick :) to include UI, saving, applying and deleting sets, hidi
 ]]
 
 local itemIconCache = require("itemIconCache")
--- Multistate: login (3) runs globally, map change (28) / equip (29) / gossip run
--- in map states. The mog caches are populated per state by the login/map-change
+-- Login (3) runs globally, map change (28) / equip (29) / gossip run in map
+-- states. The mog caches are populated per state by the login/map-change
 -- handler each state sees; the packet repair handler below reads live DB data.
-local Multistate = require("Multistate")
 
 ---------------------------------------------------------------------------------
 -- Transmog item vendor vars
@@ -565,7 +564,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
         
         CharDBQueryAsync("SELECT PresetID, SetName, SetData FROM acore_eluna.custom_transmogrification_sets WHERE Owner = " .. guidlow, -- Asyncing query as a hybrid between performance and load as I'm too lazy to create a dynamic cache
             function(result)
-                local player = require("Multistate").FindPlayerByName(playername) -- Refetching current player object
+                local player = ResolveTransmogPlayer(playername) -- Refetching current player object
                 if result then
                     local index = 1
                     repeat
@@ -716,7 +715,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
         
         CharDBQueryAsync("SELECT MAX(PresetID) as PresetID FROM acore_eluna.custom_transmogrification_sets WHERE Owner = " .. guid,
             function(query)
-                local player = require("Multistate").FindPlayerByName(playername)
+                local player = ResolveTransmogPlayer(playername)
                 local presetID = 1
                 if query then
                     local row = query:GetRow()
@@ -1707,11 +1706,17 @@ RegisterPacketEvent(0x2A8, 5, OnRepair)
 RegisterCreatureGossipEvent(NPC_Entry, 1, OnGossipHello)
 RegisterCreatureGossipEvent(NPC_Entry, 2, OnGossipSelect)
 
--- Multistate: state-aware catch-up for already-online players (server start or
--- reload). GetPlayersInWorld() only exists in the global state.
-Multistate.ForEachPlayer(function(player)
-    OnLogin(3, player)
-end)
+-- Catch-up for already-online players (server start or reload).
+-- GetPlayersInWorld() only exists in the global state.
+local _catchup
+if GetStateMapId() == -1 then
+    _catchup = GetPlayersInWorld()
+else
+    _catchup = GetStateMap():GetPlayers()
+end
+for _, _p in ipairs(_catchup) do
+    OnLogin(3, _p)
+end
 
 ---------------------------------------------------------------------------------
 -- Transmogrify items event registrations end
