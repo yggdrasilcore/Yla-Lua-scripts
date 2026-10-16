@@ -1211,7 +1211,16 @@ local function UpdateProgress(player)
                 end
             end, 900000, 1) -- Update RAF progress every 15 minutes
         end
-        player:Data():Set('RAFProgress', pending + 1)
+        -- Self-healing if the flush timer died in a reload: player:Data()
+        -- survives but timers do not, so cap the carry-over with a sync flush.
+        if pending + 1 >= 50 then
+            AuthDBExecute(string.format([[
+                UPDATE acore_eluna.account_raf SET progress = progress + %d WHERE account_id = %d
+            ]], pending + 1, player:GetAccountId()))
+            player:Data():Set('RAFProgress', nil)
+        else
+            player:Data():Set('RAFProgress', pending + 1)
+        end
     end
 end
 
