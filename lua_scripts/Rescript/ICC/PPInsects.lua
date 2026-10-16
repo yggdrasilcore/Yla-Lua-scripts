@@ -1,4 +1,3 @@
--- Multistate: Icecrown Citadel-only script (map 631).
 if GetStateMapId() ~= 631 then return end
 
 local function ManageInsect(eventId, delay, repeats, player)
@@ -156,4 +155,4 @@ local function OnInsectMapChange(event, player)
 end
 
 RegisterPlayerEvent(28, OnInsectMapChange)
-require("Multistate").ForEachPlayer(function(player) OnInsectMapChange(nil, player) end)
+for _, player in ipairs(GetStateMap():GetPlayers()) do OnInsectMapChange(nil, player) end

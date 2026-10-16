@@ -1662,9 +1662,6 @@ RegisterCreatureGossipEvent(TRANSMOG_VENDOR_NPC_ID, 2, MogVendorSelect)
 ---------------------------------------------------------------------------------
 
 local function OnRepair(event, packet, player)
-    -- Multistate: packet handlers run in the global state, where the mog caches
-    -- only hold login-time data, so live mogs are read from the DB. The read is
-    -- asynchronous: a sync query here would stall the world thread on DB latency.
     local playerName = player:GetName()
     local repairOwner = player:GetGUIDLow()
     CharDBQueryAsync("SELECT GUID, FakeEntry FROM acore_eluna.custom_transmogrification WHERE Owner = " .. repairOwner, function(result)

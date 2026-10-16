@@ -1,4 +1,3 @@
--- Multistate: Forge of Souls-only script (map 632).
 if GetStateMapId() ~= 632 then return end
 
 local BRONJAHM_ID           = 36497
@@ -67,7 +66,6 @@ local function BronjahmTactics(player)
         if SoulFragment then
             if not SoulFragment:GetData("SkullSet") then
                 SoulFragment:SetData("SkullSet", true)
-                -- Multistate: Group API is world-only, defer via EMQ (see Helpers/TargetIcon.lua).
                 SetTargetIconDeferred(player, 7, SoulFragment)
             end
         end
@@ -221,4 +219,4 @@ local function OnEnterFoS(event, player)
 end
 
 RegisterPlayerEvent(28, OnEnterFoS)
-require("Multistate").ForEachPlayer(function(player) OnEnterFoS(nil, player) end)
+for _, player in ipairs(GetStateMap():GetPlayers()) do OnEnterFoS(nil, player) end

@@ -1,4 +1,3 @@
--- Multistate: Icecrown Citadel-only script (map 631).
 if GetStateMapId() ~= 631 then return end
 
 local function LichKingLoop(eventId, delay, repeats, lk)
@@ -226,7 +225,7 @@ local function OnReload(player)
     end
 end
 
-require("Multistate").ForEachPlayer(function(player) OnReload(player) end)
+for _, player in ipairs(GetStateMap():GetPlayers()) do OnReload(player) end
 RegisterPlayerEvent(33, OnLKCombat)
 RegisterSpellEvent(69409, 2, OnSoulReaperCast)
 RegisterSpellEvent(72762, 1, OnDefilePrepare)

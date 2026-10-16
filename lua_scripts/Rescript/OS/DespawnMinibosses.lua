@@ -1,4 +1,3 @@
--- Multistate: Obsidian Sanctum-only script (map 615).
 if GetStateMapId() ~= 615 then return end
 
 local function OnKillSartharion(event, player, creature)

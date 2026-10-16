@@ -1,4 +1,3 @@
-local Multistate = require("Multistate")
 function IsVIP(player)
     return player:Data():Get("VIPTime") and player:Data():Get("VIPTime") > os.time()
 end
@@ -8,15 +7,14 @@ local function CheckVIPOnLoad()
     local accountIdMap = {}
     local accountIds = {}
     
-    -- Multistate: state-aware enumeration (each state covers visible players).
-    Multistate.ForEachPlayer(function(player)
+    for _, player in ipairs(GetStateMapId() == -1 and GetPlayersInWorld() or GetStateMap():GetPlayers()) do
         local name = player:GetName()
         local accountId = player:GetAccountId()
         
         table.insert(playerNames, name)
         accountIdMap[name] = accountId
         table.insert(accountIds, accountId)
-    end)
+    end
 
     if #accountIds == 0 then return end
     
@@ -34,7 +32,11 @@ local function CheckVIPOnLoad()
         end
         
         for _, name in ipairs(playerNames) do
-            local player = Multistate.FindPlayerByName(name)
+            local player
+            if GetStateMapId() == -1 then player = GetPlayerByName(name)
+            else for _, p in ipairs(GetStateMap():GetPlayers()) do
+                if p:GetName() == name then player = p break end
+            end end
             if player and vipTimeMap[accountIdMap[name]] then
                 player:Data():Set("VIPTime", vipTimeMap[accountIdMap[name]])
 				print("VIP found: "..player:GetName()..", acc "..player:GetAccountId()..".")
@@ -51,7 +53,10 @@ local function CheckVIP(event, player)
     if player:IsBot() then return end
 	
 	AuthDBQueryAsync("SELECT viptime FROM acore_eluna.accounts_vip WHERE account = " .. player:GetAccountId() .. ";", function(result)
-		local player = Multistate.FindPlayerByName(name)
+		local player
+		for _, p in ipairs(GetStateMap():GetPlayers()) do
+			if p:GetName() == name then player = p break end
+		end
 		if not player then return end
 		if result then
 			player:Data():Set("VIPTime", result:GetUInt32(0))

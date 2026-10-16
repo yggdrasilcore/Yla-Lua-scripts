@@ -1,4 +1,3 @@
--- Multistate: Northrend-only script (map 571).
 if GetStateMapId() ~= 571 then return end
 
 function OnEnterCombat(event, creature, target)

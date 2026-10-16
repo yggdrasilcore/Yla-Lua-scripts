@@ -1,5 +1,3 @@
--- Multistate: ticket events fire in the global (WORLD) state,
--- so this script is global-only.
 if GetStateMapId() ~= -1 then return end
 
 if not (GetRealmID() == 1) then return end -- Only on prod

@@ -1,4 +1,3 @@
--- Multistate: Icecrown Citadel-only script (map 631).
 if GetStateMapId() ~= 631 then return end
 
 local function BotAttackInsects(player)
@@ -64,4 +63,4 @@ local function OnBotMapChange(event, player)
 end
 
 RegisterPlayerEvent(28, OnBotMapChange)
-require("Multistate").ForEachPlayer(function(player) OnBotMapChange(nil, player) end)
+for _, player in ipairs(GetStateMap():GetPlayers()) do OnBotMapChange(nil, player) end

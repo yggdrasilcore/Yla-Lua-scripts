@@ -1,4 +1,3 @@
--- Multistate: Tempest Keep-only script (map 550).
 if GetStateMapId() ~= 550 then return end
 
 -- Prevents "Select True Beam" aura for persisting forever

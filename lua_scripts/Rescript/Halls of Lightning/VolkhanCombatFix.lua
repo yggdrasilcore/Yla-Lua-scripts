@@ -1,4 +1,3 @@
--- Multistate: Halls of Lightning-only script (map 602).
 if GetStateMapId() ~= 602 then return end
 
 local function OnKillVolkhan(event, player, killed)

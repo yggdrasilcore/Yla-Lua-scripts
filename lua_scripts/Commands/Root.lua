@@ -1,8 +1,3 @@
--- Multistate: PLAYER_EVENT_ON_COMMAND (42) fires in the global state, but aura
--- changes must execute on the map state, so they are forwarded via EMQ. The
--- target is re-resolved on the map state (selections usually persist, which also
--- covers non-player targets that cannot be found by name).
-local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
 -- Map-state executor (via EMQ, or directly in compatibility mode).
@@ -15,7 +10,9 @@ local function DoRootCommand(player, data)
     if sel and data.targetGuidLow and sel:GetGUIDLow() == data.targetGuidLow then
         target = sel
     elseif data.targetName then
-        target = Multistate.FindPlayerByName(data.targetName) or player
+        for _, p in ipairs(GetStateMap():GetPlayers()) do
+            if p:GetName() == data.targetName then target = p break end
+        end
     end
     if data.remove then
         target:RemoveAura(38505)

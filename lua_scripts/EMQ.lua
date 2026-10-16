@@ -1,33 +1,3 @@
--- EMQ.lua — Eve's Message Queue: inter-state communicator for multistate ALE.
--- Upstream: https://github.com/Foereaper/EMQ (adapted for mod-ale multistate-shoehorn).
---
--- Usage (in any script that needs cross-state messaging):
---   local EMQ = require("EMQ")
---
--- How it works: every player gets a 1s timer in BOTH the global state and their
--- map state. Messages are stored in the player's shared Data() cache (visible
--- from every state), written under the sender's context ("world" or "map") and
--- picked up by the timer running in the opposite context, which dispatches them
--- to the queue handler registered in that state.
---
---   -- global side (e.g. a .command handler, which always runs in world state):
---   EMQ.RegisterQueue("MyQueue", function(player, data) ... end)  -- runs in map state
---   player:SendEMQMessage("MyQueue", { ... })                     -- queued for map state
---
---   -- map side answering back to world state works symmetrically.
---
--- Notes:
---   * `data` must be marshallable (numbers, strings, booleans, plain tables).
---     Pass player/creature/item NAMES or GUIDs, never the objects themselves.
---   * `handler(player, data)` receives the player whose timer picked up the
---     message (the same player the message was queued on).
---   * ALE differences from upstream EMQ: player enumeration is state-aware
---     because GetPlayersInWorld()/GetPlayersOnMap() are world/map-only
---     respectively here (GetStateMap():GetPlayers() is used on maps).
---     GetStateMapId() exists in every state (-1 in world), so context
---     detection calls it directly.
---   * In compatibility (single-state) mode everything runs in the one world
---     state and messages are processed by the same state's timers.
 
 local EMQ = {
     config = {

@@ -1,9 +1,3 @@
--- Multistate: PLAYER_EVENT_ON_COMMAND (42) fires in the global state while
--- PLAYER_EVENT_ON_ENTER_COMBAT (33) fires in map states. Coordination flags
--- ("isInBossFight", "cbstoptime") therefore live in shared Data() (visible from
--- every state) instead of per-state SetData. Group iteration stays in the
--- global command handler (Group API is world-only). The core "combatstop"
--- command is executed in the global state via EMQ.
 local EMQ = require("EMQ")
 
 local CLTime = {}

@@ -1,4 +1,3 @@
--- Multistate: Pit of Saron-only script (map 658).
 if GetStateMapId() ~= 658 then return end
 
 local MAP_ID            = 658
@@ -92,4 +91,4 @@ local function OnEnterFoS(event, player)
 end
 
 RegisterPlayerEvent(28, OnEnterFoS)
-require("Multistate").ForEachPlayer(function(player) OnEnterFoS(nil, player) end)
+for _, player in ipairs(GetStateMap():GetPlayers()) do OnEnterFoS(nil, player) end

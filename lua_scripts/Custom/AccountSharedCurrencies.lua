@@ -1,4 +1,3 @@
--- Multistate: map-only script (all hooks fire in map states).
 
 -- ----------------------------------------------------------------------------------------------
 -- ACCOUNTWIDE CURRENCY CONFIG 
@@ -49,7 +48,10 @@ local function SyncCurrencyOnLogin(player, accountId)
         print("[AccountCurrency] SyncCurrencyOnLogin: Player " .. name .. " has " .. playerCurrencyCount .. " of currency " .. currencyId)
         
         CharDBQueryAsync("SELECT count FROM acore_eluna.accountwide_currency WHERE accountId = " .. accountId .. " AND currencyId = " .. currencyId, function(query)
-            local player = require("Multistate").FindPlayerByName(name)
+            local player
+            for _, p in ipairs(GetStateMap():GetPlayers()) do
+                if p:GetName() == name then player = p break end
+            end
             if not player then 
                 print("[AccountCurrency] SyncCurrencyOnLogin: Player " .. name .. " no longer exists, aborting sync")
                 return 

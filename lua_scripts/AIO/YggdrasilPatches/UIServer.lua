@@ -1,9 +1,4 @@
 local AIO = require("AIO")
--- Multistate: logout/command/packet/addon handlers run globally, save/map-change
--- run in map states. The LvlRewards flags are read and written in both, so they
--- live in shared Data() (visible in every state). The load-time sweep below is
--- state-aware (GetPlayersInWorld is world-only).
-local Multistate = require("Multistate")
 
 local UIFixLimit = {}
 local NoAFKLogoutZones = {
@@ -47,7 +42,11 @@ local function AIO_UI_FIX(event, player, command)
 	if event == 28 then -- on login/map change, check reward state
 		if player:Data():Get("LvlRewardsChecked") then return end
 		CharDBQueryAsync("SELECT data FROM acore_eluna.character_custom_data WHERE guid = "..guid.." AND type = 99", function(result)
-			local player = Multistate.FindPlayerByGUID(GetPlayerGUID(guid))
+			local player
+			if GetStateMapId() == -1 then player = GetPlayerByGUID(GetPlayerGUID(guid))
+			else for _, p in ipairs(GetStateMap():GetPlayers()) do
+				if p:GetGUIDLow() == guid then player = p break end
+			end end
 			if result then
 				local data = result:GetString(0)
 				if not player then return end
@@ -115,14 +114,14 @@ end
 local guidString = ""
 local first = true
 
-Multistate.ForEachPlayer(function(player)
+for _, player in ipairs(GetStateMapId() == -1 and GetPlayersInWorld() or GetStateMap():GetPlayers()) do
    if first then
        guidString = tostring(player:GetGUIDLow())
        first = false
    else
        guidString = guidString .. "," .. player:GetGUIDLow()
    end
-end)
+end
 
 if not first then
    CharDBQueryAsync(
@@ -133,7 +132,11 @@ if not first then
                    local guid = result:GetUInt32(0)
                    local data = result:GetString(1)
                    if data == "DISABLED" then
-					   local player = Multistate.FindPlayerByGUID(GetPlayerGUID(guid))
+					   local player
+					   if GetStateMapId() == -1 then player = GetPlayerByGUID(GetPlayerGUID(guid))
+					   else for _, p in ipairs(GetStateMap():GetPlayers()) do
+						   if p:GetGUIDLow() == guid then player = p break end
+					   end end
 					   if player then player:Data():Set("LvlRewardsDisabled", true) end
 				   end
                until not result:NextRow()

@@ -1,4 +1,3 @@
--- Multistate: Azshara Mall-only script (mall map 37).
 if GetStateMapId() ~= 37 then return end
 
 local voteTokenItemId = 20880 -- ID for Vote Tokens

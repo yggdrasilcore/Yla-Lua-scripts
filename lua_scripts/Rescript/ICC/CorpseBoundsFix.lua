@@ -1,4 +1,3 @@
--- Multistate: Icecrown Citadel-only script (map 631).
 if GetStateMapId() ~= 631 then return end
 
 local CorpseBoundsEvent = {}

@@ -1,4 +1,3 @@
--- Multistate: Pit of Saron-only script (map 658).
 if GetStateMapId() ~= 658 then return end
 
 -- POS Gargoyle event on the 4 slaves between Ick and the entrance (the ones without a ball and chain)
@@ -60,8 +59,10 @@ end
 
 local function CheckPlayersAndSpawnNPCs()
     for playerName, _ in pairs(PLAYERS_ON_MAP) do
-        -- Multistate: state-aware lookup (this timer runs in map states).
-        local player = require("Multistate").FindPlayerByName(playerName)
+        local player
+        for _, p in ipairs(GetStateMap():GetPlayers()) do
+            if p:GetName() == playerName then player = p break end
+        end
         if player then
             local instance = player:GetInstanceId()
             local x, y, z = player:GetLocation()
