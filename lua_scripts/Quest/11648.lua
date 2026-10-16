@@ -1,5 +1,6 @@
 -- Multistate: map-only script (all hooks fire in map states).
-if GetStateMapId() == -1 then return end
+-- Quest 11648 The Art of Persuasion - Borean Tundra: Northrend map 571 only.
+if GetStateMapId() ~= 571 then return end
 
 local QUEST_ID = 11648
 local REQUIRED_CASTS = 5

@@ -1,5 +1,5 @@
--- Multistate: map-only script (all hooks fire in map states).
-if GetStateMapId() == -1 then return end
+-- Kalimdor-only script (map 1): quest 6621 King of the Foulweald (Ashenvale).
+if GetStateMapId() ~= 1 then return end
 
 local QUEST_ID = 6621
 local CHECK_RANGE = 100

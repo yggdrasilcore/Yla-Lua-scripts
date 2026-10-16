@@ -1,5 +1,6 @@
 -- Multistate: map-only script (all hooks fire in map states).
-if GetStateMapId() == -1 then return end
+-- Quest 12659 Scalps - Zul'Drak: Northrend map 571 only.
+if GetStateMapId() ~= 571 then return end
 
 local function OnUseItem(event, player, item, target)
    if not player:GetSelection() then return false end

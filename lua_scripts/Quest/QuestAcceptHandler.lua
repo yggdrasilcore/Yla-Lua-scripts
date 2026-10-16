@@ -2,11 +2,15 @@ local function HandleQuestAccept(event, player, quest)
     local questId = quest:GetId()
     
     if questId == 13263 or questId == 13389 then
+        -- Icecrown-only branch (map 571): A Short Fuse accept teleport.
+        if GetStateMapId() ~= 571 then return end
         player:CastSpell(player, 76010, true)
         player:NearTeleport(5754, 2055, 504, 5.68)
     end
 
     if questId == 10406 then
+        -- Outland-only branch (map 530): Delivering the Message (Netherstorm) escort check.
+        if GetStateMapId() ~= 530 then return end
         player:RegisterEvent(function(eventId, delay, repeats, player)
             local Demolitionist = player:GetNearestCreature(50, 20802)
             if not Demolitionist then
@@ -16,6 +20,8 @@ local function HandleQuestAccept(event, player, quest)
     end
     
     if questId == 12671 then
+        -- Northrend-only branch (map 571): Reconnaissance Flight (Borean Tundra) vehicle check.
+        if GetStateMapId() ~= 571 then return end
         player:RegisterEvent(function(eventId, delay, repeats, player)
             local FlyingMachine = player:GetNearestCreature(20, 28710)
             if FlyingMachine then

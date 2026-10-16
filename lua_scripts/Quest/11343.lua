@@ -1,5 +1,5 @@
--- Multistate: map-only script (all hooks fire in map states).
-if GetStateMapId() == -1 then return end
+-- Northrend-only script (map 571): quest 11343 The Echo of Ymiron (Wyrmskull Village, Howling Fjord).
+if GetStateMapId() ~= 571 then return end
 
 local AURA_ID = 42786
 local QUEST_ID = 11343

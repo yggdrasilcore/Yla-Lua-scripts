@@ -1,5 +1,5 @@
--- Multistate: map-only script (all hooks fire in map states).
-if GetStateMapId() == -1 then return end
+-- Storm Peaks-only script (map 571): quest 12874 Fervor of the Frostborn (Hyldsmeet).
+if GetStateMapId() ~= 571 then return end
 
 local function OnEnterArea(event, player, oldArea, newArea)
     if newArea == 4428 then

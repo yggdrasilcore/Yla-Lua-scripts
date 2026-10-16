@@ -1,5 +1,5 @@
--- Multistate: map-only script (all hooks fire in map states).
-if GetStateMapId() == -1 then return end
+-- Outland-only script (map 530): quest 10935 The Exorcism of Colonel Jules (Honor Hold, Hellfire Peninsula).
+if GetStateMapId() ~= 530 then return end
 
 local count22507 = 0
 local JulesEvent
