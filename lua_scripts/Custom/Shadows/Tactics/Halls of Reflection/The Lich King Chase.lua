@@ -1,3 +1,4 @@
+-- Multistate: Halls of Reflection-only script (map 668).
 if GetStateMapId() ~= 668 then return end
 
 -- HOR TACTICS
@@ -20,6 +21,7 @@ function OnEnterHoR(event, player)
     local LK = player:GetNearestCreature(4000, LK_ID)
     
     if LK then
+        -- Multistate: Group API is world-only, defer via EMQ (see Helpers/TargetIcon.lua).
         SetTargetIconDeferred(player, 4, LK)
     end
 end

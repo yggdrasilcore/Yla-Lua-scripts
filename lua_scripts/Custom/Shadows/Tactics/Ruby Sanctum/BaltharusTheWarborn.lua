@@ -1,3 +1,4 @@
+-- Multistate: Ruby Sanctum-only script (map 724).
 if GetStateMapId() ~= 724 then return end
 
 local function CalculateCirclePosition(map, centerX, centerY, radius, angleRadians)
@@ -17,6 +18,7 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
         local players = baltharus:GetPlayersInRange(100)
         for _, player in ipairs(players) do
             if player:IsBot() and player:IsInGroup() then
+                -- Multistate: Group API is world-only, defer via EMQ (see Helpers/TargetIcon.lua).
                 SetTargetIconDeferred(player, 7, nil)
                 break
             end
@@ -64,6 +66,7 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
     end
 
     if setter and not baltharus:GetData("SkullSet") then
+        -- Multistate: Group API is world-only, defer via EMQ (see Helpers/TargetIcon.lua).
         SetTargetIconDeferred(setter, 7, baltharus)
         baltharus:SetData("SkullSet", true)
     end
