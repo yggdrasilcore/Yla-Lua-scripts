@@ -2,12 +2,13 @@ function IsVIP(player)
     return player:Data():Get("VIPTime") and player:Data():Get("VIPTime") > os.time()
 end
 
+-- Map-only reload warmer: world state never walks or resolves players.
 local function CheckVIPOnLoad()
     local playerNames = {}
     local accountIdMap = {}
     local accountIds = {}
-    
-    for _, player in ipairs(GetStateMapId() == -1 and GetPlayersInWorld() or GetStateMap():GetPlayers()) do
+
+    for _, player in ipairs(GetStateMap():GetPlayers()) do
         local name = player:GetName()
         local accountId = player:GetAccountId()
         
@@ -33,10 +34,9 @@ local function CheckVIPOnLoad()
         
         for _, name in ipairs(playerNames) do
             local player
-            if GetStateMapId() == -1 then player = GetPlayerByName(name)
-            else for _, p in ipairs(GetStateMap():GetPlayers()) do
+            for _, p in ipairs(GetStateMap():GetPlayers()) do
                 if p:GetName() == name then player = p break end
-            end end
+            end
             if player and vipTimeMap[accountIdMap[name]] then
                 player:Data():Set("VIPTime", vipTimeMap[accountIdMap[name]])
 				print("VIP found: "..player:GetName()..", acc "..player:GetAccountId()..".")
@@ -49,7 +49,6 @@ end
 
 local function CheckVIP(event, player)
 	local name = player:GetName()
-	local acc = player:GetAccountId()
     if player:IsBot() then return end
 	
 	AuthDBQueryAsync("SELECT viptime FROM acore_eluna.accounts_vip WHERE account = " .. player:GetAccountId() .. ";", function(result)
@@ -67,7 +66,6 @@ local function CheckVIP(event, player)
 end
 
 local function VIPBotRepairOnResurrect(event, player)
-    local name = player:GetName()
     if not player:IsBot() then
         if IsVIP(player) then
             player:DurabilityRepairAll(false)
@@ -654,8 +652,13 @@ local function VIPCommands(event, player, command)
     end
 end
 
-CheckVIPOnLoad() -- Sets players with VIP as active VIP on load/reload ELUNA
-RegisterPlayerEvent(28, CheckVIP)
-RegisterPlayerEvent(36, VIPBotRepairOnResurrect)
-RegisterPlayerEvent(42, VIPCommands)
-RegisterPlayerEvent(42, VIPGMCommands)
+-- Commands use world-only lookups (GetPlayerByName, GetCharacterCache), so
+-- they live in the world state; gameplay events live on the maps.
+if GetStateMapId() == -1 then -- World stuff
+    RegisterPlayerEvent(42, VIPCommands)
+    RegisterPlayerEvent(42, VIPGMCommands)
+else -- Map stuff
+    CheckVIPOnLoad() -- Sets players with VIP as active VIP on load/reload ELUNA
+    RegisterPlayerEvent(28, CheckVIP)
+    RegisterPlayerEvent(36, VIPBotRepairOnResurrect)
+end
