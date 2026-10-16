@@ -91,12 +91,6 @@ WorldDBQueryAsync([[
     print("[QuestItemGO] Indexed " .. numQuests .. " quests, " .. numItems .. " items, " .. numGOs .. " gameobjects.")
     PublishQuestItemGO()
 end)
-else
-    CreateLuaEvent(function(eventId)
-        if AdoptQuestItemGO() then
-            RemoveEventById(eventId)
-        end
-    end, 5000, 0)
 end
 
 local function GetItemName(itemId)
@@ -237,19 +231,18 @@ end
 local function OnMapChange(event, player)
     if not player then return end
     if not player:IsBot() then return end
+    AdoptQuestItemGO()
     if player:GetData("BotQuestLoopActive") then return end
     player:SetData("BotQuestLoopActive", true)
     player:RegisterEvent(CheckForQuestGOs, {20000, 30000}, 0)
 end
 
-if GetStateMapId() == -1 then return end
-
-RegisterPlayerEvent(28, OnMapChange)
-if GetStateMap() then
-    for _, player in ipairs(GetStateMap():GetPlayers()) do
-        if not player:IsBot() then return end
-        if player:GetData("BotQuestLoopActive") then return end
-        player:SetData("BotQuestLoopActive", true)
-        player:RegisterEvent(CheckForQuestGOs, {20000, 30000}, 0)
+if GetStateMapId() ~= -1 then
+    RegisterPlayerEvent(28, OnMapChange)
+    if GetStateMap() then
+        AdoptQuestItemGO()
+        for _, player in ipairs(GetStateMap():GetPlayers()) do
+            OnMapChange(_, player)
+        end
     end
 end
