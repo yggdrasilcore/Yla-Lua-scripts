@@ -1,38 +1,3 @@
-local EMQ = require("EMQ")
-
--- Runs a .command in the global state (ChatHandler parsing must not run on map
--- threads): directly in compatibility mode, otherwise forwarded via EMQ.
-EMQ.RegisterQueue("TwiggyRunCommand", function(player, data)
-    if player and data and data.cmd then
-        player:RunCommand(data.cmd)
-    end
-end)
-
--- Mall teleport runs on a world verdict: map closes gossip first, world
--- owns the cooldown and answers allow/deny.
-local HandleTwiggyWorld
-local HandleTwiggyView
-EMQ.RegisterQueue("TwiggyToWorld", function(player, data)
-    if HandleTwiggyWorld and (GetStateMapId() == -1) then
-        HandleTwiggyWorld(player, data)
-    end
-end)
-EMQ.RegisterQueue("TwiggyToMap", function(player, data)
-    if HandleTwiggyView and (GetStateMapId() ~= -1) then
-        HandleTwiggyView(player, data)
-    end
-end)
-
-local function TwiggyRunCommand(player, cmd)
-    if not player or not cmd then
-        return
-    end
-    if GetStateMapId() == -1 then
-        player:RunCommand(cmd)
-    else
-        player:SendEMQMessage("TwiggyRunCommand", { cmd = cmd })
-    end
-end
 -- Welcome to the Twiggy script :)
 
 -- Start Mall TP vars
@@ -62,6 +27,57 @@ mailboxtime = {}
 
 -- End Twiggy tables
 
+-- Druid morph claimable-creature lists, wired to DruidMorpher.lua via world data.
+-- DruidMorpher (world state) publishes entry->name tables with
+-- SetWorldData("DruidMorphCache1".."7"); Twiggy gossip runs on map states,
+-- so it consumes them here with GetWorldData.
+-- Index mapping follows DruidMorpher QUERIES order:
+-- 1 Cat, 2 Bear, 3 Flight, 4 Travel, 5 Moonkin, 6 Tree, 7 Aquatic.
+local catCache
+local bearCache
+local birdCache
+local travelCache
+local owlCache
+local treeCache
+local aquaticCache
+local catCount
+local bearCount
+local birdCount
+local travelCount
+local owlCount
+local treeCount
+local aquaticCount
+
+local function TwiggyCountEntries(t)
+    local n = 0
+    for _ in pairs(t) do
+        n = n + 1
+    end
+    return n
+end
+
+local function TwiggyAdoptDruidMorphCaches()
+    local c = {}
+    for i = 1, 7 do
+        c[i] = GetWorldData("DruidMorphCache" .. i):AsTable()
+    end
+    catCache = c[1]
+    bearCache = c[2]
+    birdCache = c[3]
+    travelCache = c[4]
+    owlCache = c[5]
+    treeCache = c[6]
+    aquaticCache = c[7]
+    catCount = TwiggyCountEntries(catCache)
+    bearCount = TwiggyCountEntries(bearCache)
+    birdCount = TwiggyCountEntries(birdCache)
+    travelCount = TwiggyCountEntries(travelCache)
+    owlCount = TwiggyCountEntries(owlCache)
+    treeCount = TwiggyCountEntries(treeCache)
+    aquaticCount = TwiggyCountEntries(aquaticCache)
+    return true
+end
+
 
 -- Initiates VIP table if not already present
 AuthDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.accounts_vip (ACCOUNT INT(6) NOT NULL PRIMARY KEY, VIPTIME INT(11) NOT NULL);")
@@ -83,7 +99,27 @@ local function ShowCategoryContents(player, creature, category, page)
     local endIndex = page * itemsPerPage
     player:GossipClearMenu()
 
-    local cache = cacheChoice[player:GetGUIDLow()]
+    TwiggyAdoptDruidMorphCaches()
+    -- Resolve by category string, not table identity: each adopt builds fresh
+    -- tables via AsTable(), so a stored reference goes stale and `==` checks fail.
+    local cache
+    local icon
+    if category == "Cat Forms" then
+        cache, icon = catCache, "ability_druid_catform"
+    elseif category == "Bear Forms" then
+        cache, icon = bearCache, "ability_racial_bearform"
+    elseif category == "Travel Forms" then
+        cache, icon = travelCache, "ability_druid_travelform"
+    elseif category == "Flight Forms" then
+        cache, icon = birdCache, "ability_druid_flightform"
+    elseif category == "Tree Forms" then
+        cache, icon = treeCache, "ability_druid_treeoflife"
+    elseif category == "Moonkin Forms" then
+        cache, icon = owlCache, "spell_nature_forceofnature"
+    elseif category == "Aquatic Forms" then
+        cache, icon = aquaticCache, "ability_druid_aquaticform"
+    end
+    cacheChoice[player:GetGUIDLow()] = cache
 
     -- Create a temporary table to hold the entries in a sortable format
     local tempTable = {}
@@ -102,21 +138,7 @@ local function ShowCategoryContents(player, creature, category, page)
         itemCount = itemCount + 1
         if itemCount >= startIndex and itemCount <= endIndex then
             local name = entryData.name
-            if cache == catCache then
-                player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_catform:32:32:-22:0|t" .. name, 0, 999)
-            elseif cache == bearCache then
-                player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_racial_bearform:32:32:-22:0|t" .. name, 0, 999)
-            elseif cache == travelCache then
-                player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_travelform:32:32:-22:0|t" .. name, 0, 999)
-            elseif cache == birdCache then
-                player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_flightform:32:32:-22:0|t" .. name, 0, 999)
-            elseif cache == treeCache then
-                player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_treeoflife:32:32:-22:0|t" .. name, 0, 999)
-            elseif cache == owlCache then
-                player:GossipMenuAddItem(2, "|TInterface/ICONS/spell_nature_forceofnature:32:32:-22:0|t" .. name, 0, 999)
-            elseif cache == aquaticCache then
-                player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_aquaticform:32:32:-22:0|t" .. name, 0, 999)
-            end
+            player:GossipMenuAddItem(2, "|TInterface/ICONS/" .. icon .. ":32:32:-22:0|t" .. name, 0, 999)
         end
         if itemCount >= endIndex then
             break
@@ -254,24 +276,23 @@ local function TwiggyGossipHello(event, player, creature)
 	end
 end
 
-HandleTwiggyWorld = function(player, data)
-    if not player or not data or data.op ~= "malltele" then return end
-    if player:GetMapId() == MAP_ID then
-        player:SendAreaTriggerMessage("You are already at the mall.")
-        return
+-- Mall teleport verdict runs on world via command event 42. Map gossip only
+-- runs the pre-checks, closes gossip and fires the command.
+local function OnMallTeleCommand(event, player, command)
+    if command:lower() == "mallteleport" then
+        if player:GetMapId() == MAP_ID then
+            player:SendAreaTriggerMessage("You are already at the mall.")
+            return false
+        end
+        local remaining = (player:Data():Get("MallTeleCD") or 0) - os.time()
+        if remaining > 0 then
+            player:SendAreaTriggerMessage("Your mall teleport is on cooldown for " .. math.floor((remaining % 3600) / 60) .. " minutes and " .. math.floor(remaining % 60) .. " seconds.")
+            return false
+        end
+        player:Data():Set("MallTeleCD", os.time() + COOLDOWN)
+        player:Teleport(MAP_ID, X, Y, Z, ORIENTATION)
+        return false
     end
-    local remaining = (player:Data():Get("MallTeleCD") or 0) - os.time()
-    if remaining > 0 then
-        player:SendAreaTriggerMessage("Your mall teleport is on cooldown for " .. math.floor((remaining % 3600) / 60) .. " minutes and " .. math.floor(remaining % 60) .. " seconds.")
-        return
-    end
-    player:Data():Set("MallTeleCD", os.time() + COOLDOWN)
-    player:SendEMQMessage("TwiggyToMap", { map = MAP_ID, x = X, y = Y, z = Z, o = ORIENTATION })
-end
-
-HandleTwiggyView = function(player, data)
-    if not player or not data or not data.map then return end
-    player:Teleport(data.map, data.x, data.y, data.z, data.o)
 end
 
 local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
@@ -281,11 +302,11 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
 	elseif intId == 24 then
 		OnTalkToGreetingTwig(event, player, player)
 	elseif intId == 8 then
-		TwiggyRunCommand(player, "shadowsmenu")
+		player:RunCommand("shadowsmenu")
 	elseif intId == 7 then
-		TwiggyRunCommand(player, "choosestandardfeathers")
+		player:RunCommand("choosestandardfeathers")
 	elseif intId == 6 then
-		TwiggyRunCommand(player, "rafmenu")
+		player:RunCommand("rafmenu")
 	elseif intId == 5 then
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_fire_burningspeed:32:32:-22:0|tRates", 0, 49)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_helmet_89:32:32:-22:0|tTransmog and morph services", 0, 50)
@@ -359,6 +380,7 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 5)
         player:GossipSendMenu(12, creature, 60)
 	elseif intId == 500 then
+		TwiggyAdoptDruidMorphCaches()
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/ABILITY_Druid_CatForm:32:32:-22:0|tCat Forms: " .. catCount, 0, 501)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_racial_bearform:32:32:-22:0|tBear Forms: " .. bearCount, 0, 502)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/ABILITY_Druid_FlightForm:32:32:-22:0|tFlight Forms: " .. birdCount, 0, 503)
@@ -379,24 +401,31 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
 		local newPage = intId == 999 and currentPage
 		ShowCategoryContents(player, creature, currentCategory, newPage)
 	elseif intId == 501 then
+		TwiggyAdoptDruidMorphCaches()
 		cacheChoice[player:GetGUIDLow()] = catCache
 		ShowCategoryContents(player, creature, "Cat Forms", 1)
 	elseif intId == 502 then
+		TwiggyAdoptDruidMorphCaches()
 		cacheChoice[player:GetGUIDLow()] = bearCache
 		ShowCategoryContents(player, creature, "Bear Forms", 1)
 	elseif intId == 503 then
+		TwiggyAdoptDruidMorphCaches()
 		cacheChoice[player:GetGUIDLow()] = birdCache
 		ShowCategoryContents(player, creature, "Flight Forms", 1)
 	elseif intId == 504 then
+		TwiggyAdoptDruidMorphCaches()
 		cacheChoice[player:GetGUIDLow()] = travelCache
 		ShowCategoryContents(player, creature, "Travel Forms", 1)
 	elseif intId == 505 then
+		TwiggyAdoptDruidMorphCaches()
 		cacheChoice[player:GetGUIDLow()] = owlCache
 		ShowCategoryContents(player, creature, "Moonkin Forms", 1)
 	elseif intId == 506 then
+		TwiggyAdoptDruidMorphCaches()
 		cacheChoice[player:GetGUIDLow()] = treeCache
 		ShowCategoryContents(player, creature, "Tree Forms", 1)
 	elseif intId == 507 then
+		TwiggyAdoptDruidMorphCaches()
 		cacheChoice[player:GetGUIDLow()] = aquaticCache
 		ShowCategoryContents(player, creature, "Aquatic Forms", 1)
 	elseif intId == 2 then
@@ -452,7 +481,7 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
 			mainMenu(player, creature)
 		else
 			player:GossipComplete()
-			player:SendEMQMessage("TwiggyToWorld", { op = "malltele", playerName = player:GetName() })
+			player:RunCommand("mallteleport")
 			return true
 		end
     elseif intId == 12 then
@@ -537,9 +566,13 @@ end
 -- Twiggy event registrations
 ------------------------------------------------------------------------------------------------
 
-RegisterPlayerEvent(3, OnPlayerLogin)
-RegisterCreatureGossipEvent(23198, 1, TwiggyGossipHello)
-RegisterCreatureGossipEvent(23198, 2, TwiggyGossipSelect)
+if GetStateMapId() == -1 then
+    RegisterPlayerEvent(3, OnPlayerLogin)
+    RegisterPlayerEvent(42, OnMallTeleCommand)
+else
+    RegisterCreatureGossipEvent(23198, 1, TwiggyGossipHello)
+    RegisterCreatureGossipEvent(23198, 2, TwiggyGossipSelect)
+end
 
 ------------------------------------------------------------------------------------------------
 -- End Twiggy event registrations
