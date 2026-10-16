@@ -6,7 +6,7 @@ AWARD_TOKEN_LEVEL_DIFFERENCE = 9
 AWARD_TOKEN_MINIMUM_PLAYER_LEVEL = 1 -- Also referenced by Twiggy dialogue
 
 local function OnQuestComplete(event, player, quest)
-    if player:GetLevel() == AWARD_TOKEN_MINIMUM_PLAYER_LEVEL
+    if player:GetLevel() >= AWARD_TOKEN_MINIMUM_PLAYER_LEVEL
 	and not (quest:GetId() == 3503)
 	and not (quest:GetId() == 3421)
 	then
@@ -42,7 +42,7 @@ local function OnKillCreature(event, player, killed)
     end
 
     for _, member in pairs(recipients) do
-        if member:GetLevel() == AWARD_TOKEN_MINIMUM_PLAYER_LEVEL then
+        if member:GetLevel() >= AWARD_TOKEN_MINIMUM_PLAYER_LEVEL then
             member:AddItem(TRANSMOG_TOKEN_ID, TRANSMOG_TOKEN_COUNT)
             member:SendBroadcastMessage("You have been awarded an Activity Token for killing a boss!")
         end
