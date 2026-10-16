@@ -1,4 +1,3 @@
-
 local function StartAntiClipCheck(player)
     player:SetData("LastPosX", player:GetX())
     player:SetData("LastPosY", player:GetY())
@@ -129,14 +128,9 @@ function OnAIOAntiCheatCommand(event, player, command)
     end
 end
 
-local function ReloadEluna(event)
-    CreateLuaEvent(function()
-        for _, player in ipairs(GetPlayersInWorld()) do
-            StartElunaAnticheat(event, player)
-        end
-    end, 5000, 1)
+if GetStateMapId() == -1 then
+    RegisterPlayerEvent(42, OnAIOAntiCheatCommand)
+else
+    RegisterPlayerEvent(28, StartElunaAnticheat)
+    for _, player in ipairs(GetStateMap():GetPlayers()) do StartElunaAnticheat(nil, player) end
 end
-
-RegisterPlayerEvent(42, OnAIOAntiCheatCommand)
-RegisterPlayerEvent(28, StartElunaAnticheat)
-RegisterServerEvent(33, ReloadEluna)
