@@ -1,5 +1,3 @@
--- Multistate: all registrations here (command, chat, login/logout) only fire in
--- the global state, and the mute table is only touched there.
 if GetStateMapId() ~= -1 then return end
 
 local mutedAccounts = {}

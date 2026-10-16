@@ -1,5 +1,4 @@
--- Multistate: map-only script (all hooks fire in map states).
--- Quest 12028 Spiritual Insight - Dragonblight: Northrend map 571 only.
+-- Quest 12028 Spiritual Insight - Dragonblight.
 if GetStateMapId() ~= 571 then return end
 
 local WISP = 24465

@@ -1,5 +1,4 @@
--- Multistate: map-only script (all hooks fire in map states).
--- Quest 12664 Dark Horizon - Zul'Drak: Northrend map 571 only.
+-- Quest 12664 Dark Horizon - Zul'Drak.
 if GetStateMapId() ~= 571 then return end
 
 local NPC_ID = 28666

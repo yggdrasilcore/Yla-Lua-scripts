@@ -1,5 +1,4 @@
--- Multistate: map-only script (all hooks fire in map states).
--- Quest 12326 Steamtank Surprise - Dragonblight Carrion Fields: Northrend map 571 only.
+-- Quest 12326 Steamtank Surprise - Dragonblight Carrion Fields.
 if GetStateMapId() ~= 571 then return end
 
 local AREA_CARRION_WASTES = 4188 -- Area to trigger script in

@@ -1,7 +1,3 @@
-
--- Multistate: the packet handler runs in the global state (Group API is
--- world-only), while PLAYER_EVENT_ON_KILLED_BY_CREATURE (8) fires in map
--- states, so the map side forwards to the global state via EMQ.
 local EMQ = require("EMQ")
 
 local function DoSkullClear(player)
@@ -31,8 +27,6 @@ EMQ.RegisterQueue("SkullIconClear", function(player, data)
     DoSkullClear(player)
 end)
 
--- Multistate: map-only script (death events fire on every map; the EMQ queue
--- above must still register in every state, hence the gate sits below it).
 if GetStateMapId() == -1 then return end
 
 local function RemoveRaidIconsOnDeath(event, obj1, player)

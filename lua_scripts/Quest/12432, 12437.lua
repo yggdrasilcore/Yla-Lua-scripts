@@ -1,5 +1,4 @@
--- Multistate: map-only script (all hooks fire in map states).
--- Quests 12432 and 12437 Riding the Red Rocket - Grizzly Hills Venture Bay: Northrend map 571 only.
+-- Quests 12432 and 12437 Riding the Red Rocket - Grizzly Hills Venture Bay.
 if GetStateMapId() ~= 571 then return end
 
 local function OnSpawn(event, creature)
