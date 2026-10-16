@@ -114,7 +114,14 @@ end
 local guidString = ""
 local first = true
 
-for _, player in ipairs(GetStateMapId() == -1 and GetPlayersInWorld() or GetStateMap():GetPlayers()) do
+local players
+if GetStateMapId() == -1 then
+   players = GetPlayersInWorld()
+else
+   local map = GetStateMap()
+   players = map and map:GetPlayers()
+end
+for _, player in ipairs(players or {}) do
    if first then
        guidString = tostring(player:GetGUIDLow())
        first = false

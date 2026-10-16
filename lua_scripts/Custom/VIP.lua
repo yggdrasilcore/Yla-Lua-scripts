@@ -8,7 +8,7 @@ local function CheckVIPOnLoad()
     local accountIdMap = {}
     local accountIds = {}
 
-    for _, player in ipairs(GetStateMap():GetPlayers()) do
+    for _, player in ipairs(GetStateMap() and GetStateMap():GetPlayers() or {}) do
         local name = player:GetName()
         local accountId = player:GetAccountId()
         

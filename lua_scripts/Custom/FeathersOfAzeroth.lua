@@ -689,7 +689,14 @@ end
 local function OnLoadScript()
     local dbQueryTable = {}
     
-    for _, player in ipairs(GetStateMapId() == -1 and GetPlayersInWorld() or GetStateMap():GetPlayers()) do
+    local players
+    if GetStateMapId() == -1 then
+        players = GetPlayersInWorld()
+    else
+        local map = GetStateMap()
+        players = map and map:GetPlayers()
+    end
+    for _, player in ipairs(players or {}) do
         if player:HasItem(FeathersItem) then
             table.insert(dbQueryTable, player:GetGUIDLow())
 			CheckFlyableArea(event, player, player:GetZoneId(), player:GetAreaId())

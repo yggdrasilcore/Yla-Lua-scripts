@@ -1653,26 +1653,6 @@ local function LoadItemCache()
     end
 end
 
-if GetStateMapId() == -1 then -- World stuff
-    ItemCache.LoadCache()
-    RegisterPlayerEvent(3, OnLogin)
-    for _, _p in ipairs(GetPlayersInWorld()) do -- Catch-up for already-online players (server start or reload).
-        OnLogin(3, _p)
-    end
-else -- Map stuff
-    RegisterPlayerEvent(28, OnLogin) -- On map change, in case player zones into expired/invalid instance
-    RegisterPlayerEvent(4, OnLogout)
-    RegisterPlayerEvent(29, OnEquip)
-    RegisterPacketEvent(0x2A8, 5, OnRepair)
-    RegisterCreatureGossipEvent(NPC_Entry, 1, OnGossipHello)
-    RegisterCreatureGossipEvent(NPC_Entry, 2, OnGossipSelect)
-    RegisterCreatureGossipEvent(TRANSMOG_VENDOR_NPC_ID, 1, MogVendorHello)
-    RegisterCreatureGossipEvent(TRANSMOG_VENDOR_NPC_ID, 2, MogVendorSelect)
-    for _, _p in ipairs(GetStateMap():GetPlayers()) do -- Catch-up for already-online players (server start or reload).
-        OnLogin(3, _p)
-    end
-end
-
 ---------------------------------------------------------------------------------
 -- Transmog item vendor events end
 ---------------------------------------------------------------------------------
@@ -1713,6 +1693,26 @@ local function OnRepair(event, packet, player)
             end
         end
     end)
+end
+
+if GetStateMapId() == -1 then -- World stuff
+    ItemCache.LoadCache()
+    RegisterPlayerEvent(3, OnLogin)
+    for _, _p in ipairs(GetPlayersInWorld() or {}) do -- Catch-up for already-online players (server start or reload).
+        OnLogin(3, _p)
+    end
+else -- Map stuff
+    RegisterPlayerEvent(28, OnLogin) -- On map change, in case player zones into expired/invalid instance
+    RegisterPlayerEvent(4, OnLogout)
+    RegisterPlayerEvent(29, OnEquip)
+    RegisterPacketEvent(0x2A8, 5, OnRepair)
+    RegisterCreatureGossipEvent(NPC_Entry, 1, OnGossipHello)
+    RegisterCreatureGossipEvent(NPC_Entry, 2, OnGossipSelect)
+    RegisterCreatureGossipEvent(TRANSMOG_VENDOR_NPC_ID, 1, MogVendorHello)
+    RegisterCreatureGossipEvent(TRANSMOG_VENDOR_NPC_ID, 2, MogVendorSelect)
+    for _, _p in ipairs(GetStateMap() and GetStateMap():GetPlayers() or {}) do -- Catch-up for already-online players (server start or reload).
+        OnLogin(3, _p)
+    end
 end
 
 ---------------------------------------------------------------------------------

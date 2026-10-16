@@ -77,7 +77,14 @@ local function CacheDataPoints()
 	if EnableDebug and GetStateMapId() == -1 then print("[Eluna Server Logger]: Storing data point ".. DataPointCount .. " for session ".. SessionID .." to database...") end
 	local values = {}
 	
-	table.insert(values, "('pCount', " .. #(GetStateMapId() == -1 and GetPlayersInWorld() or GetStateMap():GetPlayers()) .. ", NULL, " .. os.time() .. ")")
+	local players
+	if GetStateMapId() == -1 then
+		players = GetPlayersInWorld()
+	else
+		local map = GetStateMap()
+		players = map and map:GetPlayers()
+	end
+	table.insert(values, "('pCount', " .. #(players or {}) .. ", NULL, " .. os.time() .. ")")
 
 	local totalDiff = 0
 	for _, diff in ipairs(event13Cache) do

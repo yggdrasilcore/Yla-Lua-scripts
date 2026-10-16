@@ -1191,7 +1191,7 @@ local function OnPlayerLogin(event, player)
 end
 
 local function ReloadEluna(event)
-    for _, player in ipairs(GetStateMap():GetPlayers()) do
+    for _, player in ipairs(GetStateMap() and GetStateMap():GetPlayers() or {}) do
         CheckRefereeStatus(player)
     end
 end

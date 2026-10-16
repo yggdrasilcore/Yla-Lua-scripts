@@ -279,7 +279,7 @@ if GetStateMapId() == -1 then -- World stuff
     RegisterPlayerEvent(3, OnXPLogin) -- Per-player XP rate load (reload-proof via player:Data())
     RegisterPlayerEvent(42, onXPCommand)
 else -- Map stuff
-    for _, p in ipairs(GetStateMap():GetPlayers()) do -- Warm Data for players already online at (re)load
+    for _, p in ipairs(GetStateMap() and GetStateMap():GetPlayers() or {}) do -- Warm Data for players already online at (re)load
         LoadXPForPlayer(p)
     end
     RegisterPlayerEvent(12, OnGiveXP)
