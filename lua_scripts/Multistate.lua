@@ -128,4 +128,28 @@ function Multistate.ClearData(player, key)
     player:Data():Set(key, nil)
 end
 
+
+-- Cross-state game-event check, fed by General/GameEventMirror.lua (world state
+-- publishes WorldData "GameEvents" {active = {[id] = true}} on snapshot/start/
+-- stop). Map states query the mirror; the world state reads live core state.
+function Multistate.IsGameEventActive(id)
+    if not id then
+        return false
+    end
+    if GetStateMapId() == -1 then
+        return IsGameEventActive(id)
+    end
+    local cur = GetWorldData("GameEvents")
+    if not cur then
+        return false
+    end
+    if cur.AsTable then cur = cur:AsTable() end
+    local active = cur.active
+    if not active then
+        return false
+    end
+    if active.AsTable then active = active:AsTable() end
+    return active[id] == true
+end
+
 return Multistate
