@@ -129,14 +129,6 @@ function OnAIOAntiCheatCommand(event, player, command)
     end
 end
 
-local function ReloadEluna(event)
-    CreateLuaEvent(function()
-        for _, player in ipairs(GetPlayersInWorld()) do
-            StartElunaAnticheat(event, player)
-        end
-    end, 5000, 1)
-end
-
 RegisterPlayerEvent(42, OnAIOAntiCheatCommand)
 RegisterPlayerEvent(28, StartElunaAnticheat)
 RegisterServerEvent(33, ReloadEluna)

@@ -149,6 +149,6 @@ local function OnLoad()
     end
 end
 
-RegisterServerEvent(33, OnLoad)
+OnLoad()
 
 return EMQ

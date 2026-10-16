@@ -238,13 +238,29 @@ local function OnGiveXP(event, player, amount, victim)
     end
 end 
 
+local function ResolveXPPlayer(name, guid)
+    if not name then return nil end
+    if GetStateMapId() == -1 then
+        local p = GetPlayerByName(name)
+        if p and (not guid or p:GetGUIDLow() == guid) then return p end
+        return nil
+    end
+    local map = GetStateMap()
+    if not map then return nil end
+    for _, p in ipairs(map:GetPlayers()) do
+        if p:GetName() == name and (not guid or p:GetGUIDLow() == guid) then
+            return p
+        end
+    end
+end
+
 local function LoadXPForPlayer(player)
     local guid = player:GetGUIDLow()
     local name = player:GetName()
     CharDBQueryAsync("SELECT rate, max_paid_rate FROM acore_eluna.character_rate_xp WHERE guid = " .. guid, function(result)
         if not result then return end
-        local p = GetPlayerByName(name)
-        if not p or p:GetGUIDLow() ~= guid then return end
+        local p = ResolveXPPlayer(name, guid)
+        if not p then return end
         p:Data():Set("XPRate", result:GetUInt8(0))
         p:Data():Set("XPMaxPaid", result:GetUInt8(1))
     end)
@@ -270,7 +286,7 @@ end
 ------------------------------------------------------------------------------------------------
 
 RegisterPlayerEvent(3, OnXPLogin) -- Per-player XP rate load (reload-proof via player:Data())
-if GetPlayersInWorld then -- Warm Data for players already online at (re)load
+if GetStateMapId() == -1 then -- Warm Data world-only; maps load on demand
     for _, p in ipairs(GetPlayersInWorld()) do
         LoadXPForPlayer(p)
     end
