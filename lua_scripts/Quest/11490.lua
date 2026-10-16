@@ -1,5 +1,5 @@
--- Multistate: map-only script (all hooks fire in map states).
-if GetStateMapId() == -1 then return end
+-- Magisters' Terrace-only script (map 585): quest 11490 The Scryer's Scryer.
+if GetStateMapId() ~= 585 then return end
 
 local function OnUseGameObject(event, go, player)
     player:RegisterEvent(function(eventId, delay, repeats, player)

@@ -1,5 +1,5 @@
--- Map-only script (all hooks fire in map states).
-if GetStateMapId() == -1 then return end
+-- Kalimdor-only script (map 1): quest 11183 Cleansing Witch Hill (Dustwallow Marsh).
+if GetStateMapId() ~= 1 then return end
 
 local SPELL_ID = 42521
 local ITEM_ID = 33113

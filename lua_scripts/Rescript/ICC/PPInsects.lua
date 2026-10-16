@@ -1,7 +1,6 @@
--- Multistate: Icecrown Citadel-only script (map 631).
 if GetStateMapId() ~= 631 then return end
 
-function ManageInsect(eventId, delay, repeats, player)
+local function ManageInsect(eventId, delay, repeats, player)
     local insectGUID = player:GetData("AssignedInsectGUID")
     
     if not insectGUID then
@@ -37,7 +36,7 @@ function ManageInsect(eventId, delay, repeats, player)
     local currentTime = os.time()
     local remaining = {}
 
-    for _, guid in ipairs(guids) do
+    for _, guid in ipairs(remaining) do
         local insect = nil
         for _, npc in pairs(player:GetCreaturesInRange(100, 37782)) do
             if npc:GetGUIDLow() == guid then
@@ -156,4 +155,4 @@ local function OnInsectMapChange(event, player)
 end
 
 RegisterPlayerEvent(28, OnInsectMapChange)
-require("Multistate").ForEachPlayer(function(player) OnInsectMapChange(nil, player) end)
+for _, player in ipairs(GetStateMap():GetPlayers()) do OnInsectMapChange(nil, player) end

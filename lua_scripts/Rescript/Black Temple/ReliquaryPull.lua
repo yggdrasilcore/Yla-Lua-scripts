@@ -1,4 +1,3 @@
--- Multistate: Black Temple-only script (map 564).
 if GetStateMapId() ~= 564 then return end
 
 local ids = {22856, 23418, 23419, 23420}
@@ -23,4 +22,4 @@ local function CheckReliquaryPull(event, player)
 end
 
 RegisterPlayerEvent(28, CheckReliquaryPull)
-require("Multistate").ForEachPlayer(function(player) CheckReliquaryPull(nil, player) end)
+for _, player in ipairs(GetStateMap():GetPlayers()) do CheckReliquaryPull(nil, player) end

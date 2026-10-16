@@ -1,6 +1,5 @@
 -- World queries the index once and publishes it as serialized world data;
 -- map states adopt the shared copy and never query.
-local Multistate = require("Multistate")
 
 local questItemGoCache = {}
 local cachedQuests = {}
@@ -139,7 +138,10 @@ local function WhisperBagsFull(player, data)
     player:SetData(throttleKey, os.time())
 
     local masterName = player:IsBot()
-    local master = require("Multistate").FindPlayerByName(masterName)
+    local master
+    for _, p in ipairs(GetStateMap():GetPlayers()) do
+        if p:GetName() == masterName then master = p break end
+    end
     if not master then return end
 
     local itemName = GetItemName(data.itemId)
@@ -177,7 +179,10 @@ local function LootObject(eventId, delay, repeats, player, data)
             end
         else
             local masterName = player:IsBot()
-            local master = require("Multistate").FindPlayerByName(masterName)
+            local master
+            for _, p in ipairs(GetStateMap():GetPlayers()) do
+                if p:GetName() == masterName then master = p break end
+            end
             if master then
                 local itemName = GetItemName(data.itemId)
                 if not PlayerHasEnoughFreeSlots(player, 1) then

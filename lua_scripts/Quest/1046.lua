@@ -1,5 +1,7 @@
 -- Quest 1046: remove item 5462 from player (bags/bank/equip) on turn-in.
 -- PLAYER_EVENT_ON_COMPLETE_QUEST (54) fires from Player::RewardQuest().
+-- Ashenvale-only script (map 1): quest 1046 Raene Cleansing turn-in (Astranaar).
+if GetStateMapId() ~= 1 then return end
 local QUEST_ID = 1046
 local ITEM_ID = 5462
 

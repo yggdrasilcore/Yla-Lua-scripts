@@ -1,5 +1,5 @@
--- Multistate: map-only script (all hooks fire in map states).
-if GetStateMapId() == -1 then return end
+-- Icecrown-only script (map 571): quest 13297 Neutralizing the Plague.
+if GetStateMapId() ~= 571 then return end
 
 local function OnSpawn(event, creature)
     local entry = creature:GetEntry()

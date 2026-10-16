@@ -1,24 +1,9 @@
--- Multistate: Azshara Mall-only script (mall map 37).
 if GetStateMapId() ~= 37 then return end
 
 local Beastmaster = {
     entry = 190011, -- Beastmaster entry.
-    maxObj = 13, -- 13 = Max amount of menu objects.
-    GUIDMap = {} -- Table to store player GUIDs
+    maxObj = 13 -- 13 = Max amount of menu objects.
 }
-
-local playerPayment = {}
-
-function Beastmaster.OnLogin(event, player)
-    local lowGUID = player:GetGUIDLow()
-    local name = player:GetName()
-    Beastmaster.GUIDMap[name] = lowGUID
-end
-
-function Beastmaster.GetGUIDLow(player)
-    local name = player:GetName()
-    return Beastmaster.GUIDMap[name]
-end
 
 function Beastmaster.OnHello(event, player, unit)
     -- Check whether the player is a hunter and has Call Pet spell
@@ -52,10 +37,8 @@ function Beastmaster.OnSelect(event, player, unit, sender, intid, code)
             local pet = PerformIngameSpawn(1, petEntry, unit:GetMapId(), unit:GetInstanceId(), unit:GetX(), unit:GetY(), unit:GetZ(), unit:GetO(), false, 5000)
             pet:SetFaction(35)
             player:CastSpell(pet, 2650, true)
-			
-			if not playerPayment[player:GetName()] then
-				playerPayment[player:GetName()] = player:GetName()
-			end
+
+            player:Data():Set("BeastmasterPaid", true)
 	
             player:GossipComplete()
 			player:SendAreaTriggerMessage("Taming pet...")
@@ -139,6 +122,5 @@ function Beastmaster.LoadCache()
 end
 
 Beastmaster.LoadCache()
-RegisterPlayerEvent(3, Beastmaster.OnLogin)
 RegisterCreatureGossipEvent(Beastmaster.entry, 1, Beastmaster.OnHello)
 RegisterCreatureGossipEvent(Beastmaster.entry, 2, Beastmaster.OnSelect)

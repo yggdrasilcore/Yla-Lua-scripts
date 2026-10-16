@@ -1,11 +1,9 @@
-local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 local FeathersItem = 20739
 local FeathersSpell = 29118
 local MOUNTS_PER_PAGE = 10
 local MOUNT_DATA = {}
 local MOUNT_ICONS = {}
--- Multistate: standardmount cache replaced by shared player Data (see below).
 local FLYING_MOUNTS = {
     3363, 8153, 32235, 32239, 32240,
     32242, 32243, 32244, 32245, 32246, 32289, 32290, 32292, 32295, 32296, 32297, 32345,
@@ -691,13 +689,12 @@ end
 local function OnLoadScript()
     local dbQueryTable = {}
     
-    -- Multistate: state-aware enumeration (GetPlayersInWorld is world-only).
-    Multistate.ForEachPlayer(function(player)
+    for _, player in ipairs(GetStateMapId() == -1 and GetPlayersInWorld() or GetStateMap():GetPlayers()) do
         if player:HasItem(FeathersItem) then
             table.insert(dbQueryTable, player:GetGUIDLow())
 			CheckFlyableArea(event, player, player:GetZoneId(), player:GetAreaId())
         end
-    end)
+    end
     
     -- If we found any players with the item, query their standard mounts
     if #dbQueryTable > 0 then
@@ -710,7 +707,11 @@ local function OnLoadScript()
                 local guid = result:GetUInt32(0)
                 local mountId = result:GetUInt32(1)
                 if mountId then
-                    local p = Multistate.FindPlayerByGUID(guid)
+                    local p
+                    if GetStateMapId() == -1 then p = GetPlayerByGUID(guid)
+                    else for _, q in ipairs(GetStateMap():GetPlayers()) do
+                        if q:GetGUIDLow() == guid then p = q break end
+                    end end
                     if p then p:Data():Set("FeathersStandardMount", mountId) end
                 end
             until not result:NextRow()
@@ -750,8 +751,6 @@ local function OnCommand(event, player, command)
             then
                 return false
             end
-            -- Multistate: the cast and the follow-up zone check must run on the
-            -- player's map state.
             local data = { spellId = spellId }
             player:SendEMQMessage("FeathersCastMount", data)
             return false

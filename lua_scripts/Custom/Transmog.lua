@@ -27,10 +27,9 @@ Forked by mostly nick :) to include UI, saving, applying and deleting sets, hidi
 ]]
 
 local itemIconCache = require("itemIconCache")
--- Multistate: login (3) runs globally, map change (28) / equip (29) / gossip run
--- in map states. The mog caches are populated per state by the login/map-change
+-- Login (3) runs globally, map change (28) / equip (29) / gossip run in map
+-- states. The mog caches are populated per state by the login/map-change
 -- handler each state sees; the packet repair handler below reads live DB data.
-local Multistate = require("Multistate")
 
 ---------------------------------------------------------------------------------
 -- Transmog item vendor vars
@@ -233,11 +232,67 @@ end
 --[[
 typedef UNORDERED_MAP<uint32, uint32> transmogData
 typedef UNORDERED_MAP<uint32, transmogData> transmogMap
-static transmogMap entryMap -- entryMap[pGUID][iGUID] = entry
-static transmogData dataMap -- dataMap[iGUID] = pGUID
+Per-player mappings now live in player:Data() ("TransmogEntries"/"TransmogData").
 ]]
-local entryMap = {}
-local dataMap = {}
+-- Per-player transmog mappings live in player:Data() (reload-proof, per-player,
+-- destroyed on logout) instead of file-local guid-keyed tables that bled
+-- between players and broke across states/reloads. The item-vendor ItemCache
+-- below stays shared via WorldData.
+local function GetTransmogEntries(player)
+    if not player then
+        return nil
+    end
+    local v = player:Data():Get("TransmogEntries")
+    if v ~= nil and type(v) == "table" and v.AsTable then
+        return v:AsTable()
+    end
+    if type(v) == "table" then
+        return v
+    end
+    return nil
+end
+
+-- State-aware re-resolve for async CharDBQueryAsync callbacks: map states
+-- only see their own map players, so GetPlayerByName is world-only.
+local function ResolveTransmogPlayer(name)
+    if not name then
+        return nil
+    end
+    if GetStateMapId() == -1 then
+        return GetPlayerByName(name)
+    end
+    for _, pl in pairs(GetStateMap():GetPlayers()) do
+        if pl:GetName() == name then
+            return pl
+        end
+    end
+end
+
+local function SetTransmogEntries(player, t)
+    if player then
+        player:Data():Set("TransmogEntries", t)
+    end
+end
+
+local function GetTransmogData(player)
+    if not player then
+        return nil
+    end
+    local v = player:Data():Get("TransmogData")
+    if v ~= nil and type(v) == "table" and v.AsTable then
+        return v:AsTable()
+    end
+    if type(v) == "table" then
+        return v
+    end
+    return nil
+end
+
+local function SetTransmogData(player, t)
+    if player then
+        player:Data():Set("TransmogData", t)
+    end
+end
 
 local function GetSlotName(slot, locale)
     if not SlotNames[slot] then return end
@@ -263,19 +318,34 @@ end
 
 local function GetFakeEntry(item)
     local guid = item and item:GetGUIDLow()
-    if guid and dataMap[guid] then
-        if entryMap[dataMap[guid]] then
-            return entryMap[dataMap[guid]][guid]
+    if not guid then
+        return
+    end
+    local owner = item:GetOwner()
+    if not owner then
+        return
+    end
+    local data = GetTransmogData(owner)
+    if data and data[guid] then
+        local entries = GetTransmogEntries(owner)
+        if entries then
+            return entries[guid]
         end
     end
 end
 
-local function DeleteFakeFromDB(itemGUID)
-    if dataMap[itemGUID] then
-        if entryMap[dataMap[itemGUID]] then
-            entryMap[dataMap[itemGUID]][itemGUID] = nil
+local function DeleteFakeFromDB(itemGUID, player)
+    if player then
+        local entries = GetTransmogEntries(player)
+        if entries then
+            entries[itemGUID] = nil
+            SetTransmogEntries(player, entries)
         end
-        dataMap[itemGUID] = nil
+        local data = GetTransmogData(player)
+        if data then
+            data[itemGUID] = nil
+            SetTransmogData(player, data)
+        end
     end
     CharDBExecute("DELETE FROM acore_eluna.custom_transmogrification WHERE GUID = "..itemGUID)
 end
@@ -285,7 +355,7 @@ local function DeleteFakeEntry(item)
         return false
     end
     item:GetOwner():UpdateUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (item:GetSlot() * ITEM_SLOT_MULTIPLIER), item:GetEntry())
-    DeleteFakeFromDB(item:GetGUIDLow())
+    DeleteFakeFromDB(item:GetGUIDLow(), item:GetOwner())
     return true
 end
 
@@ -295,11 +365,12 @@ local function SetFakeEntry(item, entry)
         local pGUID = player:GetGUIDLow()
         local iGUID = item:GetGUIDLow()
         player:UpdateUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (item:GetSlot() * ITEM_SLOT_MULTIPLIER), entry)
-        if not entryMap[pGUID] then
-            entryMap[pGUID] = {}
-        end
-        entryMap[pGUID][iGUID] = entry
-        dataMap[iGUID] = pGUID
+        local entries = GetTransmogEntries(player) or {}
+        entries[iGUID] = entry
+        SetTransmogEntries(player, entries)
+        local data = GetTransmogData(player) or {}
+        data[iGUID] = pGUID
+        SetTransmogData(player, data)
         CharDBExecute("REPLACE INTO acore_eluna.custom_transmogrification (GUID, FakeEntry, Owner) VALUES ("..iGUID..", "..entry..", "..pGUID..")")
     end
 end
@@ -444,7 +515,6 @@ end
     
 local function OnGossipHello(event, player, creature)
     player:GossipClearMenu()
-    local guidlow = player:GetGUIDLow()
     player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_Book_11:31:31:-24:0|t" .. LocText(20, player), HOW, 0)
     for slot = EQUIPMENT_SLOT_START, EQUIPMENT_SLOT_END-1 do
         local transmogrified = player:GetItemByPos(INVENTORY_SLOT_BAG_0, slot)  
@@ -453,8 +523,9 @@ local function OnGossipHello(event, player, creature)
                 local slotName = GetSlotName(slot, player:GetDbcLocale())
                 if slotName then
                     local entry = transmogrified and GetFakeEntry(transmogrified) or 0
-                    if entryMap[guidlow][transmogrified:GetEntry()] then
-                        entry = entryMap[guidlow][transmogrified:GetEntry()]
+                    local mogEntries = GetTransmogEntries(player)
+                    if mogEntries and mogEntries[transmogrified:GetEntry()] then
+                        entry = mogEntries[transmogrified:GetEntry()]
                     end
                     local icon
                     if entry == 21 or entry == 1 then
@@ -493,7 +564,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
         
         CharDBQueryAsync("SELECT PresetID, SetName, SetData FROM acore_eluna.custom_transmogrification_sets WHERE Owner = " .. guidlow, -- Asyncing query as a hybrid between performance and load as I'm too lazy to create a dynamic cache
             function(result)
-                local player = require("Multistate").FindPlayerByName(playername) -- Refetching current player object
+                local player = ResolveTransmogPlayer(playername) -- Refetching current player object
                 if result then
                     local index = 1
                     repeat
@@ -644,7 +715,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
         
         CharDBQueryAsync("SELECT MAX(PresetID) as PresetID FROM acore_eluna.custom_transmogrification_sets WHERE Owner = " .. guid,
             function(query)
-                local player = require("Multistate").FindPlayerByName(playername)
+                local player = ResolveTransmogPlayer(playername)
                 local presetID = 1
                 if query then
                     local row = query:GetRow()
@@ -690,11 +761,12 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
         local iGUID = transmogrified:GetGUIDLow()
         local entry = 21
         player:UpdateUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * ITEM_SLOT_MULTIPLIER), 1)
-        if not entryMap[pGUID] then
-            entryMap[pGUID] = {}
-        end
-        entryMap[pGUID][iGUID] = entry
-        dataMap[iGUID] = pGUID
+        local hideEntries = GetTransmogEntries(player) or {}
+        hideEntries[iGUID] = entry
+        SetTransmogEntries(player, hideEntries)
+        local hideData = GetTransmogData(player) or {}
+        hideData[iGUID] = pGUID
+        SetTransmogData(player, hideData)
         CharDBExecute("REPLACE INTO acore_eluna.custom_transmogrification (GUID, FakeEntry, Owner) VALUES ("..iGUID..", 21, "..pGUID..")")
 
         player:EmoteState(66)
@@ -868,46 +940,49 @@ local function OnLogin(event, player)
     end
     local playername = player:GetName()
     applyMogOnMapChange[playerGUID] = nil
-    
-    entryMap[playerGUID] = {}
+
+    SetTransmogEntries(player, {})
+    SetTransmogData(player, {})
     CharDBQueryAsync("SELECT GUID, FakeEntry FROM acore_eluna.custom_transmogrification WHERE Owner = "..playerGUID, function(result)
-        local player = require("Multistate").FindPlayerByName(playername)
+        local player = ResolveTransmogPlayer(playername)
+        if not player then
+            applyMogOnMapChange[playerGUID] = true
+            return
+        end
+        local entries = {}
+        local data = {}
         if result then
             repeat
                 local itemGUID = result:GetUInt32(0)
                 local fakeEntry = result:GetUInt32(1)
-                dataMap[itemGUID] = playerGUID
-                entryMap[playerGUID][itemGUID] = fakeEntry
+                data[itemGUID] = playerGUID
+                entries[itemGUID] = fakeEntry
             until not result:NextRow()
 
             for slot = EQUIPMENT_SLOT_START, EQUIPMENT_SLOT_END-1 do
-                if not player then
-                    applyMogOnMapChange[playerGUID] = true
-                    return
-                end
                 local item = player:GetItemByPos(INVENTORY_SLOT_BAG_0, slot)
                 if item then
-                    if entryMap[playerGUID] then
-                        if entryMap[playerGUID][item:GetGUIDLow()] then
-                            player:SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (item:GetSlot() * ITEM_SLOT_MULTIPLIER), entryMap[playerGUID][item:GetGUIDLow()])
-                        end
+                    local fentry = entries[item:GetGUIDLow()]
+                    if fentry then
+                        player:SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (item:GetSlot() * ITEM_SLOT_MULTIPLIER), fentry)
                     end
                 end
             end
         end
+        SetTransmogEntries(player, entries)
+        SetTransmogData(player, data)
     end)
 end
 
 local function OnLogout(event, player)
-    local pGUID = player:GetGUIDLow()
-    entryMap[pGUID] = nil
+    -- Transmog mappings live in player:Data() and are destroyed on logout.
 end
 
 local function OnEquip(event, player, item, bag, slot)
     local fentry = GetFakeEntry(item)
     if fentry then
         if item:GetOwnerGUID() ~= player:GetGUID() then
-            DeleteFakeFromDB(item:GetGUIDLow())
+            DeleteFakeFromDB(item:GetGUIDLow(), player)
             return
         end
         player:SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * ITEM_SLOT_MULTIPLIER), fentry)
@@ -1587,9 +1662,6 @@ RegisterCreatureGossipEvent(TRANSMOG_VENDOR_NPC_ID, 2, MogVendorSelect)
 ---------------------------------------------------------------------------------
 
 local function OnRepair(event, packet, player)
-    -- Multistate: packet handlers run in the global state, where the mog caches
-    -- only hold login-time data, so live mogs are read from the DB. The read is
-    -- asynchronous: a sync query here would stall the world thread on DB latency.
     local playerName = player:GetName()
     local repairOwner = player:GetGUIDLow()
     CharDBQueryAsync("SELECT GUID, FakeEntry FROM acore_eluna.custom_transmogrification WHERE Owner = " .. repairOwner, function(result)
@@ -1631,11 +1703,17 @@ RegisterPacketEvent(0x2A8, 5, OnRepair)
 RegisterCreatureGossipEvent(NPC_Entry, 1, OnGossipHello)
 RegisterCreatureGossipEvent(NPC_Entry, 2, OnGossipSelect)
 
--- Multistate: state-aware catch-up for already-online players (server start or
--- reload). GetPlayersInWorld() only exists in the global state.
-Multistate.ForEachPlayer(function(player)
-    OnLogin(3, player)
-end)
+-- Catch-up for already-online players (server start or reload).
+-- GetPlayersInWorld() only exists in the global state.
+local _catchup
+if GetStateMapId() == -1 then
+    _catchup = GetPlayersInWorld()
+else
+    _catchup = GetStateMap():GetPlayers()
+end
+for _, _p in ipairs(_catchup) do
+    OnLogin(3, _p)
+end
 
 ---------------------------------------------------------------------------------
 -- Transmogrify items event registrations end

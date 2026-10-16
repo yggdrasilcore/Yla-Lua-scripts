@@ -9,7 +9,8 @@ local BOT_TELE_VISUAL   = 64446
 local BotSummonCD       = 10 * 60 -- 10 minutes
 
 local addCmdTimer       =   {}
-local logoutEvent       =   {}
+-- Per-player logout/kick timers live in player:Data("ShadowsLogoutEv")
+-- (masters hold "ShadowsLogoutEv:<bot>"), not in a file-local name-keyed table.
 local disallowedZones   =   {4298}--, 4197, 3628, 3666} -- Scarlet Enclave (DK start area), Wintergrasp, Halaa
 local AllowInBattlefield = false -- Default: False. Prevents usage of shadows in Wintergrasp.
 
@@ -490,8 +491,6 @@ function SetShadowsBarData()
 				 		    local player = GetPlayerByGUID(GetPlayerGUID(guid))
 				 		    if player then
 								player:Data():Set("ShadowsBarData", true)
-		  		 			else
-								player:Data():Set("ShadowsBarData", false)
 							end
 		 		 	    end
 		 		    until not result:NextRow()
@@ -585,7 +584,7 @@ function CheckActiveBots(eventid, delay, repeats, uninvitedPlayer)
             print("Bot removed: " ..uninvitedPlayerName.. ".")
             print("Leader: " ..player:GetName())
         end, 100, 1)
-        logoutEvent[uninvitedPlayerName] = nil
+        uninvitedPlayer:Data():Set("ShadowsLogoutEv", nil)
     end
 end
 
@@ -595,13 +594,13 @@ function UninviteGroupGUID(event, packet, player)
     local reason = packet:ReadString()
     local uninvitedPlayer = GetPlayerByGUID(guid)
     if uninvitedPlayer then
-        if not logoutEvent[uninvitedPlayer:GetName()] then
+        if not uninvitedPlayer:Data():Get("ShadowsLogoutEv") then
 			local ksh = uninvitedPlayer:ToShadow()
 			local km = ksh and ksh:GetMaster()
 			local kickGuard = km and km:Data():Get("ShadowsDontKick:" .. uninvitedPlayer:GetName())
 			if kickGuard and kickGuard > os.time() then return end
 			--print("shadows debug - uninvited GUID")
-            logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
+            uninvitedPlayer:Data():Set("ShadowsLogoutEv", uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1))
         end 
     end
 end
@@ -611,13 +610,13 @@ function UninviteGroup(event, packet, player)
     local uninvitedPlayerName = packet:ReadString()
     local uninvitedPlayer = GetPlayerByName(uninvitedPlayerName)
     if uninvitedPlayer then
-        if not logoutEvent[uninvitedPlayer:GetName()] then
+        if not uninvitedPlayer:Data():Get("ShadowsLogoutEv") then
 			local ksh = uninvitedPlayer:ToShadow()
 			local km = ksh and ksh:GetMaster()
 			local kickGuard = km and km:Data():Get("ShadowsDontKick:" .. uninvitedPlayer:GetName())
 			if kickGuard and kickGuard > os.time() then return end
 			--print("shadows debug - uninvited group")
-            logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
+            uninvitedPlayer:Data():Set("ShadowsLogoutEv", uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1))
         end
     end
 end
@@ -626,13 +625,13 @@ end
 local function LeaveGroup(event, group, guid, method, kicker, reason)
     local uninvitedPlayer = GetPlayerByGUID(guid)
     if uninvitedPlayer then
-        if not logoutEvent[uninvitedPlayer:GetName()] then
+        if not uninvitedPlayer:Data():Get("ShadowsLogoutEv") then
 			local ksh = uninvitedPlayer:ToShadow()
 			local km = ksh and ksh:GetMaster()
 			local kickGuard = km and km:Data():Get("ShadowsDontKick:" .. uninvitedPlayer:GetName())
 			if kickGuard and kickGuard > os.time() then return end
 			--print("shadows debug - leaving group")
-            logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
+            uninvitedPlayer:Data():Set("ShadowsLogoutEv", uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1))
         end
     end
 end
@@ -644,14 +643,14 @@ local function DisbandGroup(event, group)
         local master = memberShadow and memberShadow:GetMaster()
         if master then
             local botName = member:GetName()
-            if not logoutEvent[botName] then
-                logoutEvent[botName] = master:RegisterEvent(function(_, _, _, player)
+            if not master:Data():Get("ShadowsLogoutEv:" .. botName) then
+                master:Data():Set("ShadowsLogoutEv:" .. botName, master:RegisterEvent(function(_, _, _, player)
 					local kickGuard = player:Data():Get("ShadowsDontKick:" .. botName)
 					if kickGuard and kickGuard > os.time() then return end
                     player:RunCommand(".shadows bot remove " .. botName)
                     print("Removing "..botName.." from disbanded group")
-                    logoutEvent[botName] = nil
-                end, 100, 1)
+                    player:Data():Set("ShadowsLogoutEv:" .. botName, nil)
+                end, 100, 1))
             end
         end
     end
@@ -728,8 +727,9 @@ local function OnGroup(event, player, msg, Type, lang, group)
     if msg ~= "repair" then return end
     
 	player:RegisterEvent(function(e, d, r, player)
-		for _, member in ipairs(GetStateMap():GetPlayers()) do
-			if member:IsBot() and member:IsInSameGroupWith(player) then
+		if not player then return end
+		for _, member in ipairs(player:GetBots()) do
+			if member and member:IsInSameGroupWith(player) then
 				member:SendUnitWhisper("Repairing!", 0, player)
 			end
 		end
@@ -1104,14 +1104,18 @@ local function OnDisallowedZones(event, player, newZone, newArea)
                 end
             end
 
-            player:RegisterEvent(function(eventId, delay, repeats, player) 
-                if #botsToRemove > 0 then 
+            player:RegisterEvent(function(eventId, delay, repeats, player)
+                if not player then return end
+                if #botsToRemove > 0 then
+                    local bots = player:GetBots()
                     for _, botName in ipairs(botsToRemove) do
-                        local bot = GetPlayerByName(botName)
-                        if bot then
-                            bot:RemoveFromGroup()
-                            player:RunCommand(".shadows bot remove " .. botName)
+                        for _, bot in ipairs(bots) do
+                            if bot and bot:GetName() == botName then
+                                bot:RemoveFromGroup()
+                                break
+                            end
                         end
+                        player:RunCommand(".shadows bot remove " .. botName)
                     end
                     player:SendAreaTriggerMessage("You cannot use shadows in "..GetAreaName(player:GetAreaId())..".")
                 end

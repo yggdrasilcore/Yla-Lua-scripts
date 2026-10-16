@@ -1,5 +1,5 @@
--- Multistate: map-only script (all hooks fire in map states).
-if GetStateMapId() == -1 then return end
+-- Northrend-only script (map 571): quest 11343 The Echo of Ymiron (Wyrmskull Village, Howling Fjord).
+if GetStateMapId() ~= 571 then return end
 
 local AURA_ID = 42786
 local QUEST_ID = 11343
@@ -18,7 +18,10 @@ local function CheckPlayersForQuestCompletion()
     local playerCount = 0
     
     for playerName, _ in pairs(checkPlayers) do
-        local player = require("Multistate").FindPlayerByName(playerName)
+        local player
+        for _, p in ipairs(GetStateMap():GetPlayers()) do
+            if p:GetName() == playerName then player = p break end
+        end
         if player and player:GetAreaId() == AREA_ID then
             playerCount = playerCount + 1
             if player:HasAura(AURA_ID) then

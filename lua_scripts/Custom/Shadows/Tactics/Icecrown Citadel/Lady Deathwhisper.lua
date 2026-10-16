@@ -1,4 +1,3 @@
--- Multistate: Icecrown Citadel-only script (map 631).
 if GetStateMapId() ~= 631 then return end
 
 local LADY_DEATHWHISPER_ENTRY = 36855
@@ -15,7 +14,6 @@ local function LadyDeathwhisper10Loop(eventId, delay, repeats, deathwhisper)
     if darnavan then
         local nearestPlayer = darnavan:GetNearestPlayer(200)
         if nearestPlayer then
-            -- Multistate: Group API is world-only, defer via EMQ (see Helpers/TargetIcon.lua).
             SetTargetIconDeferred(nearestPlayer, 4, darnavan)
             deathwhisper:RemoveEvents()
             deathwhisper:SetData("EventActive", nil)
@@ -36,7 +34,6 @@ local function LadyDeathwhisper25Loop(eventId, delay, repeats, deathwhisper)
     if darnavan then
         local nearestPlayer = darnavan:GetNearestPlayer(200)
         if nearestPlayer then
-            -- Multistate: Group API is world-only, defer via EMQ (see Helpers/TargetIcon.lua).
             SetTargetIconDeferred(nearestPlayer, 4, darnavan)
             deathwhisper:RemoveEvents()
             deathwhisper:SetData("EventActive", nil)
@@ -89,4 +86,4 @@ local function OnEnterMap631(event, player)
 end
 
 RegisterPlayerEvent(28, OnEnterMap631)
-require("Multistate").ForEachPlayer(function(player) OnEnterMap631(nil, player) end)
+for _, player in ipairs(GetStateMap():GetPlayers()) do OnEnterMap631(nil, player) end
