@@ -1182,6 +1182,12 @@ local function OnPlayerLogin(event, player)
     CheckRefereeStatus(player)
 end
 
+local function ReloadEluna(event)
+    for _, player in ipairs(GetPlayersInWorld()) do
+        CheckRefereeStatus(player)
+    end
+end
+
 local function UpdateProgress(player)
     if player:Data():Get('RAFreferee') then
         local pending = player:Data():Get('RAFProgress') or 0
@@ -1363,5 +1369,6 @@ RegisterPlayerEvent(34, LeaveCombat)
 RegisterPlayerEvent(42, RAFCommands)
 RegisterPlayerEvent(45, OnAchievementComplete)
 RegisterPlayerEvent(54, OnCompleteQuest)
+RegisterServerEvent(33, ReloadEluna)
 
 RegisterPlayerGossipEvent(1, 2, OnGossipSelect) -- Register gossip selection event

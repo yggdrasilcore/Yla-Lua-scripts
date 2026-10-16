@@ -686,6 +686,43 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
     end
 end
 
+local function OnReloadEluna(event)
+    local players
+    if GetStateMapId() == -1 then
+        players = GetPlayersInWorld()
+    else
+        players = GetStateMap():GetPlayers()
+    end
+    for _, player in ipairs(players) do
+		if player:HasItem(ITEM_ID) then
+			local guid = player:GetGUIDLow()
+			local name = player:GetName()
+			
+			CharDBQueryAsync("SELECT id, form, active FROM acore_eluna.character_morphs WHERE guid = " .. guid, function(result)
+				local player = ResolveDemonPlayer(name)
+				if not player then return end
+				-- Rebuild (not append): player:Data() survives reloads, unlike the old file-local tables.
+				local d = { ids = {}, f = {} }
+				local count = 0
+				if result then
+					repeat
+						local morphId = result:GetUInt32(0)
+						local morphForm = result:GetUInt32(1)
+						local isActive = result:GetUInt32(2)
+						table.insert(d.ids, morphId)
+						count = count + 1
+						if familyNames[morphForm] then
+							d.f[morphForm] = morphId
+						end
+					until not result:NextRow()
+				end
+				SaveDemonData(player, d)
+				player:Data():Set(DEMON_COUNT_KEY, count)
+			end)
+		end
+    end
+end
+
 -- Cache player's morphs on login if they have the required item
 local function OnPlayerLogin(event, player)
     if player:HasItem(ITEM_ID) then
@@ -733,6 +770,7 @@ end
 RegisterPlayerEvent(3, OnPlayerLogin)
 RegisterPlayerEvent(4, OnPlayerLogout)
 RegisterPlayerEvent(7, OnKillCreature)
+RegisterServerEvent(33, OnReloadEluna)
 RegisterPlayerEvent(43, OnPetAddedToWorld)
 RegisterItemGossipEvent(ITEM_ID, 1, OnItemGossipHello)
 RegisterPlayerGossipEvent(99, 1, OnPlayerGossipHello)

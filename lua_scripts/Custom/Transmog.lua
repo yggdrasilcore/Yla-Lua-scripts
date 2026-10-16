@@ -1703,5 +1703,18 @@ RegisterPacketEvent(0x2A8, 5, OnRepair)
 RegisterCreatureGossipEvent(NPC_Entry, 1, OnGossipHello)
 RegisterCreatureGossipEvent(NPC_Entry, 2, OnGossipSelect)
 
+-- Catch-up for already-online players (server start or reload).
+-- GetPlayersInWorld() only exists in the global state.
+local _catchup
+if GetStateMapId() == -1 then
+    _catchup = GetPlayersInWorld()
+else
+    _catchup = GetStateMap():GetPlayers()
+end
+for _, _p in ipairs(_catchup) do
+    OnLogin(3, _p)
+end
+
+---------------------------------------------------------------------------------
 -- Transmogrify items event registrations end
 ---------------------------------------------------------------------------------

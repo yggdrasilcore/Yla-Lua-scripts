@@ -654,7 +654,7 @@ local function VIPCommands(event, player, command)
     end
 end
 
-if GetStateMapId() == -1 then CheckVIPOnLoad() end -- world only; maps use ev28
+CheckVIPOnLoad() -- Sets players with VIP as active VIP on load/reload ELUNA
 RegisterPlayerEvent(28, CheckVIP)
 RegisterPlayerEvent(36, VIPBotRepairOnResurrect)
 RegisterPlayerEvent(42, VIPCommands)
