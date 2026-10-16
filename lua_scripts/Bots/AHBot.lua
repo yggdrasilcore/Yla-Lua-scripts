@@ -1976,28 +1976,29 @@ local function AHBot_BuyAuction()
             until not itemResults:NextRow()
             
             local underpricedItems = {}
-            for _, item in pairs(itemCache) do
-                if AHBotItemDebug then print("[Eluna AH Bot Item Debug]: Evaluating item " .. item.entry .. " for price calculation") end
-                
-                local validItem = false
-                if ItemLevelLimit then
-                    if item.ItemLevel < ItemLevelLimit then 
-                        validItem = true 
-                        if AHBotItemDebug then print("[Eluna AH Bot Item Debug]: Item " .. item.entry .. " meets level requirement of " .. ItemLevelLimit) end
+            for _, auction in ipairs(auctionResults) do
+                local item = itemCache[itemEntries[auction.itemguid]]
+                if item then
+                    if AHBotItemDebug then print("[Eluna AH Bot Item Debug]: Evaluating item " .. item.entry .. " for price calculation") end
+
+                    local validItem = false
+                    if ItemLevelLimit then
+                        if item.ItemLevel < ItemLevelLimit then
+                            validItem = true
+                            if AHBotItemDebug then print("[Eluna AH Bot Item Debug]: Item " .. item.entry .. " meets level requirement of " .. ItemLevelLimit) end
+                        end
                     end
-                end
 
-                if validItem then
-                    if AHBotItemDebug then print("[Eluna AH Bot Item Debug]: Calculating price for valid item " .. item.entry) end
-                    local randomBot = AHBots[math.random(1, #AHBots)]
-                    local cost = ChooseCostFormula(CostFormula, item)
+                    if validItem then
+                        if AHBotItemDebug then print("[Eluna AH Bot Item Debug]: Calculating price for valid item " .. item.entry) end
+                        local randomBot = AHBots[math.random(1, #AHBots)]
+                        local cost = ChooseCostFormula(CostFormula, item)
 
-                    cost = cost * BotsPriceTolerance
-                    if cost < 200000 then cost = math.random(50000, 250000) end
-                    if AHBotItemDebug then print("[Eluna AH Bot Item Debug]: Final adjusted cost for item " .. item.entry .. ": " .. cost) end
+                        cost = cost * BotsPriceTolerance
+                        if cost < 200000 then cost = math.random(50000, 250000) end
+                        if AHBotItemDebug then print("[Eluna AH Bot Item Debug]: Final adjusted cost for item " .. item.entry .. ": " .. cost) end
 
-                    for _, auction in ipairs(auctionResults) do
-                        if itemEntries[auction.itemguid] == item.entry and auction.buyoutprice < cost then
+                        if auction.buyoutprice < cost then
                             if AHBotItemDebug then print("[Eluna AH Bot Item Debug]: Buyer - Found underpriced item " .. item.entry .. " at " .. auction.buyoutprice .. " vs calculated " .. cost) end
                             table.insert(underpricedItems, {
                                 entry = item.entry,
