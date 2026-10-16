@@ -13,6 +13,8 @@ local EMBLEM_OF_FROST = 49426
 local EMBLEM_OF_TRIUMPH = 47241
 local ACTIVITY_TOKEN = 37742
 
+local HONOR_CAP = 75000
+
 local function OnGossipHello(event, player, creature)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-26:0|tWhat would you like to exchange?\n \n ", 0, 1)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_bijou_gold:32:32:-26:0|tExchange Vote Tokens:", 0, 1)
@@ -51,7 +53,10 @@ local function BuyHonorPoints(player, cost, amount, costCurrency)
     local totalCost = cost * amount
     local rewardMult = player:GetData("RewardMultiplier") or 1
     local honorAmount = rewardMult * amount
-    if player:HasItem(costCurrency, totalCost) then
+    local currentHonor = player:GetHonorPoints()
+    if currentHonor + honorAmount > HONOR_CAP then
+        player:SendBroadcastMessage(string.format("This purchase would exceed the Honor Point cap of %d. You currently have %d.", HONOR_CAP, currentHonor))
+    elseif player:HasItem(costCurrency, totalCost) then
         player:RemoveItem(costCurrency, totalCost)
         player:ModifyHonorPoints(honorAmount)
         player:SendBroadcastMessage(string.format("You've purchased %d Honor Points for %d %s.", honorAmount, totalCost, GetItemLink(costCurrency)))
