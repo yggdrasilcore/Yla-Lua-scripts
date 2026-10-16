@@ -224,10 +224,61 @@ local commandCategories = {
    },
 }
 
+local PENDING_ADD_EXPIRY = 10 -- seconds, covers the 1-2s delay before an invited shadow comes online
+
+local function GetPendingAdds(player)
+    local pending = player:Data():Get("ShadowsPendingAdds")
+    if pending and pending.AsTable then pending = pending:AsTable() end
+    if type(pending) ~= "table" then pending = {} end
+    return pending
+end
+
+local function TrackPendingAdd(player, botName)
+    if not botName or botName == "" then return end
+    local pending = GetPendingAdds(player)
+    pending[botName] = os.time() + PENDING_ADD_EXPIRY
+    player:Data():Set("ShadowsPendingAdds", pending)
+end
+
+-- GetBotsCount() stays stale for 1-2s after invite, so include
+-- recently invited (not yet online) shadows in the displayed count.
+local function GetEffectiveBotCount(player)
+    local base = player:GetBotsCount() or 0
+    local pending = GetPendingAdds(player)
+    local hasPending = false
+    for _ in pairs(pending) do hasPending = true break end
+    if not hasPending then return base end
+
+    local currentNames = {}
+    for _, bot in ipairs(player:GetBots()) do
+        if bot then currentNames[bot:GetName()] = true end
+    end
+
+    local now = os.time()
+    local extra = 0
+    local pruned = {}
+    local dirty = false
+    for name, expiry in pairs(pending) do
+        if type(expiry) == "number" and expiry > now and not currentNames[name] then
+            extra = extra + 1
+            pruned[name] = expiry
+        else
+            dirty = true -- expired or already online, drop it
+        end
+    end
+    if dirty then
+        if extra > 0 then
+            player:Data():Set("ShadowsPendingAdds", pruned)
+        else
+            player:Data():Set("ShadowsPendingAdds", nil)
+        end
+    end
+    return base + extra
+end
+
 local function ShadowsHello(player)
     player:GossipClearMenu()
     local maxBotsForPlayer = maxBotCount
-    local botCount = player:GetBotsCount()
 
     if not player:GetData("LoginTime") then player:SetData("LoginTime", os.time()) end
 
@@ -236,8 +287,11 @@ local function ShadowsHello(player)
     if player:Data():Get("VIPTime") and player:Data():Get("VIPTime") > os.time() then -- Increased bot limit for VIP
         maxBotsForPlayer = maxVIPCount
     end
+
+    local botCount = GetEffectiveBotCount(player)
+    local displayCount = math.min(botCount, maxBotsForPlayer)
     
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAdd shadow (" .. botCount .. "/"..maxBotsForPlayer..")", 0, 10)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAdd shadow (" .. displayCount .. "/"..maxBotsForPlayer..")", 0, 10)
     if botCount > 0 then
         --player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_hunter_improvedtracking:40:40:-24:0|tCommand follow", 0, 3)
         --player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_ghoulfrenzy:40:40:-24:0|tCommand attack", 0, 4)
@@ -382,6 +436,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
         for _, bot in ipairs(player:GetBots()) do
             if bot then groupNames[bot:GetName()] = true end
         end
+        for name in pairs(GetPendingAdds(player)) do groupNames[name] = true end
 
         player:GossipClearMenu()
         player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAvailable shadows:\n \n ", 0, 10)
@@ -436,7 +491,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
             ShadowsHello(player)
             return
         end
-        if player:GetBotsCount() < maxBotsForPlayer then
+        if GetEffectiveBotCount(player) < maxBotsForPlayer then
             local selectedIndex = intid - 100
             if addCmdTimer[guid] and not (GetCurrTime() - addCmdTimer[guid] > 300) then
                 player:SendAreaTriggerMessage("You can't add shadows that fast!")
@@ -451,6 +506,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
                 player:Data():Set("ShadowsBotSummonTime", os.time())
                 player:RunCommand(".shadows bot add " .. selectedChar.name) -- Add bot
                 player:Data():Set("ShadowsDontKick:" .. selectedChar.name, os.time() + 3)
+                TrackPendingAdd(player, selectedChar.name)
                 ShadowsHello(player)
             end
         else
@@ -1073,6 +1129,7 @@ local function OnBotCommand(event, player, command)
 		 	   player:Data():Set("ShadowsBotSummonTime", os.time())
 		 	   player:Data():Set("ShadowsDontKick:" .. botName, os.time() + 3)
 		 	   player:RunCommand(".shadows bot add " .. botName)
+		 	   TrackPendingAdd(player, botName)
 		    end
 	    end
 	    return false
