@@ -64,4 +64,4 @@ local function OnBotMapChange(event, player)
 end
 
 RegisterPlayerEvent(28, OnBotMapChange)
-require("Multistate").ForEachPlayer(function(player) OnBotMapChange(nil, player) end)
+for _, player in ipairs(GetStateMap():GetPlayers()) do OnBotMapChange(nil, player) end

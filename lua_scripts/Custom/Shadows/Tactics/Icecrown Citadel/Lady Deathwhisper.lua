@@ -89,4 +89,4 @@ local function OnEnterMap631(event, player)
 end
 
 RegisterPlayerEvent(28, OnEnterMap631)
-require("Multistate").ForEachPlayer(function(player) OnEnterMap631(nil, player) end)
+for _, player in ipairs(GetStateMap():GetPlayers()) do OnEnterMap631(nil, player) end

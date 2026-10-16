@@ -173,7 +173,6 @@ local morphIdCache = {}
 -- their loader. This lazy loader fills the LOCAL state's cache synchronously
 -- from the DB, so all map-side readers stay correct without cross-state
 -- sharing (morph progression itself is persisted in character_morphs).
-local Multistate = require("Multistate")
 
 local function EnsureMorphCache(player)
     if not player then
@@ -441,7 +440,10 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
         local ITEMS_PER_PAGE = 10
         
         CharDBQueryAsync("SELECT name, id FROM acore_eluna.character_morphs WHERE guid = "..guid.." AND form = "..formId, function(results)
-            local player = Multistate.FindPlayerByName(playername)
+            local player
+            for _, p in ipairs(GetStateMap():GetPlayers()) do
+                if p:GetName() == playername then player = p break end
+            end
             
             if results then
                 -- Store all results in a table for pagination
@@ -540,7 +542,10 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
     end
     
     CharDBQueryAsync("SELECT name FROM acore_eluna.character_morphs WHERE guid = " .. guid .. " AND form = " .. chosenFamily .. " AND id = " .. intid, function(morphNameResult)
-        local player = Multistate.FindPlayerByName(name)
+        local player
+        for _, p in ipairs(GetStateMap():GetPlayers()) do
+            if p:GetName() == name then player = p break end
+        end
         local morphName = "Unknown Morph"
         if morphNameResult then
             morphName = morphNameResult:GetString(0)
@@ -717,7 +722,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
 end
 
 local function OnReloadEluna(event)
-    Multistate.ForEachPlayer(function(player)
+    for _, player in ipairs(GetPlayersInWorld()) do
 		if player:HasItem(ITEM_ID) then
 			local guid = player:GetGUIDLow()
 			local name = player:GetName()
@@ -755,7 +760,7 @@ local function OnReloadEluna(event)
 				end
 			end)
 		end
-    end)
+    end
 end
 
 -- Cache player's morphs on login if they have the required item
@@ -765,7 +770,7 @@ local function OnPlayerLogin(event, player)
 		local name = player:GetName()
 		
         CharDBQueryAsync("SELECT id, form, active FROM acore_eluna.character_morphs WHERE guid = " .. guid, function(result)
-			player = Multistate.FindPlayerByName(name)
+			player = GetPlayerByName(name)
 			if result then
 				repeat
 					local morphId = result:GetUInt32(0)

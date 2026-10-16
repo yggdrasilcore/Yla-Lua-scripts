@@ -2,7 +2,10 @@
 if GetStateMapId() == -1 then return end
 
 local function SendBroadcastWithCheck(playerGUID, message, itemEntry, itemCount, acc)
-	local player = require("Multistate").FindPlayerByGUID(playerGUID)
+	local player
+	for _, p in ipairs(GetStateMap():GetPlayers()) do
+		if p:GetGUIDLow() == GetGUIDLow(playerGUID) then player = p break end
+	end
 	local oldCount = player:GetItemCount(itemEntry)
 	player:AddItem(itemEntry, itemCount)
 	
@@ -41,7 +44,10 @@ local function TokensOnLogin(event, player)
     local votemessage = false
    
     CharDBQueryAsync("SELECT dp, vp FROM acore_eluna.account_currencies WHERE id = " .. acc, function(query)
-        local player = require("Multistate").FindPlayerByGUID(playerGUID)
+        local player
+        for _, p in ipairs(GetStateMap():GetPlayers()) do
+            if p:GetGUIDLow() == GetGUIDLow(playerGUID) then player = p break end
+        end
  	    if not player then return end
  	    player:SetData("LoginChecked", true)
         if query then

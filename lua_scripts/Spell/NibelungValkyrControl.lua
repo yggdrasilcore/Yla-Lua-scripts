@@ -2,7 +2,6 @@
 -- Written by mostly nick :) for Yggdrasil WoW
 -- Multistate: the controlling packet arrives globally while the valkyr tick runs
 -- in map states, so command timestamps live in shared Data() on the owner.
-local Multistate = require("Multistate")
 
 local function NibelungValkyrFix(event, packet, player)
     if not player then
@@ -31,7 +30,10 @@ local function OnValkyrSpawn(event, player, pet)
         
         pet:RegisterEvent(function(eventId, delay, repeats, pet)
             if pet then
-                local player = Multistate.FindPlayerByName(name)
+                local player
+                for _, p in ipairs(GetStateMap():GetPlayers()) do
+                    if p:GetName() == name then player = p break end
+                end
                 if not player then
                     local owner = pet:GetOwner()
                     if owner and owner:IsPlayer() then

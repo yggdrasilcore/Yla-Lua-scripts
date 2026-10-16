@@ -221,4 +221,4 @@ local function OnEnterFoS(event, player)
 end
 
 RegisterPlayerEvent(28, OnEnterFoS)
-require("Multistate").ForEachPlayer(function(player) OnEnterFoS(nil, player) end)
+for _, player in ipairs(GetStateMap():GetPlayers()) do OnEnterFoS(nil, player) end

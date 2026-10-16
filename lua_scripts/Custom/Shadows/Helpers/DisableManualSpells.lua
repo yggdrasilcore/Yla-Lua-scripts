@@ -199,7 +199,10 @@ local function OnMapChange(event, player)
         CharDBQueryAsync(
             string.format("SELECT spell_id FROM acore_eluna.disable_shadows_spells WHERE guid = %d", guidLow),
             function(query)
-                local player = require("Multistate").FindPlayerByGUID(guid)
+                local player
+                for _, p in ipairs(GetStateMap():GetPlayers()) do
+                    if p:GetGUIDLow() == GetGUIDLow(guid) then player = p break end
+                end
                 if not player then return end
                 
                 if query then
@@ -255,7 +258,10 @@ local function OnSave(event, player)
     CharDBQueryAsync(
         string.format("SELECT spell_id FROM acore_eluna.disable_shadows_spells WHERE guid = %d", guidLow),
         function(query)
-            local player = require("Multistate").FindPlayerByGUID(guid)
+            local player
+            for _, p in ipairs(GetStateMap():GetPlayers()) do
+                if p:GetGUIDLow() == GetGUIDLow(guid) then player = p break end
+            end
             if not player then return end
             
             if query then

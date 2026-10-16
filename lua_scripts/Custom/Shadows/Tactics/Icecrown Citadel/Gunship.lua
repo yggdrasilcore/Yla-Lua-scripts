@@ -800,4 +800,4 @@ end
 RegisterCreatureEvent(37519, 7, AllianceGunshipLock)
 RegisterPlayerEvent(33, GunshipOnEnterCombat)
 RegisterPlayerEvent(28, HandleMapEvents) -- Remove rocket pack visual
-require("Multistate").ForEachPlayer(function(player) GunshipOnEnterCombat(nil, player, nil) end)
+for _, player in ipairs(GetStateMap():GetPlayers()) do GunshipOnEnterCombat(nil, player, nil) end

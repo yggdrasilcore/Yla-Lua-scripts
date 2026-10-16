@@ -18,7 +18,10 @@ local function CheckPlayersForQuestCompletion()
     local playerCount = 0
     
     for playerName, _ in pairs(checkPlayers) do
-        local player = require("Multistate").FindPlayerByName(playerName)
+        local player
+        for _, p in ipairs(GetStateMap():GetPlayers()) do
+            if p:GetName() == playerName then player = p break end
+        end
         if player and player:GetAreaId() == AREA_ID then
             playerCount = playerCount + 1
             if player:HasAura(AURA_ID) then

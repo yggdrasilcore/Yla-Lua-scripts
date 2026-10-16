@@ -12,7 +12,10 @@ local eventId = nil
 
 local function CheckAndCompleteQuest()
     for playerName, _ in pairs(playerList) do
-        local player = require("Multistate").FindPlayerByName(playerName)
+        local player
+        for _, p in ipairs(GetStateMap():GetPlayers()) do
+            if p:GetName() == playerName then player = p break end
+        end
         if player and player:GetAreaId() ~= AREA_ID then
             playerList[playerName] = nil
         elseif player and player:IsWithinDist3d(X, Y, Z, RANGE) then

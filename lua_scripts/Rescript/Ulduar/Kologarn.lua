@@ -67,7 +67,7 @@ local function enterUlduar(event, player)
 	player:RegisterEvent(checkBridge, 5000, 0)
 end
 
-require("Multistate").ForEachPlayer(function(player) player:RegisterEvent(checkBridge, 5000, 0) end)
+for _, player in ipairs(GetStateMap():GetPlayers()) do player:RegisterEvent(checkBridge, 5000, 0) end
 
 RegisterPlayerEvent(7, killKologarn)
 RegisterPlayerEvent(28, enterUlduar)

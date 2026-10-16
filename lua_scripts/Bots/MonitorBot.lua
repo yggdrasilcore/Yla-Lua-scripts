@@ -8,7 +8,6 @@
 -- player saves) are collected in each map state. Every state flushes its own
 -- caches to the shared statistics table on its own timer. Player counting is
 -- state-aware because GetPlayersInWorld() only exists in the global state.
-local Multistate = require("Multistate")
 
 -- Global config
 local EnableModule		= true		-- Enable == true, disable == false
@@ -84,7 +83,7 @@ local function CacheDataPoints()
 	if EnableDebug and GetStateMapId() == -1 then print("[Eluna Server Logger]: Storing data point ".. DataPointCount .. " for session ".. SessionID .." to database...") end
 	local values = {}
 	
-	table.insert(values, "('pCount', " .. Multistate.CountPlayers() .. ", NULL, " .. os.time() .. ")")
+	table.insert(values, "('pCount', " .. #(GetStateMapId() == -1 and GetPlayersInWorld() or GetStateMap():GetPlayers()) .. ", NULL, " .. os.time() .. ")")
 
 	local totalDiff = 0
 	for _, diff in ipairs(event13Cache) do

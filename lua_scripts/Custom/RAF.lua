@@ -2,7 +2,6 @@
 -- else runs in map states. Cross-state coordination (summon handshake, referee
 -- flag, referral sweep) uses shared player Data() and EMQ; progress itself
 -- accumulates in account_raf via DB writes from every state.
-local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
 -- Handlers defined below, assigned here so registration order is load-safe.
@@ -1053,7 +1052,7 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
 		AuthDBQueryAsync(string.format([[
 			SELECT account_id, status, date FROM acore_eluna.account_raf WHERE referer_id = %d
 		]], accountId), function(query)
-			player = Multistate.FindPlayerByName(name)
+			player = GetPlayerByName(name)
 			if query then
 				local count = 0
 				repeat
@@ -1132,11 +1131,11 @@ local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee
                 DELETE FROM acore_eluna.account_raf WHERE account_id = %d
             ]], account_to_delete))
 
-            Multistate.ForEachPlayer(function(p)
+            for _, p in ipairs(GetPlayersInWorld()) do
                 if p:GetAccountId() == account_to_delete then
                     p:Data():Set("RAFreferee", nil)
                 end
-            end)
+            end
 
             player:SendBroadcastMessage(string.format("RAF entry for account ID %d has been deleted.", account_to_delete))
         else
@@ -1166,7 +1165,7 @@ local function CheckRefereeStatus(player)
         WHERE account_id = %d AND status = 2 AND date > %d
     ]], accountId, MaxRAFDuration), function(query)
 
-		local player = playerName and Multistate.FindPlayerByName(playerName) or nil
+		local player = playerName and GetPlayerByName(playerName) or nil
 		if not player then return end
 		if query then
 			AuthDBExecute(string.format([[
@@ -1191,9 +1190,9 @@ end
 
 local function ReloadEluna(event)
     -- Multistate: state-aware sweep (each state covers its visible players).
-    Multistate.ForEachPlayer(function(player)
+    for _, player in ipairs(GetPlayersInWorld()) do
         CheckRefereeStatus(player)
-    end)
+    end
 end
 
 local function UpdateProgress(player)

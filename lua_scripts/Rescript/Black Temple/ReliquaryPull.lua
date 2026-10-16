@@ -23,4 +23,4 @@ local function CheckReliquaryPull(event, player)
 end
 
 RegisterPlayerEvent(28, CheckReliquaryPull)
-require("Multistate").ForEachPlayer(function(player) CheckReliquaryPull(nil, player) end)
+for _, player in ipairs(GetStateMap():GetPlayers()) do CheckReliquaryPull(nil, player) end

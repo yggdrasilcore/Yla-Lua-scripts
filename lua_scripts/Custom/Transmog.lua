@@ -30,7 +30,6 @@ local itemIconCache = require("itemIconCache")
 -- Multistate: login (3) runs globally, map change (28) / equip (29) / gossip run
 -- in map states. The mog caches are populated per state by the login/map-change
 -- handler each state sees; the packet repair handler below reads live DB data.
-local Multistate = require("Multistate")
 
 ---------------------------------------------------------------------------------
 -- Transmog item vendor vars
@@ -493,7 +492,10 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
         
         CharDBQueryAsync("SELECT PresetID, SetName, SetData FROM acore_eluna.custom_transmogrification_sets WHERE Owner = " .. guidlow, -- Asyncing query as a hybrid between performance and load as I'm too lazy to create a dynamic cache
             function(result)
-                local player = require("Multistate").FindPlayerByName(playername) -- Refetching current player object
+                local player
+                for _, p in ipairs(GetStateMap():GetPlayers()) do
+                    if p:GetName() == playername then player = p break end
+                end
                 if result then
                     local index = 1
                     repeat
@@ -644,7 +646,10 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
         
         CharDBQueryAsync("SELECT MAX(PresetID) as PresetID FROM acore_eluna.custom_transmogrification_sets WHERE Owner = " .. guid,
             function(query)
-                local player = require("Multistate").FindPlayerByName(playername)
+                local player
+                for _, p in ipairs(GetStateMap():GetPlayers()) do
+                    if p:GetName() == playername then player = p break end
+                end
                 local presetID = 1
                 if query then
                     local row = query:GetRow()
@@ -871,7 +876,10 @@ local function OnLogin(event, player)
     
     entryMap[playerGUID] = {}
     CharDBQueryAsync("SELECT GUID, FakeEntry FROM acore_eluna.custom_transmogrification WHERE Owner = "..playerGUID, function(result)
-        local player = require("Multistate").FindPlayerByName(playername)
+        local player
+        for _, p in ipairs(GetStateMap():GetPlayers()) do
+            if p:GetName() == playername then player = p break end
+        end
         if result then
             repeat
                 local itemGUID = result:GetUInt32(0)
@@ -1633,9 +1641,9 @@ RegisterCreatureGossipEvent(NPC_Entry, 2, OnGossipSelect)
 
 -- Multistate: state-aware catch-up for already-online players (server start or
 -- reload). GetPlayersInWorld() only exists in the global state.
-Multistate.ForEachPlayer(function(player)
+for _, player in ipairs(GetStateMapId() == -1 and GetPlayersInWorld() or GetStateMap():GetPlayers()) do
     OnLogin(3, player)
-end)
+end
 
 ---------------------------------------------------------------------------------
 -- Transmogrify items event registrations end

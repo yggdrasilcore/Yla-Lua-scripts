@@ -26,4 +26,4 @@ local function OnEnterDTK(event, player)
 end
 
 RegisterPlayerEvent(28, OnEnterDTK)
-require("Multistate").ForEachPlayer(function(player) OnEnterDTK(nil, player) end)
+for _, player in ipairs(GetStateMap():GetPlayers()) do OnEnterDTK(nil, player) end

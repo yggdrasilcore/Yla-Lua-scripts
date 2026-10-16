@@ -156,4 +156,4 @@ local function OnInsectMapChange(event, player)
 end
 
 RegisterPlayerEvent(28, OnInsectMapChange)
-require("Multistate").ForEachPlayer(function(player) OnInsectMapChange(nil, player) end)
+for _, player in ipairs(GetStateMap():GetPlayers()) do OnInsectMapChange(nil, player) end

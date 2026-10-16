@@ -1,7 +1,6 @@
 -- Improves the terrible AzerothCore approach to .learn ###. Won't get stuck if NPC is targeted anymore. made by mostly nick :)
 -- Multistate: PLAYER_EVENT_ON_COMMAND (42) fires in the global state, but spell
 -- learning must execute on the map state, so it is forwarded via EMQ.
-local Multistate = require("Multistate")
 local EMQ = require("EMQ")
 
 -- Map-state executor (via EMQ, or directly in compatibility mode).
@@ -18,7 +17,9 @@ local function DoLearnSpell(player, data)
     if sel and data.targetGuidLow and sel:GetGUIDLow() == data.targetGuidLow and sel:IsPlayer() then
         spellTarget = sel
     elseif data.targetName then
-        spellTarget = Multistate.FindPlayerByName(data.targetName)
+        for _, p in ipairs(GetStateMap():GetPlayers()) do
+            if p:GetName() == data.targetName then spellTarget = p break end
+        end
     end
     if spellTarget then
         spellTarget:LearnSpell(spellId)
@@ -33,7 +34,9 @@ local function DoLearnSpell(player, data)
         if data.targetGuidLow and (not sel or sel:GetGUIDLow() ~= data.targetGuidLow) then
             sel = nil
             if data.targetName then
-                sel = Multistate.FindPlayerByName(data.targetName)
+                for _, p in ipairs(GetStateMap():GetPlayers()) do
+                    if p:GetName() == data.targetName then sel = p break end
+                end
             end
         end
         if sel and not sel:HasSpell(spellId) then
