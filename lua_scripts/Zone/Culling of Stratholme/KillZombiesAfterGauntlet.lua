@@ -1,4 +1,3 @@
--- Multistate: Culling of Stratholme-only script (map 595).
 if GetStateMapId() ~= 595 then return end
 
 local ARTHAS_ENTRY = 26499

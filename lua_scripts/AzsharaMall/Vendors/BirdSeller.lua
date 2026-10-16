@@ -1,4 +1,3 @@
--- Multistate: Azshara Mall-only script (mall map 37).
 if GetStateMapId() ~= 37 then return end
 
 local NPC_ID = 190099 -- Replace with your NPC entry ID
