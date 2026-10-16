@@ -4,14 +4,14 @@ if GetStateMapId() ~= 37 then return end
 local NPC_ID = 190000
 
 local VOTE_TOKEN_NAME = "Vote Tokens"
-local TRANSMOG_TOKEN_NAME = "Activity Tokens"
+local ACTIVITY_TOKEN_NAME = "Activity Tokens"
 local COMMUNITY_TOKEN_NAME = "Community Tokens"
 
 local VOTE_TOKEN = 20880
 local COMMUNITY_TOKEN = 19322
 local EMBLEM_OF_FROST = 49426
 local EMBLEM_OF_TRIUMPH = 47241
-local TRANSMOG_TOKEN = 37742
+local ACTIVITY_TOKEN = 37742
 
 local function OnGossipHello(event, player, creature)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-26:0|tWhat would you like to exchange?\n \n ", 0, 1)
@@ -22,7 +22,8 @@ local function OnGossipHello(event, player, creature)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-26:0|tCommunity Token", 0, 105)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/achievement_pvp_a_h:32:32:-26:0|tHonor Points\n \n ", 0, 107)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_coin_07:32:32:-26:0|tExchange Activity Tokens:", 0, 1)
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_holy_summonchampion:32:32:-26:0|tEmblem of Triumph\n \n", 0, 103)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_holy_summonchampion:32:32:-26:0|tEmblem of Triumph", 0, 103)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/achievement_pvp_a_h:32:32:-26:0|tHonor Points\n \n", 0, 110)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-26:0|tExchange Community Tokens:", 0, 1)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_frostemblem_01:32:32:-26:0|tEmblem of Frost", 0, 108)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_holy_summonchampion:32:32:-26:0|tEmblem of Triumph\n \n", 0, 109)
@@ -67,7 +68,7 @@ local function ShowAmountMenu(player, creature, currencyId, cost, currencyName, 
     elseif costCurrency == 19322 then
         paymentCurrency = COMMUNITY_TOKEN_NAME
     else
-        paymentCurrency = TRANSMOG_TOKEN_NAME
+        paymentCurrency = ACTIVITY_TOKEN_NAME
     end
     
     local priceText
@@ -107,19 +108,21 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
     elseif intid == 102 then
         ShowAmountMenu(player, creature, EMBLEM_OF_TRIUMPH, 1, "Emblem of Triumph", VOTE_TOKEN, false, 1)
     elseif intid == 103 then
-        ShowAmountMenu(player, creature, EMBLEM_OF_TRIUMPH, 15, "Emblem of Triumph", TRANSMOG_TOKEN, false, 1)
+        ShowAmountMenu(player, creature, EMBLEM_OF_TRIUMPH, 15, "Emblem of Triumph", ACTIVITY_TOKEN, false, 1)
     elseif intid == 104 then
-        ShowAmountMenu(player, creature, TRANSMOG_TOKEN, 1, "Activity Token", VOTE_TOKEN, false, 1)
+        ShowAmountMenu(player, creature, ACTIVITY_TOKEN, 1, "Activity Token", VOTE_TOKEN, false, 1)
     elseif intid == 105 then
         ShowAmountMenu(player, creature, COMMUNITY_TOKEN, 10, "Community Token", VOTE_TOKEN, false, 1)
     elseif intid == 106 then
-        ShowAmountMenu(player, creature, TRANSMOG_TOKEN, 1, "Activity Tokens", VOTE_TOKEN, false, 10)
+        ShowAmountMenu(player, creature, ACTIVITY_TOKEN, 1, "Activity Tokens", VOTE_TOKEN, false, 10)
     elseif intid == 107 then
         ShowAmountMenu(player, creature, 0, 1, "Honor Points", VOTE_TOKEN, true, 500)
     elseif intid == 108 then
         ShowAmountMenu(player, creature, EMBLEM_OF_FROST, 1, "Emblem of Frost", COMMUNITY_TOKEN, false, 2)
     elseif intid == 109 then
         ShowAmountMenu(player, creature, EMBLEM_OF_TRIUMPH, 1, "Emblem of Triumph", COMMUNITY_TOKEN, false, 15)
+    elseif intid == 110 then
+        ShowAmountMenu(player, creature, 0, 1, "Honor Points", ACTIVITY_TOKEN, true, 50)
     elseif intid == 99 then
         OnGossipHello(event, player, creature)
     elseif intid == 98 then
