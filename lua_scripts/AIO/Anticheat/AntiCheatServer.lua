@@ -1,6 +1,3 @@
--- Multistate: StartElunaAnticheat (event 28) runs in map states with per-state
--- timers; the command handler (event 42) runs globally. Reload handling is
--- state-aware because GetPlayersInWorld() only exists globally.
 
 local function StartAntiClipCheck(player)
     player:SetData("LastPosX", player:GetX())

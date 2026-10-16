@@ -1,7 +1,3 @@
--- Multistate: PLAYER_EVENT_ON_COMMAND (42) fires in the global state, but aura
--- changes must execute on the map state, so they are forwarded via EMQ. The
--- target is re-resolved on the map state (selections usually persist, which also
--- covers non-player targets that cannot be found by name).
 local EMQ = require("EMQ")
 
 -- Map-state executor (via EMQ, or directly in compatibility mode).

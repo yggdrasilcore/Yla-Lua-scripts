@@ -1,6 +1,3 @@
--- Multistate: PLAYER_EVENT_ON_CHAT (18) fires in the global state, but quest
--- completion mutates players on their map, so it is forwarded via EMQ. The DB
--- existence check stays global (async), then the map state applies the reward.
 local EMQ = require("EMQ")
 
 local MSG_QC = "#qc"

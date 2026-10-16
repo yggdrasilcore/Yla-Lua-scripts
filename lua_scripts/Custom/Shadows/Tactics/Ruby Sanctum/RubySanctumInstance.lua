@@ -1,4 +1,3 @@
--- Multistate: Ruby Sanctum-only script (map 724).
 if GetStateMapId() ~= 724 then return end
 
 RegisterPlayerEvent(28, function(event, player)

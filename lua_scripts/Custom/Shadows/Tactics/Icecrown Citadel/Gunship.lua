@@ -1,4 +1,3 @@
--- Multistate: Icecrown Citadel-only script (map 631).
 if GetStateMapId() ~= 631 then return end
 
 -- OBJECT IDs
@@ -181,7 +180,6 @@ local function MarkTargetSkull(player, target)
 
     target:SetData("SkullSet", true)
     target:SetData("SkullSetTime", os.time())
-    -- Multistate: Group API is world-only, defer via EMQ (see Helpers/TargetIcon.lua).
     SetTargetIconDeferred(player, 7, target)
 end
 

@@ -7,7 +7,6 @@ local function CheckVIPOnLoad()
     local accountIdMap = {}
     local accountIds = {}
     
-    -- Multistate: state-aware enumeration (each state covers visible players).
     for _, player in ipairs(GetStateMapId() == -1 and GetPlayersInWorld() or GetStateMap():GetPlayers()) do
         local name = player:GetName()
         local accountId = player:GetAccountId()

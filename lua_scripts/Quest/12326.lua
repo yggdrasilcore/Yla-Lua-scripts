@@ -1,4 +1,3 @@
--- Multistate: map-only script (all hooks fire in map states).
 if GetStateMapId() == -1 then return end
 
 local AREA_CARRION_WASTES = 4188 -- Area to trigger script in

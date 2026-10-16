@@ -1,4 +1,3 @@
--- Multistate: chat events (18-22) only fire in the global state.
 if GetStateMapId() ~= -1 then return end
 
 local blockedWords = {

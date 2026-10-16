@@ -1,8 +1,4 @@
 local AIO = require("AIO")
--- Multistate: logout/command/packet/addon handlers run globally, save/map-change
--- run in map states. The LvlRewards flags are read and written in both, so they
--- live in shared Data() (visible in every state). The load-time sweep below is
--- state-aware (GetPlayersInWorld is world-only).
 
 local UIFixLimit = {}
 local NoAFKLogoutZones = {

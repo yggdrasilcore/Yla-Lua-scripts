@@ -1,7 +1,3 @@
--- Multistate: login/logout/chat/command/packet handlers run globally, everything
--- else runs in map states. Cross-state coordination (summon handshake, referee
--- flag, referral sweep) uses shared player Data() and EMQ; progress itself
--- accumulates in account_raf via DB writes from every state.
 local EMQ = require("EMQ")
 
 -- Handlers defined below, assigned here so registration order is load-safe.
@@ -1171,7 +1167,6 @@ local function CheckRefereeStatus(player)
 			AuthDBExecute(string.format([[
 				UPDATE acore_eluna.account_raf SET IP = '%s' WHERE account_id = %d
 			]], playerIP, accountId))
-			-- Multistate: visible in every state (progress handlers run on maps).
 			player:Data():Set("RAFreferee", true)
 		else
 			player:Data():Set("RAFreferee", nil)
@@ -1189,7 +1184,6 @@ local function OnPlayerLogin(event, player)
 end
 
 local function ReloadEluna(event)
-    -- Multistate: state-aware sweep (each state covers its visible players).
     for _, player in ipairs(GetPlayersInWorld()) do
         CheckRefereeStatus(player)
     end
@@ -1258,9 +1252,6 @@ local function OnCompleteQuest(event, player, quest)
 end
 
 local function CheckCompletedReferrals()
-    -- Multistate: driven by the DB (pending referrals) instead of the per-state
-    -- RAFreferee table, so every pending referral is checked exactly once from
-    -- the global sweep. The status flip to 3 inside makes this idempotent.
     AuthDBQueryAsync("SELECT account_id FROM acore_eluna.account_raf WHERE status = 2", function(pending)
     if not pending then
         return
@@ -1354,9 +1345,6 @@ local function CheckCompletedReferrals()
     end)
 end
 
--- Multistate: the referral sweep touches every account and enumerates the world;
--- it runs exactly once server-wide in the global state (DB status flips make it
--- idempotent anyway).
 if GetStateMapId() == -1 then
     CreateLuaEvent(CheckCompletedReferrals, ProgressCheckTimer * 60 * 1000, 0)
 end

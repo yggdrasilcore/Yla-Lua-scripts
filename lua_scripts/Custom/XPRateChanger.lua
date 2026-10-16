@@ -256,8 +256,6 @@ local function onXPCommand(event, player, command)
     if command:match("^%s*xpchangemenu%s+(%d+)%s*$") then
         local _, _, timestring = command:find("^%s*xpchangemenu%s+(%d+)%s*$")
         local verificationtime = tonumber(timestring)
-        -- Multistate: the menu command may arrive via EMQ (Twiggy gossip runs on
-        -- map states), so allow a small transit window instead of an exact second.
         if verificationtime and math.abs(os.time() - verificationtime) <= 5 then
             OnTalkToGreetingTwig(event, player, player)
         end

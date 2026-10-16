@@ -1,4 +1,3 @@
--- Multistate: global-only script (all hooks fire in the world state).
 if GetStateMapId() ~= -1 then return end
 
 local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 in column at_login

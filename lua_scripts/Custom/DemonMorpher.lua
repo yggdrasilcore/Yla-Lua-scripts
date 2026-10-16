@@ -168,11 +168,6 @@ local morph30 = {}
 local logincheck = {}
 local morphIdCache = {}
 
--- Multistate: per-player morph caches are filled on login (global state) and on
--- reload (every state), but map states also see fresh logins that never run
--- their loader. This lazy loader fills the LOCAL state's cache synchronously
--- from the DB, so all map-side readers stay correct without cross-state
--- sharing (morph progression itself is persisted in character_morphs).
 
 local function EnsureMorphCache(player)
     if not player then

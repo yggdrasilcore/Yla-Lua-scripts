@@ -27,9 +27,6 @@ Forked by mostly nick :) to include UI, saving, applying and deleting sets, hidi
 ]]
 
 local itemIconCache = require("itemIconCache")
--- Multistate: login (3) runs globally, map change (28) / equip (29) / gossip run
--- in map states. The mog caches are populated per state by the login/map-change
--- handler each state sees; the packet repair handler below reads live DB data.
 
 ---------------------------------------------------------------------------------
 -- Transmog item vendor vars
@@ -1595,9 +1592,6 @@ RegisterCreatureGossipEvent(TRANSMOG_VENDOR_NPC_ID, 2, MogVendorSelect)
 ---------------------------------------------------------------------------------
 
 local function OnRepair(event, packet, player)
-    -- Multistate: packet handlers run in the global state, where the mog caches
-    -- only hold login-time data, so live mogs are read from the DB. The read is
-    -- asynchronous: a sync query here would stall the world thread on DB latency.
     local playerName = player:GetName()
     local repairOwner = player:GetGUIDLow()
     CharDBQueryAsync("SELECT GUID, FakeEntry FROM acore_eluna.custom_transmogrification WHERE Owner = " .. repairOwner, function(result)
@@ -1639,8 +1633,6 @@ RegisterPacketEvent(0x2A8, 5, OnRepair)
 RegisterCreatureGossipEvent(NPC_Entry, 1, OnGossipHello)
 RegisterCreatureGossipEvent(NPC_Entry, 2, OnGossipSelect)
 
--- Multistate: state-aware catch-up for already-online players (server start or
--- reload). GetPlayersInWorld() only exists in the global state.
 for _, player in ipairs(GetStateMapId() == -1 and GetPlayersInWorld() or GetStateMap():GetPlayers()) do
     OnLogin(3, player)
 end

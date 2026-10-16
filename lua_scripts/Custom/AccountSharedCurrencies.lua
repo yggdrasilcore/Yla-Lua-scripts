@@ -1,4 +1,3 @@
--- Multistate: map-only script (all hooks fire in map states).
 
 -- ----------------------------------------------------------------------------------------------
 -- ACCOUNTWIDE CURRENCY CONFIG 

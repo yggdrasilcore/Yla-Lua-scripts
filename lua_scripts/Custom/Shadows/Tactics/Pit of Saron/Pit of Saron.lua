@@ -1,4 +1,3 @@
--- Multistate: Pit of Saron-only script (map 658).
 if GetStateMapId() ~= 658 then return end
 
 local MAP_ID            = 658

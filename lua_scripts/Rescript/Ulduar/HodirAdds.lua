@@ -1,4 +1,3 @@
--- Multistate: Ulduar-only script (map 603).
 if GetStateMapId() ~= 603 then return end
 
 local function OnEnterCombat(event, player, enemy)

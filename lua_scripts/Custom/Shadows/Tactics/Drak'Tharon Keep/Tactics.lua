@@ -1,4 +1,3 @@
--- Multistate: Drak'Tharon Keep-only script (map 600).
 if GetStateMapId() ~= 600 then return end
 
 local MAP_ID       = 600

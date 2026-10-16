@@ -1,4 +1,3 @@
--- Multistate: Black Temple-only script (map 564).
 if GetStateMapId() ~= 564 then return end
 
 local ids = {22856, 23418, 23419, 23420}

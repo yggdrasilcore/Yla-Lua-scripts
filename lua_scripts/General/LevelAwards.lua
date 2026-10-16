@@ -1,8 +1,6 @@
--- Multistate: map-only script (all hooks fire in map states).
 if GetStateMapId() == -1 then return end
 
 function OnLevelUp(event, player, oldLevel)
-	-- Multistate: the flag is maintained by UIServer in shared Data().
 	if player:Data():Get("LvlRewardsDisabled") then return end
     local newLevel = player:GetLevel()
     local team = player:GetTeam()

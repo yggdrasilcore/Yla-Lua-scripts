@@ -1,7 +1,3 @@
--- Makes Nibelung Valkyrs controllable by permanent pet classes (frost mage with glyph, warlock) as they were in retail
--- Written by mostly nick :) for Yggdrasil WoW
--- Multistate: the controlling packet arrives globally while the valkyr tick runs
--- in map states, so command timestamps live in shared Data() on the owner.
 
 local function NibelungValkyrFix(event, packet, player)
     if not player then

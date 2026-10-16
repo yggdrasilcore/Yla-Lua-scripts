@@ -1,4 +1,3 @@
--- Multistate: map-only script (all hooks fire in map states).
 if GetStateMapId() == -1 then return end
 
 -- RP addition for https://github.com/TrinityCore/TrinityCore/issues/14172

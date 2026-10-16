@@ -1,5 +1,3 @@
--- Multistate: PLAYER_EVENT_ON_COMMAND (42) fires in the global state. Reads stay
--- direct; faction changes execute on the map state via EMQ.
 local EMQ = require("EMQ")
 
 -- Map-state executor (via EMQ, or directly in compatibility mode).

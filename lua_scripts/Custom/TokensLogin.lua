@@ -1,4 +1,3 @@
--- Multistate: map-only script (all hooks fire in map states).
 if GetStateMapId() == -1 then return end
 
 local function SendBroadcastWithCheck(playerGUID, message, itemEntry, itemCount, acc)

@@ -1,6 +1,3 @@
--- Improves the terrible AzerothCore approach to .learn ###. Won't get stuck if NPC is targeted anymore. made by mostly nick :)
--- Multistate: PLAYER_EVENT_ON_COMMAND (42) fires in the global state, but spell
--- learning must execute on the map state, so it is forwarded via EMQ.
 local EMQ = require("EMQ")
 
 -- Map-state executor (via EMQ, or directly in compatibility mode).

@@ -4,7 +4,6 @@ local FeathersSpell = 29118
 local MOUNTS_PER_PAGE = 10
 local MOUNT_DATA = {}
 local MOUNT_ICONS = {}
--- Multistate: standardmount cache replaced by shared player Data (see below).
 local FLYING_MOUNTS = {
     3363, 8153, 32235, 32239, 32240,
     32242, 32243, 32244, 32245, 32246, 32289, 32290, 32292, 32295, 32296, 32297, 32345,
@@ -690,7 +689,6 @@ end
 local function OnLoadScript()
     local dbQueryTable = {}
     
-    -- Multistate: state-aware enumeration (GetPlayersInWorld is world-only).
     for _, player in ipairs(GetStateMapId() == -1 and GetPlayersInWorld() or GetStateMap():GetPlayers()) do
         if player:HasItem(FeathersItem) then
             table.insert(dbQueryTable, player:GetGUIDLow())
@@ -753,8 +751,6 @@ local function OnCommand(event, player, command)
             then
                 return false
             end
-            -- Multistate: the cast and the follow-up zone check must run on the
-            -- player's map state.
             local data = { spellId = spellId }
             player:SendEMQMessage("FeathersCastMount", data)
             return false
