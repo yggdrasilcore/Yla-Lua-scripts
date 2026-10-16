@@ -253,6 +253,22 @@ local function GetTransmogEntries(player)
     return nil
 end
 
+-- State-aware re-resolve for async CharDBQueryAsync callbacks: map states
+-- only see their own map players, so GetPlayerByName is world-only.
+local function ResolveTransmogPlayer(name)
+    if not name then
+        return nil
+    end
+    if GetStateMapId() == -1 then
+        return GetPlayerByName(name)
+    end
+    for _, pl in pairs(GetStateMap():GetPlayers()) do
+        if pl:GetName() == name then
+            return pl
+        end
+    end
+end
+
 local function SetTransmogEntries(player, t)
     if player then
         player:Data():Set("TransmogEntries", t)
@@ -929,7 +945,7 @@ local function OnLogin(event, player)
     SetTransmogEntries(player, {})
     SetTransmogData(player, {})
     CharDBQueryAsync("SELECT GUID, FakeEntry FROM acore_eluna.custom_transmogrification WHERE Owner = "..playerGUID, function(result)
-        local player = require("Multistate").FindPlayerByName(playername)
+        local player = ResolveTransmogPlayer(playername)
         if not player then
             applyMogOnMapChange[playerGUID] = true
             return
