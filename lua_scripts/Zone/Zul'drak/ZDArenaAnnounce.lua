@@ -1,3 +1,4 @@
+-- Multistate: Northrend-only script (map 571).
 if GetStateMapId() ~= 571 then return end
 
 local YGGDRAS = 30014

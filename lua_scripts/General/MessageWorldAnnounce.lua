@@ -1,3 +1,4 @@
+-- Multistate: the world-announce timer must run exactly once server-wide in the global state.
 if GetStateMapId() ~= -1 then return end
 
 local message1 = "|cff00ccff Welcome to Yggdrasil! Please join our Discord server to stay updated. https://discord.gg/PCcCWFBdTQ"

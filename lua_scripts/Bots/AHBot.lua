@@ -183,6 +183,9 @@ local NeverSellIDs			= {									-- Default: Various items not intended for AH s
 
 if not EnableAHBot then return end
 
+-- Multistate: the AH bot only uses global-state hooks (server event 14 startup,
+-- player events 3 login / 42 command), global timers and world-only APIs
+-- (GetPlayersInWorld, GetPlayerByName), so it runs in the global state only.
 if GetStateMapId() ~= -1 then return end
 
 -------------------------------------------------------------------------------------------------------------------------

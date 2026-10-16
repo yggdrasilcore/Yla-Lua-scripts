@@ -1,3 +1,4 @@
+-- Multistate: Oculus-only script (map 578).
 if GetStateMapId() ~= 578 then return end
 
 local function OnUseDragonEssence(event, player, item, target)

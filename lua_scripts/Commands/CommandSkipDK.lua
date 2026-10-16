@@ -44,6 +44,10 @@ local RACE_QUESTS = {
     [RACE_DRAENEI]   = {12746,13188},
 }
 
+----------------------------------------------
+------------------- Code ---------------------
+-- Multistate: PLAYER_EVENT_ON_CHAT (18) fires in the global state, but the
+-- skip sequence mutates the player on its map, so it is forwarded via EMQ.
 local EMQ = require("EMQ")
 
 -- Map-state executor (via EMQ, or directly in compatibility mode).

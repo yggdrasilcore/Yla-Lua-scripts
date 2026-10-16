@@ -1,3 +1,4 @@
+-- Multistate: Utgarde Pinnacle-only script (map 575).
 if GetStateMapId() ~= 575 then return end
 
 local function OnShootHarpoonLauncher(event, player, itemEntry)

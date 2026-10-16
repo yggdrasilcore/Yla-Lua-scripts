@@ -1,6 +1,8 @@
 -- Require libs and whatever else has payloads defined
 require('lualzw')
 require('Smallfolk')
+-- Multistate: packet, addon-message, login and timer handlers here all run in the
+-- global state, so this file is global-only.
 if GetStateMapId() ~= -1 then return end
 
 require('Payloads')

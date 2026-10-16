@@ -1,3 +1,5 @@
+-- Multistate: PLAYER_EVENT_ON_COMMAND (42) only fires in the global state. This
+-- handler only reads state and messages the player, so no EMQ hop is needed.
 if GetStateMapId() ~= -1 then return end
 
 local function CombatCheck(event, player, command)

@@ -1,3 +1,4 @@
+-- Multistate: PLAYER_EVENT_ON_COMMAND (42) only fires in the global state.
 if GetStateMapId() ~= -1 then return end
 
 function GMcommands(event, player, command)

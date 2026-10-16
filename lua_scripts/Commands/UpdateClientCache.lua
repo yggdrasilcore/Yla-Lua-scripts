@@ -1,3 +1,5 @@
+-- Multistate: PLAYER_EVENT_ON_COMMAND (42) only fires in the global state.
+-- UpdateClientCache() is a global function, so no EMQ hop is needed.
 if GetStateMapId() ~= -1 then return end
 
 local function UpdateClientCacheCommand(event, player, command)

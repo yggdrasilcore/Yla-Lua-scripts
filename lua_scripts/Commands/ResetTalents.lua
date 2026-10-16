@@ -1,3 +1,6 @@
+-- Multistate: PLAYER_EVENT_ON_CHAT (18) fires in the global state, but resetting
+-- talents mutates the player on its map, so it is forwarded via EMQ. The
+-- cooldown table is only touched by the (global) chat handler.
 local EMQ = require("EMQ")
 
 -- Table to store the last usage time for each player

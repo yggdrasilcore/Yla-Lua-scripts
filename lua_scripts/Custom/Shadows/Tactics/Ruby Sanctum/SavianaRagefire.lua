@@ -1,3 +1,4 @@
+-- Multistate: Ruby Sanctum-only script (map 724).
 if GetStateMapId() ~= 724 then return end
 
 local function SavianaRagefireLoop(eventId, delay, repeats, saviana)

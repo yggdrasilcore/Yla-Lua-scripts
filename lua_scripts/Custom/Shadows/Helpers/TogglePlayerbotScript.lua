@@ -1,3 +1,4 @@
+-- Multistate: map-only script (combat hooks fire in map states).
 if GetStateMapId() == -1 then return end
 
 function ToggleShadowsScript(player, script, state)
