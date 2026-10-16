@@ -324,12 +324,26 @@ local STATIC_PET_NAMES = {
 local petNameCache = {}
 local sortedPetNameCache = {}
 local PAGE_SIZE = 13
-local currentEntry = 0
-local currentHalf = 0
-local currentPage = 1
-local firstHalfSelection = ""
-local secondHalfSelection = ""
-local pendingRenames = {}
+
+-- Per-player rename flow state lives in player:Data() (reload-proof,
+-- per-player, destroyed on logout) instead of file-locals shared across
+-- players. The petNameCache index above is static read-only data and stays.
+local function GetRenameSel(player)
+    local v = player:Data():Get("PetRenameSel")
+    if v ~= nil and type(v) == "table" and v.AsTable then
+        return v:AsTable()
+    end
+    if type(v) == "table" then
+        return v
+    end
+    return { entry = 0, half = 0, page = 1, first = "", second = "" }
+end
+
+local function SetRenameSel(player, sel)
+    if player then
+        player:Data():Set("PetRenameSel", sel)
+    end
+end
 local petTypes = {
     [416] = "Imp",
     [417] = "Felhunter",
@@ -379,9 +393,11 @@ local function OnGossipHello(event, player, creature)
 end
 
 local function ShowPage(player, entry, half, page)
-    currentEntry = entry
-    currentHalf = half
-    currentPage = page
+    local sel = GetRenameSel(player)
+    sel.entry = entry
+    sel.half = half
+    sel.page = page
+    SetRenameSel(player, sel)
 
     local startIdx = (page - 1) * PAGE_SIZE + 1
     local endIdx = page * PAGE_SIZE
@@ -397,7 +413,7 @@ local function ShowPage(player, entry, half, page)
     player:GossipClearMenu()
 
     -- Add the indicator for which half of the name is being selected
-    local petType = petTypes[currentEntry] or "Pet"
+    local petType = petTypes[entry] or "Pet"
     player:GossipMenuAddItem(4, half == 0 and "Selecting first half of "..petType.." name" or "Selecting second half of "..petType.." name", 0, PAGE_CONTROL_OFFSET)
 
     -- Show items for the current page
@@ -427,30 +443,27 @@ local function ShowPage(player, entry, half, page)
     player:GossipSendMenu(1, player, 60)
 end
 
-local function UpdatePetName(playerGUID)
-    local renameInfo = pendingRenames[playerGUID]
+local function UpdatePetName(playerGUID, renameInfo)
     if renameInfo then
         local query = string.format("UPDATE character_pet SET name = '%s' WHERE owner = %d AND entry = %d",
             renameInfo.petName, playerGUID, renameInfo.petEntry)
         CharDBExecute(query)
         print(string.format("Pet Renamer]: Updated pet name in database for player GUID %d to %s", playerGUID, renameInfo.petName))
-        pendingRenames[playerGUID] = nil
     end
 end
 
 local function OnGossipSelect(event, player, object, sender, intid, code)
     if intid == PAGE_CONTROL_OFFSET + 1 then
         player:GossipClearMenu()
-        ShowPage(player, currentEntry, currentHalf, currentPage - 1)
+        local pageSel = GetRenameSel(player)
+        ShowPage(player, pageSel.entry, pageSel.half, pageSel.page - 1)
     elseif intid == PAGE_CONTROL_OFFSET + 2 then
         player:GossipClearMenu()
-        ShowPage(player, currentEntry, currentHalf, currentPage + 1)
+        local pageSel = GetRenameSel(player)
+        ShowPage(player, pageSel.entry, pageSel.half, pageSel.page + 1)
     elseif intid >= PET_TYPE_OFFSET and intid < PET_TYPE_OFFSET + 30000 then
         local petEntry = intid - PET_TYPE_OFFSET
-        firstHalfSelection = ""
-        secondHalfSelection = ""
-        currentEntry = petEntry
-        currentHalf = 0
+        SetRenameSel(player, { entry = petEntry, half = 0, page = 1, first = "", second = "" })
         player:GossipClearMenu()
         ShowPage(player, petEntry, 0, 1)
     elseif intid == MENU_OFFSET + 1 then
@@ -463,15 +476,18 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
     elseif petNameCache[intid] then
         local selectedName = petNameCache[intid]
         if selectedName then
-            if currentHalf == 0 then
-                firstHalfSelection = selectedName.word
-                currentHalf = 1
+            local nameSel = GetRenameSel(player)
+            if nameSel.half == 0 then
+                nameSel.first = selectedName.word
+                nameSel.half = 1
+                SetRenameSel(player, nameSel)
                 player:GossipClearMenu()
                 ShowPage(player, selectedName.entry, 1, 1)
             else
-                secondHalfSelection = selectedName.word
-                local fullPetName = firstHalfSelection .. secondHalfSelection
-                local petType = petTypes[currentEntry] or "Pet"
+                nameSel.second = selectedName.word
+                SetRenameSel(player, nameSel)
+                local fullPetName = nameSel.first .. nameSel.second
+                local petType = petTypes[nameSel.entry] or "Pet"
                 
                 player:GossipClearMenu()
                 player:GossipMenuAddItem(4, string.format("How do you want to pay to rename your %s to %s?", petType, fullPetName), 0, MENU_OFFSET, false)
@@ -482,8 +498,9 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
             end
         end
 	elseif intid == MENU_OFFSET + 5 then
-        local petType = petTypes[currentEntry] or "Pet"
-        local fullPetName = firstHalfSelection .. secondHalfSelection
+        local paySel = GetRenameSel(player)
+        local petType = petTypes[paySel.entry] or "Pet"
+        local fullPetName = paySel.first .. paySel.second
         local playerGUID = player:GetGUIDLow()
         
         -- Check if the player has enough vote tokens
@@ -491,16 +508,17 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
             player:RemoveItem(19322, communityCost)
             player:SaveToDB()
             
-            pendingRenames[playerGUID] = {
+            local pendingRename = {
                 petName = fullPetName,
-                petEntry = currentEntry
+                petEntry = paySel.entry
             }
+            player:Data():Set("PetRenamePending", pendingRename)
             
             --print(string.format("Player %s will rename their %s to: %s", player:GetName(), petType, fullPetName))
             player:GossipComplete()
             
             -- Schedule the database update
-            CreateLuaEvent(function() UpdatePetName(playerGUID) end, 1000, 1)
+            CreateLuaEvent(function() UpdatePetName(playerGUID, pendingRename) end, 1000, 1)
             
             -- Log out the player
             player:LogoutPlayer(false)
@@ -510,8 +528,9 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
             player:GossipComplete()
         end
     elseif intid == MENU_OFFSET + 4 then
-        local petType = petTypes[currentEntry] or "Pet"
-        local fullPetName = firstHalfSelection .. secondHalfSelection
+        local paySel = GetRenameSel(player)
+        local petType = petTypes[paySel.entry] or "Pet"
+        local fullPetName = paySel.first .. paySel.second
         local playerGUID = player:GetGUIDLow()
         
         -- Check if the player has enough vote tokens
@@ -519,16 +538,17 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
             player:RemoveItem(20880, cost)
             player:SaveToDB()
             
-            pendingRenames[playerGUID] = {
+            local pendingRename = {
                 petName = fullPetName,
-                petEntry = currentEntry
+                petEntry = paySel.entry
             }
+            player:Data():Set("PetRenamePending", pendingRename)
             
             --print(string.format("Player %s will rename their %s to: %s", player:GetName(), petType, fullPetName))
             player:GossipComplete()
             
             -- Schedule the database update
-            CreateLuaEvent(function() UpdatePetName(playerGUID) end, 1000, 1)
+            CreateLuaEvent(function() UpdatePetName(playerGUID, pendingRename) end, 1000, 1)
             
             -- Log out the player
             player:LogoutPlayer(false)
@@ -538,9 +558,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
             player:GossipComplete()
         end
     elseif intid == MENU_OFFSET + 3 then
-        firstHalfSelection = ""
-        secondHalfSelection = ""
-        currentHalf = 0
+        SetRenameSel(player, { entry = 0, half = 0, page = 1, first = "", second = "" })
         player:GossipClearMenu()
         player:GossipMenuAddItem(4, "How does this work?", 0, MENU_OFFSET + 1)
         

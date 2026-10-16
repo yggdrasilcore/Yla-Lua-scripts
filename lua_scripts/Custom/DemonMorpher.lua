@@ -155,18 +155,48 @@ end
 
 local demonCache = {}
 
--- These are player GUID-specific storage tables. Consider moving to player:SetData("tableName", value) instead of Lua tables
-local morphCount = {}
-local playerMorphChoice = {}
-local morph15 = {}
-local morph16 = {}
-local morph17 = {}
-local morph19 = {}
-local morph23 = {}
-local morph29 = {}
-local morph30 = {}
-local logincheck = {}
-local morphIdCache = {}
+-- Per-player morph state lives in player:Data() (reload-proof, per-player,
+-- destroyed on logout) instead of file-local guid-keyed tables that bled
+-- between players and broke across states/reloads. The demon creature cache
+-- below stays shared via WorldData.
+local DEMON_DATA_KEY = "DemonMorphs"
+local DEMON_COUNT_KEY = "DemonCount"
+
+local function LoadDemonData(player)
+    if not player then
+        return nil
+    end
+    local stored = player:Data():Get(DEMON_DATA_KEY)
+    if stored ~= nil and type(stored) == "table" and stored.AsTable then
+        return stored:AsTable()
+    end
+    if type(stored) == "table" then
+        return stored
+    end
+    return nil
+end
+
+local function SaveDemonData(player, d)
+    if player then
+        player:Data():Set(DEMON_DATA_KEY, d)
+    end
+end
+
+-- State-aware re-resolve for async CharDBQueryAsync callbacks (cf. DruidMorpher):
+-- map states only see their own map players, so GetPlayerByName is world-only.
+local function ResolveDemonPlayer(name)
+    if not name then
+        return nil
+    end
+    if GetStateMapId() == -1 then
+        return GetPlayerByName(name)
+    end
+    for _, pl in pairs(GetStateMap():GetPlayers()) do
+        if pl:GetName() == name then
+            return pl
+        end
+    end
+end
 
 -- Multistate: per-player morph caches are filled on login (global state) and on
 -- reload (every state), but map states also see fresh logins that never run
@@ -179,36 +209,26 @@ local function EnsureMorphCache(player)
     if not player then
         return
     end
-    local guid = player:GetGUIDLow()
-    if morphIdCache[guid] then
+    if LoadDemonData(player) then
         return
     end
-    morphIdCache[guid] = {}
-    morphCount[guid] = 0
+    local guid = player:GetGUIDLow()
+    local d = { ids = {}, f = {} }
+    local count = 0
     local result = CharDBQuery("SELECT id, form FROM acore_eluna.character_morphs WHERE guid = " .. guid)
     if result then
         repeat
             local morphId = result:GetUInt32(0)
             local morphForm = result:GetUInt32(1)
-            table.insert(morphIdCache[guid], morphId)
-            morphCount[guid] = morphCount[guid] + 1
-            if morphForm == 15 then
-                morph15[guid] = morphId
-            elseif morphForm == 16 then
-                morph16[guid] = morphId
-            elseif morphForm == 17 then
-                morph17[guid] = morphId
-            elseif morphForm == 19 then
-                morph19[guid] = morphId
-            elseif morphForm == 23 then
-                morph23[guid] = morphId
-            elseif morphForm == 29 then
-                morph29[guid] = morphId
-            elseif morphForm == 30 then
-                morph30[guid] = morphId
+            table.insert(d.ids, morphId)
+            count = count + 1
+            if familyNames[morphForm] then
+                d.f[morphForm] = morphId
             end
         until not result:NextRow()
     end
+    SaveDemonData(player, d)
+    player:Data():Set(DEMON_COUNT_KEY, count)
 end
 
 local function CacheCreatures()
@@ -242,14 +262,15 @@ local function AdoptDemonMorpherCache()
 end
 
 local function CountTotalMorphs(player)
-    local guid = player:GetGUIDLow()
-    if morphCount[guid] then
-        return morphCount[guid]
+    local cached = player:Data():Get(DEMON_COUNT_KEY)
+    if type(cached) == "number" then
+        return cached
     else
-        local result = CharDBQuery("SELECT COUNT(*) FROM acore_eluna.character_morphs WHERE guid = "..guid)
+        local result = CharDBQuery("SELECT COUNT(*) FROM acore_eluna.character_morphs WHERE guid = "..player:GetGUIDLow())
         if result then
-            morphCount[guid] = math.min(result:GetUInt32(0), MaxMorphSkill)
-            return morphCount[guid]
+            local total = math.min(result:GetUInt32(0), MaxMorphSkill)
+            player:Data():Set(DEMON_COUNT_KEY, total)
+            return total
         end
         return 0
     end
@@ -303,9 +324,10 @@ local function OnKillCreature(event, player, creature)
     if matchedFamily then
         local escapedName = string.gsub(creatureName, "'", "''")
 
-		if morphIdCache[guid] then
+		local demonKnown = LoadDemonData(player)
+		if demonKnown and demonKnown.ids then
 			local found = false
-			for _, id in ipairs(morphIdCache[guid]) do
+			for _, id in ipairs(demonKnown.ids) do
 				if id == displayId then
 					found = true
 					break
@@ -331,16 +353,17 @@ local function OnKillCreature(event, player, creature)
 
         local familyName = familyNames[matchedFamily] or "demon"
 		
-		if morphCount[guid] then morphCount[guid] = morphCount[guid] + 1 end
+		local demonTotal = player:Data():Get(DEMON_COUNT_KEY)
+		if type(demonTotal) == "number" then player:Data():Set(DEMON_COUNT_KEY, demonTotal + 1) end
 		
         local skillMessage = CountTotalMorphs(player) < MaxMorphSkill and " Your morph skill has increased to " .. CountTotalMorphs(player)+1 .. "." or ""
 
         player:SendBroadcastMessage("You have captured " .. creatureName .. "'s essence and learned how to morph your " .. familyName .. " into their form." .. skillMessage)
 		
-		if not morphIdCache[guid] then
-            morphIdCache[guid] = {}
-        end
-		table.insert(morphIdCache[guid], displayId)
+		local demonNew = LoadDemonData(player) or { ids = {}, f = {} }
+		demonNew.ids = demonNew.ids or {}
+		table.insert(demonNew.ids, displayId)
+		SaveDemonData(player, demonNew)
 	end
 end
 
@@ -409,21 +432,10 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
             if pet then
                 pet:DeMorph()
                 CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = " .. player:GetGUIDLow() .. " AND form = " .. pet:GetCreatureFamily())
-                if pet:GetCreatureFamily() == 15 then
-                    morph15[guid] = nil
-                elseif pet:GetCreatureFamily() == 16 then
-                    morph16[guid] = nil
-                elseif pet:GetCreatureFamily() == 17 then
-                    morph17[guid] = nil
-                elseif pet:GetCreatureFamily() == 19 then
-                    morph19[guid] = nil
-                elseif pet:GetCreatureFamily() == 23 then
-                    morph23[guid] = nil
-                elseif pet:GetCreatureFamily() == 29 then
-                    morph29[guid] = nil
-                elseif pet:GetCreatureFamily() == 30 then
-                    morph30[guid] = nil
-                end
+                local demonReset = LoadDemonData(player) or { ids = {}, f = {} }
+                demonReset.f = demonReset.f or {}
+                demonReset.f[pet:GetCreatureFamily()] = nil
+                SaveDemonData(player, demonReset)
             else
                 player:SendBroadcastMessage("Your demon is too far away!")
             end
@@ -441,7 +453,8 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
         local ITEMS_PER_PAGE = 10
         
         CharDBQueryAsync("SELECT name, id FROM acore_eluna.character_morphs WHERE guid = "..guid.." AND form = "..formId, function(results)
-            local player = Multistate.FindPlayerByName(playername)
+            local player = ResolveDemonPlayer(playername)
+            if not player then return end
             
             if results then
                 -- Store all results in a table for pagination
@@ -511,7 +524,9 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
     
     -- Handle demon family selection (15-30)
     if familyNames[intid] then
-        chosenFamily = intid
+        local demonFam = LoadDemonData(player) or { ids = {}, f = {} }
+        demonFam.choice = intid
+        SaveDemonData(player, demonFam)
         ShowMorphsPage(player, intid, 1)
         return
     end
@@ -520,7 +535,14 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
     local guid = player:GetGUIDLow()
     local name = player:GetName()
     
-    playerMorphChoice[player:GetGUIDLow()] = intid
+    local demonSel = LoadDemonData(player) or { ids = {}, f = {} }
+    local chosenFamily = demonSel.choice
+    if not chosenFamily then
+        OnPlayerGossipHello(player, player)
+        return
+    end
+    demonSel.lastChoice = intid
+    SaveDemonData(player, demonSel)
     local petGUID = player:GetPetGUID()
     if petGUID then
         local nearbyUnits = player:GetCreaturesInRange(100)
@@ -532,130 +554,84 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
             end
         end
         if pet then
-            summonedPetFamily = pet:GetCreatureFamily()
+            local summonedPetFamily = pet:GetCreatureFamily()
             if summonedPetFamily == chosenFamily then
                 pet:SetDisplayId(intid)
             end
         end
     end
     
-    CharDBQueryAsync("SELECT name FROM acore_eluna.character_morphs WHERE guid = " .. guid .. " AND form = " .. chosenFamily .. " AND id = " .. intid, function(morphNameResult)
-        local player = Multistate.FindPlayerByName(name)
+    local selFamily, selId, selName = chosenFamily, intid, name
+    CharDBQueryAsync("SELECT name FROM acore_eluna.character_morphs WHERE guid = " .. guid .. " AND form = " .. selFamily .. " AND id = " .. selId, function(morphNameResult)
+        local player = ResolveDemonPlayer(selName)
+        if not player then return end
         local morphName = "Unknown Morph"
         if morphNameResult then
             morphName = morphNameResult:GetString(0)
         end
-        player:SendBroadcastMessage("You have morphed your "..familyNames[chosenFamily].." into "..morphName..".")
+        player:SendBroadcastMessage("You have morphed your "..familyNames[selFamily].." into "..morphName..".")
     end)
     
     CharDBExecute("UPDATE acore_eluna.character_morphs SET active = (form = " .. chosenFamily .. " AND id = " .. intid .. ") WHERE guid = " .. guid .. " AND form = " .. chosenFamily)
     
-    if chosenFamily == 15 then
-        morph15[guid] = intid
-        morph16[guid] = nil
-        morph17[guid] = nil
-        morph19[guid] = nil
-        morph23[guid] = nil
-        morph29[guid] = nil
-        morph30[guid] = nil
-    elseif chosenFamily == 16 then
-        morph15[guid] = nil
-        morph16[guid] = intid
-        morph17[guid] = nil
-        morph19[guid] = nil
-        morph23[guid] = nil
-        morph29[guid] = nil
-        morph30[guid] = nil
-    elseif chosenFamily == 17 then
-        morph15[guid] = nil
-        morph16[guid] = nil
-        morph17[guid] = intid
-        morph19[guid] = nil
-        morph23[guid] = nil
-        morph29[guid] = nil
-        morph30[guid] = nil
-    elseif chosenFamily == 19 then
-        morph15[guid] = nil
-        morph16[guid] = nil
-        morph17[guid] = nil
-        morph19[guid] = intid
-        morph23[guid] = nil
-        morph29[guid] = nil
-        morph30[guid] = nil
-    elseif chosenFamily == 23 then
-        morph15[guid] = nil
-        morph16[guid] = nil
-        morph17[guid] = nil
-        morph19[guid] = nil
-        morph23[guid] = intid
-        morph29[guid] = nil
-        morph30[guid] = nil
-    elseif chosenFamily == 29 then
-        morph15[guid] = nil
-        morph16[guid] = nil
-        morph17[guid] = nil
-        morph19[guid] = nil
-        morph23[guid] = nil
-        morph29[guid] = intid
-        morph30[guid] = nil
-    elseif chosenFamily == 30 then
-        morph15[guid] = nil
-        morph16[guid] = nil
-        morph17[guid] = nil
-        morph19[guid] = nil
-        morph23[guid] = nil
-        morph29[guid] = nil
-        morph30[guid] = intid
+    local demonApply = LoadDemonData(player) or { ids = {}, f = {} }
+    demonApply.f = demonApply.f or {}
+    for _, famForm in ipairs({15, 16, 17, 19, 23, 29, 30}) do
+        demonApply.f[famForm] = nil
     end
+    demonApply.f[chosenFamily] = intid
+    SaveDemonData(player, demonApply)
     OnPlayerGossipHello(player, player)
 end
 
 local function OnPetAddedToWorld(event, player, pet)
     EnsureMorphCache(player)
-    local guid = player:GetGUIDLow()
+    local demonData = LoadDemonData(player) or { ids = {}, f = {} }
+    demonData.f = demonData.f or {}
 	local summonedPetFamily = pet:GetCreatureFamily()
 	local petName = pet:GetName()
 	if petName == "Infernal" then
 		summonedPetFamily = 30
 	end
 	
-	if summonedPetFamily == 15 and morph15[guid] then
-		pet:SetDisplayId(morph15[guid])
-	elseif pet:GetCreatureFamily() == 16 and morph16[guid] then
-		pet:SetDisplayId(morph16[guid])
-	elseif pet:GetCreatureFamily() == 17 and morph17[guid] then
-		pet:SetDisplayId(morph17[guid])
-	elseif pet:GetCreatureFamily() == 19 and morph19[guid] then
-		pet:SetDisplayId(morph19[guid])
-	elseif pet:GetCreatureFamily() == 23 and morph23[guid] then
-		pet:SetDisplayId(morph23[guid])
-	elseif pet:GetCreatureFamily() == 29 and morph29[guid] then
-		pet:SetDisplayId(morph29[guid])
-	elseif pet:GetCreatureFamily() == 30 and morph30[guid] then
-		pet:SetDisplayId(morph30[guid])
-	elseif not logincheck[guid] then
-		logincheck[guid] = true
+	if summonedPetFamily == 15 and demonData.f[15] then
+		pet:SetDisplayId(demonData.f[15])
+	elseif pet:GetCreatureFamily() == 16 and demonData.f[16] then
+		pet:SetDisplayId(demonData.f[16])
+	elseif pet:GetCreatureFamily() == 17 and demonData.f[17] then
+		pet:SetDisplayId(demonData.f[17])
+	elseif pet:GetCreatureFamily() == 19 and demonData.f[19] then
+		pet:SetDisplayId(demonData.f[19])
+	elseif pet:GetCreatureFamily() == 23 and demonData.f[23] then
+		pet:SetDisplayId(demonData.f[23])
+	elseif pet:GetCreatureFamily() == 29 and demonData.f[29] then
+		pet:SetDisplayId(demonData.f[29])
+	elseif pet:GetCreatureFamily() == 30 and demonData.f[30] then
+		pet:SetDisplayId(demonData.f[30])
+	elseif not demonData.login then
+		demonData.login = true
+		SaveDemonData(player, demonData)
 		pet:RegisterEvent(function(eventId, delay, repeats, pet) -- Circumvents async db delay on login
-			if summonedPetFamily == 15 and morph15[guid] then
-				pet:SetDisplayId(morph15[guid])
+			if summonedPetFamily == 15 and demonData.f[15] then
+				pet:SetDisplayId(demonData.f[15])
 				pet:RemoveEventById(eventId)
-			elseif pet:GetCreatureFamily() == 16 and morph16[guid] then
-				pet:SetDisplayId(morph16[guid])
+			elseif pet:GetCreatureFamily() == 16 and demonData.f[16] then
+				pet:SetDisplayId(demonData.f[16])
 				pet:RemoveEventById(eventId)
-			elseif pet:GetCreatureFamily() == 17 and morph17[guid] then
-				pet:SetDisplayId(morph17[guid])
+			elseif pet:GetCreatureFamily() == 17 and demonData.f[17] then
+				pet:SetDisplayId(demonData.f[17])
 				pet:RemoveEventById(eventId)
-			elseif pet:GetCreatureFamily() == 19 and morph19[guid] then
-				pet:SetDisplayId(morph19[guid])
+			elseif pet:GetCreatureFamily() == 19 and demonData.f[19] then
+				pet:SetDisplayId(demonData.f[19])
 				pet:RemoveEventById(eventId)
-			elseif pet:GetCreatureFamily() == 23 and morph23[guid] then
-				pet:SetDisplayId(morph23[guid])
+			elseif pet:GetCreatureFamily() == 23 and demonData.f[23] then
+				pet:SetDisplayId(demonData.f[23])
 				pet:RemoveEventById(eventId)
-			elseif pet:GetCreatureFamily() == 29 and morph29[guid] then
-				pet:SetDisplayId(morph29[guid])
+			elseif pet:GetCreatureFamily() == 29 and demonData.f[29] then
+				pet:SetDisplayId(demonData.f[29])
 				pet:RemoveEventById(eventId)
-			elseif pet:GetCreatureFamily() == 30 and morph30[guid] then
-				pet:SetDisplayId(morph30[guid])
+			elseif pet:GetCreatureFamily() == 30 and demonData.f[30] then
+				pet:SetDisplayId(demonData.f[30])
 				pet:RemoveEventById(eventId)
 			end
 		end, 20, 4)
@@ -723,36 +699,25 @@ local function OnReloadEluna(event)
 			local name = player:GetName()
 			
 			CharDBQueryAsync("SELECT id, form, active FROM acore_eluna.character_morphs WHERE guid = " .. guid, function(result)
+				local player = ResolveDemonPlayer(name)
+				if not player then return end
+				-- Rebuild (not append): player:Data() survives reloads, unlike the old file-local tables.
+				local d = { ids = {}, f = {} }
+				local count = 0
 				if result then
 					repeat
 						local morphId = result:GetUInt32(0)
 						local morphForm = result:GetUInt32(1)
 						local isActive = result:GetUInt32(2)
-						if not morphIdCache[guid] then
-							morphIdCache[guid] = {}
+						table.insert(d.ids, morphId)
+						count = count + 1
+						if familyNames[morphForm] then
+							d.f[morphForm] = morphId
 						end
-						table.insert(morphIdCache[guid], morphId)
-
-						morphCount[guid] = (morphCount[guid] or 0) + 1
-						
-						if morphForm == 15 then
-							morph15[guid] = morphId
-						elseif morphForm == 16 then
-							morph16[guid] = morphId
-						elseif morphForm == 17 then
-							morph17[guid] = morphId
-						elseif morphForm == 19 then
-							morph19[guid] = morphId
-						elseif morphForm == 23 then
-							morph23[guid] = morphId
-						elseif morphForm == 29 then
-							morph29[guid] = morphId
-						elseif morphForm == 30 then
-							morph30[guid] = morphId
-						end
-
 					until not result:NextRow()
 				end
+				SaveDemonData(player, d)
+				player:Data():Set(DEMON_COUNT_KEY, count)
 			end)
 		end
     end)
@@ -765,55 +730,32 @@ local function OnPlayerLogin(event, player)
 		local name = player:GetName()
 		
         CharDBQueryAsync("SELECT id, form, active FROM acore_eluna.character_morphs WHERE guid = " .. guid, function(result)
-			player = Multistate.FindPlayerByName(name)
+			local player = ResolveDemonPlayer(name)
+			if not player then return end
+			-- Rebuild (not append): player:Data() is fresh at login but may already
+			-- hold a synchronous EnsureMorphCache fill; either way DB is the truth.
+			local d = { ids = {}, f = {} }
+			local count = 0
 			if result then
 				repeat
 					local morphId = result:GetUInt32(0)
 					local morphForm = result:GetUInt32(1)
 					local isActive = result:GetUInt32(2)
-					if not morphIdCache[guid] then
-						morphIdCache[guid] = {}
+					table.insert(d.ids, morphId)
+					count = count + 1
+					if familyNames[morphForm] then
+						d.f[morphForm] = morphId
 					end
-					table.insert(morphIdCache[guid], morphId)
-
-					morphCount[guid] = (morphCount[guid] or 0) + 1
-					
-					if morphForm == 15 then
-						morph15[guid] = morphId
-					elseif morphForm == 16 then
-						morph16[guid] = morphId
-					elseif morphForm == 17 then
-						morph17[guid] = morphId
-					elseif morphForm == 19 then
-						morph19[guid] = morphId
-					elseif morphForm == 23 then
-						morph23[guid] = morphId
-					elseif morphForm == 29 then
-						morph29[guid] = morphId
-					elseif morphForm == 30 then
-						morph30[guid] = morphId
-					end
-
 				until not result:NextRow()
 			end
+			SaveDemonData(player, d)
+			player:Data():Set(DEMON_COUNT_KEY, count)
 		end)
     end
 end
 
 local function OnPlayerLogout(event, player)
-    local guid = player:GetGUIDLow()
-    demonCache[guid] = nil
-    playerMorphChoice[guid] = nil
-    morphCount[guid] = nil
-	logincheck[guid] = nil
-	morph15[guid] = nil
-	morph16[guid] = nil
-	morph17[guid] = nil
-	morph19[guid] = nil
-	morph23[guid] = nil
-	morph29[guid] = nil
-	morph30[guid] = nil
-	morphIdCache[guid] = nil
+    -- Per-player morph state lives in player:Data() and is destroyed on logout.
 end
 
 if GetStateMapId() == -1 then

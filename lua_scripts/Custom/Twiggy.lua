@@ -13,17 +13,15 @@ local ORIENTATION = 1.09494
 -- VIP vars
 local vendorID = 26300
 local vendorCD = 15 * 60 -- 15 minutes in seconds
-local VIPVendorCD = {}
 local VIPVendorDuration = 3 * 60 * 1000 -- VIP vendor lasts for 1 minute
 local timeMessage = 0
 
 -- End VIP vars
 
--- Twiggy Tables
-local cacheChoice = {}
-local intIdChoice = {}
-local tickleCount = {}
-mailboxtime = {}
+-- Twiggy per-player state lives in player:Data() (reload-proof, per-player,
+-- destroyed on logout) instead of file-local guid-keyed tables that bled
+-- between players and broke across states/reloads.
+-- Keys: "TwiggyCache", "TwiggyIntId", "TwiggyTickle", "TwiggyMailbox", "TwiggyVendorCD".
 
 -- End Twiggy tables
 
@@ -119,7 +117,7 @@ local function ShowCategoryContents(player, creature, category, page)
     elseif category == "Aquatic Forms" then
         cache, icon = aquaticCache, "ability_druid_aquaticform"
     end
-    cacheChoice[player:GetGUIDLow()] = cache
+    player:Data():Set("TwiggyCache", cache)
 
     -- Create a temporary table to hold the entries in a sortable format
     local tempTable = {}
@@ -218,20 +216,20 @@ local function TwiggyGossipHello(event, player, creature)
 		mainMenu(player, creature)
 	else
 		-- If it's someone else's companion, don't start gossip
-		if not tickleCount[player:GetGUIDLow()] then
-			tickleCount[player:GetGUIDLow()] = 0
+		if not player:Data():Get("TwiggyTickle") then
+			player:Data():Set("TwiggyTickle", 0)
 		end
 		
-		if not tickleCount[player:GetGUIDLow()] or tickleCount[player:GetGUIDLow()] == 0 then
+		if (player:Data():Get("TwiggyTickle") or 0) == 0 then
 			creature:SendUnitWhisper("My roots have other matters to attend to. Try asking your own Twiggy.", 0, player)
-			tickleCount[player:GetGUIDLow()] = tickleCount[player:GetGUIDLow()] + 1
+			player:Data():Set("TwiggyTickle", (player:Data():Get("TwiggyTickle") or 0) + 1)
 			
 			player:RegisterEvent(function(eventId, delay, repeats, player)
-				tickleCount[player:GetGUIDLow()] = 0
+				player:Data():Set("TwiggyTickle", 0)
 				player:RemoveEventById(eventId)
 			end, 15000, 1)
 			
-		elseif tickleCount[player:GetGUIDLow()] == 8 then
+		elseif (player:Data():Get("TwiggyTickle") or 0) == 8 then
 			
 			local moveTimer = 0
 			local moveInterval = 2 -- Move every 2 seconds
@@ -242,7 +240,7 @@ local function TwiggyGossipHello(event, player, creature)
 			
 			creature:MoveTo(1, startX + math.random(-5, 5), startY + math.random(-5, 5), startZ)
 			
-			tickleCount[player:GetGUIDLow()] = tickleCount[player:GetGUIDLow()] + 1
+			player:Data():Set("TwiggyTickle", (player:Data():Get("TwiggyTickle") or 0) + 1)
 
 			creature:RegisterEvent(function(eventId, delay, repeats, creature)
 				if creature then
@@ -266,9 +264,9 @@ local function TwiggyGossipHello(event, player, creature)
 			end, 800, 20) -- Run every 1 second for 10 seconds
 			
 		else
-			tickleCount[player:GetGUIDLow()] = tickleCount[player:GetGUIDLow()] + 1
+			player:Data():Set("TwiggyTickle", (player:Data():Get("TwiggyTickle") or 0) + 1)
 			player:RegisterEvent(function(eventId, delay, repeats, player)
-				tickleCount[player:GetGUIDLow()] = 0
+				player:Data():Set("TwiggyTickle", 0)
 				player:RemoveEventById(eventId)
 			end, 15000, 1)
 		end
@@ -296,7 +294,7 @@ local function OnMallTeleCommand(event, player, command)
 end
 
 local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
-	intIdChoice[player:GetGUIDLow()] = intId
+	player:Data():Set("TwiggyIntId", intId)
     if intId == 1 then
 		mainMenu(player, creature)
 	elseif intId == 24 then
@@ -402,31 +400,31 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
 		ShowCategoryContents(player, creature, currentCategory, newPage)
 	elseif intId == 501 then
 		TwiggyAdoptDruidMorphCaches()
-		cacheChoice[player:GetGUIDLow()] = catCache
+		player:Data():Set("TwiggyCache", catCache)
 		ShowCategoryContents(player, creature, "Cat Forms", 1)
 	elseif intId == 502 then
 		TwiggyAdoptDruidMorphCaches()
-		cacheChoice[player:GetGUIDLow()] = bearCache
+		player:Data():Set("TwiggyCache", bearCache)
 		ShowCategoryContents(player, creature, "Bear Forms", 1)
 	elseif intId == 503 then
 		TwiggyAdoptDruidMorphCaches()
-		cacheChoice[player:GetGUIDLow()] = birdCache
+		player:Data():Set("TwiggyCache", birdCache)
 		ShowCategoryContents(player, creature, "Flight Forms", 1)
 	elseif intId == 504 then
 		TwiggyAdoptDruidMorphCaches()
-		cacheChoice[player:GetGUIDLow()] = travelCache
+		player:Data():Set("TwiggyCache", travelCache)
 		ShowCategoryContents(player, creature, "Travel Forms", 1)
 	elseif intId == 505 then
 		TwiggyAdoptDruidMorphCaches()
-		cacheChoice[player:GetGUIDLow()] = owlCache
+		player:Data():Set("TwiggyCache", owlCache)
 		ShowCategoryContents(player, creature, "Moonkin Forms", 1)
 	elseif intId == 506 then
 		TwiggyAdoptDruidMorphCaches()
-		cacheChoice[player:GetGUIDLow()] = treeCache
+		player:Data():Set("TwiggyCache", treeCache)
 		ShowCategoryContents(player, creature, "Tree Forms", 1)
 	elseif intId == 507 then
 		TwiggyAdoptDruidMorphCaches()
-		cacheChoice[player:GetGUIDLow()] = aquaticCache
+		player:Data():Set("TwiggyCache", aquaticCache)
 		ShowCategoryContents(player, creature, "Aquatic Forms", 1)
 	elseif intId == 2 then
 		VIPmenu(player, creature)
@@ -492,18 +490,14 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
         player:SendShowBank(player)
     elseif intId == 14 then
 		player:GossipComplete()
-		local guid = player:GetGUIDLow()
 		local currentTime = os.time()
-
-		if not mailboxtime[guid] then 
-			mailboxtime[guid] = 0
-		end
+		local mailboxCD = player:Data():Get("TwiggyMailbox") or 0
 		
-		if mailboxtime[guid] <= currentTime then
+		if mailboxCD <= currentTime then
 			player:CastSpell(player, 54710, true)
-			mailboxtime[guid] = currentTime + 900
+			player:Data():Set("TwiggyMailbox", currentTime + 900)
 		else
-			local remainingTime = mailboxtime[guid] - currentTime
+			local remainingTime = mailboxCD - currentTime
 			local minutes = math.floor(remainingTime / 60)
 			local seconds = remainingTime % 60
 			
@@ -515,7 +509,7 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
         player:SendTrainerList(creature) -- Disabled, doesn't work
     elseif intId == 17 then
 		
-		local cooldownEnd = VIPVendorCD[player:GetGUIDLow()] or 0
+		local cooldownEnd = player:Data():Get("TwiggyVendorCD") or 0
 		local remainingCooldown = cooldownEnd - os.time()
 		
 		if remainingCooldown > 0 then
@@ -544,7 +538,7 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
 				creature:SendUnitSay("Until next time, when your trash is truly treasure.",0)
 			end, VIPVendorDuration-3000, 1)
 			
-			VIPVendorCD[player:GetGUIDLow()] = cooldownEnd
+			player:Data():Set("TwiggyVendorCD", cooldownEnd)
 		end
 		
 		VIPmenu(player, creature)	

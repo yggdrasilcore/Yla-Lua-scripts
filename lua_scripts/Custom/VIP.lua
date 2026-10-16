@@ -622,17 +622,14 @@ local function VIPCommands(event, player, command)
         
     elseif cmd == "vip mail" then
         if not CheckVIPCmd(player) then return false end
-        local guid = player:GetGUIDLow()
         local currentTime = os.time()
-        if not mailboxtime[guid] then 
-            mailboxtime[guid] = 0
-        end
-        
-        if mailboxtime[guid] <= currentTime then
+        local mailboxCD = player:Data():Get("VIPMailboxCD") or 0
+
+        if mailboxCD <= currentTime then
             player:CastSpell(player, 54710, true)
-            mailboxtime[guid] = currentTime + 900
+            player:Data():Set("VIPMailboxCD", currentTime + 900)
         else
-            local remainingTime = mailboxtime[guid] - currentTime
+            local remainingTime = mailboxCD - currentTime
             local minutes = math.floor(remainingTime / 60)
             local seconds = remainingTime % 60
             

@@ -1,12 +1,10 @@
 local extendedDebug = 0 -- Crashes on extended debug...
-local lastTeleportTime = {}
 
 RegisterPacketEvent(0x38D, 5, function(event, packet, player)
     if not player then return end
     if not (player:GetAreaId() == 4220) then return end
     local name = player:GetName()
-    if not lastTeleportTime[name] then lastTeleportTime[name] = os.time() end
-    if lastTeleportTime[name] > os.time() then return end
+    if (player:Data():Get("LiftThrottle") or 0) > os.time() then return end
     
     print("player is "..player:GetName())
     
@@ -34,7 +32,7 @@ RegisterPacketEvent(0x38D, 5, function(event, packet, player)
 
         print("Position: x=" .. movementInfo.pos.x .. ", y=" .. movementInfo.pos.y .. ", z=" .. movementInfo.pos.z .. ", o=" .. movementInfo.pos.o)
         if player:GetAreaId() == 4220 then
-            golem = player:GetNearestCreature(5, 29005)
+            local golem = player:GetNearestCreature(5, 29005)
             if golem then
                 golem:RegisterEvent(function(eventId, delay, repeats, golem)
                     if golem and ((golem:GetZ() < (movementInfo.pos.z - 10)) or (golem:GetZ() > (movementInfo.pos.z + 10))) then
@@ -47,7 +45,7 @@ RegisterPacketEvent(0x38D, 5, function(event, packet, player)
                             golem:NearTeleport(movementInfo.pos.x-4, movementInfo.pos.y, movementInfo.pos.z+1, movementInfo.pos.o)
                         end
                         print("Teleporting golem")
-                        lastTeleportTime[name] = os.time() + 2
+                        if player then player:Data():Set("LiftThrottle", os.time() + 2) end
                         --player:NearTeleport(movementInfo.pos.x, movementInfo.pos.y, movementInfo.pos.z, movementInfo.pos.o)
                     end
                 end, 200, 10)

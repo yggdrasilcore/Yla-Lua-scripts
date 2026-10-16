@@ -49,7 +49,6 @@ local rafViewCache        =   {}
 local rafReqSeq           =   {}
 local rafAckSeq           =   {}
 local RAF_VIEW_TIMEOUT_MS =   6000
-local playerProgress = {}
 
 -- Create the account_raf table if it doesn't exist
 AuthDBExecute([[
@@ -1197,22 +1196,22 @@ local function ReloadEluna(event)
 end
 
 local function UpdateProgress(player)
-    local accountId = player:GetAccountId()
-    if player:Data():Get("RAFreferee") then
-        if not playerProgress[accountId] then
-            playerProgress[accountId] = 0
-            
-            player:RegisterEvent(function(eventId, delay, repeats, player)
-                if playerProgress[accountId] and playerProgress[accountId] > 0 then
-                    AuthDBExecute(string.format([[
-                        UPDATE acore_eluna.account_raf SET progress = progress + %d WHERE account_id = %d
-                    ]], playerProgress[accountId], accountId))
-                    playerProgress[accountId] = nil
+    if player:Data():Get('RAFreferee') then
+        local pending = player:Data():Get('RAFProgress') or 0
+        if pending == 0 and GetStateMapId() ~= -1 then
+            player:RegisterEvent(function(eventId, delay, repeats, p)
+                if p then
+                    local n = p:Data():Get('RAFProgress') or 0
+                    if n > 0 then
+                        AuthDBExecute(string.format([[
+                            UPDATE acore_eluna.account_raf SET progress = progress + %d WHERE account_id = %d
+                        ]], n, p:GetAccountId()))
+                        p:Data():Set('RAFProgress', nil)
+                    end
                 end
             end, 900000, 1) -- Update RAF progress every 15 minutes
         end
-        
-        playerProgress[accountId] = playerProgress[accountId] + 1
+        player:Data():Set('RAFProgress', pending + 1)
     end
 end
 

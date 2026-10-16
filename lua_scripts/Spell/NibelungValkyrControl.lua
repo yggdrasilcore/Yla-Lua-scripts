@@ -27,7 +27,7 @@ local function OnValkyrSpawn(event, player, pet)
     if pet:GetEntry() == 38391
     or pet:GetEntry() == 38392
     then
-        name = player:GetName()
+        local name = player:GetName()
         
         pet:RegisterEvent(function(eventId, delay, repeats, pet)
             if pet then

@@ -1,5 +1,3 @@
-local eventActive3081 = false
-
 local function HandleQuestAccept(event, player, quest)   
     local questId = quest:GetId()
     
@@ -10,7 +8,7 @@ local function HandleQuestAccept(event, player, quest)
 
     if questId == 10406 then
         player:RegisterEvent(function(eventId, delay, repeats, player)
-            Demolitionist = player:GetNearestCreature(50, 20802)
+            local Demolitionist = player:GetNearestCreature(50, 20802)
             if not Demolitionist then
                 player:CastSpell(player, 35679, false)
             end
@@ -19,7 +17,7 @@ local function HandleQuestAccept(event, player, quest)
     
     if questId == 12671 then
         player:RegisterEvent(function(eventId, delay, repeats, player)
-            FlyingMachine = player:GetNearestCreature(20, 28710)
+            local FlyingMachine = player:GetNearestCreature(20, 28710)
             if FlyingMachine then
                 if not FlyingMachine:HasAura(52255) then
                     FlyingMachine:AddAura(52255, FlyingMachine)
@@ -30,11 +28,13 @@ local function HandleQuestAccept(event, player, quest)
     
     if questId == 13081 then
 
-        if eventActive3081 == true then
+        local map = player:GetMap()
+        if map and map:Data():Get('Event3081') then
             return
         end
-        
-        eventActive3081 = true
+        if map then
+            map:Data():Set('Event3081', true)
+        end
         print("Correct quest and no overlapping event detected! Checking for portal NPC...")
         -- Find nearest creature
         local creature = player:GetNearestCreature(50, 30656)
@@ -65,7 +65,10 @@ local function HandleQuestAccept(event, player, quest)
         end, 33000)
         
         creature:RegisterEvent(function(eventId, delay, repeats, creature)
-            eventActive3081 = false
+            local m = creature:GetMap()
+            if m then
+                m:Data():Set('Event3081', nil)
+            end
         end, 45000)
     end
 end

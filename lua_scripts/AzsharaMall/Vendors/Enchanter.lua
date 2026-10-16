@@ -154,10 +154,8 @@ local T = {
     },
 };
 
-local pVar = {};
- 
 local function Enchanter(event, plr, unit)
-    pVar[plr:GetName()] = nil;
+    plr:Data():Set("EnchSel", nil);
     for _, v in ipairs(T["Menu"]) do
         plr:GossipMenuAddItem(3, v[1]..".|R", 0, v[2])
     end
@@ -172,7 +170,7 @@ local function EnchanterSelect(event, plr, unit, sender, intid, code)
             ID = math.floor(intid/10)
             f = true
         end
-        pVar[plr:GetName()] = intid;
+        plr:Data():Set("EnchSel", intid);
         if(T[ID]) then
             for i, v in ipairs(T[ID]) do
                 if((not f and not v[3]) or (f and v[3])) then
@@ -185,7 +183,12 @@ local function EnchanterSelect(event, plr, unit, sender, intid, code)
     elseif (intid == 500) then
         Enchanter(event, plr, unit)
     elseif (intid >= 900) then
-        local ID = pVar[plr:GetName()]
+        local sel = plr:Data():Get("EnchSel")
+        if not sel then
+            Enchanter(event, plr, unit)
+            return
+        end
+        local ID = sel
         if(ID == 161 or ID == 151) then
             ID = math.floor(ID/10)
         end
@@ -198,14 +201,14 @@ local function EnchanterSelect(event, plr, unit, sender, intid, code)
                         plr:SendBroadcastMessage("You have paid "..requiredItemCount.." "..GetItemLink(requiredItemID)..".")
                         if v[3] then
                             local WType = item:GetSubClass()
-                            if pVar[plr:GetName()] == 151 then
+                            if sel == 151 then
                                 if(WType == 1 or WType == 5 or WType == 6 or WType == 8 or WType == 10) then
                                     item:ClearEnchantment(0,0)
                                     item:SetEnchantment(intid - 900, 0, 0)
                                 else
                                     plr:SendAreaTriggerMessage("You do not have a Two-Handed Weapon equipped!")
                                 end    
-                            elseif pVar[plr:GetName()] == 161 then
+                            elseif sel == 161 then
                                 if(WType == 6) then
                                     item:ClearEnchantment(0,0)
                                     item:SetEnchantment(intid - 900, 0, 0)
@@ -233,11 +236,11 @@ local function EnchanterSelect(event, plr, unit, sender, intid, code)
                 else
                     plr:SendAreaTriggerMessage("You have no item to enchant in the selected slot!")
                 end
-                EnchanterSelect(event, plr, unit, sender, pVar[plr:GetName()], nil)
+                EnchanterSelect(event, plr, unit, sender, sel, nil)
                 return
             end
         end
-        EnchanterSelect(event, plr, unit, sender, pVar[plr:GetName()], nil)
+        EnchanterSelect(event, plr, unit, sender, sel, nil)
     end
 end
 
