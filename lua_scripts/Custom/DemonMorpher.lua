@@ -203,7 +203,6 @@ end
 -- their loader. This lazy loader fills the LOCAL state's cache synchronously
 -- from the DB, so all map-side readers stay correct without cross-state
 -- sharing (morph progression itself is persisted in character_morphs).
-local Multistate = require("Multistate")
 
 local function EnsureMorphCache(player)
     if not player then
@@ -693,7 +692,13 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
 end
 
 local function OnReloadEluna(event)
-    Multistate.ForEachPlayer(function(player)
+    local players
+    if GetStateMapId() == -1 then
+        players = GetPlayersInWorld()
+    else
+        players = GetStateMap():GetPlayers()
+    end
+    for _, player in ipairs(players) do
 		if player:HasItem(ITEM_ID) then
 			local guid = player:GetGUIDLow()
 			local name = player:GetName()
@@ -720,7 +725,7 @@ local function OnReloadEluna(event)
 				player:Data():Set(DEMON_COUNT_KEY, count)
 			end)
 		end
-    end)
+    end
 end
 
 -- Cache player's morphs on login if they have the required item
