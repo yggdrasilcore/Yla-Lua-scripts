@@ -38,14 +38,13 @@ local TokenName 			= "Community Tokens"
 local TokenReward 			= 5
 -- END VARS
  
--- Map-side view cache: last payload delivered by world, per player name.
+-- Map-side view state lives on player:Data() (reload-proof, per-player).
 -- Menus render from here; clicks resolve rows here and forward via EMQ.
-local rafViewCache        =   {}
-local rafReqSeq           =   {}
-local rafAckSeq           =   {}
+-- Keys: "RAFView", "RAFReqSeq", "RAFAckSeq".
 local RAF_VIEW_TIMEOUT_MS =   6000
 
 -- Create the account_raf table if it doesn't exist
+if GetStateMapId() == -1 then
 AuthDBExecute([[
     CREATE TABLE IF NOT EXISTS acore_eluna.account_raf (
         account_id INT PRIMARY KEY,
@@ -65,6 +64,7 @@ AuthDBExecute([[
 		date INT
     )
 ]])
+end
 
 local function SendPurpleBroadcast(player, message)
     player:SendBroadcastMessage("|cFFEDFFC0" .. message .. "|r")
@@ -432,8 +432,9 @@ local function RAFShowLoading(player, text)
     player:GossipSendMenu(12, player, 1)
 end
 
-local function RAFCacheView(playerName, view)
-    local c = rafViewCache[playerName] or {}
+local function RAFCacheView(player, view)
+    local stored = player:Data():Get("RAFView")
+    local c = stored and stored:AsTable() or {}
     if view.view == "referralinfo" then
         c.referral = view
     elseif view.view == "summonfriends" then
@@ -447,15 +448,15 @@ local function RAFCacheView(playerName, view)
     elseif view.view == "summonrequest" then
         c.request = view
     end
-    rafViewCache[playerName] = c
-    rafAckSeq[playerName] = view.seq
+    player:Data():Set("RAFView", c)
+    player:Data():Set("RAFAckSeq", view.seq)
 end
 
 -- Map -> world request. Only the matching answer renders.
 local function MapSendRAF(player, op, params)
     local name = player:GetName()
-    local seq = (rafReqSeq[name] or 0) + 1
-    rafReqSeq[name] = seq
+    local seq = (player:Data():Get("RAFReqSeq") or 0) + 1
+    player:Data():Set("RAFReqSeq", seq)
     local data = { op = op, seq = seq, playerName = name }
     if params then
         for k, v in pairs(params) do
@@ -464,7 +465,7 @@ local function MapSendRAF(player, op, params)
     end
     player:SendEMQMessage("RAFToWorld", data)
     player:RegisterEvent(function(eventId, delay, repeats, pl)
-        if pl and rafAckSeq[pl:GetName()] ~= seq and rafReqSeq[pl:GetName()] == seq then
+        if pl and pl:Data():Get("RAFAckSeq") ~= seq and pl:Data():Get("RAFReqSeq") == seq then
             pl:SendAreaTriggerMessage("RAF service timed out, please reopen the menu.")
             ShowRAFMenu(pl)
         end
@@ -476,12 +477,11 @@ HandleRAFView = function(player, data)
     if not player or not data then
         return
     end
-    local name = data.playerName or player:GetName()
-    if data.seq ~= nil and data.seq ~= rafReqSeq[name] then
+    if data.seq ~= nil and data.seq ~= (player:Data():Get("RAFReqSeq") or 0) then
         return
     end
-    RAFCacheView(name, data)
-    rafAckSeq[name] = rafReqSeq[name]
+    RAFCacheView(player, data)
+    player:Data():Set("RAFAckSeq", player:Data():Get("RAFReqSeq"))
     if data.view == "hub" then
         ShowRAFMenu(player)
     elseif data.view == "referralinfo" then
@@ -520,7 +520,8 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
     -- Map side: no DB or shared vars. Static navigation renders directly;
     -- everything else resolves rows from the cached view and forwards via EMQ.
     local name = player:GetName()
-    local cache = rafViewCache[name] or {}
+    local stored = player:Data():Get("RAFView")
+    local cache = stored and stored:AsTable() or {}
 
     if intid == 11 then -- loading-header no-op
         return
@@ -1160,7 +1161,14 @@ local function CheckRefereeStatus(player)
         WHERE account_id = %d AND status = 2 AND date > %d
     ]], accountId, MaxRAFDuration), function(query)
 
-		local player = playerName and GetPlayerByName(playerName) or nil
+		local player
+		if GetStateMapId() == -1 then
+			player = playerName and GetPlayerByName(playerName) or nil
+		else
+			for _, p in ipairs(GetStateMap():GetPlayers()) do
+				if p:GetName() == playerName then player = p break end
+			end
+		end
 		if not player then return end
 		if query then
 			AuthDBExecute(string.format([[
@@ -1183,7 +1191,7 @@ local function OnPlayerLogin(event, player)
 end
 
 local function ReloadEluna(event)
-    for _, player in ipairs(GetPlayersInWorld()) do
+    for _, player in ipairs(GetStateMap():GetPlayers()) do
         CheckRefereeStatus(player)
     end
 end
@@ -1353,22 +1361,22 @@ local function CheckCompletedReferrals()
     end)
 end
 
-if GetStateMapId() == -1 then
+if GetStateMapId() == -1 then -- World stuff
     CreateLuaEvent(CheckCompletedReferrals, ProgressCheckTimer * 60 * 1000, 0)
+    RegisterPlayerEvent(3, OnPlayerLogin)
+    RegisterPlayerEvent(42, RAFCommands)
+else -- Map stuff
+    RegisterPlayerEvent(4, ClearRefereeStatus)
+    RegisterPlayerEvent(7, OnCreatureKill)
+    RegisterPlayerEvent(12, OnXP)
+    RegisterPlayerEvent(15, OnRep)
+    RegisterPlayerEvent(25, OnSave)
+    RegisterPlayerEvent(27, OnAreaTrigger)
+    RegisterPlayerEvent(29, OnEquip)
+    RegisterPlayerEvent(33, EnterCombat)
+    RegisterPlayerEvent(34, LeaveCombat)
+    RegisterPlayerEvent(45, OnAchievementComplete)
+    RegisterPlayerEvent(54, OnCompleteQuest)
+    RegisterPlayerGossipEvent(1, 2, OnGossipSelect) -- Register gossip selection event
+    RegisterServerEvent(33, ReloadEluna)
 end
-RegisterPlayerEvent(3, OnPlayerLogin)
-RegisterPlayerEvent(4, ClearRefereeStatus)
-RegisterPlayerEvent(7, OnCreatureKill)
-RegisterPlayerEvent(12, OnXP)
-RegisterPlayerEvent(15, OnRep)
-RegisterPlayerEvent(25, OnSave)
-RegisterPlayerEvent(27, OnAreaTrigger)
-RegisterPlayerEvent(29, OnEquip)
-RegisterPlayerEvent(33, EnterCombat)
-RegisterPlayerEvent(34, LeaveCombat)
-RegisterPlayerEvent(42, RAFCommands)
-RegisterPlayerEvent(45, OnAchievementComplete)
-RegisterPlayerEvent(54, OnCompleteQuest)
-RegisterServerEvent(33, ReloadEluna)
-
-RegisterPlayerGossipEvent(1, 2, OnGossipSelect) -- Register gossip selection event

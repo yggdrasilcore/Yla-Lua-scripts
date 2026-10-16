@@ -2,8 +2,6 @@
 -- XP changer script start
 -------------------------------------------------------------------------------------------------------------------------
 
-CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.character_rate_xp (`guid` int(11) unsigned NOT NULL, `rate` int(11) NOT NULL DEFAULT 0, `max_paid_rate` int(11) NOT NULL DEFAULT 0, PRIMARY KEY (`guid`)) ENGINE=InnoDB DEFAULT CHARSET=utf8;")
-
 local currencyID = 20880
 local currencyNameSingular = "Vote Token"
 local currencyName = "Vote Tokens"
@@ -243,7 +241,14 @@ local function LoadXPForPlayer(player)
     local name = player:GetName()
     CharDBQueryAsync("SELECT rate, max_paid_rate FROM acore_eluna.character_rate_xp WHERE guid = " .. guid, function(result)
         if not result then return end
-        local p = GetPlayerByName(name)
+        local p
+        if GetStateMapId() == -1 then
+            p = GetPlayerByName(name)
+        else
+            for _, q in ipairs(GetStateMap():GetPlayers()) do
+                if q:GetName() == name then p = q break end
+            end
+        end
         if not p or p:GetGUIDLow() ~= guid then return end
         p:Data():Set("XPRate", result:GetUInt8(0))
         p:Data():Set("XPMaxPaid", result:GetUInt8(1))
@@ -269,21 +274,23 @@ end
 -- XP rate changer event registrations
 ------------------------------------------------------------------------------------------------
 
-RegisterPlayerEvent(3, OnXPLogin) -- Per-player XP rate load (reload-proof via player:Data())
-if GetPlayersInWorld then -- Warm Data for players already online at (re)load
-    for _, p in ipairs(GetPlayersInWorld()) do
+if GetStateMapId() == -1 then -- World stuff
+    CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.character_rate_xp (`guid` int(11) unsigned NOT NULL, `rate` int(11) NOT NULL DEFAULT 0, `max_paid_rate` int(11) NOT NULL DEFAULT 0, PRIMARY KEY (`guid`)) ENGINE=InnoDB DEFAULT CHARSET=utf8;")
+    RegisterPlayerEvent(3, OnXPLogin) -- Per-player XP rate load (reload-proof via player:Data())
+    RegisterPlayerEvent(42, onXPCommand)
+else -- Map stuff
+    for _, p in ipairs(GetStateMap():GetPlayers()) do -- Warm Data for players already online at (re)load
         LoadXPForPlayer(p)
     end
+    RegisterPlayerEvent(12, OnGiveXP)
+    RegisterCreatureGossipEvent(190023, 1, OnTalkToGreetingTwig)
+    RegisterCreatureGossipEvent(190023, 2, OnSelectXP)
+    RegisterPlayerGossipEvent(35353, 2, OnSelectXP)
+    RegisterPlayerGossipEvent(35354, 2, OnSelectXP)
+    RegisterPlayerGossipEvent(35355, 2, OnSelectXP)
+    RegisterCreatureGossipEvent(1900230, 1, OnTalkToGreetingTwig)
+    RegisterCreatureGossipEvent(1900230, 2, OnSelectXP)
 end
-RegisterPlayerEvent(12, OnGiveXP)
-RegisterCreatureGossipEvent(190023, 1, OnTalkToGreetingTwig)
-RegisterCreatureGossipEvent(190023, 2, OnSelectXP)
-RegisterPlayerEvent(42, onXPCommand)
-RegisterPlayerGossipEvent(35353, 2, OnSelectXP)
-RegisterPlayerGossipEvent(35354, 2, OnSelectXP)
-RegisterPlayerGossipEvent(35355, 2, OnSelectXP)
-RegisterCreatureGossipEvent(1900230, 1, OnTalkToGreetingTwig)
-RegisterCreatureGossipEvent(1900230, 2, OnSelectXP)
 
 ------------------------------------------------------------------------------------------------
 -- End XP rate changer event registrations

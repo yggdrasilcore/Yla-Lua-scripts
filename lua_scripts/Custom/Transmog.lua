@@ -976,6 +976,7 @@ end
 
 local function OnLogout(event, player)
     -- Transmog mappings live in player:Data() and are destroyed on logout.
+    applyMogOnMapChange[player:GetGUIDLow()] = nil
 end
 
 local function OnEquip(event, player, item, bag, slot)
@@ -989,7 +990,7 @@ local function OnEquip(event, player, item, bag, slot)
     end
 end
 
-if PrepareDBTable then
+if PrepareDBTable and GetStateMapId() == -1 then
     CharDBQuery([[CREATE TABLE IF NOT EXISTS acore_eluna.custom_transmogrification (`GUID` INT(10) UNSIGNED NOT NULL, `FakeEntry` INT(10) UNSIGNED NOT NULL, `Owner` INT(10) UNSIGNED NOT NULL, PRIMARY KEY (`GUID`));]])
     CharDBQuery("DELETE FROM acore_eluna.custom_transmogrification WHERE NOT EXISTS (SELECT 1 FROM item_instance WHERE item_instance.guid = custom_transmogrification.GUID)")
 end
@@ -1326,6 +1327,10 @@ local function MogVendorHello(event, player, object)
 end
 
 local function MogVendorSelect(event, player, object, sender, intid, code)
+	if not LoadItemCache() then
+		player:SendAreaTriggerMessage("Loading vendor items, try again in a moment.")
+		return
+	end
 	if intid == 0 then
 		return MogVendorHello(event, player, object)
 	
@@ -1639,18 +1644,34 @@ local function AdoptTransmogItemCache()
     return true
 end
 
-if GetStateMapId() == -1 then
-    ItemCache.LoadCache()
-else
-    CreateLuaEvent(function(eventId)
-        if AdoptTransmogItemCache() then
-            RemoveEventById(eventId)
-        end
-    end, 5000, 0)
+local function LoadItemCache()
+    if ItemCache["Cache"] and next(ItemCache["Cache"]) then
+        return ItemCache["Cache"]
+    end
+    if AdoptTransmogItemCache() then
+        return ItemCache["Cache"]
+    end
 end
 
-RegisterCreatureGossipEvent(TRANSMOG_VENDOR_NPC_ID, 1, MogVendorHello)
-RegisterCreatureGossipEvent(TRANSMOG_VENDOR_NPC_ID, 2, MogVendorSelect)
+if GetStateMapId() == -1 then -- World stuff
+    ItemCache.LoadCache()
+    RegisterPlayerEvent(3, OnLogin)
+    for _, _p in ipairs(GetPlayersInWorld()) do -- Catch-up for already-online players (server start or reload).
+        OnLogin(3, _p)
+    end
+else -- Map stuff
+    RegisterPlayerEvent(28, OnLogin) -- On map change, in case player zones into expired/invalid instance
+    RegisterPlayerEvent(4, OnLogout)
+    RegisterPlayerEvent(29, OnEquip)
+    RegisterPacketEvent(0x2A8, 5, OnRepair)
+    RegisterCreatureGossipEvent(NPC_Entry, 1, OnGossipHello)
+    RegisterCreatureGossipEvent(NPC_Entry, 2, OnGossipSelect)
+    RegisterCreatureGossipEvent(TRANSMOG_VENDOR_NPC_ID, 1, MogVendorHello)
+    RegisterCreatureGossipEvent(TRANSMOG_VENDOR_NPC_ID, 2, MogVendorSelect)
+    for _, _p in ipairs(GetStateMap():GetPlayers()) do -- Catch-up for already-online players (server start or reload).
+        OnLogin(3, _p)
+    end
+end
 
 ---------------------------------------------------------------------------------
 -- Transmog item vendor events end
@@ -1665,7 +1686,7 @@ local function OnRepair(event, packet, player)
     local playerName = player:GetName()
     local repairOwner = player:GetGUIDLow()
     CharDBQueryAsync("SELECT GUID, FakeEntry FROM acore_eluna.custom_transmogrification WHERE Owner = " .. repairOwner, function(result)
-        local player = GetPlayerByName(playerName)
+        local player = ResolveTransmogPlayer(playerName)
         if not player then
             return
         end
@@ -1692,27 +1713,6 @@ local function OnRepair(event, packet, player)
             end
         end
     end)
-end
-
-RegisterPlayerEvent(3, OnLogin)
-RegisterPlayerEvent(28, OnLogin) -- On map change, in case player zones into expired/invalid instance
-RegisterPlayerEvent(4, OnLogout)
-RegisterPlayerEvent(29, OnEquip)
-RegisterPacketEvent(0x2A8, 5, OnRepair)
-
-RegisterCreatureGossipEvent(NPC_Entry, 1, OnGossipHello)
-RegisterCreatureGossipEvent(NPC_Entry, 2, OnGossipSelect)
-
--- Catch-up for already-online players (server start or reload).
--- GetPlayersInWorld() only exists in the global state.
-local _catchup
-if GetStateMapId() == -1 then
-    _catchup = GetPlayersInWorld()
-else
-    _catchup = GetStateMap():GetPlayers()
-end
-for _, _p in ipairs(_catchup) do
-    OnLogin(3, _p)
 end
 
 ---------------------------------------------------------------------------------
