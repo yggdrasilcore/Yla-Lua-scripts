@@ -1,3 +1,4 @@
+local Multistate = require("Multistate")
 function IsVIP(player)
     return player:Data():Get("VIPTime") and player:Data():Get("VIPTime") > os.time()
 end
@@ -7,14 +8,15 @@ local function CheckVIPOnLoad()
     local accountIdMap = {}
     local accountIds = {}
     
-    for _, player in ipairs(GetStateMapId() == -1 and GetPlayersInWorld() or GetStateMap():GetPlayers()) do
+    -- Multistate: state-aware enumeration (each state covers visible players).
+    Multistate.ForEachPlayer(function(player)
         local name = player:GetName()
         local accountId = player:GetAccountId()
         
         table.insert(playerNames, name)
         accountIdMap[name] = accountId
         table.insert(accountIds, accountId)
-    end
+    end)
 
     if #accountIds == 0 then return end
     
@@ -32,11 +34,7 @@ local function CheckVIPOnLoad()
         end
         
         for _, name in ipairs(playerNames) do
-            local player
-            if GetStateMapId() == -1 then player = GetPlayerByName(name)
-            else for _, p in ipairs(GetStateMap():GetPlayers()) do
-                if p:GetName() == name then player = p break end
-            end end
+            local player = Multistate.FindPlayerByName(name)
             if player and vipTimeMap[accountIdMap[name]] then
                 player:Data():Set("VIPTime", vipTimeMap[accountIdMap[name]])
 				print("VIP found: "..player:GetName()..", acc "..player:GetAccountId()..".")
@@ -53,10 +51,7 @@ local function CheckVIP(event, player)
     if player:IsBot() then return end
 	
 	AuthDBQueryAsync("SELECT viptime FROM acore_eluna.accounts_vip WHERE account = " .. player:GetAccountId() .. ";", function(result)
-		local player
-		for _, p in ipairs(GetStateMap():GetPlayers()) do
-			if p:GetName() == name then player = p break end
-		end
+		local player = Multistate.FindPlayerByName(name)
 		if not player then return end
 		if result then
 			player:Data():Set("VIPTime", result:GetUInt32(0))
@@ -627,14 +622,17 @@ local function VIPCommands(event, player, command)
         
     elseif cmd == "vip mail" then
         if not CheckVIPCmd(player) then return false end
+        local guid = player:GetGUIDLow()
         local currentTime = os.time()
-        local mailboxCD = player:Data():Get("VIPMailboxCD") or 0
-
-        if mailboxCD <= currentTime then
+        if not mailboxtime[guid] then 
+            mailboxtime[guid] = 0
+        end
+        
+        if mailboxtime[guid] <= currentTime then
             player:CastSpell(player, 54710, true)
-            player:Data():Set("VIPMailboxCD", currentTime + 900)
+            mailboxtime[guid] = currentTime + 900
         else
-            local remainingTime = mailboxCD - currentTime
+            local remainingTime = mailboxtime[guid] - currentTime
             local minutes = math.floor(remainingTime / 60)
             local seconds = remainingTime % 60
             
