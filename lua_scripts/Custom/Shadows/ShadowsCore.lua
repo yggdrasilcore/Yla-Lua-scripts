@@ -876,7 +876,7 @@ local botWhisperResponses = {
 
 -- World
 local function OnWhisper(event, player, msg, Type, lang, receiver)
-    if not player:IsBot() then return end
+    if player:IsBot() then return end
     
     local receiverName = receiver:GetName()
     local playerName = player:GetName()
