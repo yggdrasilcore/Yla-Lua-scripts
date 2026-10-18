@@ -35,10 +35,6 @@ local CHAR_TABLES = {
     "statistics",
 }
 
-local WORLD_TABLES = {
-    "icons",
-}
-
 local function Migrate(exec, tbl)
     exec(string.format(
         "CREATE TABLE IF NOT EXISTS acore_eluna.%s LIKE %s", tbl, tbl))
@@ -54,10 +50,6 @@ end
 
 for _, tbl in ipairs(CHAR_TABLES) do
     Migrate(CharDBExecute, tbl)
-end
-
-for _, tbl in ipairs(WORLD_TABLES) do
-    Migrate(WorldDBExecute, tbl)
 end
 
 print("[1_db_migrate] Done.")
