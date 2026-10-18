@@ -111,6 +111,7 @@ function OnAIOAntiCheatCommand(event, player, command)
                 player:KickPlayer()
             end
         elseif arg == "FlyHack" then
+            if math.abs(z - player:GetGroundZ()) <= 1 or math.abs(z - player:GetFloorZ()) <= 1 then return false end
             if not player:IsOutdoors() then
                 player:AddAura(43775, player)
                 player:RegisterEvent(function(e, d, r, player)
