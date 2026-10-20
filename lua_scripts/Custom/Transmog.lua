@@ -26,7 +26,22 @@ Item link icon to Are You sure text
 Forked by mostly nick :) to include UI, saving, applying and deleting sets, hiding items, and support for certain new weapon combinations.
 ]]
 
-local itemIconCache = require("itemIconCache")
+local SLOT_ICONS = {
+    ["Head"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Head",
+    ["Shoulders"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Shoulder",
+    ["Shirt"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Shirt",
+    ["Chest"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Chest",
+    ["Waist"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Waist",
+    ["Legs"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Legs",
+    ["Feet"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Feet",
+    ["Wrists"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Wrists",
+    ["Hands"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Hands",
+    ["Back"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Chest",
+    ["Main hand"] = "Interface/PaperDoll/UI-PaperDoll-Slot-MainHand",
+    ["Off hand"] = "Interface/PaperDoll/UI-PaperDoll-Slot-SecondaryHand",
+    ["Ranged"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Ranged",
+    ["Tabard"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Tabard",
+}
 -- Login (3) runs globally, map change (28) / equip (29) / gossip run in map
 -- states. The mog caches are populated per state by the login/map-change
 -- handler each state sees; the packet repair handler below reads live DB data.
@@ -299,6 +314,15 @@ local function GetSlotName(slot, locale)
     return locale and SlotNames[slot][locale+1] or SlotNames[slot][1]
 end
 
+local function GetItemIcon(entry)
+    local itemTemplate = GetItemTemplate(entry)
+    local icon = itemTemplate and itemTemplate:GetIcon()
+    if icon and icon ~= "" then
+        return "Interface/ICONS/" .. icon
+    end
+    return "Interface/ICONS/INV_Misc_QuestionMark"
+end
+
 local function GetFakePrice(item)
     local sellPrice = item:GetSellPrice()
     local minPrice = 10000
@@ -531,9 +555,9 @@ local function OnGossipHello(event, player, creature)
                     if entry == 21 or entry == 1 then
                         icon = "Interface/ICONS/INV_Misc_QuestionMark"
                     elseif entry > 21 then
-                        icon = "Interface/ICONS/" .. itemIconCache[entry] or "Interface/ICONS/INV_Misc_QuestionMark"  -- Use a default icon if not found in cache
+                        icon = GetItemIcon(entry)
                     else
-                        icon = itemIconCache[slotName] or "Interface/ICONS/INV_Misc_QuestionMark"
+                        icon = SLOT_ICONS[slotName] or "Interface/ICONS/INV_Misc_QuestionMark"
                     end
                     
                     player:GossipMenuAddItem(3, "|T" .. icon .. ":31:31:-24:0|t".. slotName, EQUIPMENT_SLOT_END, slot)
@@ -619,12 +643,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
                     if num and num > 24 then
                         setspresent = true
                         local itemId = num
-                        local icon
-                        if itemId and itemIconCache[itemId] then
-                            icon = "Interface/ICONS/" .. itemIconCache[itemId]
-                        else
-                            icon = "Interface/ICONS/INV_Misc_QuestionMark"
-                        end
+                        local icon = GetItemIcon(itemId)
                         player:GossipMenuAddItem(4, "|T" .. icon .. ":31:31:-24:0|t" .. GetItemLink(itemId), PRESETS + 2, 0)
                     end
                 end
@@ -692,7 +711,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
                             if entry == 1 or entry == 21 then
                                 icon = "Interface/ICONS/INV_Misc_QuestionMark"
                             else
-                                icon = "Interface/ICONS/" .. itemIconCache[entry] or "Interface/ICONS/INV_Misc_QuestionMark"
+                                icon = GetItemIcon(entry)
                             end
                             cost = cost + GetSpecialPrice(transmogrified)
                             local itemId = transmogrified:GetEntry()
@@ -799,7 +818,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
                     if SuitableForTransmogrification(player, transmogrified, transmogrifier) then
                         if not _items[lowGUID][display] then
                             itemId = transmogrifier:GetEntry()
-                            icon = "Interface/ICONS/" .. itemIconCache[itemId] or "Interface/ICONS/INV_Misc_QuestionMark" 
+                            icon = GetItemIcon(itemId)
                             limit = limit + 1
                             _items[lowGUID][display] = {transmogrifier:GetBagSlot(), transmogrifier:GetSlot()}
                             local popup = LocText(4, player).."\n |T" .. icon .. ":31:31:-24:-10|t".. transmogrifier:GetName(player:GetDbcLocale()).." \n \n \n"
@@ -825,7 +844,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
                             if SuitableForTransmogrification(player, transmogrified, transmogrifier) then
                                 if not _items[lowGUID][display] then
                                     itemId = transmogrifier:GetEntry()
-                                    icon = "Interface/ICONS/" .. itemIconCache[itemId] or "Interface/ICONS/INV_Misc_QuestionMark" 
+                                    icon = GetItemIcon(itemId)
                                     limit = limit + 1
                                     _items[lowGUID][display] = {transmogrifier:GetBagSlot(), transmogrifier:GetSlot()}
                                     local popup = LocText(4, player).."\n |T" .. icon .. ":31:31:-24:-10|t".. transmogrifier:GetName(player:GetDbcLocale()).." \n \n \n"
@@ -1196,7 +1215,7 @@ function ItemCache.GenerateSearchMenu(player, object, currentPage)
     for i = low, high do
         local item = results[i]
         if item then
-            player:GossipMenuAddItem(4, "|TInterface/ICONS/" .. itemIconCache[item.entry] .. ":31:31:-24:0|t" .. item.name, 0, 2000000 + item.entry)
+            player:GossipMenuAddItem(4, "|T" .. GetItemIcon(item.entry) .. ":31:31:-24:0|t" .. item.name, 0, 2000000 + item.entry)
         end
     end
 	
@@ -1265,7 +1284,7 @@ function DisplayArmorItems(player, object, items, currentIntid)
 		for i = startIndex, endIndex do
 			local item = items[i]
 			if item and item.name and item.entry then
-				player:GossipMenuAddItem(1, "|TInterface/ICONS/" .. itemIconCache[item.entry] .. ":31:31:-24:0|t" .. item.name, 0, 2000000 + item.entry)
+				player:GossipMenuAddItem(1, "|T" .. GetItemIcon(item.entry) .. ":31:31:-24:0|t" .. item.name, 0, 2000000 + item.entry)
 			end
 		end
 		-- Add pagination options
@@ -1298,7 +1317,7 @@ function DisplaySlotItems(player, object, items, currentIntid)
 		for i = startIndex, endIndex do
 			local item = items[i]
 			if item and item.name and item.entry then
-				player:GossipMenuAddItem(1, "|TInterface/ICONS/" .. itemIconCache[item.entry] .. ":31:31:-24:0|t" .. item.name, 0, 2000000 + item.entry)
+				player:GossipMenuAddItem(1, "|T" .. GetItemIcon(item.entry) .. ":31:31:-24:0|t" .. item.name, 0, 2000000 + item.entry)
 			end
 		end
 		if page > 1 then
@@ -1354,7 +1373,7 @@ local function MogVendorSelect(event, player, object, sender, intid, code)
 		for i = startIndex, endIndex do
 			local item = results[i]
 			if item then
-				player:GossipMenuAddItem(1, "|TInterface/ICONS/" .. itemIconCache[item.entry] .. ":31:31:-24:0|t" .. item.name, 0, 2000000 + item.entry)
+				player:GossipMenuAddItem(1, "|T" .. GetItemIcon(item.entry) .. ":31:31:-24:0|t" .. item.name, 0, 2000000 + item.entry)
 			end
 		end
 		
@@ -1547,7 +1566,7 @@ local function MogVendorSelect(event, player, object, sender, intid, code)
 			itemCost = math.max(itemCost, 100)
 		end
 		
-		player:GossipMenuAddItem(0, "|TInterface/ICONS/" .. itemIconCache[itemId] .. ":31:31:-24:0|tInspect " .. itemLink .. "\n \nClick here to receive an inspect link. \n \n ", 0, 7000000 + itemId)
+		player:GossipMenuAddItem(0, "|T" .. GetItemIcon(itemId) .. ":31:31:-24:0|tInspect " .. itemLink .. "\n \nClick here to receive an inspect link. \n \n ", 0, 7000000 + itemId)
 			
 		if level == 0 then
 			local reqLevel = math.ceil(itemLevel / 2.5)
@@ -1561,7 +1580,7 @@ local function MogVendorSelect(event, player, object, sender, intid, code)
 		
 		if PlayerHasEnoughCurrency(player, itemCost) then
 			if PlayerHasEnoughFreeSlots(player, 1) then
-				player:GossipMenuAddItem(0, "|TInterface/ICONS/" .. itemIconCache[itemId] .. ":31:31:-24:0|tBuy " .. itemLink .. "?\n \nClick here to buy the item.\nPrice:  " .. itemCost .. " "..CURRENCY_NAME.."\n \n ", 0, 8000000 + itemId)
+				player:GossipMenuAddItem(0, "|T" .. GetItemIcon(itemId) .. ":31:31:-24:0|tBuy " .. itemLink .. "?\n \nClick here to buy the item.\nPrice:  " .. itemCost .. " "..CURRENCY_NAME.."\n \n ", 0, 8000000 + itemId)
 			else
 				player:SendAreaTriggerMessage("Your bags are full!")
 				player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_bag_19:31:31:-24:0|tNot enough bag space!\n \nYou don't have enough bag space to buy " .. itemLink .. ". \n \n ", 0, 0)
@@ -1600,7 +1619,7 @@ local function MogVendorSelect(event, player, object, sender, intid, code)
 			itemCost = math.max(itemCost, 100)
 		end
 		
-		player:GossipMenuAddItem(0, "|TInterface/ICONS/" .. itemIconCache[itemId] .. ":31:31:-24:0|tInspect " .. itemLink .. "\n \nClick here to receive an inspect link. \n \n ", 0, 7000000 + itemId)
+		player:GossipMenuAddItem(0, "|T" .. GetItemIcon(itemId) .. ":31:31:-24:0|tInspect " .. itemLink .. "\n \nClick here to receive an inspect link. \n \n ", 0, 7000000 + itemId)
 		
 		if level == 0 then
 			local reqLevel = math.ceil(itemLevel / 2.5)
@@ -1614,7 +1633,7 @@ local function MogVendorSelect(event, player, object, sender, intid, code)
 		
 		if PlayerHasEnoughCurrency(player, itemCost) then
 			if PlayerHasEnoughFreeSlots(player, 1) then
-				player:GossipMenuAddItem(0, "|TInterface/ICONS/" .. itemIconCache[itemId] .. ":31:31:-24:0|tBuy " .. itemLink .. "?\n \nClick here to buy the item.\nPrice:  " .. itemCost .. " "..CURRENCY_NAME.."\n \n ", 0, 8000000 + itemId)
+				player:GossipMenuAddItem(0, "|T" .. GetItemIcon(itemId) .. ":31:31:-24:0|tBuy " .. itemLink .. "?\n \nClick here to buy the item.\nPrice:  " .. itemCost .. " "..CURRENCY_NAME.."\n \n ", 0, 8000000 + itemId)
 			else
 				player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_bag_19:31:31:-24:0|tNot enough bag space!\n \nYou don't have enough bag space to buy " .. itemLink .. ". \n \n ", 0, 0)
 				player:SendAreaTriggerMessage("Your bags are full!")
