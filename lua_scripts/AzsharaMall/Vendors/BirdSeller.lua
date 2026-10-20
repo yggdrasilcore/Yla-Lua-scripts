@@ -20,7 +20,7 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
 
         player:GossipSendMenu(12, creature)
     elseif intid == 2 then
-        player:SendAddonMessage("CustomShop", "openstore", 7, player) -- No debug
+        player:SendAddonMessage("StoreOpenSearch", "Feathers", 7, player)
         player:GossipComplete()
     elseif intid == 3 then
         player:GossipComplete()
