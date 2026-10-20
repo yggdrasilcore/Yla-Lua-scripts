@@ -1,51 +1,3 @@
-local EMQ = require("EMQ")
-
--- Map-state executor (via EMQ, or directly in compatibility mode).
-local function DoLearnSpell(player, data)
-    if not player then
-        return
-    end
-    local spellId = data.spellId
-    if not spellId then
-        return
-    end
-    local sel = player:GetSelection()
-    local spellTarget = nil
-    if sel and data.targetGuidLow and sel:GetGUIDLow() == data.targetGuidLow and sel:IsPlayer() then
-        spellTarget = sel
-    elseif data.targetName then
-        for _, p in ipairs(GetStateMap():GetPlayers()) do
-            if p:GetName() == data.targetName then spellTarget = p break end
-        end
-    end
-    if spellTarget then
-        spellTarget:LearnSpell(spellId)
-    else
-        player:LearnSpell(spellId)
-    end
-
-    player:RegisterEvent(function(eventId, delay, repeats, player)
-        -- Re-resolve the target on the map state (same logic as the original
-        -- delayed check, just state-aware).
-        local sel = player:GetSelection()
-        if data.targetGuidLow and (not sel or sel:GetGUIDLow() ~= data.targetGuidLow) then
-            sel = nil
-            if data.targetName then
-                for _, p in ipairs(GetStateMap():GetPlayers()) do
-                    if p:GetName() == data.targetName then sel = p break end
-                end
-            end
-        end
-        if sel and not sel:HasSpell(spellId) then
-            player:SendBroadcastMessage("Invalid spell ID. Please provide a valid number.")
-        elseif not player:HasSpell(spellId) then
-            player:SendBroadcastMessage("Invalid spell ID. Please provide a valid number.")
-        end
-    end, 20, 1)
-end
-
-EMQ.RegisterQueue("CmdLearnSpell", DoLearnSpell)
-
 if GetStateMapId() ~= -1 then return end
 
 local function onCommand(event, player, command)
@@ -57,13 +9,21 @@ local function onCommand(event, player, command)
         local spellId = tonumber(spellIdStr)
 
         if spellId then
-            local data = { spellId = spellId }
-            local sel = player:GetSelection()
-            if sel and sel:IsPlayer() then
-                data.targetGuidLow = sel:GetGUIDLow()
-                data.targetName = sel:GetName()
+            local target = player:GetSelection()
+            if target and target:IsPlayer() then
+                target:LearnSpell(spellId)
+            else
+                player:LearnSpell(spellId)
             end
-            player:SendEMQMessage("CmdLearnSpell", data)
+
+            player:RegisterEvent(function(eventId, delay, repeats, player)
+                local target = player:GetSelection()
+                if target and not target:HasSpell(spellId) then
+                    player:SendBroadcastMessage("Invalid spell ID. Please provide a valid number.")
+                elseif not player:HasSpell(spellId) then
+                    player:SendBroadcastMessage("Invalid spell ID. Please provide a valid number.")
+                end
+            end, 20, 1)
         else
             player:SendBroadcastMessage("Invalid spell ID. Please provide a valid number.")
         end

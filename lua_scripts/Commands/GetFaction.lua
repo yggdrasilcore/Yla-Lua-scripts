@@ -1,29 +1,3 @@
-local EMQ = require("EMQ")
-
--- Map-state executor (via EMQ, or directly in compatibility mode).
-local function DoSetFaction(player, data)
-    if not player then
-        return
-    end
-    local target = player
-    local sel = player:GetSelection()
-    if sel and data.targetGuidLow and sel:GetGUIDLow() == data.targetGuidLow then
-        target = sel
-    elseif data.targetName then
-        for _, p in ipairs(GetStateMap():GetPlayers()) do
-            if p:GetName() == data.targetName then target = p break end
-        end
-    end
-    if target and target:IsPlayer() then
-        target:SetFaction(data.factionId)
-        player:SendBroadcastMessage("Set " .. (target == player and "your" or "selected player's") .. " faction to: " .. data.factionId)
-    else
-        player:SendBroadcastMessage("Your faction is: " .. player:GetFaction())
-    end
-end
-
-EMQ.RegisterQueue("CmdSetFaction", DoSetFaction)
-
 if GetStateMapId() ~= -1 then return end
 
 local function GetFactionCommand(event, player, command)
@@ -60,13 +34,14 @@ local function SetFactionCommand(event, player, command)
         end
 
         -- Get target or use player if no target
-        local data = { factionId = factionId }
         local target = player:GetSelection()
         if target and target:IsPlayer() then
-            data.targetGuidLow = target:GetGUIDLow()
-            data.targetName = target:GetName()
+            target:SetFaction(factionId)
+            player:SendBroadcastMessage("Set selected player's faction to: " .. factionId)
+        else
+            player:SetFaction(factionId)
+            player:SendBroadcastMessage("Set your faction to: " .. factionId)
         end
-        player:SendEMQMessage("CmdSetFaction", data)
         return false
     end
 end

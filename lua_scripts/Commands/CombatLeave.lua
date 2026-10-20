@@ -1,21 +1,4 @@
-local EMQ = require("EMQ")
-
 local CLTime = {}
-
--- Global executor: runs the core combatstop command for the player.
-EMQ.RegisterQueue("CombatLeaveStop", function(player, data)
-    if player then
-        player:RunCommand("combatstop")
-    end
-end)
-
-local function requestCombatStop(player)
-    if GetStateMapId() == -1 then
-        player:RunCommand("combatstop")
-    else
-        player:SendEMQMessage("CombatLeaveStop", {})
-    end
-end
 
 local function ClearCombat(event, player, command)
     if command == "cl" or command == "combatleave" or command == "leavecombat" or command == "lc" then
@@ -57,7 +40,7 @@ local function ClearCombat(event, player, command)
             print(string.format("Clearing combat for player %s", player:GetName()))
             CLTime[player:GetName()] = os.time() + 5 * 60
             player:Data():Set("cbstoptime", os.time())
-            requestCombatStop(player)
+            player:RunCommand("combatstop")
             player:SendBroadcastMessage("Your combat state has been cleared.")
         else
             print(string.format("Combat clear on cooldown for player %s", player:GetName()))
@@ -99,7 +82,7 @@ local function TimedCBCheck(eventid, delay, repeats, player)
     if player:GetInstanceId() and not hasCreatureInReasonableRange then
         print(string.format("Periodic Combat Clear - Player %s is in instance, clearing combat", player:GetName()))
         player:Data():Set("cbstoptime", os.time())
-        requestCombatStop(player)
+        player:RunCommand("combatstop")
     end
 end
 
