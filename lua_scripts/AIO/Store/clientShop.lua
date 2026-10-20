@@ -265,13 +265,22 @@ local CURRENCY_ITEMS = {
 local CURRENCY_ORDER = { "Community Tokens", "Vote Tokens", "Activity Tokens" }
 
 local currentTab = tabsInfo[1] and tabsInfo[1].id or 0
-local currentPage = 1
+local currentTabName = tabsInfo[1] and tabsInfo[1].name or ""
 local currentFilter = "All Currencies"
+local searchQuery = ""
 
 local UpdateCurrencyBalances
 local UpdateServiceCards
 local SelectTab
 local ShowPurchaseConfirm
+local searchBox
+local serverItemNames = {}
+local StoreClientHandlers = AIO.AddHandlers("CustomShopClient", {})
+
+function StoreClientHandlers.StoreNames(player, names)
+    serverItemNames = names or {}
+    UpdateServiceCards()
+end
 
 local function GetEntryDisplay(entry)
     if entry.itemType == "spell" then
@@ -279,12 +288,13 @@ local function GetEntryDisplay(entry)
         return name or entry.name or ("Spell " .. tostring(entry.id)), icon or FALLBACK_ICON
     end
 
-    local name, _, _, _, _, _, _, _, _, icon = GetItemInfo(entry.id)
+    local itemName, _, _, _, _, _, _, _, _, icon = GetItemInfo(entry.id)
     if not icon then
         icon = GetItemIcon(entry.id)
     end
 
-    return name or entry.name or ("Item " .. tostring(entry.id)), icon or FALLBACK_ICON
+    return itemName or serverItemNames[tostring(entry.id)] or entry.name or ("Item " .. tostring(entry.id)), icon
+        or FALLBACK_ICON
 end
 
 local function FormatCost(cost, costType)
@@ -313,11 +323,36 @@ end
 
 local function GetFilteredEntries()
     local entries = {}
-    local tabItems = itemsInfo[currentTab] or {}
 
+    local function matchesFilter(entry)
+        return currentFilter == "All Currencies" or entry.costType == currentFilter
+    end
+
+    if searchQuery ~= "" then
+        local tabIDs = {}
+        for tabID in pairs(itemsInfo) do
+            table.insert(tabIDs, tabID)
+        end
+        table.sort(tabIDs)
+
+        for _, tabID in ipairs(tabIDs) do
+            for index, entry in ipairs(itemsInfo[tabID]) do
+                if matchesFilter(entry) then
+                    local name = GetEntryDisplay(entry)
+                    if string.find(string.lower(name), searchQuery, 1, true) then
+                        table.insert(entries, { entry = entry, index = index, tabID = tabID })
+                    end
+                end
+            end
+        end
+
+        return entries
+    end
+
+    local tabItems = itemsInfo[currentTab] or {}
     for index, entry in ipairs(tabItems) do
-        if currentFilter == "All Currencies" or entry.costType == currentFilter then
-            table.insert(entries, { entry = entry, index = index })
+        if matchesFilter(entry) then
+            table.insert(entries, { entry = entry, index = index, tabID = currentTab })
         end
     end
 
@@ -325,6 +360,10 @@ local function GetFilteredEntries()
 end
 
 ----------------------------------------------------------------------------------------------
+
+local itemTooltip = CreateFrame("GameTooltip", "CustomStoreTooltip", UIParent, "GameTooltipTemplate")
+itemTooltip:SetOwner(UIParent, "ANCHOR_NONE")
+itemTooltip:Hide()
 
 local mainFrame = CreateFrame("Frame", "YggdrasilStoreMainFrame", UIParent)
 mainFrame:SetSize(900, 560)
@@ -338,22 +377,21 @@ mainFrame:SetScript("OnDragStop", mainFrame.StopMovingOrSizing)
 mainFrame:SetClampedToScreen(true)
 mainFrame:SetBackdrop(
     {
-        bgFile = "Interface\\FrameGeneral\\UI-Background-Marble",
+        bgFile = "Interface\\AchievementFrame\\UI-Achievement-Parchment-Horizontal",
         edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-        tile = true,
-        tileSize = 256,
+        tile = false,
         edgeSize = 32,
         insets = { left = 8, right = 8, top = 8, bottom = 8 }
     }
 )
-mainFrame:SetBackdropColor(0.20, 0.16, 0.12, 1)
+mainFrame:SetBackdropColor(0.32, 0.26, 0.18, 1)
 mainFrame:SetBackdropBorderColor(0.65, 0.52, 0.20, 1)
 mainFrame:Hide()
 
 local title = mainFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 title:SetPoint("TOP", mainFrame, "TOP", 0, -10)
 title:SetFont("Fonts\\FRIZQT__.TTF", 18)
-title:SetText("Shop")
+title:SetText("Yggdrasil Store")
 title:SetTextColor(0.95, 0.82, 0.3)
 
 local titleDivider = mainFrame:CreateTexture(nil, "ARTWORK")
@@ -365,48 +403,21 @@ titleDivider:SetPoint("TOP", mainFrame, "TOP", 0, -34)
 local closeButton = CreateFrame("Button", nil, mainFrame, "UIPanelCloseButton")
 closeButton:SetPoint("TOPRIGHT", -5, -5)
 
-local loadingFrame = CreateFrame("Frame", "YggdrasilStoreLoadingFrame", UIParent)
-loadingFrame:SetSize(280, 90)
-loadingFrame:SetPoint("CENTER")
-loadingFrame:SetFrameStrata("DIALOG")
-loadingFrame:SetBackdrop(
-    {
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = false,
-        edgeSize = 16,
-        insets = { left = 4, right = 4, top = 4, bottom = 4 }
-    }
-)
-loadingFrame:SetBackdropColor(0.20, 0.16, 0.12, 1)
-loadingFrame:SetBackdropBorderColor(0.65, 0.52, 0.20, 1)
-loadingFrame:Hide()
-
-local loadingTitle = loadingFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-loadingTitle:SetPoint("TOP", loadingFrame, "TOP", 0, -18)
-loadingTitle:SetText("Loading store...")
-loadingTitle:SetTextColor(0.95, 0.82, 0.3)
-
-local loadingSubtitle = loadingFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-loadingSubtitle:SetPoint("TOP", loadingTitle, "BOTTOM", 0, -8)
-loadingSubtitle:SetText("Querying item data")
-
 ----------------------------------------------------------------------------------------------
 
 local navPanel = CreateFrame("Frame", nil, mainFrame)
-navPanel:SetSize(190, 417)
+navPanel:SetSize(190, 477)
 navPanel:SetPoint("TOPLEFT", 15, -48)
 navPanel:SetBackdrop(
     {
-        bgFile = "Interface\\FrameGeneral\\UI-Background-Rock",
+        bgFile = "Interface\\AchievementFrame\\UI-Achievement-Parchment-Horizontal",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true,
-        tileSize = 256,
+        tile = false,
         edgeSize = 12,
         insets = { left = 4, right = 4, top = 4, bottom = 4 }
     }
 )
-navPanel:SetBackdropColor(0.25, 0.20, 0.14, 1)
+navPanel:SetBackdropColor(0.28, 0.22, 0.16, 1)
 navPanel:SetBackdropBorderColor(0.55, 0.45, 0.15, 1)
 
 local navHeader = navPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -419,7 +430,7 @@ local navButtons = {}
 for i, tab in ipairs(tabsInfo) do
     local button = CreateFrame("Button", "YggdrasilStoreNavButton" .. i, navPanel)
     button:SetSize(170, 34)
-    button:SetPoint("TOPLEFT", navPanel, "TOPLEFT", 10, -30 - (i - 1) * 38)
+    button:SetPoint("TOPLEFT", navPanel, "TOPLEFT", 10, -68 - (i - 1) * 38)
     button:SetBackdrop(
         {
             bgFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Background",
@@ -484,78 +495,112 @@ contentPanel:SetSize(665, 477)
 contentPanel:SetPoint("TOPLEFT", 220, -48)
 contentPanel:SetBackdrop(
     {
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
+        bgFile = "Interface\\AchievementFrame\\UI-Achievement-Parchment-Horizontal",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
         tile = false,
         edgeSize = 12,
         insets = { left = 4, right = 4, top = 4, bottom = 4 }
     }
 )
-contentPanel:SetBackdropColor(0.40, 0.32, 0.22, 1)
+contentPanel:SetBackdropColor(0.24, 0.19, 0.14, 1)
 contentPanel:SetBackdropBorderColor(0.55, 0.45, 0.15, 1)
 
 local categoryHeader = contentPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 categoryHeader:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 12, -10)
 categoryHeader:SetTextColor(0.95, 0.82, 0.3)
 
-local nextButton = CreateFrame("Button", nil, contentPanel, "UIPanelButtonTemplate")
-nextButton:SetSize(24, 22)
-nextButton:SetText(">")
-nextButton:SetPoint("TOPRIGHT", contentPanel, "TOPRIGHT", -10, -8)
+searchBox = CreateFrame("EditBox", "YggdrasilStoreSearchBox", navPanel)
+searchBox:SetSize(170, 34)
+searchBox:SetPoint("TOPLEFT", navPanel, "TOPLEFT", 10, -30)
+searchBox:SetAutoFocus(false)
+searchBox:SetMaxLetters(60)
+searchBox:SetFont("Fonts\\FRIZQT__.TTF", 12)
+searchBox:SetTextColor(0.95, 0.85, 0.55)
+searchBox:SetTextInsets(10, 10, 0, 0)
+searchBox:SetBackdrop(
+    {
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = false,
+        edgeSize = 12,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 }
+    }
+)
+searchBox:SetBackdropColor(0.30, 0.22, 0.10, 1)
+searchBox:SetBackdropBorderColor(0.55, 0.45, 0.15, 1)
 
-local pageText = contentPanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-pageText:SetPoint("RIGHT", nextButton, "LEFT", -8, 0)
+local searchPlaceholder = searchBox:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+searchPlaceholder:SetPoint("LEFT", searchBox, "LEFT", 10, 0)
+searchPlaceholder:SetText("Search all items...")
 
-local prevButton = CreateFrame("Button", nil, contentPanel, "UIPanelButtonTemplate")
-prevButton:SetSize(24, 22)
-prevButton:SetText("<")
-prevButton:SetPoint("RIGHT", pageText, "LEFT", -8, 0)
+searchBox:SetScript(
+    "OnEscapePressed",
+    function(self)
+        self:SetText("")
+        self:ClearFocus()
+    end
+)
 
-prevButton:SetScript(
-    "OnClick",
-    function()
-        if currentPage > 1 then
-            currentPage = currentPage - 1
-            UpdateServiceCards()
+searchBox:SetScript(
+    "OnEnterPressed",
+    function(self)
+        self:ClearFocus()
+    end
+)
+
+searchBox:SetScript(
+    "OnTextChanged",
+    function(self)
+        searchQuery = string.lower(self:GetText() or "")
+
+        if searchQuery == "" then
+            searchPlaceholder:Show()
+            categoryHeader:SetText(currentTabName)
+        else
+            searchPlaceholder:Hide()
+            categoryHeader:SetText("Search results")
+        end
+
+        UpdateServiceCards()
+    end
+)
+
+local scrollFrame = CreateFrame("ScrollFrame", "YggdrasilStoreScrollFrame", contentPanel, "UIPanelScrollFrameTemplate")
+scrollFrame:SetPoint("TOPLEFT", contentPanel, "TOPLEFT", 8, -38)
+scrollFrame:SetPoint("BOTTOMRIGHT", contentPanel, "BOTTOMRIGHT", -30, 8)
+scrollFrame:EnableMouseWheel(true)
+scrollFrame:SetScript(
+    "OnMouseWheel",
+    function(self, delta)
+        local scrollbar = _G[self:GetName() .. "ScrollBar"]
+        if scrollbar then
+            scrollbar:SetValue(scrollbar:GetValue() - delta * 48)
         end
     end
 )
 
-nextButton:SetScript(
-    "OnClick",
-    function()
-        local total = #GetFilteredEntries()
-        local maxPages = math.max(1, math.ceil(total / 8))
-        if currentPage < maxPages then
-            currentPage = currentPage + 1
-            UpdateServiceCards()
-        end
-    end
-)
+local scrollChild = CreateFrame("Frame", nil, scrollFrame)
+scrollChild:SetSize(624, 431)
+scrollFrame:SetScrollChild(scrollChild)
+
+local emptyMessage = scrollFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+emptyMessage:SetPoint("CENTER", scrollFrame, "CENTER", 0, 0)
+emptyMessage:SetText("No matching items.")
+emptyMessage:SetTextColor(0.80, 0.70, 0.50)
+emptyMessage:Hide()
 
 ----------------------------------------------------------------------------------------------
 
 local serviceCards = {}
-local CARD_WIDTH = 152
+local CARD_WIDTH = 150
 local CARD_HEIGHT = 200
-local CARD_SPACING_X = 10
+local CARD_SPACING_X = 8
 local CARD_SPACING_Y = 12
-local GRID_LEFT = 8
-local GRID_TOP = -38
+local GRID_LEFT = 2
 
-for i = 1, 8 do
-    local card = CreateFrame("Button", nil, contentPanel)
+local function CreateServiceCard()
+    local card = CreateFrame("Button", nil, scrollChild)
     card:SetSize(CARD_WIDTH, CARD_HEIGHT)
-
-    local col = (i - 1) % 4
-    local row = math.floor((i - 1) / 4)
-    card:SetPoint(
-        "TOPLEFT",
-        contentPanel,
-        "TOPLEFT",
-        GRID_LEFT + col * (CARD_WIDTH + CARD_SPACING_X),
-        GRID_TOP - row * (CARD_HEIGHT + CARD_SPACING_Y)
-    )
 
     card:SetBackdrop(
         {
@@ -685,14 +730,14 @@ for i = 1, 8 do
         end
     )
 
-    serviceCards[i] = card
+    return card
 end
 
 ----------------------------------------------------------------------------------------------
 
-local currencyBar = CreateFrame("Frame", nil, mainFrame)
-currencyBar:SetSize(300, 26)
-currencyBar:SetPoint("BOTTOMLEFT", 15, 15)
+local currencyBar = CreateFrame("Frame", nil, navPanel)
+currencyBar:SetSize(166, 76)
+currencyBar:SetPoint("BOTTOMLEFT", navPanel, "BOTTOMLEFT", 12, 64)
 currencyBar:SetBackdrop(
     {
         bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
@@ -711,20 +756,23 @@ for i, costType in ipairs(CURRENCY_ORDER) do
     local itemID = CURRENCY_ITEMS[costType]
 
     local badge = CreateFrame("Frame", nil, currencyBar)
-    badge:SetSize(85, 20)
-    badge:SetPoint("LEFT", currencyBar, "LEFT", 10 + (i - 1) * 95, 0)
+    badge:SetSize(146, 18)
+    badge:SetPoint("TOPLEFT", currencyBar, "TOPLEFT", 6, -8 - (i - 1) * 22)
     badge:EnableMouse(true)
     badge.itemID = itemID
     badge.costType = costType
+    badge.displayName = costType:gsub(" Tokens$", " Token")
 
     badge.Icon = badge:CreateTexture(nil, "ARTWORK")
-    badge.Icon:SetSize(18, 18)
+    badge.Icon:SetSize(16, 16)
     badge.Icon:SetPoint("LEFT", badge, "LEFT", 0, 0)
     badge.Icon:SetTexture(GetItemIcon(itemID) or FALLBACK_ICON)
     badge.Icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 
-    badge.Amount = badge:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    badge.Amount:SetPoint("LEFT", badge.Icon, "RIGHT", 6, 0)
+    badge.Amount = badge:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    badge.Amount:SetPoint("LEFT", badge.Icon, "RIGHT", 5, 0)
+    badge.Amount:SetWidth(120)
+    badge.Amount:SetJustifyH("LEFT")
 
     badge:SetScript(
         "OnEnter",
@@ -750,43 +798,88 @@ end
 
 local pendingPurchase
 
-StaticPopupDialogs["YGGDRASIL_STORE_CONFIRM"] = {
-    text = "Purchase %s for %s %s?",
-    button1 = "Yes",
-    button2 = "No",
-    OnAccept = function()
-        local purchase = pendingPurchase
-        pendingPurchase = nil
+local confirmFrame = CreateFrame("Frame", "YggdrasilStoreConfirmFrame", UIParent)
+confirmFrame:SetSize(380, 170)
+confirmFrame:SetPoint("CENTER")
+confirmFrame:SetFrameStrata("TOOLTIP")
+confirmFrame:SetBackdrop(
+    {
+        bgFile = "Interface\\AchievementFrame\\UI-Achievement-Parchment-Horizontal",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        tile = false,
+        edgeSize = 24,
+        insets = { left = 6, right = 6, top = 6, bottom = 6 }
+    }
+)
+confirmFrame:SetBackdropColor(0.24, 0.19, 0.14, 1)
+confirmFrame:SetBackdropBorderColor(0.65, 0.52, 0.20, 1)
+confirmFrame:EnableMouse(true)
+confirmFrame:Hide()
 
-        if not purchase then
-            return
-        end
+local confirmTitle = confirmFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+confirmTitle:SetPoint("TOP", confirmFrame, "TOP", 0, -14)
+confirmTitle:SetText("Confirm Purchase")
+confirmTitle:SetTextColor(0.95, 0.82, 0.3)
 
-        AIO.Handle("CustomShop", "addItemOrSpell", purchase.serviceKey)
+local confirmText = confirmFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+confirmText:SetPoint("TOP", confirmTitle, "BOTTOM", 0, -12)
+confirmText:SetWidth(340)
+confirmText:SetHeight(56)
+confirmText:SetJustifyH("CENTER")
+confirmText:SetWordWrap(true)
 
-        local frame = CreateFrame("Frame")
-        frame:SetScript(
-            "OnUpdate",
-            function(self, elapsed)
-                self.elapsed = (self.elapsed or 0) + elapsed
-                if self.elapsed >= 1 then
-                    UpdateCurrencyBalances()
-                    UpdateServiceCards()
-                    self:SetScript("OnUpdate", nil)
-                end
+local confirmYes = CreateFrame("Button", nil, confirmFrame, "UIPanelButtonTemplate")
+confirmYes:SetSize(100, 24)
+confirmYes:SetPoint("BOTTOM", confirmFrame, "BOTTOM", -60, 18)
+confirmYes:SetText("Yes")
+
+local confirmNo = CreateFrame("Button", nil, confirmFrame, "UIPanelButtonTemplate")
+confirmNo:SetSize(100, 24)
+confirmNo:SetPoint("BOTTOM", confirmFrame, "BOTTOM", 60, 18)
+confirmNo:SetText("No")
+
+local function CompletePurchase()
+    local purchase = pendingPurchase
+    pendingPurchase = nil
+    confirmFrame:Hide()
+
+    if not purchase then
+        return
+    end
+
+    AIO.Handle("CustomShop", "addItemOrSpell", purchase.serviceKey)
+
+    local frame = CreateFrame("Frame")
+    frame:SetScript(
+        "OnUpdate",
+        function(self, elapsed)
+            self.elapsed = (self.elapsed or 0) + elapsed
+            if self.elapsed >= 1 then
+                UpdateCurrencyBalances()
+                UpdateServiceCards()
+                self:SetScript("OnUpdate", nil)
             end
-        )
-    end,
-    timeout = 0,
-    whileDead = true,
-    hideOnEscape = true,
-    preferredIndex = 3,
-}
+        end
+    )
+end
+
+confirmYes:SetScript("OnClick", CompletePurchase)
+confirmNo:SetScript(
+    "OnClick",
+    function()
+        pendingPurchase = nil
+        confirmFrame:Hide()
+    end
+)
 
 ShowPurchaseConfirm = function(entry, serviceKey)
     pendingPurchase = { entry = entry, serviceKey = serviceKey }
     local name = GetEntryDisplay(entry)
-    StaticPopup_Show("YGGDRASIL_STORE_CONFIRM", name, FormatCost(entry.cost, entry.costType), entry.costType)
+    confirmText:SetText(
+        "Purchase " .. name .. " for " .. FormatCost(entry.cost, entry.costType) .. " " .. entry.costType .. "?"
+    )
+    confirmFrame:Show()
+    confirmFrame:Raise()
 end
 
 ----------------------------------------------------------------------------------------------
@@ -794,76 +887,74 @@ end
 UpdateCurrencyBalances = function()
     for _, badge in ipairs(currencyBadges) do
         badge.Icon:SetTexture(GetItemIcon(badge.itemID) or FALLBACK_ICON)
-        badge.Amount:SetText(tostring(GetItemCount(badge.itemID)))
+        badge.Amount:SetText(badge.displayName .. ": " .. tostring(GetItemCount(badge.itemID)))
     end
 end
 
-local function UpdatePageButtons()
-    local total = #GetFilteredEntries()
-    local maxPages = math.max(1, math.ceil(total / 8))
-
-    if currentPage > maxPages then
-        currentPage = maxPages
-    end
-
-    if maxPages <= 1 then
-        prevButton:Hide()
-        nextButton:Hide()
-        pageText:Hide()
-        return
-    end
-
-    prevButton:Show()
-    nextButton:Show()
-    pageText:Show()
-    pageText:SetText(currentPage .. " / " .. maxPages)
-
-    if currentPage == 1 then
-        prevButton:Disable()
-    else
-        prevButton:Enable()
-    end
-
-    if currentPage == maxPages then
-        nextButton:Disable()
-    else
-        nextButton:Enable()
-    end
+local function LayoutServiceCard(card, index)
+    local col = (index - 1) % 4
+    local row = math.floor((index - 1) / 4)
+    card:ClearAllPoints()
+    card:SetPoint(
+        "TOPLEFT",
+        scrollChild,
+        "TOPLEFT",
+        GRID_LEFT + col * (CARD_WIDTH + CARD_SPACING_X),
+        -row * (CARD_HEIGHT + CARD_SPACING_Y)
+    )
 end
 
 UpdateServiceCards = function()
     local entries = GetFilteredEntries()
-    local startIndex = (currentPage - 1) * 8
 
-    for i = 1, 8 do
-        local card = serviceCards[i]
-        local item = entries[startIndex + i]
-
-        if item then
-            local entry = item.entry
-            local name, icon = GetEntryDisplay(entry)
-
-            card.entry = entry
-            card.serviceKey = currentTab .. ":" .. tostring(item.index)
-            card.Icon:SetTexture(icon)
-            card.NameText:SetText(name)
-            card.QuantityText:SetText("x" .. tostring(entry.quantity or "1"))
-            card.PriceText:SetText(FormatCost(entry.cost, entry.costType))
-            card.PriceIcon:SetTexture(GetCostIcon(entry.costType))
-            card:Show()
-        else
-            card.entry = nil
-            card.serviceKey = nil
-            card:Hide()
-        end
+    if #entries == 0 then
+        emptyMessage:Show()
+    else
+        emptyMessage:Hide()
     end
 
-    UpdatePageButtons()
+    for i = 1, #entries do
+        local card = serviceCards[i]
+        if not card then
+            card = CreateServiceCard()
+            serviceCards[i] = card
+        end
+
+        local item = entries[i]
+        local entry = item.entry
+        local name, icon = GetEntryDisplay(entry)
+
+        LayoutServiceCard(card, i)
+        card.entry = entry
+        card.serviceKey = tostring(item.tabID) .. ":" .. tostring(item.index)
+        card.Icon:SetTexture(icon)
+        card.NameText:SetText(name)
+        card.QuantityText:SetText("x" .. tostring(entry.quantity or "1"))
+        card.PriceText:SetText(FormatCost(entry.cost, entry.costType))
+        card.PriceIcon:SetTexture(GetCostIcon(entry.costType))
+        card:Show()
+    end
+
+    for i = #entries + 1, #serviceCards do
+        local card = serviceCards[i]
+        card.entry = nil
+        card.serviceKey = nil
+        card:Hide()
+    end
+
+    local rows = math.max(1, math.ceil(#entries / 4))
+    local contentHeight = rows * (CARD_HEIGHT + CARD_SPACING_Y) - CARD_SPACING_Y
+    scrollChild:SetSize(624, math.max(contentHeight, 431))
+    scrollFrame:SetVerticalScroll(0)
 end
 
 SelectTab = function(tab)
     currentTab = tab.id
-    currentPage = 1
+    currentTabName = tab.name
+
+    if searchBox and searchBox:GetText() ~= "" then
+        searchBox:SetText("")
+    end
 
     for _, button in ipairs(navButtons) do
         if button.tabID == tab.id then
@@ -887,16 +978,15 @@ end
 ----------------------------------------------------------------------------------------------
 
 local filterDropdown = CreateFrame("Frame", "YggdrasilStoreFilterDropdown", navPanel, "UIDropDownMenuTemplate")
-filterDropdown:SetPoint("BOTTOMLEFT", navPanel, "BOTTOMLEFT", 2, 8)
+filterDropdown:SetPoint("BOTTOMLEFT", navPanel, "BOTTOMLEFT", -10, 10)
 
 local filterLabel = navPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-filterLabel:SetPoint("BOTTOMLEFT", navPanel, "BOTTOMLEFT", 14, 42)
+filterLabel:SetPoint("BOTTOMLEFT", navPanel, "BOTTOMLEFT", 10, 46)
 filterLabel:SetText("Filter by currency")
 filterLabel:SetTextColor(0.80, 0.70, 0.35)
 
 local function FilterDropdown_OnClick(self)
     currentFilter = self.value
-    currentPage = 1
     UIDropDownMenu_SetText(filterDropdown, currentFilter)
     UpdateServiceCards()
 end
@@ -914,7 +1004,7 @@ local function InitializeFilterDropdown(self, level)
 end
 
 UIDropDownMenu_Initialize(filterDropdown, InitializeFilterDropdown)
-UIDropDownMenu_SetWidth(filterDropdown, 160)
+UIDropDownMenu_SetWidth(filterDropdown, 150)
 UIDropDownMenu_SetText(filterDropdown, currentFilter)
 
 ----------------------------------------------------------------------------------------------
@@ -999,13 +1089,7 @@ local function StartStorePrefetch()
                 allQueriesReady = true
                 self:SetScript("OnUpdate", nil)
                 self:Hide()
-
-                if pendingStoreOpen then
-                    pendingStoreOpen = false
-                    loadingFrame:Hide()
-                    mainFrame:Show()
-                end
-
+                UpdateServiceCards()
                 return
             end
 
@@ -1018,14 +1102,8 @@ local function StartStorePrefetch()
 end
 
 local function OpenStore()
-    if allQueriesReady then
-        loadingFrame:Hide()
-        mainFrame:Show()
-    else
-        pendingStoreOpen = true
-        loadingFrame:Show()
-        StartStorePrefetch()
-    end
+    mainFrame:Show()
+    StartStorePrefetch()
 end
 
 ----------------------------------------------------------------------------------------------
@@ -1065,6 +1143,10 @@ eventFrame:SetScript(
     "OnEvent",
     function(_, event, prefix, message)
         if event == "CHAT_MSG_ADDON" and prefix == "CustomShop" and message == "openstore" then
+            OpenStore()
+        elseif event == "CHAT_MSG_ADDON" and prefix == "StoreOpenSearch" then
+            searchBox:SetText(message or "")
+            searchBox:ClearFocus()
             OpenStore()
         end
     end
@@ -1112,6 +1194,8 @@ end
 if tabsInfo[1] then
     SelectTab(tabsInfo[1])
 end
+
+AIO.Handle("CustomShop", "getStoreNames")
 
 StartStorePrefetch()
 

@@ -242,6 +242,28 @@ local itemsInfo = {
 
 }
 
+local STORE_ITEM_NAMES = {}
+
+for _, tabItems in pairs(itemsInfo) do
+    for _, entry in ipairs(tabItems) do
+        local itemID = tonumber(entry.id)
+        if itemID then
+            local template = GetItemTemplate(itemID)
+            STORE_ITEM_NAMES[tostring(itemID)] = (template and template:GetName()) or entry.name
+        end
+    end
+end
+
+for _, itemID in pairs(TOKEN_ITEMS) do
+    itemID = tonumber(itemID)
+    if itemID and not STORE_ITEM_NAMES[tostring(itemID)] then
+        local template = GetItemTemplate(itemID)
+        if template then
+            STORE_ITEM_NAMES[tostring(itemID)] = template:GetName()
+        end
+    end
+end
+
 local PURCHASE_COOLDOWN = 2
 
 local purchaseVerification = {}
@@ -412,4 +434,12 @@ function CustomShop.addItemOrSpell(player, serviceID)
     else
         PurchaseSpell(player, itemID, totalCost, costType)
     end
+end
+
+function CustomShop.getStoreNames(player)
+    AIO.Handle(player, "CustomShopClient", "StoreNames", STORE_ITEM_NAMES)
+end
+
+function CustomShop.openStoreSearch(player, search)
+    player:SendAddonMessage("StoreOpenSearch", tostring(search or ""), 7, player)
 end
