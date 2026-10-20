@@ -7707,8 +7707,6 @@ INSERT  IGNORE INTO `creature` (`guid`, `id1`, `id2`, `id3`, `map`, `zoneId`, `a
 [[
 INSERT  IGNORE INTO `creature` (`guid`, `id1`, `id2`, `id3`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseMask`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `wander_distance`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`, `ScriptName`, `VerifiedBuild`, `CreateObject`, `Comment`) VALUES (15001272,258170,0,0,571,0,0,1,1,0,3840.25,5127.2,-1.50945,5.7253,300,0,0,1996,0,0,0,0,0,'',NULL,0,NULL);]],
 [[
-INSERT  IGNORE INTO `creature` (`guid`, `id1`, `id2`, `id3`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseMask`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `wander_distance`, `currentwaypoint`, `curhealth`, `curmana`, `MovementType`, `npcflag`, `unit_flags`, `dynamicflags`, `ScriptName`, `VerifiedBuild`, `CreateObject`, `Comment`) VALUES (15001747,191000,0,0,1,0,0,1,4294967294,0,16251.4,16258.3,18.8743,0.491612,300,0,0,12600,0,0,0,0,0,'',NULL,0,NULL);]],
-[[
 
 -- gameobject: 257 missing rows
 INSERT  IGNORE INTO `gameobject` (`guid`, `id`, `map`, `zoneId`, `areaId`, `spawnMask`, `phaseMask`, `position_x`, `position_y`, `position_z`, `orientation`, `rotation0`, `rotation1`, `rotation2`, `rotation3`, `spawntimesecs`, `animprogress`, `state`, `ScriptName`, `VerifiedBuild`, `Comment`) VALUES (2578788,192688,571,0,0,1,1,5806.76,808.665,661.747,4.04537,0,0,-0.899625,0.436664,300,255,1,'',0,NULL);]],
