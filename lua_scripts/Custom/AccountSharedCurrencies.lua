@@ -16,12 +16,12 @@ local currencyItemIDs = {
 ----------------------------------------------------------------------------------------------------
 local function UpdateAccountCurrency(accountId, currencyId, newCount)
     print("[AccountCurrency] UpdateAccountCurrency: AccountID=" .. accountId .. ", CurrencyID=" .. currencyId .. ", NewCount=" .. newCount)
-    CharDBExecute("INSERT INTO acore_eluna.accountwide_currency (accountId, currencyId, count) VALUES (" .. accountId .. ", " .. currencyId .. ", " .. newCount .. ") ON DUPLICATE KEY UPDATE count = " .. newCount)
+    CharDBExecute("INSERT INTO ycore_yla.accountwide_currency (accountId, currencyId, count) VALUES (" .. accountId .. ", " .. currencyId .. ", " .. newCount .. ") ON DUPLICATE KEY UPDATE count = " .. newCount)
 end
 
 local function InitializeAccountCurrencyOnEmptyTable(accountId)
     print("[AccountCurrency] InitializeAccountCurrencyOnEmptyTable: Starting for AccountID=" .. accountId)
-    CharDBQueryAsync("SELECT 1 FROM acore_eluna.accountwide_currency WHERE accountId = " .. accountId .. " LIMIT 1", function(result)
+    CharDBQueryAsync("SELECT 1 FROM ycore_yla.accountwide_currency WHERE accountId = " .. accountId .. " LIMIT 1", function(result)
         if not result then
             print("[AccountCurrency] InitializeAccountCurrencyOnEmptyTable: Empty table detected, initializing currencies for AccountID=" .. accountId)
             for _, currencyId in ipairs(currencyItemIDs) do
@@ -47,7 +47,7 @@ local function SyncCurrencyOnLogin(player, accountId)
         local playerCurrencyCount = player:GetItemCount(currencyId)
         print("[AccountCurrency] SyncCurrencyOnLogin: Player " .. name .. " has " .. playerCurrencyCount .. " of currency " .. currencyId)
         
-        CharDBQueryAsync("SELECT count FROM acore_eluna.accountwide_currency WHERE accountId = " .. accountId .. " AND currencyId = " .. currencyId, function(query)
+        CharDBQueryAsync("SELECT count FROM ycore_yla.accountwide_currency WHERE accountId = " .. accountId .. " AND currencyId = " .. currencyId, function(query)
             local player
             for _, p in ipairs(GetStateMap():GetPlayers()) do
                 if p:GetName() == name then player = p break end
@@ -109,7 +109,7 @@ local function AccountWideCurrency(event, player)
     elseif event == 25 then -- PLAYER_EVENT_ON_SAVE        
         for _, currencyId in ipairs(currencyItemIDs) do
             local playerCurrencyCount = player:GetItemCount(currencyId)            
-            CharDBQueryAsync("SELECT count FROM acore_eluna.accountwide_currency WHERE accountId = " .. accountId .. " AND currencyId = " .. currencyId, function(query)
+            CharDBQueryAsync("SELECT count FROM ycore_yla.accountwide_currency WHERE accountId = " .. accountId .. " AND currencyId = " .. currencyId, function(query)
                 local accountCurrencyCount
                 if query then 
                     accountCurrencyCount = query:GetUInt32(0) 

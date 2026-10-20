@@ -564,13 +564,13 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         player:Data():Set("FeathersStandardMount", nil)
         print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is nil")
         player:SendBroadcastMessage("Standard mount removed.")
-        CharDBExecute(string.format("DELETE FROM acore_eluna.character_flight WHERE guid = %d", player:GetGUIDLow()))
+        CharDBExecute(string.format("DELETE FROM ycore_yla.character_flight WHERE guid = %d", player:GetGUIDLow()))
         ShowManageStandardMount(event, player)
     elseif intid == 300003 then
         player:Data():Set("FeathersStandardMount", nil)
         print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is nil")
         player:SendBroadcastMessage("Standard mount removed.")
-        CharDBExecute(string.format("DELETE FROM acore_eluna.character_flight WHERE guid = %d", player:GetGUIDLow()))
+        CharDBExecute(string.format("DELETE FROM ycore_yla.character_flight WHERE guid = %d", player:GetGUIDLow()))
         ShowManageStandardMountCmd(event, player)
     elseif intid == 600000 then
         ShowManageStandardMount(event, player)
@@ -585,7 +585,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         local mountId = intid - 800000
         player:Data():Set("FeathersStandardMount", mountId)
         print("[Feathers of Azeroth]: Selecting standard mount for "..player:GetName().." is ".. tostring(player:Data():Get("FeathersStandardMount")) .." (mount ID "..mountId..")")
-        CharDBExecute(string.format("REPLACE INTO acore_eluna.character_flight (guid, standardmount) VALUES (%d, %d)", player:GetGUIDLow(), mountId))
+        CharDBExecute(string.format("REPLACE INTO ycore_yla.character_flight (guid, standardmount) VALUES (%d, %d)", player:GetGUIDLow(), mountId))
         player:SendBroadcastMessage("Standard mount set successfully.")
         player:GossipComplete()
     elseif intid > 0 then
@@ -675,7 +675,7 @@ end
 
 local function LoadStandardMount(event, player)
     local guid = player:GetGUIDLow()
-    local result = CharDBQuery(string.format("SELECT standardmount FROM acore_eluna.character_flight WHERE guid = %d", guid))
+    local result = CharDBQuery(string.format("SELECT standardmount FROM ycore_yla.character_flight WHERE guid = %d", guid))
     if result then
         local mountId = result:GetUInt32(0)
         if mountId  then
@@ -704,7 +704,7 @@ local function OnLoadScript()
     
     -- If we found any players with the item, query their standard mounts
     if #dbQueryTable > 0 then
-        local queryStr = string.format("SELECT guid, standardmount FROM acore_eluna.character_flight WHERE guid IN (%s)", 
+        local queryStr = string.format("SELECT guid, standardmount FROM ycore_yla.character_flight WHERE guid IN (%s)", 
             table.concat(dbQueryTable, ","))
         local result = CharDBQuery(queryStr)
         
@@ -788,7 +788,7 @@ OnLoadScript()
 
 if GetStateMapId() == -1 then
     WorldDBExecute("UPDATE item_template SET description = 'This item has the ability to wrap the wings of your flying mounts with the Feathers of Azeroth, permitting their use in Azeroth.' WHERE entry = 20739")
-    CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.character_flight (guid INT UNSIGNED NOT NULL, standardmount INT UNSIGNED, X FLOAT, Y FLOAT, Z FLOAT, O FLOAT, var1 INT UNSIGNED, var2 INT UNSIGNED, var3 INT UNSIGNED, PRIMARY KEY (guid))")
+    CharDBExecute("CREATE TABLE IF NOT EXISTS ycore_yla.character_flight (guid INT UNSIGNED NOT NULL, standardmount INT UNSIGNED, X FLOAT, Y FLOAT, Z FLOAT, O FLOAT, var1 INT UNSIGNED, var2 INT UNSIGNED, var3 INT UNSIGNED, PRIMARY KEY (guid))")
     RegisterPlayerEvent(3, LoadStandardMount)
     RegisterPlayerEvent(42, OnCommand)
     RegisterPacketEvent(0x346, 5, OnMoveSetFly) -- If a player tries to fly, check if they should be able to

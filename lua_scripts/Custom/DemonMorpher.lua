@@ -139,7 +139,7 @@ local customFamilyNames = {
 -- DB setup and world queries below only run in the world state.
 if GetStateMapId() == -1 then
     if MakeMorphTable then
-        CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.character_morphs (`guid` int DEFAULT NULL, `name` text, `id` int DEFAULT NULL, `form` int DEFAULT NULL, `active` smallint DEFAULT NULL, UNIQUE KEY `unique_guid_form` (`guid`, `id`))")
+        CharDBExecute("CREATE TABLE IF NOT EXISTS ycore_yla.character_morphs (`guid` int DEFAULT NULL, `name` text, `id` int DEFAULT NULL, `form` int DEFAULT NULL, `active` smallint DEFAULT NULL, UNIQUE KEY `unique_guid_form` (`guid`, `id`))")
     end
     if MakeMorphItem then
         WorldDBExecute("REPLACE INTO `item_template` (`entry`, `class`, `subclass`, `SoundOverrideSubclass`, `name`, `displayid`, `Quality`, `Flags`, `FlagsExtra`, `BuyCount`, `BuyPrice`, `SellPrice`, `InventoryType`, `AllowableClass`, `AllowableRace`, `ItemLevel`, `RequiredLevel`, `RequiredSkill`, `RequiredSkillRank`, `requiredspell`, `requiredhonorrank`, `RequiredCityRank`, `RequiredReputationFaction`, `RequiredReputationRank`, `maxcount`, `stackable`, `ContainerSlots`, `stat_type1`, `stat_value1`, `stat_type2`, `stat_value2`, `stat_type3`, `stat_value3`, `stat_type4`, `stat_value4`, `stat_type5`, `stat_value5`, `stat_type6`, `stat_value6`, `stat_type7`, `stat_value7`, `stat_type8`, `stat_value8`, `stat_type9`, `stat_value9`, `stat_type10`, `stat_value10`, `ScalingStatDistribution`, `ScalingStatValue`, `dmg_min1`, `dmg_max1`, `dmg_type1`, `dmg_min2`, `dmg_max2`, `dmg_type2`, `armor`, `holy_res`, `fire_res`, `nature_res`, `frost_res`, `shadow_res`, `arcane_res`, `delay`, `ammo_type`, `RangedModRange`, `spellid_1`, `spelltrigger_1`, `spellcharges_1`, `spellppmRate_1`, `spellcooldown_1`, `spellcategory_1`, `spellcategorycooldown_1`, `spellid_2`, `spelltrigger_2`, `spellcharges_2`, `spellppmRate_2`, `spellcooldown_2`, `spellcategory_2`, `spellcategorycooldown_2`, `spellid_3`, `spelltrigger_3`, `spellcharges_3`, `spellppmRate_3`, `spellcooldown_3`, `spellcategory_3`, `spellcategorycooldown_3`, `spellid_4`, `spelltrigger_4`, `spellcharges_4`, `spellppmRate_4`, `spellcooldown_4`, `spellcategory_4`, `spellcategorycooldown_4`, `spellid_5`, `spelltrigger_5`, `spellcharges_5`, `spellppmRate_5`, `spellcooldown_5`, `spellcategory_5`, `spellcategorycooldown_5`, `bonding`, `description`, `PageText`, `LanguageID`, `PageMaterial`, `startquest`, `lockid`, `Material`, `sheath`, `RandomProperty`, `RandomSuffix`, `block`, `itemset`, `MaxDurability`, `area`, `Map`, `BagFamily`, `TotemCategory`, `socketColor_1`, `socketContent_1`, `socketColor_2`, `socketContent_2`, `socketColor_3`, `socketContent_3`, `socketBonus`, `GemProperties`, `RequiredDisenchantSkill`, `ArmorDamageModifier`, `duration`, `ItemLimitCategory`, `HolidayId`, `ScriptName`, `DisenchantID`, `FoodType`, `minMoneyLoot`, `maxMoneyLoot`, `flagsCustom`, `VerifiedBuild`) values('5041','0','8','-1','Demonic Scroll','6423','6','8388608','0','1','0','0','0','256','-1','0','0','0','0','0','0','0','0','0','1','1','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','24312','0','0','0','-1','0','-1','0','0','0','0','-1','0','-1','0','0','0','0','-1','0','-1','0','0','0','0','-1','0','-1','0','0','0','0','-1','0','-1','0','This scroll lets you absorb the forms of demon enemies to apply them on your demon pets.','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','-1','0','0','0','0','','0','0','0','0','0','1');")
@@ -242,7 +242,7 @@ local function PlayerData(player)
     SaveData(player, d)
     local name = player:GetName()
     local guid = player:GetGUIDLow()
-    CharDBQueryAsync("SELECT id, form, active FROM acore_eluna.character_morphs WHERE guid = " .. guid, function(result)
+    CharDBQueryAsync("SELECT id, form, active FROM ycore_yla.character_morphs WHERE guid = " .. guid, function(result)
         local p
         for _, pl in pairs(GetStateMap():GetPlayers()) do
             if pl:GetName() == name then
@@ -312,7 +312,7 @@ local function OnKillCreature(event, player, creature)
         local guid = player:GetGUIDLow()
         local escapedName = string.gsub(creatureName, "'", "''")
 
-        CharDBExecute("REPLACE INTO acore_eluna.character_morphs (guid, name, id, form, active) VALUES (" .. guid .. ", '" .. escapedName .. "', " .. displayId .. ", " .. matchedFamily .. ", 0)") -- Consider moving db saves to onPlayerSave instead of creature kill
+        CharDBExecute("REPLACE INTO ycore_yla.character_morphs (guid, name, id, form, active) VALUES (" .. guid .. ", '" .. escapedName .. "', " .. displayId .. ", " .. matchedFamily .. ", 0)") -- Consider moving db saves to onPlayerSave instead of creature kill
 
         local familyName = familyNames[matchedFamily] or "demon"
 
@@ -399,7 +399,7 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
             end
             if pet then
                 pet:DeMorph()
-                CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = " .. player:GetGUIDLow() .. " AND form = " .. pet:GetCreatureFamily())
+                CharDBExecute("UPDATE ycore_yla.character_morphs SET active = 0 WHERE guid = " .. player:GetGUIDLow() .. " AND form = " .. pet:GetCreatureFamily())
                 local rd = LoadData(player)
                 rd.active = rd.active or {}
                 rd.active[pet:GetCreatureFamily()] = nil
@@ -420,7 +420,7 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
         local playername = p:GetName()
         local ITEMS_PER_PAGE = 10
 
-        CharDBQueryAsync("SELECT name, id FROM acore_eluna.character_morphs WHERE guid = "..guid.." AND form = "..formId, function(results)
+        CharDBQueryAsync("SELECT name, id FROM ycore_yla.character_morphs WHERE guid = "..guid.." AND form = "..formId, function(results)
             local player = FindPlayerOnMap(playername)
             if not player then return end
             
@@ -528,7 +528,7 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
     end
     
     local selFamily, selId, selName = chosenFamily, intid, name
-    CharDBQueryAsync("SELECT name FROM acore_eluna.character_morphs WHERE guid = " .. guid .. " AND form = " .. selFamily .. " AND id = " .. selId, function(morphNameResult)
+    CharDBQueryAsync("SELECT name FROM ycore_yla.character_morphs WHERE guid = " .. guid .. " AND form = " .. selFamily .. " AND id = " .. selId, function(morphNameResult)
         local p = FindPlayerOnMap(selName)
         if not p then return end
         local morphName = "Unknown Morph"
@@ -538,7 +538,7 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
         p:SendBroadcastMessage("You have morphed your "..familyNames[selFamily].." into "..morphName..".")
     end)
     
-    CharDBExecute("UPDATE acore_eluna.character_morphs SET active = (form = " .. chosenFamily .. " AND id = " .. intid .. ") WHERE guid = " .. guid .. " AND form = " .. chosenFamily)
+    CharDBExecute("UPDATE ycore_yla.character_morphs SET active = (form = " .. chosenFamily .. " AND id = " .. intid .. ") WHERE guid = " .. guid .. " AND form = " .. chosenFamily)
     
     local da = LoadData(player)
     da.active = da.active or {}

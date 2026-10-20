@@ -41,7 +41,7 @@ local function AIO_UI_FIX(event, player, command)
 	
 	if event == 28 then -- on login/map change, check reward state
 		if player:Data():Get("LvlRewardsChecked") then return end
-		CharDBQueryAsync("SELECT data FROM acore_eluna.character_custom_data WHERE guid = "..guid.." AND type = 99", function(result)
+		CharDBQueryAsync("SELECT data FROM ycore_yla.character_custom_data WHERE guid = "..guid.." AND type = 99", function(result)
 			local player
 			if GetStateMapId() == -1 then player = GetPlayerByGUID(GetPlayerGUID(guid))
 			else for _, p in ipairs(GetStateMap():GetPlayers()) do
@@ -61,9 +61,9 @@ local function AIO_UI_FIX(event, player, command)
 	elseif event == 4 or event == 25 then
 		if player:Data():Get("LvlRewardsChanged") then
 			if player:Data():Get("LvlRewardsDisabled") then
-				CharDBExecute("REPLACE INTO acore_eluna.character_custom_data (guid, type, time, data) VALUES ("..guid..", 99, "..os.time()..", 'DISABLED')")
+				CharDBExecute("REPLACE INTO ycore_yla.character_custom_data (guid, type, time, data) VALUES ("..guid..", 99, "..os.time()..", 'DISABLED')")
 			else
-				CharDBExecute("REPLACE INTO acore_eluna.character_custom_data (guid, type, time, data) VALUES ("..guid..", 99, "..os.time()..", 'ENABLED')")
+				CharDBExecute("REPLACE INTO ycore_yla.character_custom_data (guid, type, time, data) VALUES ("..guid..", 99, "..os.time()..", 'ENABLED')")
 			end
 		end
     elseif event == 42 then
@@ -132,7 +132,7 @@ end
 
 if not first then
    CharDBQueryAsync(
-       string.format("SELECT guid, data FROM acore_eluna.character_custom_data WHERE guid IN (%s) AND type = 99", guidString),
+       string.format("SELECT guid, data FROM ycore_yla.character_custom_data WHERE guid IN (%s) AND type = 99", guidString),
        function(result)
            if result then
                repeat
@@ -152,7 +152,7 @@ if not first then
    )
 end
 
-CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.character_custom_data (guid int unsigned NOT NULL, type tinyint unsigned NOT NULL, time int unsigned NOT NULL, data blob NOT NULL, PRIMARY KEY (guid, type))")
+CharDBExecute("CREATE TABLE IF NOT EXISTS ycore_yla.character_custom_data (guid int unsigned NOT NULL, type tinyint unsigned NOT NULL, time int unsigned NOT NULL, data blob NOT NULL, PRIMARY KEY (guid, type))")
 
 RegisterPlayerEvent(4, AIO_UI_FIX)
 RegisterPlayerEvent(25, AIO_UI_FIX)

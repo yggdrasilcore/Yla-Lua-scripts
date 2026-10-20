@@ -188,7 +188,7 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
         local guid = player:GetGUIDLow()
         if currentRate > intid then
             player:Data():Set("XPRate", intid)
-            CharDBExecute("REPLACE INTO acore_eluna.character_rate_xp (guid, rate, max_paid_rate) VALUES ('"..guid.."', '"..intid.."', '"..(player:Data():Get("XPMaxPaid") or 0).."')")
+            CharDBExecute("REPLACE INTO ycore_yla.character_rate_xp (guid, rate, max_paid_rate) VALUES ('"..guid.."', '"..intid.."', '"..(player:Data():Get("XPMaxPaid") or 0).."')")
             messagestring = "Congratulations, you changed your experience rate to: x"..intid
             if object == player then
                 player:SendBroadcastMessage(messagestring)
@@ -216,7 +216,7 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
             end
         end
         player:Data():Set("XPRate", intid)
-        CharDBExecute("REPLACE INTO acore_eluna.character_rate_xp (guid, rate, max_paid_rate) VALUES ('"..guid.."', '"..intid.."', '"..(player:Data():Get("XPMaxPaid") or 0).."')")
+        CharDBExecute("REPLACE INTO ycore_yla.character_rate_xp (guid, rate, max_paid_rate) VALUES ('"..guid.."', '"..intid.."', '"..(player:Data():Get("XPMaxPaid") or 0).."')")
         messagestring = "Congratulations, you changed your experience rate to: x"..intid
         if object == player then
             player:SendBroadcastMessage(messagestring)
@@ -239,7 +239,7 @@ end
 local function LoadXPForPlayer(player)
     local guid = player:GetGUIDLow()
     local name = player:GetName()
-    CharDBQueryAsync("SELECT rate, max_paid_rate FROM acore_eluna.character_rate_xp WHERE guid = " .. guid, function(result)
+    CharDBQueryAsync("SELECT rate, max_paid_rate FROM ycore_yla.character_rate_xp WHERE guid = " .. guid, function(result)
         if not result then return end
         local p
         if GetStateMapId() == -1 then
@@ -275,7 +275,7 @@ end
 ------------------------------------------------------------------------------------------------
 
 if GetStateMapId() == -1 then -- World stuff
-    CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.character_rate_xp (`guid` int(11) unsigned NOT NULL, `rate` int(11) NOT NULL DEFAULT 0, `max_paid_rate` int(11) NOT NULL DEFAULT 0, PRIMARY KEY (`guid`)) ENGINE=InnoDB DEFAULT CHARSET=utf8;")
+    CharDBExecute("CREATE TABLE IF NOT EXISTS ycore_yla.character_rate_xp (`guid` int(11) unsigned NOT NULL, `rate` int(11) NOT NULL DEFAULT 0, `max_paid_rate` int(11) NOT NULL DEFAULT 0, PRIMARY KEY (`guid`)) ENGINE=InnoDB DEFAULT CHARSET=utf8;")
     RegisterPlayerEvent(3, OnXPLogin) -- Per-player XP rate load (reload-proof via player:Data())
     RegisterPlayerEvent(42, onXPCommand)
 else -- Map stuff

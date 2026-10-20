@@ -19,7 +19,7 @@ local function CheckVIPOnLoad()
 
     if #accountIds == 0 then return end
     
-    local query = "SELECT account, viptime FROM acore_eluna.accounts_vip WHERE account IN (" .. table.concat(accountIds, ",") .. ");"
+    local query = "SELECT account, viptime FROM ycore_yla.accounts_vip WHERE account IN (" .. table.concat(accountIds, ",") .. ");"
     
     AuthDBQueryAsync(query, function(result)
         local vipTimeMap = {}
@@ -51,7 +51,7 @@ local function CheckVIP(event, player)
 	local name = player:GetName()
     if player:IsBot() then return end
 	
-	AuthDBQueryAsync("SELECT viptime FROM acore_eluna.accounts_vip WHERE account = " .. player:GetAccountId() .. ";", function(result)
+	AuthDBQueryAsync("SELECT viptime FROM ycore_yla.accounts_vip WHERE account = " .. player:GetAccountId() .. ";", function(result)
 		local player
 		for _, p in ipairs(GetStateMap():GetPlayers()) do
 			if p:GetName() == name then player = p break end
@@ -168,7 +168,7 @@ local function VIPGMCommands(event, player, command)
                     end
                 end
                 
-                AuthDBQueryAsync("SELECT viptime FROM acore_eluna.accounts_vip WHERE account = " .. targetAccountId .. ";", function(vipResult)
+                AuthDBQueryAsync("SELECT viptime FROM ycore_yla.accounts_vip WHERE account = " .. targetAccountId .. ";", function(vipResult)
                     local gm = GetPlayerByName(gmName)
                     
                     local currentVIPTime = vipResult and vipResult:GetUInt32(0) or 0
@@ -177,7 +177,7 @@ local function VIPGMCommands(event, player, command)
                     local baseTime = math.max(currentVIPTime, currentTime)
                     local newVIPTime = baseTime + (days * 24 * 60 * 60)
                     
-                    AuthDBExecute("INSERT INTO acore_eluna.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+                    AuthDBExecute("INSERT INTO ycore_yla.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
                     
                     local charListStr = #charNames > 0 and table.concat(charNames, ", ") or "no characters"
                     
@@ -246,7 +246,7 @@ local function VIPGMCommands(event, player, command)
                 local gm = GetPlayerByName(gmName)
                 local username = acctResult and acctResult:GetString(0) or "unknown"
                 
-                AuthDBQueryAsync("SELECT viptime FROM acore_eluna.accounts_vip WHERE account = " .. targetAccountId .. ";", function(vipResult)
+                AuthDBQueryAsync("SELECT viptime FROM ycore_yla.accounts_vip WHERE account = " .. targetAccountId .. ";", function(vipResult)
                     local gm = GetPlayerByName(gmName)
                     local targetPlayer = GetPlayerByName(charName)
                     
@@ -256,7 +256,7 @@ local function VIPGMCommands(event, player, command)
                     local baseTime = math.max(currentVIPTime, currentTime)
                     local newVIPTime = baseTime + (days * 24 * 60 * 60)
                     
-                    AuthDBExecute("INSERT INTO acore_eluna.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+                    AuthDBExecute("INSERT INTO ycore_yla.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
                     
                     if targetPlayer then
                         targetPlayer:Data():Set("VIPTime", newVIPTime)
@@ -309,7 +309,7 @@ local function VIPGMCommands(event, player, command)
         local baseTime = math.max(currentVIPTime, currentTime)
         local newVIPTime = baseTime + (days * 24 * 60 * 60)
         
-        AuthDBExecute("INSERT INTO acore_eluna.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+        AuthDBExecute("INSERT INTO ycore_yla.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
         
         targetPlayer:Data():Set("VIPTime", newVIPTime)
         
@@ -356,7 +356,7 @@ local function VIPGMCommands(event, player, command)
         
         local newVIPTime = math.max(currentTime, currentVIPTime - (days * 24 * 60 * 60))
         
-        AuthDBExecute("INSERT INTO acore_eluna.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+        AuthDBExecute("INSERT INTO ycore_yla.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
         
         targetPlayer:Data():Set("VIPTime", newVIPTime)
         
@@ -407,7 +407,7 @@ local function VIPGMCommands(event, player, command)
         
         local newVIPTime = math.max(currentTime, currentVIPTime - (days * 24 * 60 * 60))
         
-        AuthDBExecute("INSERT INTO acore_eluna.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+        AuthDBExecute("INSERT INTO ycore_yla.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
         
         targetPlayer:Data():Set("VIPTime", newVIPTime)
         
@@ -454,7 +454,7 @@ local function VIPGMCommands(event, player, command)
         local targetAccountId = targetPlayer:GetAccountId()
         local currentTime = os.time()
         
-        AuthDBExecute("INSERT INTO acore_eluna.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. currentTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+        AuthDBExecute("INSERT INTO ycore_yla.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. currentTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
         
         targetPlayer:Data():Set("VIPTime", currentTime)
         
@@ -489,7 +489,7 @@ local function VIPGMCommands(event, player, command)
         local targetAccountId = targetPlayer:GetAccountId()
         local currentTime = os.time()
         
-        AuthDBExecute("INSERT INTO acore_eluna.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. currentTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+        AuthDBExecute("INSERT INTO ycore_yla.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. currentTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
         
         targetPlayer:Data():Set("VIPTime", currentTime)
         

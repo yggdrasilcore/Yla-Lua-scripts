@@ -106,7 +106,7 @@ local function BuildLockoutCacheForAccount(accountId)
 
         local guidIn = table.concat(guidList, ",")
 
-        CharDBQueryAsync("SELECT guid, time, count FROM acore_eluna.character_instance_vendor_reset WHERE guid IN (" .. guidIn .. ")", function(resetQuery)
+        CharDBQueryAsync("SELECT guid, time, count FROM ycore_yla.character_instance_vendor_reset WHERE guid IN (" .. guidIn .. ")", function(resetQuery)
             local loaded = {}
             if resetQuery then
                 repeat
@@ -172,7 +172,7 @@ local function OnPlayerMapChange(event, player)
     
     if player:Data():Get("InstanceResetLockChecked") then return end
     
-    CharDBQueryAsync("SELECT command FROM acore_eluna.command_queue WHERE comment = " .. guid .. " AND executed = 0", function(q)
+    CharDBQueryAsync("SELECT command FROM ycore_yla.command_queue WHERE comment = " .. guid .. " AND executed = 0", function(q)
         local player = nil
         for _, p in ipairs(GetStateMap():GetPlayers()) do
             if p:GetGUIDLow() == guid then player = p break end
@@ -189,7 +189,7 @@ local function OnPlayerMapChange(event, player)
                     player:RunCommand("instanceresetunbind " .. guid .. " " .. mapVal .. " " .. diffVal)
                     player:Data():Set("InstanceResetExpect", nil)
                     if player:Data():Get("InstanceResetResult") == "done" then
-                        CharDBExecute("UPDATE acore_eluna.command_queue SET executed = 1 WHERE comment = " .. guid .. " AND command = 'UnbindInstance(" .. mapVal .. ", " .. diffVal .. ")'")
+                        CharDBExecute("UPDATE ycore_yla.command_queue SET executed = 1 WHERE comment = " .. guid .. " AND command = 'UnbindInstance(" .. mapVal .. ", " .. diffVal .. ")'")
                     end
                     player:Data():Set("InstanceResetResult", nil)
                 end
@@ -332,7 +332,7 @@ local function ResetInstanceLockout(player, map, difficulty, targetGuid, targetN
         tokenCost = 0
         resetCount[targetGuid] = resetCount[targetGuid] + 1
 
-        CharDBExecute("REPLACE INTO acore_eluna.character_instance_vendor_reset (guid, time, count) VALUES (" .. targetGuid .. ", " .. freeReset[targetGuid] .. ", " .. resetCount[targetGuid] .. ")")
+        CharDBExecute("REPLACE INTO ycore_yla.character_instance_vendor_reset (guid, time, count) VALUES (" .. targetGuid .. ", " .. freeReset[targetGuid] .. ", " .. resetCount[targetGuid] .. ")")
     end
 
     if not ChargeTokens(player, tokenCost) then return end
@@ -343,7 +343,7 @@ local function ResetInstanceLockout(player, map, difficulty, targetGuid, targetN
     player:Data():Set("InstanceResetExpect", nil)
     CharDBExecute("DELETE FROM character_instance WHERE guid = " .. targetGuid .. " AND instance IN (SELECT id FROM instance WHERE map = " .. map .. " AND difficulty = " .. difficulty .. ")")
     if player:Data():Get("InstanceResetResult") ~= "done" then
-        CharDBExecute("INSERT INTO acore_eluna.command_queue (comment, command, inserted, executed) VALUES (" .. targetGuid .. ", 'UnbindInstance(" .. map .. ", " .. difficulty .. ")', " .. os.time() .. ", 0)")
+        CharDBExecute("INSERT INTO ycore_yla.command_queue (comment, command, inserted, executed) VALUES (" .. targetGuid .. ", 'UnbindInstance(" .. map .. ", " .. difficulty .. ")', " .. os.time() .. ", 0)")
     end
     player:Data():Set("InstanceResetResult", nil)
 
@@ -572,4 +572,4 @@ RegisterPlayerEvent(28, OnPlayerMapChange)
 RegisterPlayerEvent(42, OnInstanceResetCommand)
 RegisterCreatureGossipEvent(NPC_ID, 1, OnGossipHello)
 RegisterCreatureGossipEvent(NPC_ID, 2, OnGossipSelect)
-CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.character_instance_vendor_reset (guid INT NOT NULL, time INT NOT NULL, count INT DEFAULT 0, PRIMARY KEY (guid));")
+CharDBExecute("CREATE TABLE IF NOT EXISTS ycore_yla.character_instance_vendor_reset (guid INT NOT NULL, time INT NOT NULL, count INT DEFAULT 0, PRIMARY KEY (guid));")

@@ -30,7 +30,7 @@ local ItemsToSell = {
 local VotePointCost = 50
 local ItemsPerPage = 11
 
--- Static icon index, dumped from acore_eluna.icons (see SQL below).
+-- Static icon index, dumped from ycore_yla.icons (see SQL below).
 local icons = {
 [11903]="INV_Box_PetCarrier_01",
 [13582]="Spell_Shadow_SummonFelHunter",

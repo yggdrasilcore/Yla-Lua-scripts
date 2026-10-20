@@ -537,7 +537,7 @@ function SetShadowsBarData()
         local guidString = table.concat(allGuids, ",")
 			
 	    CharDBQueryAsync(
-		    string.format("SELECT guid, data FROM character_custom_data WHERE guid IN (%s) AND type = 98", guidString),
+		    string.format("SELECT guid, data FROM ycore_yla.character_custom_data WHERE guid IN (%s) AND type = 98", guidString),
 		    function(result)
 				if result then
 					repeat
@@ -588,7 +588,7 @@ local function ShadowsLogin(event, player) -- Lazy persistent storage solution. 
     else
         player:SetData("LoginTime", os.time())
         
-        CharDBQueryAsync("SELECT data FROM character_custom_data WHERE guid = "..guid.." AND type = 98", function(result)
+        CharDBQueryAsync("SELECT data FROM ycore_yla.character_custom_data WHERE guid = "..guid.." AND type = 98", function(result)
             if result then
                 local data = result:GetString(0)
                 local player = GetPlayerByGUID(GetPlayerGUID(guid))
@@ -611,9 +611,9 @@ local function LogoutOrSave(event, player)
 
 	if event == 4 or event == 25 then
 		if player:Data():Get("ShadowsBarData") then
-			CharDBExecute("REPLACE INTO character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'ENABLED')")
+			CharDBExecute("REPLACE INTO ycore_yla.character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'ENABLED')")
 		else
-			CharDBExecute("REPLACE INTO character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'DISABLED')")
+			CharDBExecute("REPLACE INTO ycore_yla.character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'DISABLED')")
 		end
 	end
 	

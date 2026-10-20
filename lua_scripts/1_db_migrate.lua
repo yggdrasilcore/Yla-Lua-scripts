@@ -1,13 +1,13 @@
 -- 1_db_migrate.lua
 -- One-shot (idempotent, safe to run on every startup) migrater that copies all
--- custom Eluna tables from their legacy databases into acore_eluna.
+-- custom Eluna tables from their legacy databases into ycore_yla.
 --
 -- Loads first (1_ prefix). Each COPY keeps the original query DB type so the
 -- unqualified source resolves in the connection's default DB:
 --   AuthDB*  -> acore_auth, CharDB* -> acore_characters, WorldDB* -> acore_world
 -- silicon: CREATE TABLE ... LIKE is a schema-only copy; INSERT IGNORE copies rows.
 -- Fresh installs (source missing): LIKE fails harmlessly, feature scripts below
--- create the acore_eluna table empty via their rewritten CREATE TABLE IF NOT EXISTS.
+-- create the ycore_yla table empty via their rewritten CREATE TABLE IF NOT EXISTS.
 --
 -- World-state only: every state loads every script, but the copy must run once.
 -- GetStateMapId() == -1 in the world state (and in compatibility mode).
@@ -37,12 +37,12 @@ local CHAR_TABLES = {
 
 local function Migrate(exec, tbl)
     exec(string.format(
-        "CREATE TABLE IF NOT EXISTS acore_eluna.%s LIKE %s", tbl, tbl))
+        "CREATE TABLE IF NOT EXISTS ycore_yla.%s LIKE %s", tbl, tbl))
     exec(string.format(
-        "INSERT IGNORE INTO acore_eluna.%s SELECT * FROM %s", tbl, tbl))
+        "INSERT IGNORE INTO ycore_yla.%s SELECT * FROM %s", tbl, tbl))
 end
 
-print("[1_db_migrate] Copying custom tables to acore_eluna...")
+print("[1_db_migrate] Copying custom tables to ycore_yla...")
 
 for _, tbl in ipairs(AUTH_TABLES) do
     Migrate(AuthDBExecute, tbl)
@@ -118,5 +118,5 @@ DROP TABLE IF EXISTS `acore_world`.`trainer`;
 DROP TABLE IF EXISTS `acore_world`.`trainer_spell`;
 DROP TABLE IF EXISTS `acore_world`.`spell_learn_spell`;
 DROP TABLE IF EXISTS `acore_world`.`icons`;
-DROP TABLE IF EXISTS `acore_eluna`.`icons`;
+DROP TABLE IF EXISTS `ycore_yla`.`icons`;
 --]]

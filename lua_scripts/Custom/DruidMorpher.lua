@@ -117,7 +117,7 @@ local function PlayerData(player)
     d.loading = true
     SaveData(player, d)
     local name = player:GetName()
-    CharDBQueryAsync("SELECT name, id, form, active FROM acore_eluna.character_morphs WHERE guid = " .. player:GetGUIDLow(), function(r)
+    CharDBQueryAsync("SELECT name, id, form, active FROM ycore_yla.character_morphs WHERE guid = " .. player:GetGUIDLow(), function(r)
         local p
         for _, pl in pairs(GetStateMap():GetPlayers()) do
             if pl:GetName() == name then
@@ -265,7 +265,7 @@ local function OnKillCreature(event, player, creature)
     list[#list + 1] = {name = name, displayId = displayId}
     SaveData(player, d)
     local escapedName = string.gsub(name, "'", "''") -- Fixes crashes on Loque'Nahak and other NPCs with ' in name
-    CharDBExecute("REPLACE INTO acore_eluna.character_morphs (guid, name, id, form) VALUES (" .. player:GetGUIDLow() .. ", '" .. escapedName .. "', " .. displayId .. ", " .. idx .. ")")
+    CharDBExecute("REPLACE INTO ycore_yla.character_morphs (guid, name, id, form) VALUES (" .. player:GetGUIDLow() .. ", '" .. escapedName .. "', " .. displayId .. ", " .. idx .. ")")
     skill = Skill(d)
     player:SendBroadcastMessage("You have released " .. name .. "'s spirit and learned how to morph into their " .. NAMES[idx] .. " form." .. (skill < MaxMorphSkill and " Your morph skill has increased to " .. skill .. "." or ""))
 
@@ -363,8 +363,8 @@ local function ApplyMorph(player, d, idx, morph)
             player:SetSpeed(move, speed)
         end
     end
-    CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = " .. guid .. " AND form = " .. idx)
-    CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 1 WHERE guid = " .. guid .. " AND form = " .. idx .. " AND id = " .. morph.displayId)
+    CharDBExecute("UPDATE ycore_yla.character_morphs SET active = 0 WHERE guid = " .. guid .. " AND form = " .. idx)
+    CharDBExecute("UPDATE ycore_yla.character_morphs SET active = 1 WHERE guid = " .. guid .. " AND form = " .. idx .. " AND id = " .. morph.displayId)
     player:SendBroadcastMessage(msg)
     player:GossipComplete()
 end
@@ -384,7 +384,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         if idx then
             d.active[idx] = 0
             SaveData(player, d)
-            CharDBExecute("UPDATE acore_eluna.character_morphs SET active = 0 WHERE guid = " .. player:GetGUIDLow() .. " AND form = " .. idx)
+            CharDBExecute("UPDATE ycore_yla.character_morphs SET active = 0 WHERE guid = " .. player:GetGUIDLow() .. " AND form = " .. idx)
             Reshift(player, true)
         end
         ShowInitialGossipMenu(player)

@@ -39,7 +39,7 @@ local DeleteInterval	= 60		-- How often to truncate old data, in hours. This lea
 if not EnableLogger then return end
 if LoggingInterval < 1 then error("[Eluna Server Logger]: Fatal error - Logger frequency cannot be lower than 1! Aborting.") end
 
-CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.statistics (event VARCHAR(32) NOT NULL, param1 INT UNSIGNED, param2 VARCHAR(32), param3 INT UNSIGNED);")
+CharDBExecute("CREATE TABLE IF NOT EXISTS ycore_yla.statistics (event VARCHAR(32) NOT NULL, param1 INT UNSIGNED, param2 VARCHAR(32), param3 INT UNSIGNED);")
 
 -- Cache tables
 
@@ -179,7 +179,7 @@ local function CacheDataPoints()
 	end
 	
 	if #values > 0 then
-		local query = "INSERT INTO acore_eluna.statistics (event, param1, param2, param3) VALUES " .. table.concat(values, ",") .. ";"
+		local query = "INSERT INTO ycore_yla.statistics (event, param1, param2, param3) VALUES " .. table.concat(values, ",") .. ";"
 		if EnableDebug and GetStateMapId() == -1 then print("[Eluna Server Logger]: Inserting query - "..query) end
 		CharDBExecute(query)
 	end
@@ -211,13 +211,13 @@ local function CleanOldData()
     local truncateTime = os.time() - (TruncateCutoff * 24 * 60 * 60)
     local oneHourAgo = os.time() - (DeleteInterval * 60)
     local query = string.format([[
-    DELETE FROM acore_eluna.statistics
+    DELETE FROM ycore_yla.statistics
     WHERE param3 < %d
     AND param3 NOT IN (
         SELECT max_param3
         FROM (
             SELECT MAX(param3) AS max_param3
-            FROM acore_eluna.statistics
+            FROM ycore_yla.statistics
             WHERE param3 >= %d
             GROUP BY event, DATE_FORMAT(FROM_UNIXTIME(param3), '%%Y-%%m-%%d %%H')
         ) AS temp_max_param3
