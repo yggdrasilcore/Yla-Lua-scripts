@@ -1,19 +1,3 @@
-local EMQ = require("EMQ")
-
--- Handlers defined below, assigned here so registration order is load-safe.
-local HandleRAFWorld -- (player, data): runs in world, owns DB + commands
-local HandleRAFView  -- (player, data): runs on map, pure render from payload
-EMQ.RegisterQueue("RAFToWorld", function(player, data)
-    if HandleRAFWorld and (GetStateMapId() == -1) then
-        HandleRAFWorld(player, data)
-    end
-end)
-EMQ.RegisterQueue("RAFToMap", function(player, data)
-    if HandleRAFView and (GetStateMapId() ~= -1) then
-        HandleRAFView(player, data)
-    end
-end)
-
 -- Welcome to Yggdrasil's RAF system, by mostly nick :)
 
 -- START VARS
@@ -27,7 +11,7 @@ local RewardTier4			= 25
 local RegisterRAFTimeLimit	= 1 				-- Time in hours to limit RAF linkage after starting to play
 local summonCDLength		= 30				-- How many minutes the cooldown of the RAF summon is
 
--- AI-created pagination stuff
+-- Pagination stuff
 local ENTRIES_PER_PAGE 		= 10
 local PAGINATION_INTID_START = 201
 local SUMMON_PAGINATION_INTID_START = 701
@@ -39,8 +23,8 @@ local TokenReward 			= 5
 -- END VARS
  
 -- Map-side view state lives on player:Data() (reload-proof, per-player).
--- Menus render from here; clicks resolve rows here and forward via EMQ.
--- Keys: "RAFView", "RAFReqSeq", "RAFAckSeq".
+-- Menus render from here; clicks resolve rows here and forward to world.
+-- Keys: "RAFView", "RAFReqSeq", "RAFAckSeq", "RAFRequest".
 local RAF_VIEW_TIMEOUT_MS =   6000
 
 -- Create the account_raf table if it doesn't exist
@@ -453,17 +437,22 @@ local function RAFCacheView(player, view)
 end
 
 -- Map -> world request. Only the matching answer renders.
-local function MapSendRAF(player, op, params)
-    local name = player:GetName()
+local function QueueRAFRequest(player, op, params)
     local seq = (player:Data():Get("RAFReqSeq") or 0) + 1
     player:Data():Set("RAFReqSeq", seq)
-    local data = { op = op, seq = seq, playerName = name }
+    local data = { op = op, seq = seq, playerName = player:GetName() }
     if params then
         for k, v in pairs(params) do
             data[k] = v
         end
     end
-    player:SendEMQMessage("RAFToWorld", data)
+    player:Data():Set("RAFRequest", data)
+    player:RunCommand("RAFProcessRequest")
+    return seq
+end
+
+local function MapSendRAF(player, op, params)
+    local seq = QueueRAFRequest(player, op, params)
     player:RegisterEvent(function(eventId, delay, repeats, pl)
         if pl and pl:Data():Get("RAFAckSeq") ~= seq and pl:Data():Get("RAFReqSeq") == seq then
             pl:SendAreaTriggerMessage("RAF service timed out, please reopen the menu.")
@@ -471,40 +460,6 @@ local function MapSendRAF(player, op, params)
         end
     end, RAF_VIEW_TIMEOUT_MS, 1)
 end
-
--- Map-side view dispatcher. Stale answers are dropped.
-HandleRAFView = function(player, data)
-    if not player or not data then
-        return
-    end
-    if data.seq ~= nil and data.seq ~= (player:Data():Get("RAFReqSeq") or 0) then
-        return
-    end
-    RAFCacheView(player, data)
-    player:Data():Set("RAFAckSeq", player:Data():Get("RAFReqSeq"))
-    if data.view == "hub" then
-        ShowRAFMenu(player)
-    elseif data.view == "referralinfo" then
-        ShowReferralInfoMenu(player, data)
-    elseif data.view == "summonfriends" then
-        ShowSummonFriendsMenu(player, data)
-    elseif data.view == "refereeinfo" then
-        ShowRefereeInfo(player, data)
-    elseif data.view == "raflink" then
-        ShowRAFLink(player, data)
-    elseif data.view == "bonuses" then
-        ClaimBonuses(player, data)
-    elseif data.view == "claimapproved" then
-        GrantRAFReward(player, data.tier, data.option)
-        ClaimBonuses(player, data)
-    elseif data.view == "summonrequest" then
-        ShowSummonRequest(player, data)
-    elseif data.view == "teleport" then
-        player:Teleport(data.map, data.x, data.y, data.z, data.o)
-        player:GossipComplete()
-    end
-end
-
 
 -- Claim option intid -> reward tier. Unknown intids claim nothing.
 local RAFClaimTiers = {}
@@ -518,8 +473,7 @@ end
 
 local function OnGossipSelect(event, player, object, sender, intid, code, menu_id)
     -- Map side: no DB or shared vars. Static navigation renders directly;
-    -- everything else resolves rows from the cached view and forwards via EMQ.
-    local name = player:GetName()
+    -- everything else resolves rows from the cached view and forwards to world.
     local stored = player:Data():Get("RAFView")
     local cache = stored and stored:AsTable() or {}
 
@@ -564,7 +518,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         MapSendRAF(player, "accept", {})
     elseif intid == 502 then
         player:GossipComplete()
-        player:SendEMQMessage("RAFToWorld", { op = "decline", playerName = name })
+        QueueRAFRequest(player, "decline")
     elseif intid == 1 then
         RAFShowLoading(player, "Loading, one moment...")
         MapSendRAF(player, "open-link", {})
@@ -632,9 +586,33 @@ local RAFTiers = {
 
 local function WorldRAFView(player, seq, view)
     if not player or not view then return end
+    if seq ~= nil and seq ~= (player:Data():Get("RAFReqSeq") or 0) then
+        return
+    end
     view.seq = seq
     view.playerName = view.playerName or player:GetName()
-    player:SendEMQMessage("RAFToMap", view)
+    RAFCacheView(player, view)
+    if view.view == "hub" then
+        ShowRAFMenu(player)
+    elseif view.view == "referralinfo" then
+        ShowReferralInfoMenu(player, view)
+    elseif view.view == "summonfriends" then
+        ShowSummonFriendsMenu(player, view)
+    elseif view.view == "refereeinfo" then
+        ShowRefereeInfo(player, view)
+    elseif view.view == "raflink" then
+        ShowRAFLink(player, view)
+    elseif view.view == "bonuses" then
+        ClaimBonuses(player, view)
+    elseif view.view == "claimapproved" then
+        GrantRAFReward(player, view.tier, view.option)
+        ClaimBonuses(player, view)
+    elseif view.view == "summonrequest" then
+        ShowSummonRequest(player, view)
+    elseif view.view == "teleport" then
+        player:Teleport(view.map, view.x, view.y, view.z, view.o)
+        player:GossipComplete()
+    end
 end
 
 local function RAFBonusStrings(claimed, n)
@@ -760,7 +738,7 @@ local function WorldRAFSummonMenu(player, seq, page)
     end)
 end
 
--- Shared summon execution for the EMQ op and the chat command.
+-- Shared summon execution for the request op and the chat command.
 local function WorldRAFSummon(requester, friend, seq)
     local reqName = requester:GetName()
     local function ackMenu()
@@ -979,6 +957,15 @@ end
 
 local function RAFCommands(event, player, command) -- .summonfriend, .rafreferee, .rafdelete, .rafmenu
 	if not player then return end
+    if command:lower() == "rafprocessrequest" then
+        local data = player:Data():Get("RAFRequest")
+        if data then
+            if data.AsTable then data = data:AsTable() end
+            player:Data():Set("RAFRequest", nil)
+            HandleRAFWorld(player, data)
+        end
+        return false
+    end
     local cmd, param = string.match(command:lower(), "^(%S+)%s*(%d*)$")
     local accountId = player:GetAccountId()
 	
@@ -1191,9 +1178,35 @@ local function OnPlayerLogin(event, player)
 end
 
 local function ReloadEluna(event)
-    for _, player in ipairs(GetStateMap() and GetStateMap():GetPlayers() or {}) do
-        CheckRefereeStatus(player)
+    local map = GetStateMap()
+    if not map then return end
+
+    local accountIds = {}
+    local seen = {}
+    for _, player in ipairs(map:GetPlayers()) do
+        local accountId = player:GetAccountId()
+        if accountId and not seen[accountId] then
+            seen[accountId] = true
+            table.insert(accountIds, accountId)
+        end
     end
+    if #accountIds == 0 then return end
+
+    local MaxRAFDuration = os.time() - RAFDuration
+    AuthDBQueryAsync(string.format([[
+        SELECT account_id FROM acore_eluna.account_raf
+        WHERE status = 2 AND date > %d AND account_id IN (%s)
+    ]], MaxRAFDuration, table.concat(accountIds, ",")), function(query)
+        local active = {}
+        if query then
+            repeat active[query:GetUInt32(0)] = true until not query:NextRow()
+        end
+        local currentMap = GetStateMap()
+        if not currentMap then return end
+        for _, player in ipairs(currentMap:GetPlayers()) do
+            player:Data():Set("RAFreferee", active[player:GetAccountId()] and true or nil)
+        end
+    end)
 end
 
 local function UpdateProgress(player)
