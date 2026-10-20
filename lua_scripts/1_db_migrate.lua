@@ -53,3 +53,70 @@ for _, tbl in ipairs(CHAR_TABLES) do
 end
 
 print("[1_db_migrate] Done.")
+
+--[[
+DROP TABLE IF EXISTS `acore_auth`.`acore_cms_subscriptions`;
+DROP TABLE IF EXISTS `acore_characters`.`accountwide_achievements`;
+DROP TABLE IF EXISTS `acore_characters`.`accountwide_money`;
+DROP TABLE IF EXISTS `acore_characters`.`accountwide_mounts`;
+DROP TABLE IF EXISTS `acore_characters`.`accountwide_pets`;
+DROP TABLE IF EXISTS `acore_characters`.`accountwide_reputation`;
+DROP TABLE IF EXISTS `acore_characters`.`auctionbidders`;
+DROP TABLE IF EXISTS `acore_characters`.`character_battleground_data`;
+DROP TABLE IF EXISTS `acore_characters`.`character_fishingsteps`;
+DROP TABLE IF EXISTS `acore_characters`.`character_flying`;
+DROP TABLE IF EXISTS `acore_characters`.`character_xp_rate`;
+DROP TABLE IF EXISTS `acore_characters`.`custom_unlocked_appearances`;
+DROP TABLE IF EXISTS `acore_characters`.`__del_ability_spell`;
+DROP TABLE IF EXISTS `acore_characters`.`__del_override_spell`;
+DROP TABLE IF EXISTS `acore_characters`.`__del_shapeshift_spell`;
+DROP TABLE IF EXISTS `acore_characters`.`__del_spell_learn_spell`;
+DROP TABLE IF EXISTS `acore_characters`.`__del_spells_with_learn_effect`;
+DROP TABLE IF EXISTS `acore_characters`.`__del_talent_pyroblast`;
+DROP TABLE IF EXISTS `acore_characters`.`__del_talent_pyroblast2`;
+DROP TABLE IF EXISTS `acore_characters`.`__del_talent_rest_ranks`;
+DROP TABLE IF EXISTS `acore_characters`.`gm_subsurveys`;
+DROP TABLE IF EXISTS `acore_characters`.`group_instance`;
+DROP TABLE IF EXISTS `acore_characters`.`InstanceFaction`;
+DROP TABLE IF EXISTS `acore_characters`.`item_loot_items`;
+DROP TABLE IF EXISTS `acore_characters`.`item_loot_money`;
+DROP TABLE IF EXISTS `acore_characters`.`__playercreateinfo_spell`;
+DROP TABLE IF EXISTS `acore_characters`.`__profession_autolearn`;
+DROP TABLE IF EXISTS `acore_characters`.`__profession_skill`;
+DROP TABLE IF EXISTS `acore_characters`.`__profession_spell_req_skill`;
+DROP TABLE IF EXISTS `acore_characters`.`__profession_spell_req_spell`;
+DROP TABLE IF EXISTS `acore_characters`.`__spell_ranks`;
+DROP TABLE IF EXISTS `acore_characters`.`transferlog`;
+DROP TABLE IF EXISTS `acore_characters`.`transferredspells`;
+DROP TABLE IF EXISTS `acore_world`.`access_requirement`;
+DROP TABLE IF EXISTS `acore_world`.`battlefield_template`;
+DROP TABLE IF EXISTS `acore_world`.`creature_default_trainer`;
+DROP TABLE IF EXISTS `acore_world`.`creature_movement_info`;
+DROP TABLE IF EXISTS `acore_world`.`gameobject_overrides`;
+DROP TABLE IF EXISTS `acore_world`.`instance_spawn_groups`;
+DROP TABLE IF EXISTS `acore_world`.`mod_auctionhousebot`;
+DROP TABLE IF EXISTS `acore_world`.`mod_auctionhousebot_disabled_items`;
+DROP TABLE IF EXISTS `acore_world`.`playerbots_rpg_races`;
+DROP TABLE IF EXISTS `acore_world`.`player_classlevelstats`;
+DROP TABLE IF EXISTS `acore_world`.`player_levelstats`;
+DROP TABLE IF EXISTS `acore_world`.`pool_members`;
+DROP TABLE IF EXISTS `acore_world`.`quest_pool_members`;
+DROP TABLE IF EXISTS `acore_world`.`quest_pool_template`;
+DROP TABLE IF EXISTS `acore_world`.`script_spline_chain_meta`;
+DROP TABLE IF EXISTS `acore_world`.`script_spline_chain_waypoints`;
+DROP TABLE IF EXISTS `acore_world`.`spawn_group`;
+DROP TABLE IF EXISTS `acore_world`.`spawn_group_template`;
+DROP TABLE IF EXISTS `acore_world`.`spell_dbc_bck`;
+DROP TABLE IF EXISTS `acore_world`.`trainer_locale`;
+DROP TABLE IF EXISTS `acore_world`.`trinity_string`;
+DROP TABLE IF EXISTS `acore_world`.`vehicleseat_dbc_copy`;
+DROP TABLE IF EXISTS `acore_world`.`vehicle_template`;
+DROP TABLE IF EXISTS `acore_world`.`vw_conditions_with_labels`;
+DROP TABLE IF EXISTS `acore_world`.`vw_disables_with_labels`;
+DROP TABLE IF EXISTS `acore_world`.`vw_smart_scripts_with_labels`;
+DROP TABLE IF EXISTS `acore_world`.`trainer`;
+DROP TABLE IF EXISTS `acore_world`.`trainer_spell`;
+DROP TABLE IF EXISTS `acore_world`.`spell_learn_spell`;
+DROP TABLE IF EXISTS `acore_world`.`icons`;
+DROP TABLE IF EXISTS `acore_eluna`.`icons`;
+--]]
