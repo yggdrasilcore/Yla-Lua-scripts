@@ -1,6 +1,4 @@
 -- Wrapped from base_yla_custom.sql for the ycore_yla update runner.
-local updates = require("ycore_yla").updates
-
 local statements = {
 [[
 CREATE DATABASE /*!32312 IF NOT EXISTS*/`ycore_yla` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;]],
@@ -301,4 +299,6 @@ local function base_yla_custom()
     end
 end
 
-updates("base_yla_custom", base_yla_custom)
+CreateLuaEvent(function()
+    YcoreYlaUpdate("base_yla_custom", base_yla_custom)
+end, 5000, 1)

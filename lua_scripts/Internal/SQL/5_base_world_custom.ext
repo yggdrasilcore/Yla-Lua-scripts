@@ -1,6 +1,4 @@
 -- Wrapped from base_world_custom.sql for the ycore_yla update runner.
-local updates = require("ycore_yla").updates
-
 local statements = {
 [[
 
@@ -9690,4 +9688,6 @@ local function base_world_custom()
     end
 end
 
-updates("base_world_custom", base_world_custom)
+CreateLuaEvent(function()
+    YcoreYlaUpdate("base_world_custom", base_world_custom)
+end, 5000, 1)
