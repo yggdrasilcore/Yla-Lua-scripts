@@ -84,31 +84,32 @@ local function OnRaidIconCommand(event, player, command)
         return false
     end
 
-    if command ~= "RemoveRaidIcon" and command ~= "SetRaidIcon" then return end
+    if command == "RemoveRaidIcon" or command == "SetRaidIcon" then
 
-    local group = player:GetGroup()
-    if not group then return end
+        local group = player:GetGroup()
+        if not group then return false end
 
-    if command == "RemoveRaidIcon" then
-        local members = group:GetMembers()
-        for _, member in pairs(members) do
-            if member:IsAlive() and member:IsInCombat() then
-                local distance = player:GetDistance(member)
-                if distance <= 500 then return end
+        if command == "RemoveRaidIcon" then
+            local members = group:GetMembers()
+            for _, member in pairs(members) do
+                if member:IsAlive() and member:IsInCombat() then
+                    local distance = player:GetDistance(member)
+                    if distance <= 500 then return false end
+                end
             end
+
+            player:Data():Set("RaidIconPending", nil)
+            group:SetTargetIcon(7, 0, player:GetGUID())
+            ResetTargetIconGuards(7)
+            return false
         end
 
-        player:Data():Set("RaidIconPending", nil)
-        group:SetTargetIcon(7, 0, player:GetGUID())
-        ResetTargetIconGuards(7)
+        local targetGuid = player:GetSelectionGUID()
+        if GetGUIDLow(targetGuid) == 0 then return end
+        group:SetTargetIcon(7, targetGuid, player:GetGUID())
+        setGuard[GuardKey(7, GetGUIDLow(targetGuid))] = os.time()
         return false
     end
-
-    local targetGuid = player:GetSelectionGUID()
-    if GetGUIDLow(targetGuid) == 0 then return end
-    group:SetTargetIcon(7, targetGuid, player:GetGUID())
-    setGuard[GuardKey(7, GetGUIDLow(targetGuid))] = os.time()
-    return false
 end
 
 local function RemoveRaidIconsOnDeath(event, obj1, player)
