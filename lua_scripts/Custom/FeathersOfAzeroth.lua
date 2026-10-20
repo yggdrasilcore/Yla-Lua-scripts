@@ -1,4 +1,3 @@
-local EMQ = require("EMQ")
 local FeathersItem = 20739
 local FeathersSpell = 29118
 local MOUNTS_PER_PAGE = 10
@@ -735,17 +734,6 @@ local function OnMoveSetFly(event, packet, player)
     end
 end
 
--- Map-state executor for mount-by-command (via EMQ, or directly in compat mode).
-local function DoCastMountCommand(player, data)
-    if not player or not data or not data.spellId then
-        return
-    end
-    player:CastSpell(player, data.spellId, false)
-    CheckFlyableArea(42, player, player:GetZoneId(), player:GetAreaId())
-end
-
-EMQ.RegisterQueue("FeathersCastMount", DoCastMountCommand)
-
 local function OnCommand(event, player, command)
     if command == "choosestandardfeathers" then
         ShowManageStandardMountCmd(event, player)
@@ -758,8 +746,8 @@ local function OnCommand(event, player, command)
             then
                 return false
             end
-            local data = { spellId = spellId }
-            player:SendEMQMessage("FeathersCastMount", data)
+            player:CastSpell(player, spellId, false)
+            CheckFlyableArea(event, player, player:GetZoneId(), player:GetAreaId())
             return false
         end
     end
@@ -797,19 +785,23 @@ local function OnCastFlyingMount(event, player, spell)
 end
 
 OnLoadScript()
-WorldDBExecute("UPDATE item_template SET description = 'This item has the ability to wrap the wings of your flying mounts with the Feathers of Azeroth, permitting their use in Azeroth.' WHERE entry = 20739")
-CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.character_flight (guid INT UNSIGNED NOT NULL, standardmount INT UNSIGNED, X FLOAT, Y FLOAT, Z FLOAT, O FLOAT, var1 INT UNSIGNED, var2 INT UNSIGNED, var3 INT UNSIGNED, PRIMARY KEY (guid))")
-RegisterPlayerEvent(3, LoadStandardMount)
-RegisterPlayerEvent(27, CheckFlyableArea)
-RegisterPlayerEvent(28, OnMapChange)
-RegisterPlayerEvent(42, OnCommand)
-RegisterItemEvent(FeathersItem, 2, OnUseItem)
-RegisterPlayerGossipEvent(182746573, 2, OnGossipSelect)
-RegisterPacketEvent(0x346, 5, OnMoveSetFly) -- If a player tries to fly, check if they should be able to
-RegisterSpellEvent(75973, 2, OnX53orInvincible)
-RegisterSpellEvent(72282, 2, OnX53orInvincible)
-RegisterSpellEvent(72283, 2, OnX53orInvincible)
-RegisterSpellEvent(72284, 2, OnX53orInvincible)
-for _, spellId in ipairs(FLYING_MOUNTS) do
-    RegisterSpellEvent(spellId, 1, OnCastFlyingMount)
+
+if GetStateMapId() == -1 then
+    WorldDBExecute("UPDATE item_template SET description = 'This item has the ability to wrap the wings of your flying mounts with the Feathers of Azeroth, permitting their use in Azeroth.' WHERE entry = 20739")
+    CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.character_flight (guid INT UNSIGNED NOT NULL, standardmount INT UNSIGNED, X FLOAT, Y FLOAT, Z FLOAT, O FLOAT, var1 INT UNSIGNED, var2 INT UNSIGNED, var3 INT UNSIGNED, PRIMARY KEY (guid))")
+    RegisterPlayerEvent(3, LoadStandardMount)
+    RegisterPlayerEvent(42, OnCommand)
+    RegisterPacketEvent(0x346, 5, OnMoveSetFly) -- If a player tries to fly, check if they should be able to
+else
+    RegisterPlayerEvent(27, CheckFlyableArea)
+    RegisterPlayerEvent(28, OnMapChange)
+    RegisterItemEvent(FeathersItem, 2, OnUseItem)
+    RegisterPlayerGossipEvent(182746573, 2, OnGossipSelect)
+    RegisterSpellEvent(75973, 2, OnX53orInvincible)
+    RegisterSpellEvent(72282, 2, OnX53orInvincible)
+    RegisterSpellEvent(72283, 2, OnX53orInvincible)
+    RegisterSpellEvent(72284, 2, OnX53orInvincible)
+    for _, spellId in ipairs(FLYING_MOUNTS) do
+        RegisterSpellEvent(spellId, 1, OnCastFlyingMount)
+    end
 end
