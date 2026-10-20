@@ -35,7 +35,13 @@ local CHAR_TABLES = {
     "statistics",
 }
 
-local function Migrate(exec, tbl)
+local function TableExists(query, tbl)
+    return query(string.format(
+        "SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = '%s' LIMIT 1", tbl)) ~= nil
+end
+
+local function Migrate(query, exec, tbl)
+    if not TableExists(query, tbl) then return end
     exec(string.format(
         "CREATE TABLE IF NOT EXISTS ycore_yla.%s LIKE %s", tbl, tbl))
     exec(string.format(
@@ -45,11 +51,11 @@ end
 print("[1_db_migrate] Copying custom tables to ycore_yla...")
 
 for _, tbl in ipairs(AUTH_TABLES) do
-    Migrate(AuthDBExecute, tbl)
+    Migrate(AuthDBQuery, AuthDBExecute, tbl)
 end
 
 for _, tbl in ipairs(CHAR_TABLES) do
-    Migrate(CharDBExecute, tbl)
+    Migrate(CharDBQuery, CharDBExecute, tbl)
 end
 
 print("[1_db_migrate] Done.")
