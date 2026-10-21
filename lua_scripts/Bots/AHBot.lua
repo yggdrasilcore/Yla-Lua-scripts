@@ -250,13 +250,13 @@ end
 local function queryBotCharacters() -- Verifies bots' existence
     local knownGUIDs = {}
     for _, char in ipairs(GetCharacterCache()) do
-        knownGUIDs[char.guidLow] = true
+        knownGUIDs[tostring(char.guidLow)] = true
     end
 
     local validGUIDs = {}
 
     for _, guid in ipairs(AHBots) do
-        if knownGUIDs[guid] then
+        if knownGUIDs[tostring(guid)] then
             table.insert(validGUIDs, guid)
         end
     end

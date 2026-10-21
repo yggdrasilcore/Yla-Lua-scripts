@@ -446,7 +446,7 @@ local function SyncAccountMounts(event, player)
 	local guids = {}
 	for _, char in ipairs(GetCharacterCache()) do
 		if char.accountId == pAccountId and char.guidLow ~= pGUID then
-			table.insert(guids, char.guidLow)
+			table.insert(guids, tostring(char.guidLow))
 		end
 	end
 
