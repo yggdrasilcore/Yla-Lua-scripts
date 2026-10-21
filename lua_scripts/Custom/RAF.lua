@@ -24,8 +24,7 @@ local TokenReward 			= 5
  
 -- Map-side view state lives on player:Data() (reload-proof, per-player).
 -- Menus render from here; clicks resolve rows here and forward to world.
--- Keys: "RAFView", "RAFReqSeq", "RAFAckSeq", "RAFRequest".
-local RAF_VIEW_TIMEOUT_MS =   6000
+-- Keys: "RAFView", "RAFReqSeq", "RAFRequest".
 
 -- Create the account_raf table if it doesn't exist
 if GetStateMapId() == -1 then
@@ -407,15 +406,6 @@ local function GrantRAFReward(player, tier, option)
     end
 end
 
--- Loading placeholder. Intid 11 is a dedicated no-op.
-local function RAFShowLoading(player, text)
-    text = text or "Loading, one moment..."
-    player:GossipClearMenu()
-    player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_groupneedmore:32:32:-22:0|t" .. text .. "\n \n", 1, 11)
-    player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 1, 998)
-    player:GossipSendMenu(12, player, 1)
-end
-
 local function RAFCacheView(player, view)
     local stored = player:Data():Get("RAFView")
     local c = stored and stored:AsTable() or {}
@@ -433,7 +423,6 @@ local function RAFCacheView(player, view)
         c.request = view
     end
     player:Data():Set("RAFView", c)
-    player:Data():Set("RAFAckSeq", view.seq)
 end
 
 -- Map -> world request. Only the matching answer renders.
@@ -449,16 +438,6 @@ local function QueueRAFRequest(player, op, params)
     player:Data():Set("RAFRequest", data)
     player:RunCommand("RAFProcessRequest")
     return seq
-end
-
-local function MapSendRAF(player, op, params)
-    local seq = QueueRAFRequest(player, op, params)
-    player:RegisterEvent(function(eventId, delay, repeats, pl)
-        if pl and pl:Data():Get("RAFAckSeq") ~= seq and pl:Data():Get("RAFReqSeq") == seq then
-            pl:SendAreaTriggerMessage("RAF service timed out, please reopen the menu.")
-            ShowRAFMenu(pl)
-        end
-    end, RAF_VIEW_TIMEOUT_MS, 1)
 end
 
 -- Claim option intid -> reward tier. Unknown intids claim nothing.
@@ -477,10 +456,6 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
     local stored = player:Data():Get("RAFView")
     local cache = stored and stored:AsTable() or {}
 
-    if intid == 11 then -- loading-header no-op
-        return
-    end
-
     if intid > 1000 then -- summon friend: guid -> name from cache
         local friendGUIDLow = intid - 1000
         local target
@@ -488,8 +463,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
             if f.guid == friendGUIDLow then target = f break end
         end
         if not target then
-            RAFShowLoading(player, "Loading, one moment...")
-            MapSendRAF(player, "open-summon", { page = 1 })
+            QueueRAFRequest(player, "open-summon", { page = 1 })
             return
         end
         if player:IsFlying() or player:IsOnVehicle()
@@ -499,14 +473,11 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
             player:SendAreaTriggerMessage("You can't summon your friend right now!")
             return
         end
-        RAFShowLoading(player, "Sending summon request, one moment...")
-        MapSendRAF(player, "summon", { guid = friendGUIDLow })
+        QueueRAFRequest(player, "summon", { guid = friendGUIDLow })
     elseif intid >= PAGINATION_INTID_START and intid < PAGINATION_INTID_START + 99 then
-        RAFShowLoading(player, "Loading, one moment...")
-        MapSendRAF(player, "open-info", { page = intid - PAGINATION_INTID_START })
+        QueueRAFRequest(player, "open-info", { page = intid - PAGINATION_INTID_START })
     elseif intid >= SUMMON_PAGINATION_INTID_START and intid < SUMMON_PAGINATION_INTID_START + 99 then
-        RAFShowLoading(player, "Loading, one moment...")
-        MapSendRAF(player, "open-summon", { page = intid - SUMMON_PAGINATION_INTID_START })
+        QueueRAFRequest(player, "open-summon", { page = intid - SUMMON_PAGINATION_INTID_START })
     elseif intid == 500 then
         if cache.request then
             ShowSummonRequest(player, cache.request)
@@ -514,37 +485,29 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
             player:GossipComplete()
         end
     elseif intid == 501 then
-        RAFShowLoading(player, "Accepting summon, one moment...")
-        MapSendRAF(player, "accept", {})
+        QueueRAFRequest(player, "accept", {})
     elseif intid == 502 then
         player:GossipComplete()
         QueueRAFRequest(player, "decline")
     elseif intid == 1 then
-        RAFShowLoading(player, "Loading, one moment...")
-        MapSendRAF(player, "open-link", {})
+        QueueRAFRequest(player, "open-link", {})
     elseif intid == 10 then
-        RAFShowLoading(player, "Linking, one moment...")
-        MapSendRAF(player, "register", { code = code })
+        QueueRAFRequest(player, "register", { code = code })
     elseif intid == 2 then
-        RAFShowLoading(player, "Loading, one moment...")
-        MapSendRAF(player, "open-info", { page = 1 })
+        QueueRAFRequest(player, "open-info", { page = 1 })
     elseif intid == 3 then
-        RAFShowLoading(player, "Loading, one moment...")
-        MapSendRAF(player, "open-referee", {})
+        QueueRAFRequest(player, "open-referee", {})
     elseif intid == 4 then
-        RAFShowLoading(player, "Loading, one moment...")
-        MapSendRAF(player, "open-bonuses", {})
+        QueueRAFRequest(player, "open-bonuses", {})
     elseif intid == 5 then
         player:GossipComplete()
     elseif intid == 6 then
         player:GossipComplete()
     elseif intid == 7 then
-        RAFShowLoading(player, "Loading, one moment...")
-        MapSendRAF(player, "open-summon", { page = 1 })
+        QueueRAFRequest(player, "open-summon", { page = 1 })
     elseif intid == 40 then
         if player:HasItem(19322, 1) or PlayerHasEnoughFreeSlots(player, 1) then
-            RAFShowLoading(player, "Claiming, one moment...")
-            MapSendRAF(player, "claim", { tier = 0 })
+            QueueRAFRequest(player, "claim", { tier = 0 })
         end
     elseif intid == 41 then
         Reward41(player)
@@ -557,8 +520,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
     elseif RAFClaimIntid(intid) then
         local tier = RAFClaimIntid(intid)
         if PlayerHasEnoughFreeSlots(player, 3) then
-            RAFShowLoading(player, "Claiming, one moment...")
-            MapSendRAF(player, "claim", { tier = tier, option = intid })
+            QueueRAFRequest(player, "claim", { tier = tier, option = intid })
         else
             player:SendBroadcastMessage("You need at least 3 free bag slots to receive your reward.")
             if cache.bonuses then
