@@ -321,6 +321,18 @@ local function GetCostIcon(costType)
     return FALLBACK_ICON
 end
 
+local function SortStoreEntries(a, b)
+    local nameA = string.lower(GetEntryDisplay(a.entry))
+    local nameB = string.lower(GetEntryDisplay(b.entry))
+    if nameA == nameB then
+        if a.tabID == b.tabID then
+            return a.index < b.index
+        end
+        return a.tabID < b.tabID
+    end
+    return nameA < nameB
+end
+
 local function GetFilteredEntries()
     local entries = {}
 
@@ -346,6 +358,7 @@ local function GetFilteredEntries()
             end
         end
 
+        table.sort(entries, SortStoreEntries)
         return entries
     end
 
@@ -356,6 +369,7 @@ local function GetFilteredEntries()
         end
     end
 
+    table.sort(entries, SortStoreEntries)
     return entries
 end
 
