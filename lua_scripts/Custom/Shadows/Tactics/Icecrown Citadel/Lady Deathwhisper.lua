@@ -86,4 +86,4 @@ local function OnEnterMap631(event, player)
 end
 
 RegisterPlayerEvent(28, OnEnterMap631)
-for _, player in ipairs(GetStateMap():GetPlayers()) do OnEnterMap631(nil, player) end
+if GetStateMap() then for _, player in ipairs(GetStateMap():GetPlayers()) do OnEnterMap631(nil, player) end end

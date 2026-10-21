@@ -54,7 +54,7 @@ end
 RegisterPlayerEvent(28, OnMapChange)
 
 local players = {}
-for _, p in ipairs(GetStateMap():GetPlayers()) do table.insert(players, p) end
+if GetStateMap() then for _, p in ipairs(GetStateMap():GetPlayers()) do table.insert(players, p) end end
 for _, player in ipairs(players) do
     if player:GetMapId() == ULDUAR_MAP_ID then
         player:RegisterEvent(OnHeartbeat, 60 * 1000, 0)

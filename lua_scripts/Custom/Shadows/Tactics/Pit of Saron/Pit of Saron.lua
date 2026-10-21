@@ -91,4 +91,4 @@ local function OnEnterFoS(event, player)
 end
 
 RegisterPlayerEvent(28, OnEnterFoS)
-for _, player in ipairs(GetStateMap():GetPlayers()) do OnEnterFoS(nil, player) end
+if GetStateMap() then for _, player in ipairs(GetStateMap():GetPlayers()) do OnEnterFoS(nil, player) end end

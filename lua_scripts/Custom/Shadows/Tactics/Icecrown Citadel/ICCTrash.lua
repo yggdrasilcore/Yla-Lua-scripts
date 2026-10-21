@@ -63,4 +63,4 @@ local function OnBotMapChange(event, player)
 end
 
 RegisterPlayerEvent(28, OnBotMapChange)
-for _, player in ipairs(GetStateMap():GetPlayers()) do OnBotMapChange(nil, player) end
+if GetStateMap() then for _, player in ipairs(GetStateMap():GetPlayers()) do OnBotMapChange(nil, player) end end

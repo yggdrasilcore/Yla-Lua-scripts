@@ -22,4 +22,4 @@ local function CheckReliquaryPull(event, player)
 end
 
 RegisterPlayerEvent(28, CheckReliquaryPull)
-for _, player in ipairs(GetStateMap():GetPlayers()) do CheckReliquaryPull(nil, player) end
+if GetStateMap() then for _, player in ipairs(GetStateMap():GetPlayers()) do CheckReliquaryPull(nil, player) end end

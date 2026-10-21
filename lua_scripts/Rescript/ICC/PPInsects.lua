@@ -155,4 +155,4 @@ local function OnInsectMapChange(event, player)
 end
 
 RegisterPlayerEvent(28, OnInsectMapChange)
-for _, player in ipairs(GetStateMap():GetPlayers()) do OnInsectMapChange(nil, player) end
+if GetStateMap() then for _, player in ipairs(GetStateMap():GetPlayers()) do OnInsectMapChange(nil, player) end end

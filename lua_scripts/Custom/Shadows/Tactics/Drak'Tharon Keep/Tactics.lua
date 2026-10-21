@@ -25,4 +25,4 @@ local function OnEnterDTK(event, player)
 end
 
 RegisterPlayerEvent(28, OnEnterDTK)
-for _, player in ipairs(GetStateMap():GetPlayers()) do OnEnterDTK(nil, player) end
+if GetStateMap() then for _, player in ipairs(GetStateMap():GetPlayers()) do OnEnterDTK(nil, player) end end
