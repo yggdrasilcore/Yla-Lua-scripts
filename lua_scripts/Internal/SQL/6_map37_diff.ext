@@ -2227,6 +2227,57 @@ INSERT IGNORE INTO `gameobject` VALUES (2583308,148423,37,0,0,1,1,1148.45,222.27
 [==[
 INSERT IGNORE INTO `gameobject` VALUES (2583309,148423,37,0,0,1,1,1165.73,237.614,360.001,2.32307,0,0,-0.917415,-0.397931,300,0,1,'',NULL,NULL);
 ]==],
+[==[
+INSERT IGNORE INTO `creature_addon` VALUES (15001389,96000,0,0,0,0,0,NULL);
+]==],
+[==[
+INSERT IGNORE INTO `creature_addon` VALUES (15001414,1100022,0,0,0,0,0,NULL);
+]==],
+[==[
+INSERT IGNORE INTO `creature_addon` VALUES (15001419,1100023,0,0,0,0,0,NULL);
+]==],
+[==[
+INSERT IGNORE INTO `creature_addon` VALUES (15001420,1100021,0,0,0,0,0,NULL);
+]==],
+[==[
+INSERT IGNORE INTO `creature_addon` VALUES (15001425,32365012,0,0,0,0,0,NULL);
+]==],
+[==[
+INSERT IGNORE INTO `creature_addon` VALUES (15001441,32365014,0,0,0,0,0,NULL);
+]==],
+[==[
+INSERT IGNORE INTO `creature_addon` VALUES (15001442,32365015,0,0,0,0,0,NULL);
+]==],
+[==[
+INSERT IGNORE INTO `creature_addon` VALUES (15001708,32365016,0,0,0,0,0,NULL);
+]==],
+[==[
+INSERT IGNORE INTO `creature_addon` VALUES (15001709,32365017,0,0,0,0,0,NULL);
+]==],
+[==[
+INSERT IGNORE INTO `creature_addon` VALUES (15001346,0,0,0,1,233,0,NULL);
+]==],
+[==[
+INSERT IGNORE INTO `creature_addon` VALUES (15001348,0,0,0,1,69,0,NULL);
+]==],
+[==[
+INSERT IGNORE INTO `creature_formations` VALUES (15001414,15001414,0,0,2,0,0);
+]==],
+[==[
+INSERT IGNORE INTO `creature_formations` VALUES (15001419,15001419,0,0,2,0,0);
+]==],
+[==[
+INSERT IGNORE INTO `creature_formations` VALUES (15001420,15001420,0,0,2,0,0);
+]==],
+[==[
+INSERT IGNORE INTO `creature_formations` VALUES (15001420,15001484,3,300,512,0,0);
+]==],
+[==[
+INSERT IGNORE INTO `creature_formations` VALUES (15001414,15001488,3,300,512,0,0);
+]==],
+[==[
+INSERT IGNORE INTO `creature_formations` VALUES (15001419,15001490,3,300,512,0,0);
+]==],
 }
 
 local function map37_diff()
