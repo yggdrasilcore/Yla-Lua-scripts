@@ -559,7 +559,7 @@ ChatFrame_AddMessageEventFilter("CHAT_MSG_RAID", filterFunc)
 
 -- Spell Flight stuff
 
-local BUFFIDS = {
+local Mounts = {
     3363, 8153, 32235, 32239, 32240,
     32242, 32243, 32244, 32245, 32246, 32289, 32290, 32292, 32295, 32296, 32297, 32345,
     33943, 37015, 39798, 39800, 39801, 39802, 39803, 39910, 40120, 40192,
@@ -575,7 +575,7 @@ local BUFFIDS = {
 
 -- Create a name-to-id lookup table
 local spellNameToID = {}
-for _, id in pairs(BUFFIDS) do
+for _, id in pairs(Mounts) do
     local name = GetSpellInfo(id)
     if name then
         spellNameToID[name] = id
@@ -589,6 +589,7 @@ local lastSendTime = 0
 local function OnEvent(self, event, unit, spellName, spellRank, lineID)
     if not IsSpellKnown(FeathersSpell) then return end
     if InCombatLockdown() then return end
+    if IsSwimming() then return end -- Should this be here?
     if UnitUsingVehicle("player") then return end
     if not (
     --GetRealZoneText() == "Azshara Crater" or -- mall flight disabled
@@ -617,11 +618,11 @@ local function OnEvent(self, event, unit, spellName, spellRank, lineID)
 				local canColdWeather = IsSpellKnown(54197)
 				
 				if map == 4 and subzone == "Krasus' Landing" and canColdWeather and x < 0.655 then
-					
 					return
 				end
-
+                
                 SendChatMessage("." .. spellID, "SAY")
+                
                 UIErrorsFrame:Clear()
                 lastSendTime = GetTime()
             end
@@ -727,8 +728,8 @@ function HandleButtonTexture(i, toggle)
 			end
 		end
 		
-        -- Check if spellID is in BUFFIDS
-        for _, id in pairs(BUFFIDS) do
+        -- Check if spellID is in Mounts
+        for _, id in pairs(Mounts) do
             if spellID == id then
 	
                 -- If no custom texture, create one
