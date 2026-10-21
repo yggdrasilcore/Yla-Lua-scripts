@@ -1014,6 +1014,37 @@ if PrepareDBTable and GetStateMapId() == -1 then
     CharDBQuery("DELETE FROM ycore_yla.custom_transmogrification WHERE NOT EXISTS (SELECT 1 FROM item_instance WHERE item_instance.guid = custom_transmogrification.GUID)")
 end
 
+
+---------------------------------------------------------------------------------
+-- Transmog item vendor events
+---------------------------------------------------------------------------------
+
+local function AdoptTransmogItemCache()
+    local shared = GetWorldData("TransmogItemCache")
+    if type(shared) == "table" and shared.AsTable then
+        shared = shared:AsTable()
+    end
+    if type(shared) ~= "table" or type(shared.cache) ~= "table" then
+        return false
+    end
+    ItemCache["Cache"] = shared.cache
+    return true
+end
+
+local function LoadItemCache()
+    if ItemCache["Cache"] and next(ItemCache["Cache"]) then
+        return ItemCache["Cache"]
+    end
+    if AdoptTransmogItemCache() then
+        return ItemCache["Cache"]
+    end
+end
+
+---------------------------------------------------------------------------------
+-- Transmog item vendor events end
+---------------------------------------------------------------------------------
+
+
 ---------------------------------------------------------------------------------
 -- Transmog item vendor script start
 ---------------------------------------------------------------------------------
@@ -1646,36 +1677,6 @@ local function MogVendorSelect(event, player, object, sender, intid, code)
 		player:GossipSendMenu(12, object)
 	end
 end
-
----------------------------------------------------------------------------------
--- Transmog item vendor events
----------------------------------------------------------------------------------
-
-local function AdoptTransmogItemCache()
-    local shared = GetWorldData("TransmogItemCache")
-    if type(shared) == "table" and shared.AsTable then
-        shared = shared:AsTable()
-    end
-    if type(shared) ~= "table" or type(shared.cache) ~= "table" then
-        return false
-    end
-    ItemCache["Cache"] = shared.cache
-    return true
-end
-
-local function LoadItemCache()
-    if ItemCache["Cache"] and next(ItemCache["Cache"]) then
-        return ItemCache["Cache"]
-    end
-    if AdoptTransmogItemCache() then
-        return ItemCache["Cache"]
-    end
-end
-
----------------------------------------------------------------------------------
--- Transmog item vendor events end
----------------------------------------------------------------------------------
-
 
 ---------------------------------------------------------------------------------
 -- Transmogrify items event registrations
