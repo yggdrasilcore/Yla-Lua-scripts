@@ -1116,6 +1116,9 @@ local function StartStorePrefetch()
 end
 
 local function OpenStore()
+    if searchBox then searchBox:SetText("") searchBox:ClearFocus() end
+    currentFilter = "All Currencies"
+    if filterDropdown then UIDropDownMenu_SetText(filterDropdown, currentFilter) end
     mainFrame:Show()
     StartStorePrefetch()
 end
