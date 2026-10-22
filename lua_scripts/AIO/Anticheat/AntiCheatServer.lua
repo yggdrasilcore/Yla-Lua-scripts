@@ -88,18 +88,17 @@ function OnAIOAntiCheatCommand(event, player, command)
         elseif arg == "SpeedHack" then
             local clientSpd, closestSpd = command:match("SpeedHack%s+(%S+)%s+(%S+)")
             
-            -- Allowed speed deviations
-            if player:IsFalling() and clientSpd then
-                local speed = tonumber(clientSpd)
-                if speed == 5    -- Skips normal falling
-                or speed == 40   -- Skips most knockbacks, incl LK shadow traps
-                then return false end
-            end
-            
-            -- Skip knockbacks, which are mostly speed 40
-            if player:IsFalling() and clientSpd and tonumber(clientSpd) == 40 then
-                return false
-            end
+            -- Skip falling entirely
+            if player:IsFalling() then return false end
+
+            -- Allowed client speeds
+            local speed = tonumber(clientSpd)
+            if speed == 7.50
+            or speed == 17.50
+            or speed == 5.00
+            or speed == 28.00
+            or speed == 40.00
+            then return false end
             
             local state = player:IsUnderWater() and "Swimming" or player:IsFlying() and "Flying" or player:IsFalling() and "Falling" or "Walking"
             SendToDiscord("SpeedHack detected. Offending player: "..player:GetName()..". Pos: "..string.format("%.2f, %.2f, %.2f", x, y, z)..". Map: "..player:GetMapId()..(clientSpd and ". Client speed: "..clientSpd..", Server speed: "..closestSpd or "")..". State: "..state)
