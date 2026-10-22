@@ -46,6 +46,18 @@ local SLOT_ICONS = {
 -- states. The mog caches are populated per state by the login/map-change
 -- handler each state sees; the packet repair handler below reads live DB data.
 
+-- Item GUIDs are 48-bit counters. Eluna's GetUInt64 returns a 64-bit userdata;
+-- convert it to a Lua number (exact up to 2^53) and always serialize it as an
+-- integer so the SQL never loses precision or uses scientific notation.
+local function ToGuidNumber(value)
+    if type(value) == "number" then return value end
+    return tonumber(tostring(value)) or 0
+end
+
+local function GuidToString(value)
+    return string.format("%.0f", ToGuidNumber(value))
+end
+
 ---------------------------------------------------------------------------------
 -- Transmog item vendor vars
 ---------------------------------------------------------------------------------
@@ -371,7 +383,7 @@ local function DeleteFakeFromDB(itemGUID, player)
             SetTransmogData(player, data)
         end
     end
-    CharDBExecute("DELETE FROM ycore_yla.custom_transmogrification WHERE GUID = "..itemGUID)
+    CharDBExecute("DELETE FROM ycore_yla.custom_transmogrification WHERE GUID = " .. GuidToString(itemGUID))
 end
 
 local function DeleteFakeEntry(item)
@@ -395,7 +407,7 @@ local function SetFakeEntry(item, entry)
         local data = GetTransmogData(player) or {}
         data[iGUID] = pGUID
         SetTransmogData(player, data)
-        CharDBExecute("REPLACE INTO ycore_yla.custom_transmogrification (GUID, FakeEntry, Owner) VALUES ("..iGUID..", "..entry..", "..pGUID..")")
+        CharDBExecute("REPLACE INTO ycore_yla.custom_transmogrification (GUID, FakeEntry, Owner) VALUES (" .. GuidToString(iGUID) .. ", " .. entry .. ", " .. pGUID .. ")")
     end
 end
 
@@ -786,7 +798,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
         local hideData = GetTransmogData(player) or {}
         hideData[iGUID] = pGUID
         SetTransmogData(player, hideData)
-        CharDBExecute("REPLACE INTO ycore_yla.custom_transmogrification (GUID, FakeEntry, Owner) VALUES ("..iGUID..", 21, "..pGUID..")")
+        CharDBExecute("REPLACE INTO ycore_yla.custom_transmogrification (GUID, FakeEntry, Owner) VALUES (" .. GuidToString(iGUID) .. ", 21, " .. pGUID .. ")")
 
         player:EmoteState(66)
         player:RegisterEvent(function(eventId, delay, repeats, player) -- Hack to fix non-updating item display IDs
@@ -972,7 +984,7 @@ local function OnLogin(event, player)
         local data = {}
         if result then
             repeat
-                local itemGUID = result:GetUInt32(0)
+                local itemGUID = ToGuidNumber(result:GetUInt64(0))
                 local fakeEntry = result:GetUInt32(1)
                 data[itemGUID] = playerGUID
                 entries[itemGUID] = fakeEntry
@@ -1010,7 +1022,9 @@ local function OnEquip(event, player, item, bag, slot)
 end
 
 if PrepareDBTable and GetStateMapId() == -1 then
-    CharDBQuery([[CREATE TABLE IF NOT EXISTS ycore_yla.custom_transmogrification (`GUID` INT(10) UNSIGNED NOT NULL, `FakeEntry` INT(10) UNSIGNED NOT NULL, `Owner` INT(10) UNSIGNED NOT NULL, PRIMARY KEY (`GUID`));]])
+    CharDBQuery([[CREATE TABLE IF NOT EXISTS ycore_yla.custom_transmogrification (`GUID` BIGINT UNSIGNED NOT NULL, `FakeEntry` INT(10) UNSIGNED NOT NULL, `Owner` INT(10) UNSIGNED NOT NULL, PRIMARY KEY (`GUID`));]])
+    -- Existing installs may still have the old 32-bit GUID column.
+    CharDBQuery("ALTER TABLE ycore_yla.custom_transmogrification MODIFY `GUID` BIGINT UNSIGNED NOT NULL")
     CharDBQuery("DELETE FROM ycore_yla.custom_transmogrification WHERE NOT EXISTS (SELECT 1 FROM item_instance WHERE item_instance.guid = custom_transmogrification.GUID)")
 end
 
@@ -1693,7 +1707,7 @@ local function OnRepair(event, packet, player)
         local liveEntries = {}
         if result then
             repeat
-                liveEntries[result:GetUInt32(0)] = result:GetUInt32(1)
+                liveEntries[ToGuidNumber(result:GetUInt64(0))] = result:GetUInt32(1)
             until not result:NextRow()
         end
         for slot = EQUIPMENT_SLOT_START, EQUIPMENT_SLOT_END-1 do

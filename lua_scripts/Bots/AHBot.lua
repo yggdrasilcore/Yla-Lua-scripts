@@ -233,6 +233,26 @@ if not houseList or houseList == "" or houseList:match("[^%d,]") then  print("[E
 if not ActionsPerCycle or type(ActionsPerCycle) ~= "number" then print("[Eluna AH Bot]: Core - ActionsPerCycle must be a number! Defaulting to 500.") ActionsPerCycle = 500 end
 table.unpack = table.unpack or unpack
 
+-- Item GUIDs are 48-bit counters. Eluna's GetUInt64 returns a 64-bit userdata;
+-- convert it to a Lua number (exact up to 2^53) and always serialize it as an
+-- integer so the SQL never loses precision or uses scientific notation.
+local function ToGuidNumber(value)
+    if type(value) == "number" then return value end
+    return tonumber(tostring(value)) or 0
+end
+
+local function GuidToString(value)
+    return string.format("%.0f", ToGuidNumber(value))
+end
+
+local function JoinGuids(guids)
+    local serialized = {}
+    for i, guid in ipairs(guids) do
+        serialized[i] = GuidToString(guid)
+    end
+    return table.concat(serialized, ",")
+end
+
 function SendMessageToGMs(message)
     for _, player in pairs(GetPlayersInWorld()) do
         if player:GetGMRank() > 0 then
@@ -1676,7 +1696,7 @@ local function CheckAuctions(houseId, callback)
     CharDBQueryAsync(string.format("SELECT COUNT(*) FROM auctionhouse WHERE itemowner IN (%s) and houseid = %d", botList, houseId),
 	function(countResult)
 		if countResult then
-			local count = countResult:GetUInt32(0)
+			local count = ToGuidNumber(countResult:GetUInt64(0))
 			postedAuctions[houseId] = count
 			callback(count)
 		end
@@ -1929,7 +1949,7 @@ local function AHBot_BuyAuction()
 		repeat
 			table.insert(tempResults, {
 				id = results:GetUInt32(0),
-				itemguid = results:GetUInt32(1),
+				itemguid = ToGuidNumber(results:GetUInt64(1)),
 				houseid = results:GetUInt32(2),
 				itemowner = results:GetUInt32(3),
 				buyoutprice = results:GetUInt32(4),
@@ -1960,14 +1980,14 @@ local function AHBot_BuyAuction()
             table.insert(itemGuids, auction.itemguid)
         end
 		
-        local itemQuery = string.format("SELECT guid, itemEntry FROM item_instance WHERE guid IN (%s)", table.concat(itemGuids, ","))
+        local itemQuery = string.format("SELECT guid, itemEntry FROM item_instance WHERE guid IN (%s)", JoinGuids(itemGuids))
 
         CharDBQueryAsync(itemQuery, function(itemResults)
             if not itemResults then return end
             
             local itemEntries = {}
             repeat
-                local guid = itemResults:GetUInt32(0)
+                local guid = ToGuidNumber(itemResults:GetUInt64(0))
                 local itemEntry = itemResults:GetUInt32(1)
                 itemEntries[guid] = itemEntry
             until not itemResults:NextRow()
@@ -2150,7 +2170,7 @@ local function AddAuctions(specificHouse)
 				local maxGuidForSecondHighest = 0
 				
 				repeat
-					local guid = itemResult:GetUInt32(0)
+					local guid = ToGuidNumber(itemResult:GetUInt64(0))
 					local AddedByEluna = itemResult:GetUInt32(1)
 					
 					usedGuids[guid] = true
@@ -2441,13 +2461,13 @@ local function AddAuctions(specificHouse)
 							
 							local startBid = math.floor(cost * (math.random(51, 90) / 100))
 							-- Add item_instance entry
-							table.insert(itemQueryParts, "(" .. lastItemId .. ", " .. item.entry .. ", " .. randomBot .. ", " .. item.craftedBy .. ", 0, " .. stack .. ", 0, '" ..
+							table.insert(itemQueryParts, "(" .. GuidToString(lastItemId) .. ", " .. item.entry .. ", " .. randomBot .. ", " .. item.craftedBy .. ", 0, " .. stack .. ", 0, '" ..
 								item.c1 .. " " .. item.c2 .. " " .. item.c3 .. " " .. item.c4 .. " " .. item.c5 .. "', 0, '"..enchantString.."', " ..
 								randomStats .. ", " .. item.durability .. ", "..item.duration..", '')")
 
 							-- Add auction entry
-							table.insert(auctionQueryParts, string.format("(%d, %d, %d, %d, %d, %d, 0, 0, %d, 1, %d)",
-								lastAuctionId, houseId, lastItemId, randomBot, cost, expireTime, startBid, AddedByEluna))
+							table.insert(auctionQueryParts, string.format("(%d, %d, %s, %d, %d, %d, 0, 0, %d, 1, %d)",
+								lastAuctionId, houseId, GuidToString(lastItemId), randomBot, cost, expireTime, startBid, AddedByEluna))
 						end
 					end
 					-- We're nesting our next operations in async queries to ensure they don't overlap and are performed in rapid succession

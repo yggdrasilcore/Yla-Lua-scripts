@@ -87,6 +87,7 @@ end
 if CharDBQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'acore_characters' AND table_name = 'custom_transmogrification' LIMIT 1") then
     CharDBExecute("CREATE TABLE IF NOT EXISTS ycore_yla.custom_transmogrification LIKE acore_characters.custom_transmogrification")
     CharDBExecute("INSERT IGNORE INTO ycore_yla.custom_transmogrification SELECT * FROM acore_characters.custom_transmogrification")
+    CharDBExecute("ALTER TABLE ycore_yla.custom_transmogrification MODIFY `GUID` BIGINT UNSIGNED NOT NULL")
 end
 
 -- custom_transmogrification_sets
