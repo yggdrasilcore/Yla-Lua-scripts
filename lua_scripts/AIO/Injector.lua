@@ -67,11 +67,17 @@ local WardenLoader = {
 	}
 }
 
+local function LuaQuote(s)
+	return '"' .. s:gsub('[%z\1-\31\\"]', function(c)
+		return string.format("\\%03d", string.byte(c))
+	end) .. '"'
+end
+
 function Player:SendLargePayload(addon, version, cache, comp, data)
 	comp = comp or 0;
 	cache = cache or 0;
 	local chunk = {}
-	local max_size = 900
+	local max_size = 500
 
 	if(comp == 1) then
 		-- payload should be compressed using lzw
@@ -109,7 +115,7 @@ function Player:SendLargePayload(addon, version, cache, comp, data)
 		end
 		istr = istr..tostring(i)
 
-		self:SendAddonMessage("ws", "_G['"..cGTN.."'].f.p('"..istr.."', '"..cstr.."', '"..addon.."', "..version..", "..cache..", "..comp..", [["..chunk[i].."]])", 7, self)
+		self:SendAddonMessage("ws", "_G['"..cGTN.."'].f.p('"..istr.."', '"..cstr.."', '"..addon.."', "..version..", "..cache..", "..comp..", "..LuaQuote(chunk[i])..")", 7, self)
 	end
 end
 
@@ -135,12 +141,14 @@ local function SendAddonInjector(player)
 	-- Concatenate
 	player:SendAddonMessage("ws", "_G['"..cGTN.."'].f.c = function(a) local b='' for _,d in ipairs(a) do b=b..d end; return b end", 7, player) 
 	-- Execute
-	player:SendAddonMessage("ws", "_G['"..cGTN.."'].f.e = function(n) local t=_G['"..cGTN.."']; local lt = t.s[n] local fn = t.f.c(lt.ca); _G[n..'payload'] = {v = lt.v, p = fn}; if(lt.co==1) then fn = lualzw.decompress(fn) end t.f.l(fn, n) t.s[n]=nil end", 7, player)
+	player:SendAddonMessage("ws", "_G['"..cGTN.."'].f.e = function(n) local t=_G['"..cGTN.."']; local lt = t.s[n]; if not lt or lt.done then return end lt.done = true; local fn = t.f.c(lt.ca); _G[n..'payload'] = {v = lt.v, p = fn, h = t.f.h(fn)}; if(lt.co==1) then fn = lualzw.decompress(fn) end t.f.l(fn, n) t.s[n]=nil end", 7, player)
 	-- Process
-	player:SendAddonMessage("ws", "_G['"..cGTN.."'].f.p = function(a, b, n, v, c, co, s) local t,tc=_G['"..cGTN.."'], _G['"..cGTN.."'].s; if not tc[n] then tc[n] = {['v']=v, ['co']=co, ['c']=c, ['ca']={}} end local lt = tc[n] a=tonumber(a) b=tonumber(b) table.insert(lt.ca, a, s) if a == b and #lt.ca == b then t.f.e(n) end end", 7, player)
+	player:SendAddonMessage("ws", "_G['"..cGTN.."'].f.p = function(a, b, n, v, c, co, s) local t,tc=_G['"..cGTN.."'], _G['"..cGTN.."'].s; a=tonumber(a) b=tonumber(b) local lt=tc[n]; if not lt or lt.v~=v or lt.b~=b then lt={['v']=v, ['co']=co, ['c']=c, ['b']=b, ['ca']={}} tc[n]=lt end; if lt.done then return end; if lt.ca[a] then return end; table.insert(lt.ca, a, s) if a == b and #lt.ca == b then t.f.e(n) end end", 7, player)
+	-- Checksum
+	player:SendAddonMessage("ws", "_G['"..cGTN.."'].f.h = function(s) local h=0 for i=1,#s do h=(h*33+string.byte(s,i))%4294967296 end return h end", 7, player)
 	-- Inform
 	-- One potential issue is dependency load order and requirement, this is something I'll have to look into at some point..
-	player:SendAddonMessage("ws", "_G['"..cGTN.."'].f.i = function(n, v, c, co, s) local t=_G['"..cGTN.."']; if not(t.i[2]) then t.i[2] = tonumber(s) end if(c == 1) then RegisterForSave(n..'payload'); local cc = _G[n..'payload'] if(cc) then if(cc.v == v) then local p = cc.p if(co == 1) then p = lualzw.decompress(p) end t.f.l(p, n) return; end end end SendAddonMessage('wc', 'req'..n, 'WHISPER', UnitName('player')) end", 7, player)
+	player:SendAddonMessage("ws", "_G['"..cGTN.."'].f.i = function(n, v, c, co, s) local t=_G['"..cGTN.."']; if not(t.i[2]) then t.i[2] = tonumber(s) end if(c == 1) then RegisterForSave(n..'payload'); local cc = _G[n..'payload']; if cc and cc.v == v and type(cc.p) == 'string' and cc.h and t.f.h(cc.p) == cc.h then local p = cc.p if(co == 1) then p = lualzw.decompress(p) end t.f.l(p, n) return end _G[n..'payload'] = nil end SendAddonMessage('wc', 'req'..n, 'WHISPER', UnitName('player')) end", 7, player)
 	-- cache registry
 	player:SendAddonMessage("ws", "_G['"..cGTN.."'].f.r = function(a) RegisterForSave(a); end", 7, player) 
 
