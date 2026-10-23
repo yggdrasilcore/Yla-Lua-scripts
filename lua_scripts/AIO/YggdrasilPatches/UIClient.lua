@@ -932,17 +932,6 @@ end)
 
 UpdateAllButtons()
 
-local function OnSpellCastSucceed(_, _, _, name)
-    if name == "Worgen Form" then
-        SendChatMessage(".32819", "SAY")  -- Send a message in "say" chat
-    end
-end
-
--- Register the event when a spell is cast
-local spellSucceed = CreateFrame("Frame")
-spellSucceed:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
-spellSucceed:SetScript("OnEvent", OnSpellCastSucceed)
-
 --------------------------------------
 -- LVL Rewards Toggle
 --------------------------------------

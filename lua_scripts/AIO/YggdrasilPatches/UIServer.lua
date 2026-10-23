@@ -67,13 +67,7 @@ local function AIO_UI_FIX(event, player, command)
 			end
 		end
     elseif event == 42 then
-		if command == "32819" then -- Extends worg form to 5 minutes, hack approach to spell script
-			if player:HasAura(32819) then
-				local aura = player:AddAura(32819, player)
-				aura:SetDuration(5 * 60 * 1000)
-			end
-			return false
-		elseif command == "afk" then
+		if command == "afk" then
 			--if player:IsAFK() 
 			--and NoAFKLogoutZones[player:GetZoneId()]
 			--then
