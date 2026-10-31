@@ -30,6 +30,13 @@ local itemsInfo = {
         { id = 7, name = "Suicide",  itemType = "spell", quantity = "1", costType = "Community Tokens", cost = 10 },
         { id = 427, name = "Tele Monastery",  itemType = "spell", quantity = "1", costType = "Community Tokens", cost = 10 },
         { id = 32819, name = "Worgen Form",  itemType = "spell", quantity = "1", costType = "Community Tokens", cost = 25 },
+        { id = 228, name = "Polymorph: Chicken",  itemType = "spell", quantity = "1", costType = "Community Tokens", cost = 25 },
+        { id = 28271, name = "Polymorph: Turtle",  itemType = "spell", quantity = "1", costType = "Community Tokens", cost = 25 },
+        { id = 28272, name = "Polymorph: Pig",  itemType = "spell", quantity = "1", costType = "Community Tokens", cost = 25 },
+        { id = 61025, name = "Polymorph: Snake",  itemType = "spell", quantity = "1", costType = "Community Tokens", cost = 25 },
+        { id = 61305, name = "Polymorph: Black Cat",  itemType = "spell", quantity = "1", costType = "Community Tokens", cost = 25 },
+        { id = 61721, name = "Polymorph: Rabbit",  itemType = "spell", quantity = "1", costType = "Community Tokens", cost = 25 },
+        { id = 61780, name = "Polymorph: Turkey",  itemType = "spell", quantity = "1", costType = "Community Tokens", cost = 25 },
         { id = 8041, name = "Serpent Form",  itemType = "spell", quantity = "1", costType = "Community Tokens", cost = 25 },
         { id = 3329, name = "Frog Form",  itemType = "spell", quantity = "1", costType = "Community Tokens", cost = 25 },
         { id = 24717, name = "Costume",  itemType = "spell", quantity = "1", costType = "Community Tokens", cost = 25 },
@@ -384,6 +391,18 @@ local function PurchaseSpell(player, spellID, totalCost, costType)
     if player:HasSpell(spellID) then
         player:SendBroadcastMessage("You already have this spell.")
         return
+    end
+
+    local entry = GetStoreEntry(serviceID)
+    if entry and entry.id == spellID then
+        -- Only polymorph spells (IDs: 228, 28271, 28272, 61025, 61305, 61721, 61780)
+        if spellID == 228 or spellID == 28271 or spellID == 28272 or
+           spellID == 61025 or spellID == 61305 or spellID == 61721 or spellID == 61780 then
+            if player:GetClassId() ~= 8 then
+                player:SendBroadcastMessage("This spell can only be purchased by mages.")
+                return
+            end
+        end
     end
 
     DeductPlayerCurrency(player, costType, totalCost)
