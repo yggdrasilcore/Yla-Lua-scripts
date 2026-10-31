@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 631 then return end
+
 local function LichKingLoop(eventId, delay, repeats, lk)
     if lk:IsDead() or not lk:IsInCombat() then
         StopLuaEvent(lk)
@@ -223,7 +225,7 @@ local function OnReload(player)
     end
 end
 
-for _, player in ipairs(GetPlayersInWorld()) do OnReload(player) end
+if GetStateMap() then for _, player in ipairs(GetStateMap():GetPlayers()) do OnReload(player) end end
 RegisterPlayerEvent(33, OnLKCombat)
 RegisterSpellEvent(69409, 2, OnSoulReaperCast)
 RegisterSpellEvent(72762, 1, OnDefilePrepare)

@@ -442,7 +442,9 @@ local function ProcessRemoveQue()
     end
 end
 if AIO_SERVER then
-    CreateLuaEvent(ProcessRemoveQue, AIO_MSG_CACHE_DELAY, 0)
+if GetStateMapId() == -1 then
+        CreateLuaEvent(ProcessRemoveQue, AIO_MSG_CACHE_DELAY, 0)
+    end
 else
     local frame = CreateFrame("Frame")
     local timer = AIO_MSG_CACHE_DELAY

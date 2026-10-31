@@ -169,7 +169,7 @@ function DisableManualSpells(player)
         end
         player:SaveToDB()
         
-        CharDBExecute("REPLACE INTO acore_eluna.disable_shadows_spells (guid, spell_id) VALUES " .. table.concat(values, ", "))
+        CharDBExecute("REPLACE INTO ycore_yla.disable_shadows_spells (guid, spell_id) VALUES " .. table.concat(values, ", "))
         RemovedPlayerSpells[guidLow] = playerSpellsToRemove
         player:SetData("RemovedManualSpells", true)
         PrintInfo("[DisableManualSpells] Cached and saved " .. #playerSpellsToRemove .. " spells for " .. playerName)
@@ -197,9 +197,12 @@ local function OnMapChange(event, player)
         PrintInfo("[OnMapChange] No cache found, querying DB for " .. player:GetName())
         local guid = player:GetGUID()
         CharDBQueryAsync(
-            string.format("SELECT spell_id FROM acore_eluna.disable_shadows_spells WHERE guid = %d", guidLow),
+            string.format("SELECT spell_id FROM ycore_yla.disable_shadows_spells WHERE guid = %d", guidLow),
             function(query)
-                local player = GetPlayerByGUID(guid)
+                local player
+                for _, p in ipairs(GetStateMap():GetPlayers()) do
+                    if p:GetGUIDLow() == GetGUIDLow(guid) then player = p break end
+                end
                 if not player then return end
                 
                 if query then
@@ -253,9 +256,12 @@ local function OnSave(event, player)
     local guid = player:GetGUID()
     
     CharDBQueryAsync(
-        string.format("SELECT spell_id FROM acore_eluna.disable_shadows_spells WHERE guid = %d", guidLow),
+        string.format("SELECT spell_id FROM ycore_yla.disable_shadows_spells WHERE guid = %d", guidLow),
         function(query)
-            local player = GetPlayerByGUID(guid)
+            local player
+            for _, p in ipairs(GetStateMap():GetPlayers()) do
+                if p:GetGUIDLow() == GetGUIDLow(guid) then player = p break end
+            end
             if not player then return end
             
             if query then
@@ -274,7 +280,7 @@ local function OnSave(event, player)
                 if allKnown then
                     PrintInfo("[OnSave] All " .. spellCount .. " spells verified, clearing DB for " .. player:GetName())
                     CharDBExecute(string.format(
-                        "DELETE FROM acore_eluna.disable_shadows_spells WHERE guid = %d",
+                        "DELETE FROM ycore_yla.disable_shadows_spells WHERE guid = %d",
                         guidLow
                     ))
                     RemovedPlayerSpells[guidLow] = nil
@@ -289,30 +295,4 @@ end
 RegisterPlayerEvent(28, OnMapChange)
 RegisterPlayerEvent(34, OnLeaveCombat)
 RegisterPlayerEvent(25, OnSave)
-CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.disable_shadows_spells (`guid` INT UNSIGNED NOT NULL, `spell_id` INT UNSIGNED NOT NULL, PRIMARY KEY (`guid`, `spell_id`))")
-
-local function OnDisableSpellsCommand(event, player, command)
-    if command == "disablespells" and player:GetGMRank() > 0 then
-		
-        local target = player:GetSelection()
-        
-        if not target then
-            player:SendBroadcastMessage("No target selected")
-            return false
-        end
-        
-        if target:ToPlayer() == nil then
-            player:SendBroadcastMessage("Target must be a player")
-            return false
-        end
-        
-        local targetPlayer = target:ToPlayer()
-        
-        DisableManualSpells(targetPlayer)
-        player:SendBroadcastMessage("DisableManualSpells executed on " .. targetPlayer:GetName())
-        
-        return false
-    end
-end
-
-RegisterPlayerEvent(42, OnDisableSpellsCommand)
+CharDBExecute("CREATE TABLE IF NOT EXISTS ycore_yla.disable_shadows_spells (`guid` INT UNSIGNED NOT NULL, `spell_id` INT UNSIGNED NOT NULL, PRIMARY KEY (`guid`, `spell_id`))")

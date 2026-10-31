@@ -1,3 +1,6 @@
+-- Northrend-only script (map 571): quest 12973 escorts Brann to Frosthold.
+if GetStateMapId() ~= 571 then return end
+
 local eventActive = false
 
 local function StartDialogueSequence(eventId, delay, repeats, brann)

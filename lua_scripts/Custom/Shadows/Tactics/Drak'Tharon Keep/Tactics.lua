@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 600 then return end
+
 local MAP_ID       = 600
 local TICK_TIMER   = 100 -- ms
 local NUDGE_Z      = 1 -- yds
@@ -23,4 +25,4 @@ local function OnEnterDTK(event, player)
 end
 
 RegisterPlayerEvent(28, OnEnterDTK)
-for _, player in ipairs(GetPlayersInWorld()) do OnEnterDTK(nil, player) end
+if GetStateMap() then for _, player in ipairs(GetStateMap():GetPlayers()) do OnEnterDTK(nil, player) end end

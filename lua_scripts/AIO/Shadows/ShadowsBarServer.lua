@@ -1,3 +1,5 @@
+if GetStateMapId() ~= -1 then return end
+
 local ShadowsCacheHandlers = AIO.AddHandlers("ShadowsCache", {})
 
 function ShadowsCacheHandlers.RequestCache(player)

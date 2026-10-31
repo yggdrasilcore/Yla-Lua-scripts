@@ -1,3 +1,5 @@
+if GetStateMapId() ~= -1 then return end
+
 local HERBALISM_SKILL = 182
 local BASE_SPELLS = {
     2383,   -- Find Herbs

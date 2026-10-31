@@ -1,3 +1,5 @@
+if GetStateMapId() ~= -1 then return end
+
 local function killPlayer(e, d, r, player)
 	if player:GetHealth() == 0 then return end -- Don't try to kill if HP is 0 (then player is actually dead, as opposed to the IsDead() flag)
 	if not player:GetData("DeathSet") or player:GetData("DeathSet") < os.time() then

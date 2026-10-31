@@ -1,3 +1,5 @@
+if GetStateMapId() ~= -1 then return end
+
 local mutedAccounts = {}
 
 local function OnCommand(event, player, command)

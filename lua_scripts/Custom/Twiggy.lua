@@ -3,7 +3,6 @@
 -- Start Mall TP vars
 local ITEM_ID = 37430 -- Old mall stone. Currently used as index for mall CD in DB
 local COOLDOWN = 30 * 60 -- 30 minutes
-local MallTeleCD = {}
 local MAP_ID = 37
 local X = 888.082
 local Y = 119.53
@@ -14,23 +13,72 @@ local ORIENTATION = 1.09494
 -- VIP vars
 local vendorID = 26300
 local vendorCD = 15 * 60 -- 15 minutes in seconds
-local VIPVendorCD = {}
 local VIPVendorDuration = 3 * 60 * 1000 -- VIP vendor lasts for 1 minute
 local timeMessage = 0
 
 -- End VIP vars
 
--- Twiggy Tables
-local cacheChoice = {}
-local intIdChoice = {}
-local tickleCount = {}
-mailboxtime = {}
+-- Twiggy per-player state lives in player:Data() (reload-proof, per-player,
+-- destroyed on logout) instead of file-local guid-keyed tables that bled
+-- between players and broke across states/reloads.
+-- Keys: "TwiggyCache", "TwiggyIntId", "TwiggyTickle", "TwiggyMailbox", "TwiggyVendorCD".
 
 -- End Twiggy tables
 
+-- Druid morph claimable-creature lists, wired to DruidMorpher.lua via world data.
+-- DruidMorpher (world state) publishes entry->name tables with
+-- SetWorldData("DruidMorphCache1".."7"); Twiggy gossip runs on map states,
+-- so it consumes them here with GetWorldData.
+-- Index mapping follows DruidMorpher QUERIES order:
+-- 1 Cat, 2 Bear, 3 Flight, 4 Travel, 5 Moonkin, 6 Tree, 7 Aquatic.
+local catCache
+local bearCache
+local birdCache
+local travelCache
+local owlCache
+local treeCache
+local aquaticCache
+local catCount
+local bearCount
+local birdCount
+local travelCount
+local owlCount
+local treeCount
+local aquaticCount
+
+local function TwiggyCountEntries(t)
+    local n = 0
+    for _ in pairs(t) do
+        n = n + 1
+    end
+    return n
+end
+
+local function TwiggyAdoptDruidMorphCaches()
+    local c = {}
+    for i = 1, 7 do
+        c[i] = GetWorldData("DruidMorphCache" .. i):AsTable()
+    end
+    catCache = c[1]
+    bearCache = c[2]
+    birdCache = c[3]
+    travelCache = c[4]
+    owlCache = c[5]
+    treeCache = c[6]
+    aquaticCache = c[7]
+    catCount = TwiggyCountEntries(catCache)
+    bearCount = TwiggyCountEntries(bearCache)
+    birdCount = TwiggyCountEntries(birdCache)
+    travelCount = TwiggyCountEntries(travelCache)
+    owlCount = TwiggyCountEntries(owlCache)
+    treeCount = TwiggyCountEntries(treeCache)
+    aquaticCount = TwiggyCountEntries(aquaticCache)
+    return true
+end
+
 
 -- Initiates VIP table if not already present
-AuthDBExecute("CREATE TABLE IF NOT EXISTS accounts_vip (ACCOUNT INT(6) NOT NULL PRIMARY KEY, VIPTIME INT(11) NOT NULL);")
+CharDBExecute("CREATE TABLE IF NOT EXISTS ycore_yla.accounts_vip (ACCOUNT INT(6) NOT NULL PRIMARY KEY, VIPTIME INT(11) NOT NULL);")
 
 -- Prepares Twiggy in the database
 --WorldDBExecute("UPDATE creature_template_model SET CreatureDisplayID = 13098, DisplayScale = 0.33 WHERE CreatureID = 23198;")
@@ -49,7 +97,27 @@ local function ShowCategoryContents(player, creature, category, page)
     local endIndex = page * itemsPerPage
     player:GossipClearMenu()
 
-    local cache = cacheChoice[player:GetGUIDLow()]
+    TwiggyAdoptDruidMorphCaches()
+    -- Resolve by category string, not table identity: each adopt builds fresh
+    -- tables via AsTable(), so a stored reference goes stale and `==` checks fail.
+    local cache
+    local icon
+    if category == "Cat Forms" then
+        cache, icon = catCache, "ability_druid_catform"
+    elseif category == "Bear Forms" then
+        cache, icon = bearCache, "ability_racial_bearform"
+    elseif category == "Travel Forms" then
+        cache, icon = travelCache, "ability_druid_travelform"
+    elseif category == "Flight Forms" then
+        cache, icon = birdCache, "ability_druid_flightform"
+    elseif category == "Tree Forms" then
+        cache, icon = treeCache, "ability_druid_treeoflife"
+    elseif category == "Moonkin Forms" then
+        cache, icon = owlCache, "spell_nature_forceofnature"
+    elseif category == "Aquatic Forms" then
+        cache, icon = aquaticCache, "ability_druid_aquaticform"
+    end
+    player:Data():Set("TwiggyCache", cache)
 
     -- Create a temporary table to hold the entries in a sortable format
     local tempTable = {}
@@ -68,21 +136,7 @@ local function ShowCategoryContents(player, creature, category, page)
         itemCount = itemCount + 1
         if itemCount >= startIndex and itemCount <= endIndex then
             local name = entryData.name
-            if cache == catCache then
-                player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_catform:32:32:-22:0|t" .. name, 0, 999)
-            elseif cache == bearCache then
-                player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_racial_bearform:32:32:-22:0|t" .. name, 0, 999)
-            elseif cache == travelCache then
-                player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_travelform:32:32:-22:0|t" .. name, 0, 999)
-            elseif cache == birdCache then
-                player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_flightform:32:32:-22:0|t" .. name, 0, 999)
-            elseif cache == treeCache then
-                player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_treeoflife:32:32:-22:0|t" .. name, 0, 999)
-            elseif cache == owlCache then
-                player:GossipMenuAddItem(2, "|TInterface/ICONS/spell_nature_forceofnature:32:32:-22:0|t" .. name, 0, 999)
-            elseif cache == aquaticCache then
-                player:GossipMenuAddItem(2, "|TInterface/ICONS/ability_druid_aquaticform:32:32:-22:0|t" .. name, 0, 999)
-            end
+            player:GossipMenuAddItem(2, "|TInterface/ICONS/" .. icon .. ":32:32:-22:0|t" .. name, 0, 999)
         end
         if itemCount >= endIndex then
             break
@@ -106,8 +160,8 @@ local function ShowCategoryContents(player, creature, category, page)
 end
 
 local function VIPmenu(player, creature)
-	if player:GetData("VIPTime") and player:GetData("VIPTime") > os.time() then
-		local vipTime = player:GetData("VIPTime")
+	if player:Data():Get("VIPTime") and player:Data():Get("VIPTime") > os.time() then
+		local vipTime = player:Data():Get("VIPTime")
 		local remainingTime = vipTime - os.time()
 
 		if remainingTime >= 86400 then
@@ -162,20 +216,20 @@ local function TwiggyGossipHello(event, player, creature)
 		mainMenu(player, creature)
 	else
 		-- If it's someone else's companion, don't start gossip
-		if not tickleCount[player:GetGUIDLow()] then
-			tickleCount[player:GetGUIDLow()] = 0
+		if not player:Data():Get("TwiggyTickle") then
+			player:Data():Set("TwiggyTickle", 0)
 		end
 		
-		if not tickleCount[player:GetGUIDLow()] or tickleCount[player:GetGUIDLow()] == 0 then
+		if (player:Data():Get("TwiggyTickle") or 0) == 0 then
 			creature:SendUnitWhisper("My roots have other matters to attend to. Try asking your own Twiggy.", 0, player)
-			tickleCount[player:GetGUIDLow()] = tickleCount[player:GetGUIDLow()] + 1
+			player:Data():Set("TwiggyTickle", (player:Data():Get("TwiggyTickle") or 0) + 1)
 			
 			player:RegisterEvent(function(eventId, delay, repeats, player)
-				tickleCount[player:GetGUIDLow()] = 0
+				player:Data():Set("TwiggyTickle", 0)
 				player:RemoveEventById(eventId)
 			end, 15000, 1)
 			
-		elseif tickleCount[player:GetGUIDLow()] == 8 then
+		elseif (player:Data():Get("TwiggyTickle") or 0) == 8 then
 			
 			local moveTimer = 0
 			local moveInterval = 2 -- Move every 2 seconds
@@ -186,7 +240,7 @@ local function TwiggyGossipHello(event, player, creature)
 			
 			creature:MoveTo(1, startX + math.random(-5, 5), startY + math.random(-5, 5), startZ)
 			
-			tickleCount[player:GetGUIDLow()] = tickleCount[player:GetGUIDLow()] + 1
+			player:Data():Set("TwiggyTickle", (player:Data():Get("TwiggyTickle") or 0) + 1)
 
 			creature:RegisterEvent(function(eventId, delay, repeats, creature)
 				if creature then
@@ -210,9 +264,9 @@ local function TwiggyGossipHello(event, player, creature)
 			end, 800, 20) -- Run every 1 second for 10 seconds
 			
 		else
-			tickleCount[player:GetGUIDLow()] = tickleCount[player:GetGUIDLow()] + 1
+			player:Data():Set("TwiggyTickle", (player:Data():Get("TwiggyTickle") or 0) + 1)
 			player:RegisterEvent(function(eventId, delay, repeats, player)
-				tickleCount[player:GetGUIDLow()] = 0
+				player:Data():Set("TwiggyTickle", 0)
 				player:RemoveEventById(eventId)
 			end, 15000, 1)
 		end
@@ -220,12 +274,31 @@ local function TwiggyGossipHello(event, player, creature)
 	end
 end
 
+-- Mall teleport verdict runs on world via command event 42. Map gossip only
+-- runs the pre-checks, closes gossip and fires the command.
+local function OnMallTeleCommand(event, player, command)
+    if command:lower() == "mallteleport" then
+        if player:GetMapId() == MAP_ID then
+            player:SendAreaTriggerMessage("You are already at the mall.")
+            return false
+        end
+        local remaining = (player:Data():Get("MallTeleCD") or 0) - os.time()
+        if remaining > 0 then
+            player:SendAreaTriggerMessage("Your mall teleport is on cooldown for " .. math.floor((remaining % 3600) / 60) .. " minutes and " .. math.floor(remaining % 60) .. " seconds.")
+            return false
+        end
+        player:Data():Set("MallTeleCD", os.time() + COOLDOWN)
+        player:Teleport(MAP_ID, X, Y, Z, ORIENTATION)
+        return false
+    end
+end
+
 local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
-	intIdChoice[player:GetGUIDLow()] = intId
+	player:Data():Set("TwiggyIntId", intId)
     if intId == 1 then
 		mainMenu(player, creature)
 	elseif intId == 24 then
-		player:RunCommand("xpchangemenu "..os.time())
+		OnTalkToGreetingTwig(event, player, player)
 	elseif intId == 8 then
 		player:RunCommand("shadowsmenu")
 	elseif intId == 7 then
@@ -295,10 +368,17 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_druid_travelform:32:32:-22:0|tDruid shapeshifts: \n \nThrough harnessing the powers of ancient Kaldorei magic, druids can learn the form of many unique beasts to apply them onto their own beastial forms. Note: Some creatures share the same creature model. Each model can only be claimed once.\n \nClick here for a full list of applicable creatures. \n ", 0, 500)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_helmet_89:32:32:-22:0|tTransmogrifyer: \n \nYggdrasil sports a transmogrifyer from the Cataclysm era, where you can apply the look of one item onto others by having both items in your bags and paying a transmogrifyer to apply the new look. Transmogrifyers are at the mall and all capital cities' enchanting trainers.\n ", 0, 50)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_bag_07_red:32:32:-22:0|tTransmog Item Vendor: \n \nThis mall vendor can search for almost any item in the world under item level 200 and sell it to you for Activity Tokens.\n ", 0, 50)
-		player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tActivity Tokens: \n \nBy completing quests while at level 80 and killing raid/dungeon bosses while the player is at level 80 and the boss is level 71 or higher, you earn Activity Tokens. These can be used to buy items at the Transmog Item Vendor.\n ", 0, 50)
+        if AWARD_TOKEN_MINIMUM_PLAYER_LEVEL == 80 then
+            player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tActivity Tokens: \n \nBy completing quests while at level "..AWARD_TOKEN_MINIMUM_PLAYER_LEVEL..", and killing raid/dungeon bosses while the player is at level "..AWARD_TOKEN_MINIMUM_PLAYER_LEVEL.." and the boss is level "..AWARD_TOKEN_MINIMUM_PLAYER_LEVEL - AWARD_TOKEN_LEVEL_DIFFERENCE.." or higher, you earn Activity Tokens. These can be used to buy items at the Transmog Item Vendor.\n ", 0, 50)
+        elseif AWARD_TOKEN_MINIMUM_PLAYER_LEVEL == 1 then
+            player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tActivity Tokens: \n \nBy completing quests while and killing raid/dungeon bosses within "..AWARD_TOKEN_LEVEL_DIFFERENCE.." levels of you, you earn Activity Tokens. These can be used to buy items at the Transmog Item Vendor.\n ", 0, 50)
+       else
+            player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tActivity Tokens: \n \nBy completing quests and killing raid/dungeon bosses while the player is above level "..(AWARD_TOKEN_MINIMUM_PLAYER_LEVEL - 1)..", if the boss is within "..AWARD_TOKEN_LEVEL_DIFFERENCE.." levels of you, you earn Activity Tokens. These can be used to buy items at the Transmog Item Vendor.\n ", 0, 50)
+        end
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 5)
         player:GossipSendMenu(12, creature, 60)
 	elseif intId == 500 then
+		TwiggyAdoptDruidMorphCaches()
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/ABILITY_Druid_CatForm:32:32:-22:0|tCat Forms: " .. catCount, 0, 501)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_racial_bearform:32:32:-22:0|tBear Forms: " .. bearCount, 0, 502)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/ABILITY_Druid_FlightForm:32:32:-22:0|tFlight Forms: " .. birdCount, 0, 503)
@@ -319,25 +399,32 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
 		local newPage = intId == 999 and currentPage
 		ShowCategoryContents(player, creature, currentCategory, newPage)
 	elseif intId == 501 then
-		cacheChoice[player:GetGUIDLow()] = catCache
+		TwiggyAdoptDruidMorphCaches()
+		player:Data():Set("TwiggyCache", catCache)
 		ShowCategoryContents(player, creature, "Cat Forms", 1)
 	elseif intId == 502 then
-		cacheChoice[player:GetGUIDLow()] = bearCache
+		TwiggyAdoptDruidMorphCaches()
+		player:Data():Set("TwiggyCache", bearCache)
 		ShowCategoryContents(player, creature, "Bear Forms", 1)
 	elseif intId == 503 then
-		cacheChoice[player:GetGUIDLow()] = birdCache
+		TwiggyAdoptDruidMorphCaches()
+		player:Data():Set("TwiggyCache", birdCache)
 		ShowCategoryContents(player, creature, "Flight Forms", 1)
 	elseif intId == 504 then
-		cacheChoice[player:GetGUIDLow()] = travelCache
+		TwiggyAdoptDruidMorphCaches()
+		player:Data():Set("TwiggyCache", travelCache)
 		ShowCategoryContents(player, creature, "Travel Forms", 1)
 	elseif intId == 505 then
-		cacheChoice[player:GetGUIDLow()] = owlCache
+		TwiggyAdoptDruidMorphCaches()
+		player:Data():Set("TwiggyCache", owlCache)
 		ShowCategoryContents(player, creature, "Moonkin Forms", 1)
 	elseif intId == 506 then
-		cacheChoice[player:GetGUIDLow()] = treeCache
+		TwiggyAdoptDruidMorphCaches()
+		player:Data():Set("TwiggyCache", treeCache)
 		ShowCategoryContents(player, creature, "Tree Forms", 1)
 	elseif intId == 507 then
-		cacheChoice[player:GetGUIDLow()] = aquaticCache
+		TwiggyAdoptDruidMorphCaches()
+		player:Data():Set("TwiggyCache", aquaticCache)
 		ShowCategoryContents(player, creature, "Aquatic Forms", 1)
 	elseif intId == 2 then
 		VIPmenu(player, creature)
@@ -358,9 +445,9 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
         local durations = {[21]=7, [22]=14, [23]=21, [25]=31}
         if player:HasItem(19322, costs[intId]) then
             player:RemoveItem(19322, costs[intId])
-            local newTime = math.max(os.time(), player:GetData("VIPTime") or 0) + durations[intId] * 24 * 60 * 60
-            player:SetData("VIPTime", newTime)
-            AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. player:GetAccountId() .. ", " .. newTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+            local newTime = math.max(os.time(), player:Data():Get("VIPTime") or 0) + durations[intId] * 24 * 60 * 60
+            player:Data():Set("VIPTime", newTime)
+            CharDBExecute("INSERT INTO ycore_yla.accounts_vip (account, viptime) VALUES (" .. player:GetAccountId() .. ", " .. newTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
             VIPmenu(player, creature)
         else
             player:SendAreaTriggerMessage("You don't have enough Community Tokens.")
@@ -376,7 +463,7 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
         player:GossipSendMenu(12, creature, 60)
 	elseif intId == 30 then
         player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-22:0|tCommunity Token: \n \nEarned through helping build the Yggdrasil community, these tokens can be traded for vanity pets, mounts, account services and more at the mall, or VIP services with Twiggy.\n \n ", 0, 30)
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tActivity Token: \n \nThis currency can be spent at the transmog item vendor to buy items under item level 200 that you can then later wear as gear or transmog onto your higher item level gear. It is earned by completing end-game quests or slaying bosses above level 71 while at level 80.\n \n ", 0, 30)
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_misc_coin_07:32:32:-22:0|tActivity Token: \n \nThis currency can be spent at the transmog item vendor to buy items under item level 200 that you can then later wear as gear or transmog onto your higher item level gear. It is earned by completing quests or slaying bosses within 9 levels of you.\n \n ", 0, 30)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Inv_bijou_gold:32:32:-22:0|tVote Token: \n \nEarned through voting for the server, these tokens can be predominantly exchanged for vanity items at the mall, or traded down to Emblems of Frost or Emblems of Triumph at the Mall's exchanger.\n \n ", 0, 30)	
         player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 3)
         player:GossipSendMenu(12, creature, 60)
@@ -391,23 +478,9 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
 			player:SendAreaTriggerMessage("You have to be at least level 10 to teleport to the mall.")
 			mainMenu(player, creature)
 		else
-		
-			local currentTime = os.time()
-			local cooldownEnd = MallTeleCD[player:GetGUIDLow()] or 0
-			local remainingCooldown = cooldownEnd - currentTime
-
-			if remainingCooldown > 0 then
-				local hours = math.floor(remainingCooldown / 3600)
-				local minutes = math.floor((remainingCooldown % 3600) / 60)
-				local seconds = math.floor(remainingCooldown % 60)
-				player:SendAreaTriggerMessage("Your mall teleport is on cooldown for " .. minutes .. " minutes and " .. seconds .. " seconds.")
-				mainMenu(player, creature)
-			else
-				cooldownEnd = currentTime + COOLDOWN
-				MallTeleCD[player:GetGUIDLow()] = cooldownEnd
-				player:Teleport(MAP_ID, X, Y, Z, ORIENTATION)
-				return true
-			end
+			player:GossipComplete()
+			player:RunCommand("mallteleport")
+			return true
 		end
     elseif intId == 12 then
 		player:DurabilityRepairAll(false)
@@ -417,18 +490,14 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
         player:SendShowBank(player)
     elseif intId == 14 then
 		player:GossipComplete()
-		local guid = player:GetGUIDLow()
 		local currentTime = os.time()
-
-		if not mailboxtime[guid] then 
-			mailboxtime[guid] = 0
-		end
+		local mailboxCD = player:Data():Get("TwiggyMailbox") or 0
 		
-		if mailboxtime[guid] <= currentTime then
+		if mailboxCD <= currentTime then
 			player:CastSpell(player, 54710, true)
-			mailboxtime[guid] = currentTime + 900
+			player:Data():Set("TwiggyMailbox", currentTime + 900)
 		else
-			local remainingTime = mailboxtime[guid] - currentTime
+			local remainingTime = mailboxCD - currentTime
 			local minutes = math.floor(remainingTime / 60)
 			local seconds = remainingTime % 60
 			
@@ -440,7 +509,7 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
         player:SendTrainerList(creature) -- Disabled, doesn't work
     elseif intId == 17 then
 		
-		local cooldownEnd = VIPVendorCD[player:GetGUIDLow()] or 0
+		local cooldownEnd = player:Data():Get("TwiggyVendorCD") or 0
 		local remainingCooldown = cooldownEnd - os.time()
 		
 		if remainingCooldown > 0 then
@@ -469,7 +538,7 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
 				creature:SendUnitSay("Until next time, when your trash is truly treasure.",0)
 			end, VIPVendorDuration-3000, 1)
 			
-			VIPVendorCD[player:GetGUIDLow()] = cooldownEnd
+			player:Data():Set("TwiggyVendorCD", cooldownEnd)
 		end
 		
 		VIPmenu(player, creature)	
@@ -491,9 +560,13 @@ end
 -- Twiggy event registrations
 ------------------------------------------------------------------------------------------------
 
-RegisterPlayerEvent(3, OnPlayerLogin)
-RegisterCreatureGossipEvent(23198, 1, TwiggyGossipHello)
-RegisterCreatureGossipEvent(23198, 2, TwiggyGossipSelect)
+if GetStateMapId() == -1 then
+    RegisterPlayerEvent(3, OnPlayerLogin)
+    RegisterPlayerEvent(42, OnMallTeleCommand)
+else
+    RegisterCreatureGossipEvent(23198, 1, TwiggyGossipHello)
+    RegisterCreatureGossipEvent(23198, 2, TwiggyGossipSelect)
+end
 
 ------------------------------------------------------------------------------------------------
 -- End Twiggy event registrations

@@ -1,20 +1,18 @@
-local MOVE_TO_POS = {x = 6423, y = 433, z = 511, o = 0.7}
-local HOME_POS = {x = 6409, y = 422, z = 511.348, o = 0.62}
-local eventActive3081 = false
-
-local function HandleQuestAccept(event, packet, player)   
-    local guid = packet:ReadGUID()
-    local questId = packet:ReadULong()
-    local unk1 = packet:ReadULong()
+local function HandleQuestAccept(event, player, quest)   
+    local questId = quest:GetId()
     
     if questId == 13263 or questId == 13389 then
+        -- Icecrown-only branch (map 571): A Short Fuse accept teleport.
+        if GetStateMapId() ~= 571 then return end
         player:CastSpell(player, 76010, true)
         player:NearTeleport(5754, 2055, 504, 5.68)
     end
 
     if questId == 10406 then
+        -- Outland-only branch (map 530): Delivering the Message (Netherstorm) escort check.
+        if GetStateMapId() ~= 530 then return end
         player:RegisterEvent(function(eventId, delay, repeats, player)
-            Demolitionist = player:GetNearestCreature(50, 20802)
+            local Demolitionist = player:GetNearestCreature(50, 20802)
             if not Demolitionist then
                 player:CastSpell(player, 35679, false)
             end
@@ -22,8 +20,10 @@ local function HandleQuestAccept(event, packet, player)
     end
     
     if questId == 12671 then
+        -- Northrend-only branch (map 571): Reconnaissance Flight (Borean Tundra) vehicle check.
+        if GetStateMapId() ~= 571 then return end
         player:RegisterEvent(function(eventId, delay, repeats, player)
-            FlyingMachine = player:GetNearestCreature(20, 28710)
+            local FlyingMachine = player:GetNearestCreature(20, 28710)
             if FlyingMachine then
                 if not FlyingMachine:HasAura(52255) then
                     FlyingMachine:AddAura(52255, FlyingMachine)
@@ -34,11 +34,13 @@ local function HandleQuestAccept(event, packet, player)
     
     if questId == 13081 then
 
-        if eventActive3081 == true then
+        local map = player:GetMap()
+        if map and map:Data():Get('Event3081') then
             return
         end
-        
-        eventActive3081 = true
+        if map then
+            map:Data():Set('Event3081', true)
+        end
         print("Correct quest and no overlapping event detected! Checking for portal NPC...")
         -- Find nearest creature
         local creature = player:GetNearestCreature(50, 30656)
@@ -69,9 +71,12 @@ local function HandleQuestAccept(event, packet, player)
         end, 33000)
         
         creature:RegisterEvent(function(eventId, delay, repeats, creature)
-            eventActive3081 = false
+            local m = creature:GetMap()
+            if m then
+                m:Data():Set('Event3081', nil)
+            end
         end, 45000)
     end
 end
 
-RegisterPacketEvent(0x189, 5, HandleQuestAccept)
+RegisterPlayerEvent(63, HandleQuestAccept)

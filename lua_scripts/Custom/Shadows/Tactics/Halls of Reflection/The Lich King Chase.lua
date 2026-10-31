@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 668 then return end
+
 -- HOR TACTICS
 
 local RISEN_WITCH_DOCTOR_ID = 36941
@@ -11,18 +13,14 @@ function OnEnterHoR(event, player)
     
     player:RegisterEvent(function(event, d, r, player)
         if not (player:GetMapId() == 668) then return end
-        TogglePlayerbotScript(player, "icc", false)
-        TogglePlayerbotScript(player, "utgarde keep", false)
+        ToggleShadowsScript(player, "icc", false)
+        ToggleShadowsScript(player, "utgarde keep", false)
      end, 5000, 1)
         
     local LK = player:GetNearestCreature(4000, LK_ID)
     
     if LK then
-        local group = player:GetGroup()
-        
-        if group then
-            group:SetTargetIcon(4, LK:GetGUID(), player:GetGUID())
-        end
+        SetTargetIconDeferred(player, 4, LK)
     end
 end
 

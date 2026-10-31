@@ -1,8 +1,36 @@
+-- World queries the index once and publishes it as serialized world data;
+-- map states adopt the shared copy and never query.
+
 local questItemGoCache = {}
 local cachedQuests = {}
 local cachedItems = {}
 local cachedGOs = {}
 
+local function AdoptQuestItemGO()
+    local shared = GetWorldData("QuestItemGO")
+    if type(shared) == "table" and shared.AsTable then
+        shared = shared:AsTable()
+    end
+    if type(shared) ~= "table" or type(shared.cache) ~= "table" then
+        return false
+    end
+    questItemGoCache = shared.cache
+    cachedQuests = type(shared.quests) == "table" and shared.quests or {}
+    cachedItems = type(shared.items) == "table" and shared.items or {}
+    cachedGOs = type(shared.gos) == "table" and shared.gos or {}
+    return true
+end
+
+local function PublishQuestItemGO()
+    SetWorldData("QuestItemGO", {
+        cache = questItemGoCache,
+        quests = cachedQuests,
+        items = cachedItems,
+        gos = cachedGOs,
+    })
+end
+
+if GetStateMapId() == -1 then
 WorldDBQueryAsync([[
     SELECT gqi.GameObjectEntry, qt.ID AS QuestID, gqi.ItemId,
         CASE
@@ -61,17 +89,9 @@ WorldDBQueryAsync([[
     for _ in pairs(cachedGOs)    do numGOs    = numGOs    + 1 end
 
     print("[QuestItemGO] Indexed " .. numQuests .. " quests, " .. numItems .. " items, " .. numGOs .. " gameobjects.")
+    PublishQuestItemGO()
 end)
-
-print("[QuestItemGO] questItemGoCache = {")
-for questId, entries in pairs(questItemGoCache) do
-    print("    [" .. questId .. "] = {")
-    for _, e in ipairs(entries) do
-        print("        { goEntry=" .. e.goEntry .. ", itemId=" .. e.itemId .. ", itemCount=" .. e.itemCount .. ", data3=" .. e.data3 .. " },")
-    end
-    print("    },")
 end
-print("}")
 
 local function GetItemName(itemId)
     local template = GetItemTemplate(itemId)
@@ -112,7 +132,10 @@ local function WhisperBagsFull(player, data)
     player:SetData(throttleKey, os.time())
 
     local masterName = player:IsBot()
-    local master = GetPlayerByName(masterName)
+    local master
+    for _, p in ipairs(GetStateMap():GetPlayers()) do
+        if p:GetName() == masterName then master = p break end
+    end
     if not master then return end
 
     local itemName = GetItemName(data.itemId)
@@ -150,7 +173,10 @@ local function LootObject(eventId, delay, repeats, player, data)
             end
         else
             local masterName = player:IsBot()
-            local master = GetPlayerByName(masterName)
+            local master
+            for _, p in ipairs(GetStateMap():GetPlayers()) do
+                if p:GetName() == masterName then master = p break end
+            end
             if master then
                 local itemName = GetItemName(data.itemId)
                 if not PlayerHasEnoughFreeSlots(player, 1) then
@@ -205,15 +231,18 @@ end
 local function OnMapChange(event, player)
     if not player then return end
     if not player:IsBot() then return end
+    AdoptQuestItemGO()
     if player:GetData("BotQuestLoopActive") then return end
     player:SetData("BotQuestLoopActive", true)
     player:RegisterEvent(CheckForQuestGOs, {20000, 30000}, 0)
 end
 
-RegisterPlayerEvent(28, OnMapChange)
-
-for _, player in ipairs(GetPlayersInWorld()) do
-    if player:GetData("BotQuestLoopActive") then return end
-    player:SetData("BotQuestLoopActive", true)
-    player:RegisterEvent(CheckForQuestGOs, {20000, 30000}, 0)
+if GetStateMapId() ~= -1 then
+    RegisterPlayerEvent(28, OnMapChange)
+    if GetStateMap() then
+        AdoptQuestItemGO()
+        for _, player in ipairs(GetStateMap():GetPlayers()) do
+            OnMapChange(_, player)
+        end
+    end
 end

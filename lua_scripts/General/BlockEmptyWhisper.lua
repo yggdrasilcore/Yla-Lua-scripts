@@ -1,3 +1,5 @@
+if GetStateMapId() ~= -1 then return end
+
 local function OnWhisper(event, player, message, type, lang, receiver)
     if message == "" or message:match("^%s*$") then
         return false

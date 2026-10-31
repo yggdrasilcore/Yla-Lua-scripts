@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 724 then return end
+
 local function SavianaRagefireLoop(eventId, delay, repeats, saviana)
     if saviana:IsDead() or not saviana:IsInCombat() then StopLuaEvent(saviana) return  end
     

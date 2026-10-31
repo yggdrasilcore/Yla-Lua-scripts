@@ -8,18 +8,11 @@ minShadowsLevel = 15 -- Global var also referenced by Twiggy
 local BOT_TELE_VISUAL   = 64446
 local BotSummonCD       = 10 * 60 -- 10 minutes
 
-isPlayerBot		        =   {} -- Global table referenced in VIP script as well
-activeBots       		=   {}
 local addCmdTimer       =   {}
-local logoutEvent       =   {}
-local botsAvailable     =   {}
-local botTeleTime       =   {}
-local botMasters        =   {}
-local botSummonTime     =   {}
-local dontKickTime	    =   {}
-local removalInProgress =   {}
-local lastTeleTime      =   {}
+-- Per-player logout/kick timers live in player:Data("ShadowsLogoutEv")
+-- (masters hold "ShadowsLogoutEv:<bot>"), not in a file-local name-keyed table.
 local disallowedZones   =   {4298}--, 4197, 3628, 3666} -- Scarlet Enclave (DK start area), Wintergrasp, Halaa
+local AllowInBattlefield = false -- Default: False. Prevents usage of shadows in Wintergrasp.
 
 -- Shadows Configs End
 
@@ -231,53 +224,47 @@ local commandCategories = {
    },
 }
 
+local function GetEffectiveBotCount(player)
+    local base = player:GetBotsCount() or 0
+    local pending = player:Data():Get("Pending_shadows_ops")
+    if pending and pending.AsTable then pending = pending:AsTable() end
+    if type(pending) ~= "table" then return base end
+
+    local currentNames = {}
+    for _, bot in ipairs(player:GetBots()) do
+        if bot then currentNames[bot:GetName()] = true end
+    end
+
+    local now = os.time()
+    for name, op in pairs(pending) do
+        if type(op) == "table" and (now - op.time) < 2 then
+            if op.op == "add" and not currentNames[name] then
+                base = base + 1
+            elseif op.op == "remove" and currentNames[name] then
+                base = base - 1
+            end
+        end
+    end
+    return base
+end
+
 local function ShadowsHello(player)
     player:GossipClearMenu()
-    local accountId = player:GetAccountId()
-    local guidlow = player:GetGUIDLow()
-    local name = player:GetName()
-	local maxBotsForPlayer = maxBotCount
+    local maxBotsForPlayer = maxBotCount
 
-    if not player:GetData("BotCount") then player:SetData("BotCount", 0) end
-    if not activeBots[name] then activeBots[name] = {} end
-	if not player:GetData("LoginTime") then player:SetData("LoginTime", os.time()) end
-	
+    if not player:GetData("LoginTime") then player:SetData("LoginTime", os.time()) end
+
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_gizmo_02:40:40:-24:0|tHow to use shadows", 0, 2)
-        
-    if not botsAvailable[accountId] then
-        botsAvailable[accountId] = {}
-        CharDBQueryAsync("SELECT name, race, class, gender, level FROM characters WHERE account = " .. accountId, function(query)
-            if query then
-                repeat
-                    local name = query:GetString(0)
-                    local race = query:GetUInt8(1)
-                    local class = query:GetUInt8(2)
-                    local gender = query:GetUInt8(3)
-                    local level = query:GetUInt8(4)
-                    
-                    table.insert(botsAvailable[accountId], {
-                        name = name,
-                        race = race,
-                        class = class,
-                        gender = gender,
-                        level = level
-                    })
-                    
-                until not query:NextRow()
 
-                table.sort(botsAvailable[accountId], function(a, b)
-                    return a.level > b.level
-                end)
-            end
-        end)
-    end
-
-    if player:GetData("VIPTime") and player:GetData("VIPTime") > os.time() then -- Increased bot limit for VIP
+    if player:Data():Get("VIPTime") and player:Data():Get("VIPTime") > os.time() then -- Increased bot limit for VIP
         maxBotsForPlayer = maxVIPCount
     end
+
+    local botCount = GetEffectiveBotCount(player)
+    local displayCount = math.min(botCount, maxBotsForPlayer)
     
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAdd shadow (" .. player:GetData("BotCount") .. "/"..maxBotsForPlayer..")", 0, 10)
-    if player:GetData("BotCount") > 0 then
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAdd shadow (" .. displayCount .. "/"..maxBotsForPlayer..")", 0, 10)
+    if botCount > 0 then
         --player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_hunter_improvedtracking:40:40:-24:0|tCommand follow", 0, 3)
         --player:GossipMenuAddItem(4, "|TInterface/ICONS/ability_ghoulfrenzy:40:40:-24:0|tCommand attack", 0, 4)
         player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_unused2:40:40:-24:0|tSummon shadows", 0, 5, false, "Are you sure you want to summon your shadow(s) here?\n \nThis will induce a "..(BotSummonCD/60).."-minute summon cooldown.")
@@ -289,20 +276,28 @@ local function ShadowsHello(player)
 end
 
 local function ListActiveShadows(player)
-    local name = player:GetName()
     player:GossipClearMenu()
 
     player:GossipMenuAddItem(0, "|TInterface/PaperDollInfoFrame/UI-GearManager-Undo:40:40:-24:0|tActive shadows:\n \n ", 0, 6)
 
-    if activeBots[name] then
-       for index, botName in ipairs(activeBots[name]) do
-           local menuText = string.format(
-               "|TInterface/ICONS/ability_vehicle_loadselfcatapult:40:40:-24:0|t%s\n \n ", 
-               botName
-           )
-           
-           player:GossipMenuAddItem(0, menuText, 0, 200 + index)
-       end
+    local pending = player:Data():Get("Pending_shadows_ops")
+    if pending and pending.AsTable then pending = pending:AsTable() end
+    if type(pending) ~= "table" then pending = {} end
+
+    local index = 0
+    for _, bot in ipairs(player:GetBots()) do
+        if bot then
+            local op = pending[bot:GetName()]
+            if not (type(op) == "table" and op.op == "remove" and (os.time() - op.time) < 2) then
+                index = index + 1
+                local menuText = string.format(
+                    "|TInterface/ICONS/ability_vehicle_loadselfcatapult:40:40:-24:0|t%s\n \n ",
+                    bot:GetName()
+                )
+
+                player:GossipMenuAddItem(0, menuText, 0, 200 + index)
+            end
+        end
     end
 
     player:GossipMenuAddItem(0, "|TInterface/ICONS/Trade_Engineering:40:40:-24:0|tBack", 0, 999)
@@ -315,7 +310,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
     local name = player:GetName()
 	local maxBotsForPlayer = maxBotCount
     
-    if player:GetData("VIPTime") and player:GetData("VIPTime") > os.time() then -- Increased bot limit for VIP
+    if player:Data():Get("VIPTime") and player:Data():Get("VIPTime") > os.time() then -- Increased bot limit for VIP
         maxBotsForPlayer = maxVIPCount
     end
     
@@ -380,57 +375,18 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
        player:GossipSendMenu(12, player, 200)
 	   
     elseif intid == 3 then -- Follow
-        for _, name in pairs(activeBots[name]) do 
-            if name ~= player:GetName() then
-                bot = GetPlayerByName(name)
-                if bot then
-                    bot:MoveFollow(player, math.random(-6, 6), math.random(-6, 6))
-                    if bot:IsInCombat() and bot:GetSelection() then
-                        bot:GetSelection():ClearInCombat()
-                    end
-                    bot:ClearInCombat()
-                end
-            end
+        if player:GetBotsCount() > 0 then
+            player:Say("/p follow", 0)
         end
         player:SendAreaTriggerMessage("Your shadows are now following you.")
         ShadowsHello(player)
     elseif intid == 4 then -- Attack
-        for _, name in pairs(activeBots[name]) do 
-            if name ~= player:GetName() then
-                bot = GetPlayerByName(name)
-                if bot then
-                    player:Say("/p attack", 0)
-                end
-            end
+        if player:GetBotsCount() > 0 then
+            player:Say("/p attack", 0)
         end
         ShadowsHello(player)
-    elseif intid == 5 then -- Summon
-        if not botTeleTime[accountId] then botTeleTime[accountId] = 0 end
-        
-        if botTeleTime[accountId] < os.time() then
-            for _, name in pairs(activeBots[name]) do 
-                if name ~= player:GetName() then
-                    bot = GetPlayerByName(name)
-                    if bot then
-                        if bot:GetMapId() == player:GetMapId() then
-                            bot:Teleport(player:GetMapId(), player:GetX() + math.random(-3, 3), player:GetY() + math.random(-3, 3), player:GetZ() + math.random(0, 0.1), player:GetO() + math.random(-6, 6))
-                            player:CastSpell(bot, BOT_TELE_VISUAL, true)
-                            bot:CastSpell(bot, BOT_TELE_VISUAL, true)
-                        else
-                            bot:Teleport(player:GetMapId(), player:GetX() + math.random(-3, 3), player:GetY() + math.random(-3, 3), player:GetZ() + math.random(0, 0.1), player:GetO() + math.random(-6, 6))
-                            player:CastSpell(bot, BOT_TELE_VISUAL, true)
-                            local name = player:GetName()
-                            bot:RegisterEvent(function(eventId, delay, repeats, bot) 
-                                bot:CastSpell(bot, BOT_TELE_VISUAL, true)
-                            end, 500, 1)
-                        end
-                    end
-                end
-            end
-            botTeleTime[accountId] = os.time() + (BotSummonCD)
-        else
-            player:SendAreaTriggerMessage("Your shadows summon is on cooldown for " .. math.floor((botTeleTime[accountId] - os.time()) / 60) .. " minutes and " .. ((botTeleTime[accountId] - os.time()) % 60) .. " seconds.")
-        end
+    elseif intid == 5 then -- Summon: world thread pulls every bot
+        player:RunCommand(".shadows summon")
         ShadowsHello(player)
     elseif intid == 6 then  -- Show list of active shadows to remove
         ListActiveShadows(player)
@@ -442,39 +398,58 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
 			player:SendBroadcastMessage("Your shadow bar settings are loading, please try again in a few seconds.")
 		end
 		ShadowsHello(player)
-	elseif intid >= 200 and intid < 299 then  -- Bot removal selection
-        local selectedIndex = intid - 200
+    elseif intid >= 200 and intid < 299 then  -- Bot removal selection
+        local pending = player:Data():Get("Pending_shadows_ops")
+        if pending and pending.AsTable then pending = pending:AsTable() end
+        if type(pending) ~= "table" then pending = {} end
 
-        if activeBots[name] and activeBots[name][selectedIndex] then
-           local selectedBot = activeBots[name][selectedIndex]
-           player:RunCommand(".playerbots bot remove " .. selectedBot)
-           ListActiveShadows(player)
-        end
-    elseif intid == 10 then  -- "Add bot" option
-        local group = player:GetGroup()
-        local groupMembers = {}
-        local groupNames = {}
-        
-        player:GossipClearMenu()
-        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAvailable shadows:\n \n ", 0, 10)
-        
-        if group then
-            groupMembers = group:GetMembers()
-            for _, member in pairs(groupMembers) do
-                if member then
-                    groupNames[member:GetName()] = true
+        local selectedIndex = intid - 200
+        local index = 0
+        local selectedBot
+        for _, bot in ipairs(player:GetBots()) do
+            if bot then
+                local op = pending[bot:GetName()]
+                if not (type(op) == "table" and op.op == "remove" and (os.time() - op.time) < 2) then
+                    index = index + 1
+                    if index == selectedIndex then selectedBot = bot:GetName() end
                 end
             end
         end
-        
-        if botsAvailable[accountId] then
+
+        if selectedBot then
+           pending[selectedBot] = { op = "remove", time = os.time() }
+           player:Data():Set("Pending_shadows_ops", pending)
+           player:RunCommand(".shadows bot remove " .. selectedBot)
+           ListActiveShadows(player)
+        end
+    elseif intid == 10 then  -- "Add bot" option
+        local groupNames = {}
+        for _, bot in ipairs(player:GetBots()) do
+            if bot then groupNames[bot:GetName()] = true end
+        end
+        local pending = player:Data():Get("Pending_shadows_ops")
+        if pending and pending.AsTable then pending = pending:AsTable() end
+        if type(pending) == "table" then
+            for opName, op in pairs(pending) do
+                if type(op) == "table" and op.op == "add" and (os.time() - op.time) < 2 then
+                    groupNames[opName] = true
+                end
+            end
+        end
+
+        player:GossipClearMenu()
+        player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_groupneedmore:40:40:-24:0|tAvailable shadows:\n \n ", 0, 10)
+
+        local available = player:Data():Get("ShadowsAvailable")
+        if available and available.AsTable then available = available:AsTable() end
+        if available then
             local found = false
-            for index, charInfo in ipairs(botsAvailable[accountId]) do
+            for index, charInfo in ipairs(available) do
                 if charInfo.name ~= player:GetName() then
                     local className = GetClassName(charInfo.class)
                     local raceName = GetRaceName(charInfo.race)
                     
-                    local raceIcon = GetRaceIconPath(charInfo.race, charInfo.gender)
+                    local raceIcon = GetRaceIconPath(charInfo.race, charInfo.sex)
                     local classIcon = GetClassIconPath(charInfo.class)
                     
                     if charInfo.name and not groupNames[charInfo.name] then
@@ -505,7 +480,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
                 return
             end
         end
-        if (player:GetMapId() == 571) and (player:GetZoneId() == 4197) and WG_FightActive then
+        if (not AllowInBattlefield) and (player:GetMapId() == 571) and (player:GetZoneId() == 4197) and IsWintergraspWarTime() then
             player:GossipComplete()
             player:SendAreaTriggerMessage("You cannot use shadows during active Wintergasp battles.")
             return
@@ -515,7 +490,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
             ShadowsHello(player)
             return
         end
-        if player:GetData("BotCount") < maxBotsForPlayer then
+        if GetEffectiveBotCount(player) < maxBotsForPlayer then
             local selectedIndex = intid - 100
             if addCmdTimer[guid] and not (GetCurrTime() - addCmdTimer[guid] > 300) then
                 player:SendAreaTriggerMessage("You can't add shadows that fast!")
@@ -523,16 +498,18 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
                 return
             end
             
-            if botsAvailable[accountId] and botsAvailable[accountId][selectedIndex] then
-                local selectedChar = botsAvailable[accountId][selectedIndex]
-                botSummonTime[guid] = os.time()
-                player:RunCommand(".playerbots bot add " .. selectedChar.name) -- Add bot
-				dontKickTime[selectedChar.name] = os.time() + 3
-                if not isPlayerBot[selectedChar.name] then
-                    isPlayerBot[selectedChar.name] = name
-                elseif not (isPlayerBot[selectedChar.name] == name) then
-                    isPlayerBot[selectedChar.name] = name
-                end
+            local available = player:Data():Get("ShadowsAvailable")
+            if available and available.AsTable then available = available:AsTable() end
+            if available and available[selectedIndex] then
+                local selectedChar = available[selectedIndex]
+                player:Data():Set("ShadowsBotSummonTime", os.time())
+                player:RunCommand(".shadows bot add " .. selectedChar.name) -- Add bot
+                player:Data():Set("ShadowsDontKick:" .. selectedChar.name, os.time() + 3)
+                local pending = player:Data():Get("Pending_shadows_ops")
+                if pending and pending.AsTable then pending = pending:AsTable() end
+                if type(pending) ~= "table" then pending = {} end
+                pending[selectedChar.name] = { op = "add", time = os.time() }
+                player:Data():Set("Pending_shadows_ops", pending)
                 ShadowsHello(player)
             end
         else
@@ -547,29 +524,15 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
     end
 end
 
-function SetActiveVars()
-    activeBots = {}
-    local playersByAccount = {}
+function SetShadowsBarData()
     local allGuids = {}
-    
+
     -- Group players by their account ID and collect all GUIDs
     for _, player in pairs(GetPlayersInWorld()) do
         if player then
 			player:SetData("ShadowBarStatusChecked", true)
-            local accountId = player:GetAccountId()
-            if not playersByAccount[accountId] then
-                playersByAccount[accountId] = {}
-            end
-			local name = player:GetName()
-			local guid = player:GetGUIDLow()
-            local playerData = {
-                name = name,
-                guid = guid
-            }
-            table.insert(playersByAccount[accountId], playerData)
-            table.insert(allGuids, playerData.guid)
-			player:SetData("BotCount", 0)
-			activeBots[name] = {}
+            local guid = player:GetGUIDLow()
+            table.insert(allGuids, guid)
         end
     end
 
@@ -577,7 +540,7 @@ function SetActiveVars()
         local guidString = table.concat(allGuids, ",")
 			
 	    CharDBQueryAsync(
-		    string.format("SELECT guid, data FROM character_custom_data WHERE guid IN (%s) AND type = 98", guidString),
+		    string.format("SELECT guid, data FROM ycore_yla.character_custom_data WHERE guid IN (%s) AND type = 98", guidString),
 		    function(result)
 				if result then
 					repeat
@@ -586,326 +549,247 @@ function SetActiveVars()
 						if data == "ENABLED" then
 				 		    local player = GetPlayerByGUID(GetPlayerGUID(guid))
 				 		    if player then
-								player:SetData("ShadowsBarData", true)
-		  		 			else
-								player:SetData("ShadowsBarData", false)
+								player:Data():Set("ShadowsBarData", true)
 							end
 		 		 	    end
 		 		    until not result:NextRow()
 		 	    end
 		    end
 	    )
-		
-			
-        CharDBQueryAsync(string.format(
-            "SELECT guid, cooldown_end FROM character_cooldowns WHERE guid IN (%s) AND item_id = 0",
-            guidString
-        ),
-        function(query)
-            local cooldowns = {}
-            
-            if query then
-                repeat
-                    local guid = query:GetUInt32(0)
-                    local cooldownEnd = query:GetUInt32(1)
-                    cooldowns[guid] = cooldownEnd
-                until not query:NextRow()
-            end
+    end
+end
 
-            -- Process each account
-            for accountId, players in pairs(playersByAccount) do
-                if #players > 1 then
-                    local lowestCooldown = nil
-                    local mainPlayer = nil
+-- World
+local function ShadowsLogin(event, player) -- Lazy persistent storage solution. Could probably just use characters table directly. Initially wanted cache-persistent value attached to world but not possible in standard AC ELUNA
+    local guid = player:GetGUIDLow()
+    
+    if player:IsBot() then
+        if player:HasAura(32113) then player:RemoveAura(32113) end
+        
+        if (player:GetClass() == 11) and not player:HasAura(57857) then player:AddAura(57857, player) end -- Fixes Druid shadows stuck on Rebirth without mats
+        
+        if not player:IsInGroup() then return end
+        
+        local group = player:GetGroup()
+        
+        local shadow = player:ToShadow()
+        local master = shadow and shadow:GetMaster()
 
-                    -- Find player with lowest cooldown in this account
-                    for _, playerData in pairs(players) do
-                        local cooldown = cooldowns[playerData.guid] or 0
-                        if not lowestCooldown or cooldown < lowestCooldown then
-                            lowestCooldown = cooldown
-                            mainPlayer = playerData
-                        end
-                    end
-
-                    -- Set up activeBots for the main player
-                    if mainPlayer then
-						local player = GetPlayerByName(mainPlayer.name)
-                        activeBots[mainPlayer.name] = {}
-                        player:SetData("BotCount", 0)
-                        
-                        -- Add other characters as bots
-                        for _, playerData in pairs(players) do
-                            if playerData.guid ~= mainPlayer.guid then
-                                table.insert(activeBots[mainPlayer.name], playerData.name)
-                                player:SetData("BotCount", (player:GetData("BotCount") or 0) + 1)
-                                isPlayerBot[playerData.name] = mainPlayer.name
-                            end
-                        end
-                    end
+        if not master then return end
+        
+        if master:Data():Get("ShadowsBarData") then
+            master:SendAddonMessage("ShadowsBar", "ENABLED", 7, master)
+        else
+            master:SendAddonMessage("ShadowsBar", "DISABLED", 7, master)
+        end
+        
+        if not group:IsLeader(player:GetGUID()) then return end
+        
+        if player:IsInSameGroupWith(master) or player:IsInSameRaidWith(master) then
+            group:SetLeader(master:GetGUID())
+        end
+    else
+        player:SetData("LoginTime", os.time())
+        
+        CharDBQueryAsync("SELECT data FROM ycore_yla.character_custom_data WHERE guid = "..guid.." AND type = 98", function(result)
+            if result then
+                local data = result:GetString(0)
+                local player = GetPlayerByGUID(GetPlayerGUID(guid))
+                if not player then return end
+                if data == "ENABLED" then
+                    player:Data():Set("ShadowsBarData", true)
+                else
+                    player:Data():Set("ShadowsBarData", false)
                 end
             end
         end)
     end
 end
 
-local function ShadowsLogin(event, player) -- Lazy persistent storage solution. Could probably just use characters table directly. Initially wanted cache-persistent value attached to world but not possible in standard AC ELUNA
-    local guid = player:GetGUIDLow()
-    local name = player:GetName()
-	
-	CharDBExecute("REPLACE INTO character_cooldowns (guid, item_id, cooldown_end) VALUES (" .. guid .. ", 0, " .. os.time() .. ")");
-
-    if isPlayerBot[name] then
-		
-		if player:HasAura(32113) then player:RemoveAura(32113) end
-		
-		if (player:GetClass() == 11) and not player:HasAura(57857) then player:AddAura(57857, player) end -- Fixes Druid shadows stuck on Rebirth without mats
-		
-        if not player:IsInGroup() then return end
-		
-        local group = player:GetGroup()
-		
-        local masterName = isPlayerBot[name]
-        local master
-        if masterName then master = GetPlayerByName(masterName) end
-		
-        if not master then return end
-		
-		if master:GetData("ShadowsBarData") then
-			master:SendAddonMessage("ShadowsBar", "ENABLED", 7, master)
-		else
-			master:SendAddonMessage("ShadowsBar", "DISABLED", 7, master)
-		end
-		
-        if not group:IsLeader(player:GetGUID()) then return end
-		
-        if player:IsInSameGroupWith(master) or player:IsInSameRaidWith(master) then
-            group:SetLeader(master:GetGUID())
-        end
-    end
-
-    if isPlayerBot[name] then return end
-	
-    if not player:GetData("BotCount") or player:GetData("BotCount") < 0 then player:SetData("BotCount", 0) end
-
-    if not activeBots[name] then activeBots[name] = {} end
-	
-	player:SetData("LoginTime", os.time())
-	
-	CharDBQueryAsync("SELECT data FROM character_custom_data WHERE guid = "..guid.." AND type = 98", function(result)
-		if result then
-			local data = result:GetString(0)
-			local player = GetPlayerByGUID(GetPlayerGUID(guid))
-			if not player then return end
-			if data == "ENABLED" then
-				player:SetData("ShadowsBarData", true)
-			else
-				player:SetData("ShadowsBarData", false)
-			end
-		end
-	end)
-end
-
+-- World
 local function LogoutOrSave(event, player)
     local accountId = player:GetAccountId()
     local guid = player:GetGUIDLow()
     local name = player:GetName()
 
 	if event == 4 or event == 25 then
-		if player:GetData("ShadowsBarData") then
-			CharDBExecute("REPLACE INTO character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'ENABLED')")
+		if player:Data():Get("ShadowsBarData") then
+			CharDBExecute("REPLACE INTO ycore_yla.character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'ENABLED')")
 		else
-			CharDBExecute("REPLACE INTO character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'DISABLED')")
+			CharDBExecute("REPLACE INTO ycore_yla.character_custom_data (guid, type, time, data) VALUES ("..guid..", 98, "..os.time()..", 'DISABLED')")
 		end
 	end
 	
 	if event == 25 then return end
 
-    isPlayerBot[name]           = nil
-    botsAvailable[accountId]    = nil
-    activeBots[name]            = nil
-    botMasters[guid]            = nil
-    
-    -- Check if player is set as active anywhere in the table
-    for botMaster, bots in pairs(activeBots) do
-        for i, botName in ipairs(bots) do
-            if botName == name then
-                -- Found the player as a bot somewhere, remove them from that player's list
-                table.remove(activeBots[botMaster], i)
+    local shadow = player:ToShadow()
+    local master = shadow and shadow:GetMaster()
 
-                if GetPlayerByName(botMaster):GetInstanceId() or player:GetInstanceId() then
-                    return -- Don't boot players' bots from group if in RHC as it can bug out the instance group
-                end
-                player:RemoveFromGroup()
-                break
-            end
+    if master then
+        if master:GetInstanceId() or player:GetInstanceId() then
+            return -- Don't boot players' bots from group if in RHC as it can bug out the instance group
         end
+        player:RemoveFromGroup()
     end
 end
 
 function CheckActiveBots(eventid, delay, repeats, uninvitedPlayer)
     local uninvitedPlayerName = uninvitedPlayer:GetName()
-    if isPlayerBot[uninvitedPlayerName] then
-        local player = GetPlayerByName(isPlayerBot[uninvitedPlayerName])
-        local bot = GetPlayerByName(uninvitedPlayerName)
-        if player and bot then
-            player:RegisterEvent(function(_, _, _, player)
-                player:RunCommand(".playerbots bot remove " .. uninvitedPlayerName)
-                print("Bot removed: " ..uninvitedPlayerName.. ".")
-                print("Leader: " ..player:GetName())
-            end, 100, 1)
-        end
-        logoutEvent[uninvitedPlayerName] = nil
+    local shadow = uninvitedPlayer:ToShadow()
+    local master = shadow and shadow:GetMaster()
+    if master then
+        master:RegisterEvent(function(_, _, _, player)
+            player:RunCommand(".shadows bot remove " .. uninvitedPlayerName)
+            print("Bot removed: " ..uninvitedPlayerName.. ".")
+            print("Leader: " ..player:GetName())
+        end, 100, 1)
+        uninvitedPlayer:Data():Set("ShadowsLogoutEv", nil)
     end
 end
 
+-- World
 function UninviteGroupGUID(event, packet, player)
     local guid = packet:ReadGUID()
     local reason = packet:ReadString()
     local uninvitedPlayer = GetPlayerByGUID(guid)
     if uninvitedPlayer then
-        if not logoutEvent[uninvitedPlayer:GetName()] then
-			if dontKickTime[uninvitedPlayer:GetName()] and dontKickTime[uninvitedPlayer:GetName()] > os.time() then return end
+        if not uninvitedPlayer:Data():Get("ShadowsLogoutEv") then
+			local ksh = uninvitedPlayer:ToShadow()
+			local km = ksh and ksh:GetMaster()
+			local kickGuard = km and km:Data():Get("ShadowsDontKick:" .. uninvitedPlayer:GetName())
+			if kickGuard and kickGuard > os.time() then return end
 			--print("shadows debug - uninvited GUID")
-            logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
+            uninvitedPlayer:Data():Set("ShadowsLogoutEv", uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1))
         end 
     end
 end
 
+-- World
 function UninviteGroup(event, packet, player)
     local uninvitedPlayerName = packet:ReadString()
     local uninvitedPlayer = GetPlayerByName(uninvitedPlayerName)
     if uninvitedPlayer then
-        if not logoutEvent[uninvitedPlayer:GetName()] then
-			if dontKickTime[uninvitedPlayer:GetName()] and dontKickTime[uninvitedPlayer:GetName()] > os.time() then return end
+        if not uninvitedPlayer:Data():Get("ShadowsLogoutEv") then
+			local ksh = uninvitedPlayer:ToShadow()
+			local km = ksh and ksh:GetMaster()
+			local kickGuard = km and km:Data():Get("ShadowsDontKick:" .. uninvitedPlayer:GetName())
+			if kickGuard and kickGuard > os.time() then return end
 			--print("shadows debug - uninvited group")
-            logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
+            uninvitedPlayer:Data():Set("ShadowsLogoutEv", uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1))
         end
     end
 end
 
+-- World
 local function LeaveGroup(event, group, guid, method, kicker, reason)
     local uninvitedPlayer = GetPlayerByGUID(guid)
     if uninvitedPlayer then
-        if not logoutEvent[uninvitedPlayer:GetName()] then
-			if dontKickTime[uninvitedPlayer:GetName()] and dontKickTime[uninvitedPlayer:GetName()] > os.time() then return end
+        if not uninvitedPlayer:Data():Get("ShadowsLogoutEv") then
+			local ksh = uninvitedPlayer:ToShadow()
+			local km = ksh and ksh:GetMaster()
+			local kickGuard = km and km:Data():Get("ShadowsDontKick:" .. uninvitedPlayer:GetName())
+			if kickGuard and kickGuard > os.time() then return end
 			--print("shadows debug - leaving group")
-            logoutEvent[uninvitedPlayer:GetName()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
+            uninvitedPlayer:Data():Set("ShadowsLogoutEv", uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1))
         end
     end
 end
 
+-- World
 local function DisbandGroup(event, group)
     for _, member in ipairs (group:GetMembers()) do
-        if isPlayerBot[member:GetName()] then
+        local memberShadow = member:ToShadow()
+        local master = memberShadow and memberShadow:GetMaster()
+        if master then
             local botName = member:GetName()
-            local player = GetPlayerByName(isPlayerBot[botName])
-            if player and not logoutEvent[botName] then
-                logoutEvent[botName] = player:RegisterEvent(function(_, _, _, player)
-					if dontKickTime[botName] and dontKickTime[botName] > os.time() then return end
-                    player:RunCommand(".playerbots bot remove " .. botName)
+            if not master:Data():Get("ShadowsLogoutEv:" .. botName) then
+                master:Data():Set("ShadowsLogoutEv:" .. botName, master:RegisterEvent(function(_, _, _, player)
+					local kickGuard = player:Data():Get("ShadowsDontKick:" .. botName)
+					if kickGuard and kickGuard > os.time() then return end
+                    player:RunCommand(".shadows bot remove " .. botName)
                     print("Removing "..botName.." from disbanded group")
-                    logoutEvent[botName] = nil
-                end, 100, 1)
+                    player:Data():Set("ShadowsLogoutEv:" .. botName, nil)
+                end, 100, 1))
             end
         end
     end
 end
 
-function Teleport(player, sameMap)
-    local name = player:GetName()
-    if isPlayerBot[name] then return end
-    local guid = player:GetGUIDLow()
-    if not player:IsInGroup() then
-        return -- Should probably add a sanity check here to disconnect bots not in your party in case party affiliation fails somehow
-    end
-    if player:IsDead() then
-        return
-    end
-    if not player:GetData("BotCount") or player:GetData("BotCount") == 0 then
-        return
-    end
-    if lastTeleTime[guid] and os.time() <= lastTeleTime[guid] then
-        return
-    end
+-- World
+local function Teleport(player, sameMap)
+    if player:IsBot() then return end
+    if not player:IsInGroup() then return end
+    if player:IsDead() then return end
+    if player:GetBotsCount() == 0 then return end
+    if os.time() <= (player:Data():Get("ShadowsLastTele") or 0) then return end
+    
     if ((player:GetMapId() == 0 or player:GetMapId() == 1 -- Kalimdor, Eastern Kingdoms
     or player:GetMapId() == 530 or player:GetMapId() == 571) -- Outlands, Northrend
     and (sameMap == "yes"))
     or (player:InArena() or player:InBattleground()) -- PVP exclusions from teleport
-    then
-        return
+    then return end
+    
+    local myBots = {}
+    for _, bot in ipairs(player:GetBots()) do
+        if bot then myBots[bot:GetName()] = true end
     end
-    for i, botName in ipairs(activeBots[name]) do
-        local bot = GetPlayerByName(botName)
-        if bot and not player:IsInCombat() then
-			if (bot:GetHealth() == 0) and not bot:HasAura(8326) then -- Stops unreleased ghost corpses from being teleported
-				return
-			end 
-            if bot:GetMapId() ~= player:GetMapId() and sameMap == "yes" then
-                return
-            end
-            if not bot:IsWithinLoS(player) and
-			(((bot:GetZ() < player:GetZ() - 20) or (bot:GetZ() > player:GetZ() + 20) or (player:GetDistance(bot) > 100))
-			or not ((bot:GetMapId() == player:GetMapId())))
-			or
-			(player:GetDistance(bot) > 400)
-			then
-				if bot:HasAura(8326) then RunCommand("revive "..bot:GetName()) end -- handle auto revive of bots on enter instance/raid
-                bot:Teleport(player:GetMapId(), player:GetX() + math.random(-1, 1), player:GetY() + math.random(-1, 1), player:GetZ(), player:GetO() + math.random(-6, 6))
-                print("Teleporting bot "..botName.." to "..name)
+
+    for _, bot in ipairs(player:GetMap():GetPlayers()) do
+        if bot:IsBot() and myBots[bot:GetName()] then
+            if not player:IsInCombat() then
+                if (bot:GetHealth() == 0) and not bot:HasAura(8326) then -- Stops unreleased ghost corpses from being teleported
+                    return
+                end
+                if not bot:IsWithinLoS(player) and
+                (((bot:GetZ() < player:GetZ() - 20) or (bot:GetZ() > player:GetZ() + 20) or (player:GetDistance(bot) > 100)))
+                or
+                (player:GetDistance(bot) > 400)
+                then
+                    if bot:HasAura(8326) then RunCommand("revive "..bot:GetName()) end -- handle auto revive of bots on enter instance/raid
+                    bot:Teleport(player:GetMapId(), player:GetX() + math.random(-1, 1), player:GetY() + math.random(-1, 1), player:GetZ(), player:GetO() + math.random(-6, 6))
+                    print("Teleporting bot "..bot:GetName().." to "..player:GetName())
+                end
             end
         end
     end
-    lastTeleTime[guid] = os.time() + 1
+    if sameMap ~= "yes" and not player:IsInCombat() then
+        for _, shadow in ipairs(player:GetBots()) do
+            if shadow and shadow:GetMapId() ~= player:GetMapId() then
+                shadow:Teleport(player:GetMapId(), player:GetX() + math.random(-1, 1), player:GetY() + math.random(-1, 1), player:GetZ(), player:GetO() + math.random(-6, 6))
+                print("Teleporting bot "..shadow:GetName().." to "..player:GetName())
+            end
+        end
+    end
+    player:Data():Set("ShadowsLastTele", os.time() + 1)
 end
 
+-- World
 local function PacketTeleDelay(_, _, player)
-    local name = player:GetName()
-    if isPlayerBot[name] then return end
+    if player:IsBot() then return end
     local sameMap = "openWorld"
     player:RegisterEvent(function(_, _, _, player)
         Teleport(player, sameMap)
     end, 1000, 1)
 end
 
+-- World
 local function PacketMoveDelay(_, _, player)
-    local name = player:GetName()
-    if isPlayerBot[name] then return end
+    if player:IsBot() then return end
     local sameMap = "yes"
     player:RegisterEvent(function(_, _, _, player)
         Teleport(player, sameMap)
     end, 1000, 1)
 end
 
-local function buildCommandList()
-    local commands = {}
-    for _, category in pairs(commandCategories) do
-        for _, cmd in ipairs(category.commands) do
-            local cleanCmd = cmd.cmd:gsub("%s*<.+>%s*$", ""):lower()
-            commands[cleanCmd] = true
-        end
-    end
-    return commands
-end
-
-local validCommands = buildCommandList()
-
+-- World
 local function OnGroup(event, player, msg, Type, lang, group)
     if msg ~= "repair" then return end
     
 	player:RegisterEvent(function(e, d, r, player)
-		local playerName = player:GetName()
-		local group = player:GetGroup()
-		
-		local groupPlayers = group:GetMembers()
-		for _, groupMember in ipairs(groupPlayers) do
-			local groupMemberName = groupMember:GetName()
-		
-			if activeBots[groupMemberName] then
-				for _, botName in ipairs(activeBots[groupMemberName]) do
-					if player:GetAccountId() == GetPlayerByName(botName):GetAccountId() then
-						GetPlayerByName(botName):SendUnitWhisper("Repairing!", 0, player)
-					end
-				end
+		if not player then return end
+		for _, member in ipairs(player:GetBots()) do
+			if member and member:IsInSameGroupWith(player) then
+				member:SendUnitWhisper("Repairing!", 0, player)
 			end
 		end
 	end, 10)
@@ -993,26 +877,20 @@ local botWhisperResponses = {
     },
 }
 
+-- World
 local function OnWhisper(event, player, msg, Type, lang, receiver)
-    if not player:IsBot() then return end
+    if player:IsBot() then return end
     
     local receiverName = receiver:GetName()
     local playerName = player:GetName()
 
-    if not isPlayerBot[receiverName] then return end
+    if not receiver:IsBot() then return end
 
-    local masterName = nil
-    for master, bots in pairs(activeBots) do
-        for _, botName in ipairs(bots) do
-            if botName == receiverName then
-                masterName = master
-                break
-            end
-        end
-        if masterName then break end
-    end
-    
-    if not masterName then return end
+    local receiverShadow = receiver:ToShadow()
+    local receiverMaster = receiverShadow and receiverShadow:GetMaster()
+    if not receiverMaster then return end
+
+    local masterName = receiverMaster:GetName()
 
     if playerName ~= masterName then
         local masterResponses = {
@@ -1037,9 +915,12 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
 
     local msgLower = msg:lower()
 
-    for cmd, _ in pairs(validCommands) do
-        if msgLower:match("^" .. cmd:lower() .. "%s*$") or msgLower:match("^" .. cmd:lower() .. "%s+") then
-            return
+    for _, category in pairs(commandCategories) do
+        for _, cmd in ipairs(category.commands) do
+            local clean = cmd.cmd:gsub("%s*<.+>%s*$", ""):lower()
+            if msgLower:match("^" .. clean .. "%s*$") or msgLower:match("^" .. clean .. "%s+") then
+                return
+            end
         end
     end
 
@@ -1076,43 +957,63 @@ local function OnWhisper(event, player, msg, Type, lang, receiver)
     bot:SendUnitWhisper(fallback[math.random(#fallback)], 0, player)
 end
 
+-- World
 local function OnBotCommand(event, player, command)
     if command == "shadowsmenu" then
+        local accountId = player:GetAccountId()
+        local rows = {}
+        for _, char in ipairs(GetCharacterCache()) do
+            if char.accountId == accountId then
+                table.insert(rows, {name = char.name, race = char.race, class = char.class, level = char.level, sex = char.sex})
+            end
+        end
+        table.sort(rows, function(a, b) return a.level > b.level end)
+        player:Data():Set("ShadowsAvailable", rows)
         ShadowsHello(player)
         return false
     end
-    if string.find(command, "^playerb") then
+    if command == "shadows summon" then
+        local cd = player:Data():Get("ShadowsSummonCD") or 0
+        if cd >= os.time() then
+            player:SendAreaTriggerMessage("Your shadows summon is on cooldown for " .. math.floor((cd - os.time()) / 60) .. " minutes and " .. ((cd - os.time()) % 60) .. " seconds.")
+            return true
+        end
+        if player:GetBotsCount() == 0 then
+            player:SendAreaTriggerMessage("You have no active shadows.")
+            return true
+        end
+        for _, bot in ipairs(player:GetBots()) do
+            if bot then
+                bot:Teleport(player:GetMapId(), player:GetX() + math.random(-3, 3), player:GetY() + math.random(-3, 3), player:GetZ() + math.random(0, 0.1), player:GetO() + math.random(-6, 6))
+                player:CastSpell(bot, BOT_TELE_VISUAL, true)
+                bot:RegisterEvent(function(eventId, delay, repeats, b)
+                    if b then b:CastSpell(b, BOT_TELE_VISUAL, true) end
+                end, 500, 1)
+            end
+        end
+        player:Data():Set("ShadowsSummonCD", os.time() + BotSummonCD)
+        return true
+    end
+    if string.find(command, "^shadows bot ") then
         local guid = player:GetGUIDLow()
         local name = player:GetName()
         
-        if (string.find(command, "^playerbots bot add ")
-        and (botSummonTime[guid] and (os.time() - botSummonTime[guid] < 5)))
+        if (string.find(command, "^shadows bot add ")
+        and (player:Data():Get("ShadowsBotSummonTime") and (os.time() - player:Data():Get("ShadowsBotSummonTime") < 5)))
         then
-            local selectedChar = string.match(command, "^playerbots bot add (.+)$")
-            
+            local selectedChar = string.match(command, "^shadows bot add (.+)$")
+
             local exists = false
-            for _, char in ipairs(activeBots[name]) do
-                if char == selectedChar then
+            for _, bot in ipairs(player:GetBots()) do
+                if bot and bot:GetName() == selectedChar then
                     exists = true
                     return false
                 end
             end
 
-            if not exists then
-                table.insert(activeBots[name], selectedChar)
-            end
-
-            if not botMasters[guid] then 
-                botMasters[guid] = {} 
-            end
-            
-            isPlayerBot[selectedChar] = name
-            player:SetData("BotCount", (player:GetData("BotCount") or 0) + 1)
-            table.insert(botMasters[guid], player:GetName())
-            addCmdTimer[guid] = GetCurrTime()
-            if player:GetData("BotCount") > 4 then 
+            if player:GetBotsCount() + 1 > 4 then
                 local shadowsGroup = player:GetGroup()
-                if shadowsGroup then 
+                if shadowsGroup then
                     shadowsGroup:ConvertToRaid()
                 end
             end
@@ -1136,20 +1037,12 @@ local function OnBotCommand(event, player, command)
             return true
         end
         
-        if string.find(command, "^playerbots bot remove ") then
-            local selectedChar = string.match(command, "^playerbots bot remove (.+)$")
+        if string.find(command, "^shadows bot remove ") then
+            local selectedChar = string.match(command, "^shadows bot remove (.+)$")
             
             local selectedCharObj = GetPlayerByName(selectedChar)
             if selectedCharObj then selectedCharObj:RemoveEvents() end
-            
-            for i, botName in ipairs(activeBots[name]) do
-                if botName == selectedChar then
-                    table.remove(activeBots[name], i)
-                    player:SetData("BotCount", (player:GetData("BotCount") or 0) - 1)
-                    break
-                end
-            end
-            
+
             return true
         end
         return false
@@ -1159,38 +1052,29 @@ local function OnBotCommand(event, player, command)
 		if player:GetData("LoginTime") and (player:GetData("LoginTime") < os.time() + 5) then
 			local accountId = player:GetAccountId()
 			local name = player:GetName()
-			
-			CharDBQueryAsync("SELECT name FROM characters WHERE account = " .. accountId .. " AND name != '" .. name .. "'", function(query)
-				if query then
-					local characters = {}
-					repeat
-						local characterName = query:GetString(0)
-						table.insert(characters, characterName)
-					until not query:NextRow()
-					
-					local bots = table.concat(characters, ", ")
-					local player = GetPlayerByName(name)
-					if player then
-						player:SendAddonMessage("Shadows", bots, 7, player)
-					end
+			local characters = {}
+			for _, char in ipairs(GetCharacterCache()) do
+				if char.accountId == accountId and char.name ~= name then
+					table.insert(characters, char.name)
 				end
-			end)
+			end
+			player:SendAddonMessage("Shadows", table.concat(characters, ", "), 7, player)
 		end
 		return false
 	end
 	
 	if command == "shadowsbaron" then
-		player:SetData("ShadowsBarData", true)
+		player:Data():Set("ShadowsBarData", true)
 		player:SendBroadcastMessage("Automatic shadows bar enabled.")
 		return false
 	elseif command == "shadowsbaroff" then
-		player:SetData("ShadowsBarData", false)
+		player:Data():Set("ShadowsBarData", false)
 		player:SendBroadcastMessage("Automatic shadows bar disabled.")
 		return false
 	elseif command == "shadowsbarstatus" then
 		player:SetData("ShadowBarStatusChecked", true)
 		if not player:IsInGroup() then
-			if player:GetData("ShadowsBarData") then
+			if player:Data():Get("ShadowsBarData") then
 				player:SendAddonMessage("ShadowsBar", "OPEN", 7, player)
 			else
 				player:SendAddonMessage("ShadowsBar", "CLOSED", 7, player)
@@ -1200,15 +1084,16 @@ local function OnBotCommand(event, player, command)
 			local groupPlayers = group:GetMembers()
 			local foundBot = false
 			for _, groupMember in ipairs(groupPlayers) do
-				local name = groupMember:GetName()
-				if isPlayerBot[name] == player:GetName() and player:GetData("ShadowsBarData") then
+				local memberShadow = groupMember:ToShadow()
+				local memberMaster = memberShadow and memberShadow:GetMaster()
+				if memberMaster and memberMaster:GetName() == player:GetName() and player:Data():Get("ShadowsBarData") then
 					player:SendAddonMessage("ShadowsBar", "ENABLED", 7, player)
 					foundBot = true
 					break
 				end
 			end
 			if not foundBot then
-				if player:GetData("ShadowsBarData") then
+				if player:Data():Get("ShadowsBarData") then
 					player:SendAddonMessage("ShadowsBar", "OPEN", 7, player)
 				else
 					player:SendAddonMessage("ShadowsBar", "CLOSED", 7, player)
@@ -1232,7 +1117,7 @@ local function OnBotCommand(event, player, command)
 	   
 	   if player:IsInGroup() then
 		   
-		   if player:GetData("VIPTime") and player:GetData("VIPTime") > os.time() then
+		   if player:Data():Get("VIPTime") and player:Data():Get("VIPTime") > os.time() then
 				maxBotsForPlayer = maxVIPCount
 		   end
 		   
@@ -1244,10 +1129,14 @@ local function OnBotCommand(event, player, command)
 		   local playerGuid = player:GetGUIDLow()
 		   
 		   for _, botName in ipairs(botNames) do
-		 	   isPlayerBot[botName] = name
-		 	   botSummonTime[playerGuid] = os.time()
-		 	   dontKickTime[botName] = os.time() + 3
-		 	   player:RunCommand(".playerbots bot add " .. botName)
+		 	   player:Data():Set("ShadowsBotSummonTime", os.time())
+		 	   player:Data():Set("ShadowsDontKick:" .. botName, os.time() + 3)
+		 	   player:RunCommand(".shadows bot add " .. botName)
+		 	   local pending = player:Data():Get("Pending_shadows_ops")
+		 	   if pending and pending.AsTable then pending = pending:AsTable() end
+		 	   if type(pending) ~= "table" then pending = {} end
+		 	   pending[botName] = { op = "add", time = os.time() }
+		 	   player:Data():Set("Pending_shadows_ops", pending)
 		    end
 	    end
 	    return false
@@ -1256,43 +1145,66 @@ local function OnBotCommand(event, player, command)
 end
 
 local function OnPlayerMapEnter(event, map, player)
-    local name = player:GetName()
-    if isPlayerBot[player:GetName()] then return end
+    if player:IsBot() then return end
     local sameMap = "openWorld"
     Teleport(player, sameMap)
 end
 
 local function OnDisallowedZones(event, player, newZone, newArea)
-    local name = player:GetName()
     if player:IsDead() then
         return
     end
-    if isPlayerBot[player:GetName()] then return end
-    if not player:GetData("BotCount") or player:GetData("BotCount") <= 0 then
+    if player:IsBot() then return end
+    if player:GetBotsCount() <= 0 then
         return
     end
     for _, zone in pairs(disallowedZones) do
         if newZone == zone or newArea == zone then
             local botsToRemove = {}
 
-            if player:GetData("BotCount") and player:GetData("BotCount") > 0 then
-                for i, botName in ipairs(activeBots[name]) do
-                    table.insert(botsToRemove, botName)
+            if player:GetBotsCount() > 0 then
+                for _, bot in ipairs(player:GetBots()) do
+                    if bot then table.insert(botsToRemove, bot:GetName()) end
                 end
             end
 
-            player:RegisterEvent(function(eventId, delay, repeats, player) 
-                if #botsToRemove > 0 then 
+            player:RegisterEvent(function(eventId, delay, repeats, player)
+                if not player then return end
+                if #botsToRemove > 0 then
+                    local bots = player:GetBots()
                     for _, botName in ipairs(botsToRemove) do
-                        local bot = GetPlayerByName(botName)
-                        if bot then
-                            bot:RemoveFromGroup()
-                            player:RunCommand(".playerbots bot remove " .. botName)
+                        for _, bot in ipairs(bots) do
+                            if bot and bot:GetName() == botName then
+                                bot:RemoveFromGroup()
+                                break
+                            end
                         end
+                        player:RunCommand(".shadows bot remove " .. botName)
                     end
                     player:SendAreaTriggerMessage("You cannot use shadows in "..GetAreaName(player:GetAreaId())..".")
                 end
             end, 100, 1)
+        end
+    end
+end
+
+local function DismissWintergraspShadows(event, battleId)
+    if battleId == 1 and not AllowInBattlefield then
+        for _, player in pairs(GetPlayersInWorld()) do
+            if (player:GetMapId() == 571) and (player:GetZoneId() == 4197) and not player:IsBot() and player:GetBotsCount() > 0 then
+                local removed = false
+                for _, bot in ipairs(player:GetBots()) do
+                    if bot then
+                        bot:RemoveFromGroup()
+                        player:RunCommand(".shadows bot remove " .. bot:GetName())
+                        removed = true
+                    end
+                end
+                if removed then
+                    player:SendBroadcastMessage("Shadows are not permitted during active Wintergrasp battles. Your shadows have logged off.")
+                    player:SendAreaTriggerMessage("Shadows are not permitted during active Wintergrasp battles. Your shadows have logged off.")
+                end
+            end
         end
     end
 end
@@ -1303,14 +1215,10 @@ local function OnGroupChangeLeader(event, packet, player)
     local group = player:GetGroup()
     
     for _, player in ipairs (group:GetMembers()) do
-        local name = player:GetName()
-        
-        if isPlayerBot[name] then        
-        
-            local masterName = isPlayerBot[name]
-            local master
-            
-            if masterName then master = GetPlayerByName(masterName) end
+        local memberShadow = player:ToShadow()
+        if memberShadow then
+
+            local master = memberShadow:GetMaster()
 
             if not master then return end
             if group:IsLeader(player:GetGUID()) then
@@ -1319,16 +1227,12 @@ local function OnGroupChangeLeader(event, packet, player)
                     player:RegisterEvent(function(e, d, r, player)
                         local group = player:GetGroup()
                         if not group then return end
-                        
-                        local name = player:GetName()
-                        
-                        local masterName = isPlayerBot[name]
-                        local master
-                        
-                        if masterName then master = GetPlayerByName(masterName) end
-            
+
+                        local ms = player:ToShadow()
+                        local master = ms and ms:GetMaster()
+                        if not master then return end
                         group:SetLeader(master:GetGUID())
-                        
+
                     end, 1000)
                     
                     break
@@ -1338,59 +1242,41 @@ local function OnGroupChangeLeader(event, packet, player)
     end
 end
 
-function ProcessWintergraspWorldstate(variableID, value) -- Called on init and update worldstate 3801
-    if value == 0 then
-        local allPlayers = GetPlayersInWorld()
-        for _, player in pairs(allPlayers) do
-            if (player:GetMapId() == 571) and (player:GetZoneId() == 4197) then
-                local playerName = player:GetName()
-                
-                if not isPlayerBot[playerName] then
-                    local master = player
-                    
-                    if master and (master:GetData("BotCount") and master:GetData("BotCount") > 0) then
-                        
-                        local botsToRemove = {}
-                        if activeBots[master:GetName()] then
-                            for i, botName in ipairs(activeBots[master:GetName()]) do
-                                table.insert(botsToRemove, botName)
-                            end
-                        end
-                        
-                        if #botsToRemove > 0 then
-                            for _, botName in ipairs(botsToRemove) do
-                                local bot = GetPlayerByName(botName)
-                                if bot then
-                                    bot:RemoveFromGroup()
-                                    master:RunCommand(".playerbots bot remove " .. botName)
-                                end
-                            end
-                            master:SendBroadcastMessage("Shadows are not permitted during active Wintergrasp battles. Your shadows have logged off.")
-                            master:SendAreaTriggerMessage("Shadows are not permitted during active Wintergrasp battles. Your shadows have logged off.")
-                        end
-                    end
-                end
-            end
-        end
-    end
+if not (GetStateMapId() == -1) then
+    -- Player map stuff
+    RegisterPlayerEvent(27, OnDisallowedZones)
+
+    -- Passes map obj directly in hook, as opposed to RegisterPlayerEvent:OnEnterMap
+    RegisterServerEvent(21, OnPlayerMapEnter)
+
+    -- Shadows menu
+    RegisterPlayerGossipEvent(200, 2, ShadowsGossipSelect)
 end
 
-SetActiveVars()
-RegisterPlayerEvent(3, ShadowsLogin)
-RegisterPlayerEvent(4, LogoutOrSave)
-RegisterPlayerEvent(25, LogoutOrSave)
-RegisterPlayerEvent(19, OnWhisper)
-RegisterPlayerEvent(20, OnGroup)
-RegisterServerEvent(21, OnPlayerMapEnter)
-RegisterPlayerEvent(27, OnDisallowedZones)
-RegisterPlayerEvent(42, OnBotCommand)
-RegisterPlayerGossipEvent(200, 2, ShadowsGossipSelect)
-RegisterGroupEvent(3, LeaveGroup)
-RegisterGroupEvent(5, DisbandGroup)
-RegisterPacketEvent(0x075, 5, UninviteGroup)
-RegisterPacketEvent(0x076, 5, UninviteGroupGUID)
-RegisterPacketEvent(0x0C7, 5, PacketTeleDelay)
-RegisterPacketEvent(0x0C9, 5, PacketMoveDelay)
-RegisterPacketEvent(0x0CA, 5, PacketMoveDelay)
-RegisterPacketEvent(0x0CB, 5, PacketMoveDelay)
-RegisterPacketEvent(0x079, 7, OnGroupChangeLeader)
+if GetStateMapId() == -1 then
+    -- Shadows bar vars
+    SetShadowsBarData()
+    
+    -- Player world stuff
+    RegisterPlayerEvent(3, ShadowsLogin)
+    RegisterPlayerEvent(4, LogoutOrSave)
+    RegisterPlayerEvent(19, OnWhisper)
+    RegisterPlayerEvent(20, OnGroup)
+    RegisterPlayerEvent(25, LogoutOrSave)
+    RegisterPlayerEvent(42, OnBotCommand)
+    
+    -- Packet stuff
+    RegisterPacketEvent(0x075, 5, UninviteGroup)
+    RegisterPacketEvent(0x076, 5, UninviteGroupGUID)
+    RegisterPacketEvent(0x0C7, 5, PacketTeleDelay)
+    RegisterPacketEvent(0x0C9, 5, PacketMoveDelay)
+    RegisterPacketEvent(0x0CA, 5, PacketMoveDelay)
+    RegisterPacketEvent(0x0CB, 5, PacketMoveDelay)
+    RegisterPacketEvent(0x079, 7, OnGroupChangeLeader)
+    
+    -- Group stuff
+    RegisterGroupEvent(3, LeaveGroup)
+    RegisterGroupEvent(5, DisbandGroup)
+
+    RegisterBattlefieldEvent(1, DismissWintergraspShadows)
+end

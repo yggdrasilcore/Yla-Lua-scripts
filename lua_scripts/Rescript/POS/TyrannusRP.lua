@@ -1,3 +1,5 @@
+if GetStateMapId() == -1 then return end
+
 local function POSCombatEnd(event, player)
     if player:GetAreaId() == 4905 and player:GetNearestCreature(150, 36658, 0, 2) then
 		player:RegisterEvent(function(eventId, delay, repeats, player)

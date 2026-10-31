@@ -1,3 +1,6 @@
+-- Kalimdor-only script (map 1): quest 11183 Cleansing Witch Hill (Dustwallow Marsh).
+if GetStateMapId() ~= 1 then return end
+
 local SPELL_ID = 42521
 local ITEM_ID = 33113
 local newZelfrax = 238640
@@ -54,22 +57,27 @@ local function origZelSpawn(event, creature)
     end
 end
 
+local CREDIT_RANGE = 250
+
 local function OnCreatureDeath(event, creature, killer)
     creature:RemoveEvents()
     origZel = creature:GetNearestCreature(200, 23864)
     if origZel then
         origZel:DespawnOrUnsummon()
     end
-    local groupMembers = killer:GetGroup()
-    if groupMembers then
-        for _, member in ipairs(groupMembers:GetMembers()) do
-            if member:IsPlayer() then
-                member:CompleteQuest(QUEST_ID)
-            end
-        end
-    else
-        if killer:IsPlayer() then
-            killer:CompleteQuest(QUEST_ID)
+    if not (killer and killer:IsPlayer()) then return end
+    local map = creature:GetMap()
+    if not map then
+        killer:CompleteQuest(QUEST_ID)
+        return
+    end
+    local instanceId = creature:GetInstanceId()
+    for _, member in pairs(map:GetPlayers()) do
+        if member and member:IsPlayer() and member:IsInWorld()
+            and (not instanceId or member:GetInstanceId() == instanceId)
+            and creature:GetDistance(member) <= CREDIT_RANGE
+            and (member == killer or killer:IsInSameGroupWith(member) or killer:IsInSameRaidWith(member)) then
+            member:CompleteQuest(QUEST_ID)
         end
     end
 end

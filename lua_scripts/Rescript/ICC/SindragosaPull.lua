@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 631 then return end
+
 local function OnPullSindragosa(event, player, sindragosa)
     if sindragosa and sindragosa:GetEntry() == 36853 then
         if sindragosa:GetNearestCreature(300, 36789) then

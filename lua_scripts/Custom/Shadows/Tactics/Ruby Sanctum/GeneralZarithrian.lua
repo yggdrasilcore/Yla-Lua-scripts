@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 724 then return end
+
 local function GeneralZarithrian(eventId, delay, repeats, zarithrian)
     if zarithrian:IsDead() or not zarithrian:IsInCombat() then        
         zarithrian:SetData("CachedMainTank", nil)

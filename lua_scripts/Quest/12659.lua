@@ -1,3 +1,6 @@
+-- Quest 12659 Scalps - Zul'Drak.
+if GetStateMapId() ~= 571 then return end
+
 local function OnUseItem(event, player, item, target)
    if not player:GetSelection() then return false end
    local sel = player:GetSelection()

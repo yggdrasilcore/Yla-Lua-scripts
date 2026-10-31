@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 631 then return end
+
 local FESTERGUT_ENTRY  = 36626
 local GASTRIC_BLOAT    = {72214, 72219, 72231, 72551, 72552, 72553}
 local SPORE_AURA_1     = 69278
@@ -572,7 +574,7 @@ local function FestergutOnEnterCombat(event, player, festergut)
         festergut:SetData("GooZ", nil)
         festergut:SetData("GooTime", nil)
         festergut:SetData("LastHCReassignTime", nil)
-        TogglePlayerbotScript(player, "icc", false)
+        ToggleShadowsScript(player, "icc", false)
         if player:GetDifficulty() > 1 then ApplyHiddenBuffsToShadows(player) end
         StartLuaEvent(festergut, FestergutLoop)
     end

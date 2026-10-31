@@ -4,7 +4,7 @@ local function RaiseAllyCast(event, player, spell, skipCheck)
 	if target and target:IsPlayer() and (player:IsInSameGroupWith(target) or player:IsInSameRaidWith(target)) and target:IsDead() then
 		target:CastSpell(target, 46619)
 		target:RegisterEvent(function(eventId, delay, repeats, target)
-			RaiseAllyGhoul = target:GetNearestCreature(10, 30230)
+			local RaiseAllyGhoul = target:GetNearestCreature(10, 30230)
 			if RaiseAllyGhoul then
 				RaiseAllyGhoul:PerformEmote(449) -- Crawl animation
 			end

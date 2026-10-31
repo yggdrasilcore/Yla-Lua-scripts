@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 658 then return end
+
 -- POS Gargoyle event on the 4 slaves between Ick and the entrance (the ones without a ball and chain)
 -- Made for Yggdrasil WoW by mostly nick :)
 
@@ -57,7 +59,10 @@ end
 
 local function CheckPlayersAndSpawnNPCs()
     for playerName, _ in pairs(PLAYERS_ON_MAP) do
-        local player = GetPlayerByName(playerName)
+        local player
+        for _, p in ipairs(GetStateMap():GetPlayers()) do
+            if p:GetName() == playerName then player = p break end
+        end
         if player then
             local instance = player:GetInstanceId()
             local x, y, z = player:GetLocation()

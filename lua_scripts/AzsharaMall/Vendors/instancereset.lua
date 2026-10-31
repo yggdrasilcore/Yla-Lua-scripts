@@ -1,3 +1,21 @@
+-- Azshara Mall-only script (mall map 37).
+-- UnbindInstance is world-state-only, so unbinds run through a world command.
+local function OnInstanceResetCommand(event, player, command)
+    local targetGuid, map, difficulty = command:lower():match("^instanceresetunbind%s+(%d+)%s+(%d+)%s+(%d+)$")
+    if not targetGuid then return end
+    if not player then return false end
+    if player:Data():Get("InstanceResetExpect") ~= (targetGuid .. ":" .. map .. ":" .. difficulty) then return false end
+    player:Data():Set("InstanceResetExpect", nil)
+    local ok, target = pcall(GetPlayerByGUID, tonumber(targetGuid))
+    if ok and target then
+        target:UnbindInstance(tonumber(map), tonumber(difficulty))
+        player:Data():Set("InstanceResetResult", "done")
+    else
+        player:Data():Set("InstanceResetResult", "absent")
+    end
+    return false
+end
+
 local NPC_ID = 190090
 local TOKEN_ITEM_ID = 20880
 local MAX_MENU_ITEMS = 8
@@ -88,7 +106,7 @@ local function BuildLockoutCacheForAccount(accountId)
 
         local guidIn = table.concat(guidList, ",")
 
-        CharDBQueryAsync("SELECT guid, time, count FROM acore_eluna.character_instance_vendor_reset WHERE guid IN (" .. guidIn .. ")", function(resetQuery)
+        CharDBQueryAsync("SELECT guid, time, count FROM ycore_yla.character_instance_vendor_reset WHERE guid IN (" .. guidIn .. ")", function(resetQuery)
             local loaded = {}
             if resetQuery then
                 repeat
@@ -152,10 +170,13 @@ local function OnPlayerMapChange(event, player)
         if player:GetMapId() == 37 then BuildLockoutCacheForAccount(accountId) end
     end, 1000)
     
-    if player:GetData("InstanceResetLockChecked") then return end
+    if player:Data():Get("InstanceResetLockChecked") then return end
     
-    CharDBQueryAsync("SELECT command FROM acore_eluna.command_queue WHERE comment = " .. guid .. " AND executed = 0", function(q)
-        local player = GetPlayerByGUID(guid)
+    CharDBQueryAsync("SELECT command FROM ycore_yla.command_queue WHERE comment = " .. guid .. " AND executed = 0", function(q)
+        local player = nil
+        for _, p in ipairs(GetStateMap():GetPlayers()) do
+            if p:GetGUIDLow() == guid then player = p break end
+        end
         if not player then return end
 
         if q then
@@ -163,13 +184,19 @@ local function OnPlayerMapChange(event, player)
                 local command = q:GetString(0)
                 local mapVal, diffVal = command:match("UnbindInstance%((%d+),%s*(%d+)%)")
                 if mapVal and diffVal then
-                    player:UnbindInstance(tonumber(mapVal), tonumber(diffVal))
-                    CharDBExecute("UPDATE acore_eluna.command_queue SET executed = 1 WHERE comment = " .. guid .. " AND command = 'UnbindInstance(" .. mapVal .. ", " .. diffVal .. ")'")
+                    player:Data():Set("InstanceResetExpect", guid .. ":" .. mapVal .. ":" .. diffVal)
+                    player:Data():Set("InstanceResetResult", nil)
+                    player:RunCommand("instanceresetunbind " .. guid .. " " .. mapVal .. " " .. diffVal)
+                    player:Data():Set("InstanceResetExpect", nil)
+                    if player:Data():Get("InstanceResetResult") == "done" then
+                        CharDBExecute("UPDATE ycore_yla.command_queue SET executed = 1 WHERE comment = " .. guid .. " AND command = 'UnbindInstance(" .. mapVal .. ", " .. diffVal .. ")'")
+                    end
+                    player:Data():Set("InstanceResetResult", nil)
                 end
             until not q:NextRow()
         end
 
-        player:SetData("InstanceResetLockChecked", 1)
+        player:Data():Set("InstanceResetLockChecked", 1)
     end)
 end
 
@@ -305,19 +332,20 @@ local function ResetInstanceLockout(player, map, difficulty, targetGuid, targetN
         tokenCost = 0
         resetCount[targetGuid] = resetCount[targetGuid] + 1
 
-        CharDBExecute("REPLACE INTO acore_eluna.character_instance_vendor_reset (guid, time, count) VALUES (" .. targetGuid .. ", " .. freeReset[targetGuid] .. ", " .. resetCount[targetGuid] .. ")")
+        CharDBExecute("REPLACE INTO ycore_yla.character_instance_vendor_reset (guid, time, count) VALUES (" .. targetGuid .. ", " .. freeReset[targetGuid] .. ", " .. resetCount[targetGuid] .. ")")
     end
 
     if not ChargeTokens(player, tokenCost) then return end
 
-    local onlineTarget = GetPlayerByGUID(targetGuid)
-    if onlineTarget then
-        onlineTarget:UnbindInstance(map, difficulty)
-        CharDBExecute("DELETE FROM character_instance WHERE guid = " .. targetGuid .. " AND instance IN (SELECT id FROM instance WHERE map = " .. map .. " AND difficulty = " .. difficulty .. ")")
-    else
-        CharDBExecute("DELETE FROM character_instance WHERE guid = " .. targetGuid .. " AND instance IN (SELECT id FROM instance WHERE map = " .. map .. " AND difficulty = " .. difficulty .. ")")
-        CharDBExecute("INSERT INTO acore_eluna.command_queue (comment, command, inserted, executed) VALUES (" .. targetGuid .. ", 'UnbindInstance(" .. map .. ", " .. difficulty .. ")', " .. os.time() .. ", 0)")
+    player:Data():Set("InstanceResetExpect", targetGuid .. ":" .. map .. ":" .. difficulty)
+    player:Data():Set("InstanceResetResult", nil)
+    player:RunCommand("instanceresetunbind " .. targetGuid .. " " .. map .. " " .. difficulty)
+    player:Data():Set("InstanceResetExpect", nil)
+    CharDBExecute("DELETE FROM character_instance WHERE guid = " .. targetGuid .. " AND instance IN (SELECT id FROM instance WHERE map = " .. map .. " AND difficulty = " .. difficulty .. ")")
+    if player:Data():Get("InstanceResetResult") ~= "done" then
+        CharDBExecute("INSERT INTO ycore_yla.command_queue (comment, command, inserted, executed) VALUES (" .. targetGuid .. ", 'UnbindInstance(" .. map .. ", " .. difficulty .. ")', " .. os.time() .. ", 0)")
     end
+    player:Data():Set("InstanceResetResult", nil)
 
     local key = map * 10 + difficulty
     if accountLockoutCache[accountId] then
@@ -528,11 +556,20 @@ local function OnGossipSelect(event, player, creature, sender, intid, code, menu
     player:GossipComplete()
 end
 
-for _, player in ipairs(GetPlayersInWorld()) do
-    OnPlayerMapChange(nil, player)
+-- State-aware catch-up for already-online players (server start or
+-- reload). GetPlayersInWorld() only exists in the global state.
+if GetStateMapId() == -1 then
+    for _, player in ipairs(GetPlayersInWorld()) do
+        OnPlayerMapChange(nil, player)
+    end
+elseif GetStateMap() then
+    for _, player in ipairs(GetStateMap():GetPlayers()) do
+        OnPlayerMapChange(nil, player)
+    end
 end
 
 RegisterPlayerEvent(28, OnPlayerMapChange)
+RegisterPlayerEvent(42, OnInstanceResetCommand)
 RegisterCreatureGossipEvent(NPC_ID, 1, OnGossipHello)
 RegisterCreatureGossipEvent(NPC_ID, 2, OnGossipSelect)
-CharDBExecute("CREATE TABLE IF NOT EXISTS acore_eluna.character_instance_vendor_reset (guid INT NOT NULL, time INT NOT NULL, count INT DEFAULT 0, PRIMARY KEY (guid));")
+CharDBExecute("CREATE TABLE IF NOT EXISTS ycore_yla.character_instance_vendor_reset (guid INT NOT NULL, time INT NOT NULL, count INT DEFAULT 0, PRIMARY KEY (guid));")

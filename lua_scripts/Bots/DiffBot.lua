@@ -1,3 +1,7 @@
+if GetStateMapId() ~= -1 then return end
+
+if not (GetRealmID() == 1) then return end -- Only on prod
+
 local highDiffCount = 0
 local lastalert = 0
 

@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 574 then return end
+
 local INGVAR_ENTRY               = 23954
 
 local UTGARDE_KEEP_MAP_ID        = 574
@@ -162,7 +164,10 @@ local function OnEnterUtgardeKeep(event, player)
 end
 
 RegisterPlayerEvent(28, OnEnterUtgardeKeep)
-for _, player in ipairs(GetPlayersInWorld()) do OnEnterUtgardeKeep(nil, player) end
+local map = GetStateMap()
+if map then
+    for _, player in ipairs(map:GetPlayers()) do OnEnterUtgardeKeep(nil, player) end
+end
 
 local function OnRoarPrepare(event, caster, spell)
     caster:SetData("RoarActive", true)

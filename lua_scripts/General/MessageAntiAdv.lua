@@ -1,3 +1,5 @@
+if GetStateMapId() ~= -1 then return end
+
 local blockedWords = {
    -- Existing entries
    "[.]com%f[%s]", "[.]br%f[%s]", "[.]ml%f[%s]", "bit[.]ly%f[%s]",

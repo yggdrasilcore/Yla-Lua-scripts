@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 37 then return end
+
 local targetName = "Twogga"
 
 local function resetChase(eventId, delay, repeats, creature)

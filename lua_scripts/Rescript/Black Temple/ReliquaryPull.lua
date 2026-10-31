@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 564 then return end
+
 local ids = {22856, 23418, 23419, 23420}
 
 local function CheckReliquaryPullLoop(eventId, delay, repeats, player)
@@ -20,4 +22,4 @@ local function CheckReliquaryPull(event, player)
 end
 
 RegisterPlayerEvent(28, CheckReliquaryPull)
-for _, player in ipairs(GetPlayersInWorld()) do CheckReliquaryPull(_, player) end
+if GetStateMap() then for _, player in ipairs(GetStateMap():GetPlayers()) do CheckReliquaryPull(nil, player) end end

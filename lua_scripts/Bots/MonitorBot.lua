@@ -2,6 +2,7 @@
 -- Conf
 ----------------------------------------------------------------------------------------------------
 
+
 -- Global config
 local EnableModule		= true		-- Enable == true, disable == false
 
@@ -38,7 +39,7 @@ local DeleteInterval	= 60		-- How often to truncate old data, in hours. This lea
 if not EnableLogger then return end
 if LoggingInterval < 1 then error("[Eluna Server Logger]: Fatal error - Logger frequency cannot be lower than 1! Aborting.") end
 
-CharDBExecute("CREATE TABLE IF NOT EXISTS statistics (event VARCHAR(32) NOT NULL, param1 INT UNSIGNED, param2 VARCHAR(32), param3 INT UNSIGNED);")
+CharDBExecute("CREATE TABLE IF NOT EXISTS ycore_yla.statistics (event VARCHAR(32) NOT NULL, param1 INT UNSIGNED, param2 VARCHAR(32), param3 INT UNSIGNED);")
 
 -- Cache tables
 
@@ -73,10 +74,17 @@ end
 
 -- Core function
 local function CacheDataPoints()
-	if EnableDebug then print("[Eluna Server Logger]: Storing data point ".. DataPointCount .. " for session ".. SessionID .." to database...") end
+	if EnableDebug and GetStateMapId() == -1 then print("[Eluna Server Logger]: Storing data point ".. DataPointCount .. " for session ".. SessionID .." to database...") end
 	local values = {}
 	
-	table.insert(values, "('pCount', " .. #GetPlayersInWorld() .. ", NULL, " .. os.time() .. ")")
+	local players
+	if GetStateMapId() == -1 then
+		players = GetPlayersInWorld()
+	else
+		local map = GetStateMap()
+		players = map and map:GetPlayers()
+	end
+	table.insert(values, "('pCount', " .. #(players or {}) .. ", NULL, " .. os.time() .. ")")
 
 	local totalDiff = 0
 	for _, diff in ipairs(event13Cache) do
@@ -171,8 +179,8 @@ local function CacheDataPoints()
 	end
 	
 	if #values > 0 then
-		local query = "INSERT INTO statistics (event, param1, param2, param3) VALUES " .. table.concat(values, ",") .. ";"
-		if EnableDebug then print("[Eluna Server Logger]: Inserting query - "..query) end
+		local query = "INSERT INTO ycore_yla.statistics (event, param1, param2, param3) VALUES " .. table.concat(values, ",") .. ";"
+		if EnableDebug and GetStateMapId() == -1 then print("[Eluna Server Logger]: Inserting query - "..query) end
 		CharDBExecute(query)
 	end
 
@@ -203,13 +211,13 @@ local function CleanOldData()
     local truncateTime = os.time() - (TruncateCutoff * 24 * 60 * 60)
     local oneHourAgo = os.time() - (DeleteInterval * 60)
     local query = string.format([[
-    DELETE FROM statistics
+    DELETE FROM ycore_yla.statistics
     WHERE param3 < %d
     AND param3 NOT IN (
         SELECT max_param3
         FROM (
             SELECT MAX(param3) AS max_param3
-            FROM statistics
+            FROM ycore_yla.statistics
             WHERE param3 >= %d
             GROUP BY event, DATE_FORMAT(FROM_UNIXTIME(param3), '%%Y-%%m-%%d %%H')
         ) AS temp_max_param3
@@ -378,14 +386,14 @@ if EnableLogger then
 		error("[Eluna Server Logger]: Fatal error - Logging is enabled but all loggers are disabled. Aborting.")
 	end
 	CreateLuaEvent(CacheDataPoints, LoggingInterval * 60 * 1000, 0)
-if EnableDebug then print("[Eluna Server Logger]: Server logger loaded with session ID "..SessionID..". Storing data every "..LoggingInterval.." minutes. Truncating enabled: "..tostring(EnableTruncate)) end
+if EnableDebug and GetStateMapId() == -1 then print("[Eluna Server Logger]: Server logger loaded with session ID "..SessionID..". Storing data every "..LoggingInterval.." minutes. Truncating enabled: "..tostring(EnableTruncate)) end
 end
 
 if EnableTruncate then
 	if TruncateOnStartup then
 		CleanOldData()
 	end
-	if not EnableLogger then
+	if not EnableLogger and GetStateMapId() == -1 then
 		print("[Eluna Server Logger]: Warning - Truncate is enabled but nothing is being logged.")
 	end
 	CreateLuaEvent(CleanOldData, DeleteInterval * 60 * 1000, 0)

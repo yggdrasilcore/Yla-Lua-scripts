@@ -1,3 +1,5 @@
+if GetStateMapId() == -1 then return end
+
 local MOUNTS_60 = {
 458,459,468,470,471,472,578,580,581,6648,6653,6654,6777,6896,6897,6898,6899,8394,8395,8980,10787,10788,10789,10790,10792,10793,10795,10796,10798,10799,10873,10969,15780,15781,16058,16059,16060,17453,17454,17455,17456,17458,17462,17463,17464,18363,18989,18990,25858,33630,34406,34795,35018,35020,35022,35710,35711,42776,43899,49378,50869,50870,51621,64657,64658,64731,64977,66847
 }
@@ -49,10 +51,10 @@ end
 local function OnPrepareRidingTurtle(event, player, spell)
     if not player:IsBot() then return end
 
-    local masterName = isPlayerBot[player:GetName()]
-    local master
-    if masterName then master = GetPlayerByName(masterName) end
+    local shadow = player:ToShadow()
+    local master = shadow and shadow:GetMaster()
     if not master then return end
+    if master:GetMapId() ~= player:GetMapId() or master:GetInstanceId() ~= player:GetInstanceId() then return end
 
     if not master:IsMounted() then return end
     CastMatchingMasterMount(player, master, spell)
@@ -64,10 +66,10 @@ local function OnPrepareSeaTurtle(event, player, spell)
     if not player:IsBot() then return end
     if player:IsInWater() then return end
 
-    local masterName = isPlayerBot[player:GetName()]
-    local master
-    if masterName then master = GetPlayerByName(masterName) end
+    local shadow = player:ToShadow()
+    local master = shadow and shadow:GetMaster()
     if not master then return end
+    if master:GetMapId() ~= player:GetMapId() or master:GetInstanceId() ~= player:GetInstanceId() then return end
 
     if not master:IsMounted() then return end
     CastMatchingMasterMount(player, master, spell)

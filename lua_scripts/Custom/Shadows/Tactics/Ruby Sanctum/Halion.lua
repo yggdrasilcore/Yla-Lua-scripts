@@ -1,3 +1,4 @@
+if GetStateMapId() ~= 724 then return end
 -- NPCs
 local HALION_ENTRY          = 39863
 local COMBUSTION_ENTRY      = 40001

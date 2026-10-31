@@ -1,3 +1,5 @@
+if GetStateMapId() == -1 then return end
+
 local requiredItemID = 4427
 local requiredItemCount = 1
 

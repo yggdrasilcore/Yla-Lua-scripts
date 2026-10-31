@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 578 then return end
+
 local function OnUseDragonEssence(event, player, item, target)
     if player:GetClass() ~= 1 then
         return

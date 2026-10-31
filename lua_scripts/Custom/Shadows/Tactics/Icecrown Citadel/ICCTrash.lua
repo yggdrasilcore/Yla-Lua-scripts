@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 631 then return end
+
 local function BotAttackInsects(player)
     local insects = player:GetCreaturesInRange(100, 37782)
     
@@ -61,4 +63,4 @@ local function OnBotMapChange(event, player)
 end
 
 RegisterPlayerEvent(28, OnBotMapChange)
-for _, player in ipairs(GetPlayersInWorld()) do OnBotMapChange(_, player) end
+if GetStateMap() then for _, player in ipairs(GetStateMap():GetPlayers()) do OnBotMapChange(nil, player) end end

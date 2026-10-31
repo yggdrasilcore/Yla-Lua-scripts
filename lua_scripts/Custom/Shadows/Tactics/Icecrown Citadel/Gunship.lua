@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 631 then return end
+
 -- OBJECT IDs
 -- Bosses
 local MURADIN_ENTRY            = 36948
@@ -171,17 +173,14 @@ local function MarkTargetSkull(player, target)
     player:SetData("GunshipMarkTick", tick)
 
     if tick % 30 ~= 0 then return end
-    
-    if not target then return end
 
-    local group = player:GetGroup()
-    if not group then return end
+    if not target then return end
 
     if target:GetData("SkullSet") and (os.time() - (target:GetData("SkullSetTime") or 0)) < 6 then return end
 
     target:SetData("SkullSet", true)
     target:SetData("SkullSetTime", os.time())
-    group:SetTargetIcon(7, target:GetGUID(), player:GetGUID())
+    SetTargetIconDeferred(player, 7, target)
 end
 
 local function GunshipHordeActions(eventId, delay, repeats, player)
@@ -799,4 +798,4 @@ end
 RegisterCreatureEvent(37519, 7, AllianceGunshipLock)
 RegisterPlayerEvent(33, GunshipOnEnterCombat)
 RegisterPlayerEvent(28, HandleMapEvents) -- Remove rocket pack visual
-for _, player in ipairs(GetPlayersInWorld()) do GunshipOnEnterCombat(_, player, _) end
+if GetStateMap() then for _, player in ipairs(GetStateMap():GetPlayers()) do GunshipOnEnterCombat(nil, player, nil) end end

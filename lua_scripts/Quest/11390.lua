@@ -1,3 +1,6 @@
+-- Northrend-only script (map 571): quest 11390 I've Got a Flying Machine! (Steel Gate, Howling Fjord).
+if GetStateMapId() ~= 571 then return end
+
 local Quest11390Timer = {}
 
 local function CheckPlayerArea(eventId, delay, repeats, player)

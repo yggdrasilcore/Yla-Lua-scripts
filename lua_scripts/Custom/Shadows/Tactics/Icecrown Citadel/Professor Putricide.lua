@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 631 then return end
+
 local function GetNearestSafePoint(x, y)
     local safePoints = {
         {4356, 3265}, {4417, 3207}, {4356, 3157}, {4288, 3192}

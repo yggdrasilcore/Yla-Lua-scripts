@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 631 then return end
+
 local LADY_DEATHWHISPER_ENTRY = 36855
 
 local function LadyDeathwhisper10Loop(eventId, delay, repeats, deathwhisper)
@@ -12,13 +14,10 @@ local function LadyDeathwhisper10Loop(eventId, delay, repeats, deathwhisper)
     if darnavan then
         local nearestPlayer = darnavan:GetNearestPlayer(200)
         if nearestPlayer then
-            local group = nearestPlayer:GetGroup()
-            if group then
-                group:SetTargetIcon(4, darnavan:GetGUID(), nearestPlayer:GetGUID())
-                deathwhisper:RemoveEvents()
-                deathwhisper:SetData("EventActive", nil)
-                return
-            end
+            SetTargetIconDeferred(nearestPlayer, 4, darnavan)
+            deathwhisper:RemoveEvents()
+            deathwhisper:SetData("EventActive", nil)
+            return
         end
     end
 end
@@ -35,13 +34,10 @@ local function LadyDeathwhisper25Loop(eventId, delay, repeats, deathwhisper)
     if darnavan then
         local nearestPlayer = darnavan:GetNearestPlayer(200)
         if nearestPlayer then
-            local group = nearestPlayer:GetGroup()
-            if group then
-                group:SetTargetIcon(4, darnavan:GetGUID(), nearestPlayer:GetGUID())
-                deathwhisper:RemoveEvents()
-                deathwhisper:SetData("EventActive", nil)
-                return
-            end
+            SetTargetIconDeferred(nearestPlayer, 4, darnavan)
+            deathwhisper:RemoveEvents()
+            deathwhisper:SetData("EventActive", nil)
+            return
         end
     end
 end
@@ -90,4 +86,4 @@ local function OnEnterMap631(event, player)
 end
 
 RegisterPlayerEvent(28, OnEnterMap631)
-for _, player in ipairs(GetPlayersInWorld()) do OnEnterMap631(_, player) end
+if GetStateMap() then for _, player in ipairs(GetStateMap():GetPlayers()) do OnEnterMap631(nil, player) end end

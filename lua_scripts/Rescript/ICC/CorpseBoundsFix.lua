@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 631 then return end
+
 local CorpseBoundsEvent = {}
 
 local function CheckLowZPlayers(eventid, delay, repeats, player)

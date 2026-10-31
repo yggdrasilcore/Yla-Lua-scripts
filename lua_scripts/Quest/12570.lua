@@ -1,3 +1,5 @@
+if GetStateMapId() == -1 then return end
+
 local AREA_ID = 4291
 local QUEST_ID = 12570
 local NPC_ID = 28217
@@ -9,7 +11,10 @@ local eventId = nil
 
 local function CheckAndCompleteQuest()
     for playerName, _ in pairs(playerList) do
-        local player = GetPlayerByName(playerName)
+        local player
+        for _, p in ipairs(GetStateMap():GetPlayers()) do
+            if p:GetName() == playerName then player = p break end
+        end
         if player and player:GetAreaId() ~= AREA_ID then
             playerList[playerName] = nil
         elseif player and player:IsWithinDist3d(X, Y, Z, RANGE) then

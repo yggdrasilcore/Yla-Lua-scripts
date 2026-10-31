@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 631 then return end
+
 local function OnEnterCombat(event, player, enemy)
     if not enemy then  return  end
     

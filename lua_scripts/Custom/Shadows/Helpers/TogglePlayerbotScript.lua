@@ -1,8 +1,10 @@
-function TogglePlayerbotScript(player, script, state)
-    local masterName = isPlayerBot[player:GetName()]
-    if not masterName then return end
-    local master = GetPlayerByName(masterName)
+if GetStateMapId() == -1 then return end
+
+function ToggleShadowsScript(player, script, state)
+    local shadow = player:ToShadow()
+    local master = shadow and shadow:GetMaster()
     if not master then return end
+    if master:GetMapId() ~= player:GetMapId() or master:GetInstanceId() ~= player:GetInstanceId() then return end
     local cmd = state and "co +" .. script or "co -" .. script
     master:Whisper(cmd, 0, player)
 end
@@ -10,7 +12,7 @@ end
 
 local function OnLeaveCombatICC(event, player)
     if player:GetMapId() ~= 631 then return end
-    TogglePlayerbotScript(player, "icc", true)
+    ToggleShadowsScript(player, "icc", true)
 end
 
 RegisterPlayerEvent(34, OnLeaveCombatICC)

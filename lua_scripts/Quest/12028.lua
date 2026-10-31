@@ -1,3 +1,6 @@
+-- Quest 12028 Spiritual Insight - Dragonblight.
+if GetStateMapId() ~= 571 then return end
+
 local WISP = 24465
 local MORPH_DELAY_MS = 1550
 local DEMORPH_DELAY_MS = 3*60*1000

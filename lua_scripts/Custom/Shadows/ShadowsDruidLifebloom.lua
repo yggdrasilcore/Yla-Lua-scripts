@@ -1,3 +1,5 @@
+if GetStateMapId() == -1 then return end
+
 local LIFEBLOOM_SPELLS = {48451, 48450, 33763}
 
 local function GetHighestKnownLifebloom(player)
@@ -10,21 +12,15 @@ local function GetHighestKnownLifebloom(player)
 end
 
 local function GetLowestHpMember(player)
-    local group = player:GetGroup()
-    if not group then return nil end
-
-    local members = group:GetMembers()
     local target = nil
     local lowestHp = math.huge
 
-    for _, member in ipairs(members) do
-        if member and member:IsAlive() then
-            if player:IsWithinDist(member, 40) and player:IsWithinLoS(member) then
-                local hp = member:GetHealth()
-                if hp < lowestHp then
-                    lowestHp = hp
-                    target = member
-                end
+    for _, member in ipairs(player:GetPlayersInRange(40, 2, 1)) do
+        if member and player:IsWithinLoS(member) and player:IsInSameGroupWith(member) then
+            local hp = member:GetHealth()
+            if hp < lowestHp then
+                lowestHp = hp
+                target = member
             end
         end
     end
@@ -56,9 +52,8 @@ local function OnMapChange(event, player)
 end
 
 RegisterPlayerEvent(28, OnMapChange)
-
-CreateLuaEvent(function(e, d, r)
-    for _, player in ipairs(GetPlayersInWorld()) do
+if GetStateMap() then
+    for _, player in ipairs(GetStateMap():GetPlayers()) do
         OnMapChange(nil, player)
     end
-end, 2000)
+end

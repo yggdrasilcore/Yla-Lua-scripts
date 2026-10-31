@@ -40,36 +40,34 @@ local function AIO_UI_FIX(event, player, command)
 	local guid = player:GetGUIDLow()
 	
 	if event == 28 then -- on login/map change, check reward state
-		if player:GetData("LvlRewardsChecked") then return end
-		CharDBQueryAsync("SELECT data FROM character_custom_data WHERE guid = "..guid.." AND type = 99", function(result)
-			local player = GetPlayerByGUID(GetPlayerGUID(guid))
+		if player:Data():Get("LvlRewardsChecked") then return end
+		CharDBQueryAsync("SELECT data FROM ycore_yla.character_custom_data WHERE guid = "..guid.." AND type = 99", function(result)
+			local player
+			if GetStateMapId() == -1 then player = GetPlayerByGUID(GetPlayerGUID(guid))
+			else for _, p in ipairs(GetStateMap():GetPlayers()) do
+				if p:GetGUIDLow() == guid then player = p break end
+			end end
 			if result then
 				local data = result:GetString(0)
 				if not player then return end
 				if data == "DISABLED" then
-					player:SetData("LvlRewardsDisabled", true)
+					player:Data():Set("LvlRewardsDisabled", true)
 				else
-					player:SetData("LvlRewardsDisabled", false)
+					player:Data():Set("LvlRewardsDisabled", false)
 				end
-				player:SetData("LvlRewardsChecked", true)
+				player:Data():Set("LvlRewardsChecked", true)
 			end
 		end)
 	elseif event == 4 or event == 25 then
-		if player:GetData("LvlRewardsChanged") then
-			if player:GetData("LvlRewardsDisabled") then
-				CharDBExecute("REPLACE INTO character_custom_data (guid, type, time, data) VALUES ("..guid..", 99, "..os.time()..", 'DISABLED')")
+		if player:Data():Get("LvlRewardsChanged") then
+			if player:Data():Get("LvlRewardsDisabled") then
+				CharDBExecute("REPLACE INTO ycore_yla.character_custom_data (guid, type, time, data) VALUES ("..guid..", 99, "..os.time()..", 'DISABLED')")
 			else
-				CharDBExecute("REPLACE INTO character_custom_data (guid, type, time, data) VALUES ("..guid..", 99, "..os.time()..", 'ENABLED')")
+				CharDBExecute("REPLACE INTO ycore_yla.character_custom_data (guid, type, time, data) VALUES ("..guid..", 99, "..os.time()..", 'ENABLED')")
 			end
 		end
     elseif event == 42 then
-		if command == "32819" then -- Extends worg form to 5 minutes, hack approach to spell script
-			if player:HasAura(32819) then
-				local aura = player:AddAura(32819, player)
-				aura:SetDuration(5 * 60 * 1000)
-			end
-			return false
-		elseif command == "afk" then
+		if command == "afk" then
 			--if player:IsAFK() 
 			--and NoAFKLogoutZones[player:GetZoneId()]
 			--then
@@ -82,16 +80,16 @@ local function AIO_UI_FIX(event, player, command)
 		-- LVL Reward Toggle in features tab
 		elseif command == "lvlrewardsoff" then
 			player:SendBroadcastMessage("Your level-up rewards have been disabled.")
-			player:SetData("LvlRewardsDisabled", true)
-			player:SetData("LvlRewardsChanged", true)
+			player:Data():Set("LvlRewardsDisabled", true)
+			player:Data():Set("LvlRewardsChanged", true)
 			return false
 		elseif command == "lvlrewardson" then
 			player:SendBroadcastMessage("Your level-up rewards have been enabled.")
-			player:SetData("LvlRewardsDisabled", false)
-			player:SetData("LvlRewardsChanged", true)
+			player:Data():Set("LvlRewardsDisabled", false)
+			player:Data():Set("LvlRewardsChanged", true)
 			return false
 		elseif command == "lvlrewardsstatus" then
-			local status = player:GetData("LvlRewardsDisabled")
+			local status = player:Data():Get("LvlRewardsDisabled")
 			if status then
 				player:SendAddonMessage("LvlRewardsDisabled", "DISABLED", 7, player)
 			else
@@ -110,7 +108,14 @@ end
 local guidString = ""
 local first = true
 
-for _, player in ipairs(GetPlayersInWorld()) do   
+local players
+if GetStateMapId() == -1 then
+   players = GetPlayersInWorld()
+else
+   local map = GetStateMap()
+   players = map and map:GetPlayers()
+end
+for _, player in ipairs(players or {}) do
    if first then
        guidString = tostring(player:GetGUIDLow())
        first = false
@@ -121,15 +126,19 @@ end
 
 if not first then
    CharDBQueryAsync(
-       string.format("SELECT guid, data FROM character_custom_data WHERE guid IN (%s) AND type = 99", guidString),
+       string.format("SELECT guid, data FROM ycore_yla.character_custom_data WHERE guid IN (%s) AND type = 99", guidString),
        function(result)
            if result then
                repeat
                    local guid = result:GetUInt32(0)
                    local data = result:GetString(1)
                    if data == "DISABLED" then
-					   local player = GetPlayerByGUID(GetPlayerGUID(guid))
-					   if player then player:SetData("LvlRewardsDisabled", true) end
+					   local player
+					   if GetStateMapId() == -1 then player = GetPlayerByGUID(GetPlayerGUID(guid))
+					   else for _, p in ipairs(GetStateMap():GetPlayers()) do
+						   if p:GetGUIDLow() == guid then player = p break end
+					   end end
+					   if player then player:Data():Set("LvlRewardsDisabled", true) end
 				   end
                until not result:NextRow()
            end
@@ -137,7 +146,7 @@ if not first then
    )
 end
 
-CharDBExecute("CREATE TABLE IF NOT EXISTS character_custom_data (guid int unsigned NOT NULL, type tinyint unsigned NOT NULL, time int unsigned NOT NULL, data blob NOT NULL, PRIMARY KEY (guid, type))")
+CharDBExecute("CREATE TABLE IF NOT EXISTS ycore_yla.character_custom_data (guid int unsigned NOT NULL, type tinyint unsigned NOT NULL, time int unsigned NOT NULL, data blob NOT NULL, PRIMARY KEY (guid, type))")
 
 RegisterPlayerEvent(4, AIO_UI_FIX)
 RegisterPlayerEvent(25, AIO_UI_FIX)

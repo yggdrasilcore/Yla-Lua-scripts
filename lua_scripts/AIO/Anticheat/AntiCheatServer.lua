@@ -57,7 +57,7 @@ local function SendAntiCheatChecks(player)
 end
 
 local function StartElunaAnticheat(event, player)
-    if isPlayerBot[player:GetName()] then return end
+    if player:IsBot() then return end
     
     if player:GetData("SendAntiCheatChecks") then 
         player:RemoveEventById(player:GetData("SendAntiCheatChecks"))
@@ -88,18 +88,17 @@ function OnAIOAntiCheatCommand(event, player, command)
         elseif arg == "SpeedHack" then
             local clientSpd, closestSpd = command:match("SpeedHack%s+(%S+)%s+(%S+)")
             
-            -- Allowed speed deviations
-            if player:IsFalling() and clientSpd then
-                local speed = tonumber(clientSpd)
-                if speed == 5    -- Skips normal falling
-                or speed == 40   -- Skips most knockbacks, incl LK shadow traps
-                then return false end
-            end
-            
-            -- Skip knockbacks, which are mostly speed 40
-            if player:IsFalling() and clientSpd and tonumber(clientSpd) == 40 then
-                return false
-            end
+            -- Skip falling entirely
+            if player:IsFalling() then return false end
+
+            -- Allowed client speeds
+            local speed = tonumber(clientSpd)
+            if speed == 7.50
+            or speed == 17.50
+            or speed == 5.00
+            or speed == 28.00
+            or speed == 40.00
+            then return false end
             
             local state = player:IsUnderWater() and "Swimming" or player:IsFlying() and "Flying" or player:IsFalling() and "Falling" or "Walking"
             SendToDiscord("SpeedHack detected. Offending player: "..player:GetName()..". Pos: "..string.format("%.2f, %.2f, %.2f", x, y, z)..". Map: "..player:GetMapId()..(clientSpd and ". Client speed: "..clientSpd..", Server speed: "..closestSpd or "")..". State: "..state)
@@ -111,6 +110,7 @@ function OnAIOAntiCheatCommand(event, player, command)
                 player:KickPlayer()
             end
         elseif arg == "FlyHack" then
+            if math.abs(z - player:GetGroundZ()) <= 1 or math.abs(z - player:GetFloorZ()) <= 1 then return false end
             if not player:IsOutdoors() then
                 player:AddAura(43775, player)
                 player:RegisterEvent(function(e, d, r, player)
@@ -128,15 +128,9 @@ function OnAIOAntiCheatCommand(event, player, command)
     end
 end
 
-local function ReloadEluna(event)
-    CreateLuaEvent(function()
-        local players = GetPlayersInWorld()
-        for _, player in ipairs(players) do
-            StartElunaAnticheat(event, player)
-        end
-    end, 5000, 1)
+if GetStateMapId() == -1 then
+    RegisterPlayerEvent(42, OnAIOAntiCheatCommand)
+else
+    RegisterPlayerEvent(28, StartElunaAnticheat)
+    for _, player in ipairs(GetStateMap() and GetStateMap():GetPlayers() or {}) do StartElunaAnticheat(nil, player) end
 end
-
-RegisterPlayerEvent(42, OnAIOAntiCheatCommand)
-RegisterPlayerEvent(28, StartElunaAnticheat)
-RegisterServerEvent(33, ReloadEluna)

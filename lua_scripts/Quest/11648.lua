@@ -1,3 +1,6 @@
+-- Quest 11648 The Art of Persuasion - Borean Tundra.
+if GetStateMapId() ~= 571 then return end
+
 local QUEST_ID = 11648
 local REQUIRED_CASTS = 5
 local NPC_ID = 25478

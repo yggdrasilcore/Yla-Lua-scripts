@@ -1,4 +1,6 @@
-function FirstLogin(event, player)
+if GetStateMapId() ~= -1 then return end
+
+local function FirstLogin(event, player)
     if player:GetLevel() == 1 then
         player:EquipItem(4497, 19)
         player:EquipItem(4497, 20)

@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 631 then return end
+
 function CombatCheck(eventId, delay, repeats, sindragosa)
     if sindragosa:IsDead() or not sindragosa:IsInCombat() then
         sindragosa:SetData("SindyEventOn", nil)

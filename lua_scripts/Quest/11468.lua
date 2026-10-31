@@ -1,3 +1,6 @@
+-- Northrend-only script (map 571): quest 11468 Falcon Versus Hawk (Howling Fjord).
+if GetStateMapId() ~= 571 then return end
+
 local function UseRockFalcon(event, player, item, target)
     if not target or not (target:GetEntry() == 24747) then
         return false

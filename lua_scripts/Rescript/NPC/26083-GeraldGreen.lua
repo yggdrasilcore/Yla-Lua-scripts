@@ -1,3 +1,6 @@
+
+if GetStateMapId() ~= 571 then return end
+
 local NPC_ID = 26083
 local HOME_X = 2484
 local HOME_Y = 5217

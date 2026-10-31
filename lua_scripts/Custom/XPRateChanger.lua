@@ -2,18 +2,12 @@
 -- XP changer script start
 -------------------------------------------------------------------------------------------------------------------------
 
-CharDBExecute("CREATE TABLE IF NOT EXISTS `character_rate_xp` (`guid` int(11) unsigned NOT NULL, `rate` int(11) NOT NULL DEFAULT 0, `max_paid_rate` int(11) NOT NULL DEFAULT 0, PRIMARY KEY (`guid`)) ENGINE=InnoDB DEFAULT CHARSET=utf8;")
-
 local currencyID = 20880
 local currencyNameSingular = "Vote Token"
 local currencyName = "Vote Tokens"
 
-local XPCache = {}
-local MaxPaidCache = {}
-
-local function OnTalkToGreetingTwig(event, player, object)
-    local guid = player:GetGUIDLow()
-    local currentRate = XPCache[guid] or 1
+function OnTalkToGreetingTwig(event, player, object)
+    local currentRate = player:Data():Get("XPRate") or 1
     
     player:GossipClearMenu()
     
@@ -23,7 +17,7 @@ local function OnTalkToGreetingTwig(event, player, object)
     local cost9 = " (4x "..currencyName..")"
     local cost10 = " (5x "..currencyName..")"
     
-    if object == player or (player:GetData("VIPTime") and player:GetData("VIPTime") > os.time()) then
+    if object == player or (player:Data():Get("VIPTime") and player:Data():Get("VIPTime") > os.time()) then
         cost6 = ""
         cost7 = ""
         cost8 = ""
@@ -31,7 +25,7 @@ local function OnTalkToGreetingTwig(event, player, object)
         cost10 = ""
     end
 
-    local maxPaid = MaxPaidCache[guid] or 0
+    local maxPaid = player:Data():Get("XPMaxPaid") or 0
     if maxPaid >= 6 then cost6 = "" end
     if maxPaid >= 7 then cost7 = "" end
     if maxPaid >= 8 then cost8 = "" end
@@ -51,7 +45,7 @@ local function OnTalkToGreetingTwig(event, player, object)
         if player:GetLevel() == 80 and not (player:GetClass() == 3) then
             player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/achievement_level_80:40:40:-28:0|tNo services available\n \nThere are no experience services available at level 80.\n \n ", 0, 12)
         else
-            player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/spell_fire_burningspeed:40:40:-28:0|tYour experience rate is: x"..currentRate, 0, 2)
+            player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/spell_fire_burningspeed:40:40:-28:0|tYour experience rate is: x"..currentRate, 0, 12)
             player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/Achievement_Quests_Completed_08:40:40:-28:0|tSet rates x1", 0, 1, false, "Are you sure you want to change your experience rate to: x1?")
             player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/Achievement_Quests_Completed_08:40:40:-28:0|tSet rates x2", 0, 2, false, "Are you sure you want to change your experience rate to: x2?")
             player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/Achievement_Quests_Completed_08:40:40:-28:0|tSet rates x3", 0, 3, false, "Are you sure you want to change your experience rate to: x3?")
@@ -74,7 +68,7 @@ local function OnTalkToGreetingTwig(event, player, object)
 end 
 
 local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
-    local currentRate = XPCache[player:GetGUIDLow()] or 1
+    local currentRate = player:Data():Get("XPRate") or 1
     if intid == 11 then
     
         player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/ABILITY_DRUID_MANATREE:40:40:-28:0|tTell me about Yggdrasil\n \nThe realms of Azeroth are connected in many ways, including through the Twisting Nether. However, in recent times, it has become apparent that an earthern force connects our realms as well. We've come to call this force Yggdrasil.\n \nThe roots of Yggdrasil have, since the dawn of time, come to grow new spurs, from which the world's Twiggies have risen.\n \nUs Twiggies have since taken it upon them to ease the burden of travelers in Azeroth. Every newcomer receives their own Branch of Yggdrasil, also known as Twiggy, to guide them.\n \nTwiggy can inform you of the features Yggdrasil brings, teleport you to the mall, and more.\n \n ", 0, 11)
@@ -148,7 +142,7 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
         local cost9 = " (4x "..currencyName..")"
         local cost10 = " (5x "..currencyName..")"
         
-        if object == player or (player:GetData("VIPTime") and player:GetData("VIPTime") > os.time()) then
+        if object == player or (player:Data():Get("VIPTime") and player:Data():Get("VIPTime") > os.time()) then
             cost6 = ""
             cost7 = ""
             cost8 = ""
@@ -156,7 +150,7 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
             cost10 = ""
         end
 
-        local maxPaid = MaxPaidCache[player:GetGUIDLow()] or 0
+        local maxPaid = player:Data():Get("XPMaxPaid") or 0
         if maxPaid >= 6 then cost6 = "" end
         if maxPaid >= 7 then cost7 = "" end
         if maxPaid >= 8 then cost8 = "" end
@@ -167,7 +161,7 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
         if player:GetLevel() == 80 and not (player:GetClass() == 3) then
             player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/achievement_level_80:40:40:-28:0|tNo services available\n \nThere are no experience services available at level 80.\n \n ", 0, 12)
         else
-            player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/spell_fire_burningspeed:40:40:-28:0|tYour experience rate is: x"..currentRate, 0, 2)
+            player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/spell_fire_burningspeed:40:40:-28:0|tYour experience rate is: x"..currentRate, 0, 12)
             player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/Achievement_Quests_Completed_08:40:40:-28:0|tSet rates x1", 0, 1, false, "Are you sure you want to change your experience rate to: x1?")
             player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/Achievement_Quests_Completed_08:40:40:-28:0|tSet rates x2", 0, 2, false, "Are you sure you want to change your experience rate to: x2?")
             player:GossipMenuAddItem(1, "|TINTERFACE/ICONS/Achievement_Quests_Completed_08:40:40:-28:0|tSet rates x3", 0, 3, false, "Are you sure you want to change your experience rate to: x3?")
@@ -193,8 +187,8 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
     elseif intid < 11 then
         local guid = player:GetGUIDLow()
         if currentRate > intid then
-            XPCache[guid] = intid
-            CharDBExecute("REPLACE INTO character_rate_xp (guid, rate, max_paid_rate) VALUES ('"..guid.."', '"..intid.."', '"..(MaxPaidCache[guid] or 0).."')")
+            player:Data():Set("XPRate", intid)
+            CharDBExecute("REPLACE INTO ycore_yla.character_rate_xp (guid, rate, max_paid_rate) VALUES ('"..guid.."', '"..intid.."', '"..(player:Data():Get("XPMaxPaid") or 0).."')")
             messagestring = "Congratulations, you changed your experience rate to: x"..intid
             if object == player then
                 player:SendBroadcastMessage(messagestring)
@@ -204,8 +198,8 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
             player:CastSpell(player, 47292, true)
             player:GossipComplete()
             return
-        elseif intid > 5 and not (player:GetData("VIPTime") and (player:GetData("VIPTime") > os.time())) then -- Charge if higher tier XP and not VIP
-            local maxPaid = MaxPaidCache[guid] or 0
+        elseif intid > 5 and not (player:Data():Get("VIPTime") and (player:Data():Get("VIPTime") > os.time())) then -- Charge if higher tier XP and not VIP
+            local maxPaid = player:Data():Get("XPMaxPaid") or 0
             if intid > maxPaid then
                 if not player:HasItem(currencyID, intid - 5) then
                     player:GossipComplete()
@@ -218,11 +212,11 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
                     return
                 end
                 player:RemoveItem(currencyID, intid - 5)
-                MaxPaidCache[guid] = intid
+                player:Data():Set("XPMaxPaid", intid)
             end
         end
-        XPCache[guid] = intid
-        CharDBExecute("REPLACE INTO character_rate_xp (guid, rate, max_paid_rate) VALUES ('"..guid.."', '"..intid.."', '"..(MaxPaidCache[guid] or 0).."')")
+        player:Data():Set("XPRate", intid)
+        CharDBExecute("REPLACE INTO ycore_yla.character_rate_xp (guid, rate, max_paid_rate) VALUES ('"..guid.."', '"..intid.."', '"..(player:Data():Get("XPMaxPaid") or 0).."')")
         messagestring = "Congratulations, you changed your experience rate to: x"..intid
         if object == player then
             player:SendBroadcastMessage(messagestring)
@@ -235,28 +229,41 @@ local function OnSelectXP(event, player, object, sender, intid, code, menu_id)
 end
 
 local function OnGiveXP(event, player, amount, victim)
-    if XPCache[player:GetGUIDLow()] then
-        amount = amount * XPCache[player:GetGUIDLow()]
+    local rate = player:Data():Get("XPRate")
+    if rate then
+        amount = amount * rate
         return amount
     end
 end 
 
-local function LoadXPCache()
-   CharDBQueryAsync("SELECT guid, rate, max_paid_rate FROM character_rate_xp", function(result)
-       if result then
-           repeat
-               XPCache[result:GetUInt32(0)] = result:GetUInt8(1)
-               MaxPaidCache[result:GetUInt32(0)] = result:GetUInt8(2)
-           until not result:NextRow()
-       end
-   end)
+local function LoadXPForPlayer(player)
+    local guid = player:GetGUIDLow()
+    local name = player:GetName()
+    CharDBQueryAsync("SELECT rate, max_paid_rate FROM ycore_yla.character_rate_xp WHERE guid = " .. guid, function(result)
+        if not result then return end
+        local p
+        if GetStateMapId() == -1 then
+            p = GetPlayerByName(name)
+        else
+            for _, q in ipairs(GetStateMap():GetPlayers()) do
+                if q:GetName() == name then p = q break end
+            end
+        end
+        if not p or p:GetGUIDLow() ~= guid then return end
+        p:Data():Set("XPRate", result:GetUInt8(0))
+        p:Data():Set("XPMaxPaid", result:GetUInt8(1))
+    end)
+end
+
+local function OnXPLogin(event, player)
+    LoadXPForPlayer(player)
 end
 
 local function onXPCommand(event, player, command)
     if command:match("^%s*xpchangemenu%s+(%d+)%s*$") then
         local _, _, timestring = command:find("^%s*xpchangemenu%s+(%d+)%s*$")
         local verificationtime = tonumber(timestring)
-        if verificationtime and verificationtime == os.time() then
+        if verificationtime and math.abs(os.time() - verificationtime) <= 5 then
             OnTalkToGreetingTwig(event, player, player)
         end
         return false
@@ -267,16 +274,23 @@ end
 -- XP rate changer event registrations
 ------------------------------------------------------------------------------------------------
 
-LoadXPCache() -- Loads XPCache on script load (server startup/reload ELUNA)
-RegisterPlayerEvent(12, OnGiveXP)
-RegisterCreatureGossipEvent(190023, 1, OnTalkToGreetingTwig)
-RegisterCreatureGossipEvent(190023, 2, OnSelectXP)
-RegisterPlayerEvent(42, onXPCommand)
-RegisterPlayerGossipEvent(35353, 2, OnSelectXP)
-RegisterPlayerGossipEvent(35354, 2, OnSelectXP)
-RegisterPlayerGossipEvent(35355, 2, OnSelectXP)
-RegisterCreatureGossipEvent(1900230, 1, OnTalkToGreetingTwig)
-RegisterCreatureGossipEvent(1900230, 2, OnSelectXP)
+if GetStateMapId() == -1 then -- World stuff
+    CharDBExecute("CREATE TABLE IF NOT EXISTS ycore_yla.character_rate_xp (`guid` int(11) unsigned NOT NULL, `rate` int(11) NOT NULL DEFAULT 0, `max_paid_rate` int(11) NOT NULL DEFAULT 0, PRIMARY KEY (`guid`)) ENGINE=InnoDB DEFAULT CHARSET=utf8;")
+    RegisterPlayerEvent(3, OnXPLogin) -- Per-player XP rate load (reload-proof via player:Data())
+    RegisterPlayerEvent(42, onXPCommand)
+else -- Map stuff
+    for _, p in ipairs(GetStateMap() and GetStateMap():GetPlayers() or {}) do -- Warm Data for players already online at (re)load
+        LoadXPForPlayer(p)
+    end
+    RegisterPlayerEvent(12, OnGiveXP)
+    RegisterCreatureGossipEvent(190023, 1, OnTalkToGreetingTwig)
+    RegisterCreatureGossipEvent(190023, 2, OnSelectXP)
+    RegisterPlayerGossipEvent(35353, 2, OnSelectXP)
+    RegisterPlayerGossipEvent(35354, 2, OnSelectXP)
+    RegisterPlayerGossipEvent(35355, 2, OnSelectXP)
+    RegisterCreatureGossipEvent(1900230, 1, OnTalkToGreetingTwig)
+    RegisterCreatureGossipEvent(1900230, 2, OnSelectXP)
+end
 
 ------------------------------------------------------------------------------------------------
 -- End XP rate changer event registrations

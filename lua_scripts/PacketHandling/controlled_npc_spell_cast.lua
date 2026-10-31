@@ -1,3 +1,5 @@
+if GetStateMapId() ~= -1 then return end
+
 local function controllednpcspellcast(event, packet, player)
     if not player then
         return

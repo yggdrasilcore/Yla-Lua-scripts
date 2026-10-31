@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 602 then return end
+
 local function OnKillVolkhan(event, player, killed)
     if killed:GetEntry() == 28587 then
         player:RegisterEvent(function(e, d, r, player)
