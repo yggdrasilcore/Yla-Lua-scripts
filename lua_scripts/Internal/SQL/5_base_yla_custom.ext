@@ -268,18 +268,6 @@ CREATE TABLE `ycore_yla`.`persistent_storage` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;]],
 [[
 
-/*Table structure for table `shadows_bots` */
-
-DROP TABLE IF EXISTS `ycore_yla`.`shadows_bots`;]],
-[[
-
-CREATE TABLE `ycore_yla`.`shadows_bots` (
-  `bot_name` varchar(12) NOT NULL,
-  `master_name` varchar(12) NOT NULL,
-  PRIMARY KEY (`bot_name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;]],
-[[
-
 /*Table structure for table `statistics` */
 
 DROP TABLE IF EXISTS `ycore_yla`.`statistics`;]],

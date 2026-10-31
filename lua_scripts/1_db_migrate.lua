@@ -96,12 +96,6 @@ if CharDBQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'ac
     CharDBExecute("INSERT IGNORE INTO ycore_yla.custom_transmogrification_sets SELECT * FROM acore_characters.custom_transmogrification_sets")
 end
 
--- shadows_bots
-if CharDBQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'acore_characters' AND table_name = 'shadows_bots' LIMIT 1") then
-    CharDBExecute("CREATE TABLE IF NOT EXISTS ycore_yla.shadows_bots LIKE acore_characters.shadows_bots")
-    CharDBExecute("INSERT IGNORE INTO ycore_yla.shadows_bots SELECT * FROM acore_characters.shadows_bots")
-end
-
 -- statistics
 if CharDBQuery("SELECT 1 FROM information_schema.tables WHERE table_schema = 'acore_characters' AND table_name = 'statistics' LIMIT 1") then
     CharDBExecute("CREATE TABLE IF NOT EXISTS ycore_yla.statistics LIKE acore_characters.statistics")
