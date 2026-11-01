@@ -1,4 +1,3 @@
-
 -- Shadows Configs Start
 
 maxBotCount = 4
@@ -275,6 +274,15 @@ local function ShadowsHello(player)
     player:GossipSendMenu(12, player, 200)
 end
 
+local function GetSortedBots(player)
+    local bots = {}
+    for _, bot in ipairs(player:GetBots()) do
+        if bot then table.insert(bots, bot) end
+    end
+    table.sort(bots, function(a, b) return a:GetGUIDLow() < b:GetGUIDLow() end)
+    return bots
+end
+
 local function ListActiveShadows(player)
     player:GossipClearMenu()
 
@@ -285,7 +293,7 @@ local function ListActiveShadows(player)
     if type(pending) ~= "table" then pending = {} end
 
     local index = 0
-    for _, bot in ipairs(player:GetBots()) do
+    for _, bot in ipairs(GetSortedBots(player)) do
         if bot then
             local op = pending[bot:GetName()]
             if not (type(op) == "table" and op.op == "remove" and (os.time() - op.time) < 2) then
@@ -406,7 +414,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
         local selectedIndex = intid - 200
         local index = 0
         local selectedBot
-        for _, bot in ipairs(player:GetBots()) do
+        for _, bot in ipairs(GetSortedBots(player)) do
             if bot then
                 local op = pending[bot:GetName()]
                 if not (type(op) == "table" and op.op == "remove" and (os.time() - op.time) < 2) then
@@ -964,10 +972,10 @@ local function OnBotCommand(event, player, command)
         local rows = {}
         for _, char in ipairs(GetCharacterCache()) do
             if char.accountId == accountId then
-                table.insert(rows, {name = char.name, race = char.race, class = char.class, level = char.level, sex = char.sex})
+                table.insert(rows, {guid = char.guidLow, name = char.name, race = char.race, class = char.class, level = char.level, sex = char.sex})
             end
         end
-        table.sort(rows, function(a, b) return a.level > b.level end)
+        table.sort(rows, function(a, b) return a.guid < b.guid end)
         player:Data():Set("ShadowsAvailable", rows)
         ShadowsHello(player)
         return false
