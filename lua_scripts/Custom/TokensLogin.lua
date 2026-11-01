@@ -18,16 +18,16 @@ local function SendBroadcastWithCheck(playerGUID, message, itemEntry, itemCount,
 	if itemEntry == 20880 then
 		CharDBExecute("UPDATE ycore_yla.account_currencies SET vp = 0 WHERE id = " .. acc)
 		player:RegisterEvent(function(_, _, _, player)
-			if not player:GetData("CurrSave") then
-				player:SetData("CurrSave")
+			if not player:Data():Get("CurrSave") then
+				player:Data():Set("CurrSave")
 				player:SaveToDB()
 			end
 		end, 1000)
 	else
 		CharDBExecute("UPDATE ycore_yla.account_currencies SET dp = 0 WHERE id = " .. acc)
 		player:RegisterEvent(function(_, _, _, player)
-			if not player:GetData("CurrSave") then
-				player:SetData("CurrSave")
+			if not player:Data():Get("CurrSave") then
+				player:Data():Set("CurrSave")
 				player:SaveToDB()
 			end
 		end, 1500)
@@ -36,7 +36,7 @@ end
 
 local function TokensOnLogin(event, player)
     if player:IsBot() then return end
-    if player:GetData("LoginChecked") then return end
+    if player:Data():Get("LoginChecked") then return end
     local acc = player:GetAccountId()
     local playerGUID = player:GetGUID()
     local communitymessage = false
@@ -48,7 +48,7 @@ local function TokensOnLogin(event, player)
             if p:GetGUIDLow() == GetGUIDLow(playerGUID) then player = p break end
         end
  	    if not player then return end
- 	    player:SetData("LoginChecked", true)
+ 	    player:Data():Set("LoginChecked", true)
         if query then
             local dpValue = query:GetInt32(0)
             local vpValue = query:GetInt32(1)
