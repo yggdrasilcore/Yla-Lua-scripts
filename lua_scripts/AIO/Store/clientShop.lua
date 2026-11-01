@@ -41,7 +41,6 @@ local itemsInfo = {
         { id = 7, name = "Suicide",  itemType = "spell", quantity = "1", costType = "Community Tokens", cost = 10 },
         { id = 427, name = "Tele Monastery",  itemType = "spell", quantity = "1", costType = "Community Tokens", cost = 10 },
         { id = 32819, name = "Worgen Form",  itemType = "spell", quantity = "1", costType = "Community Tokens", cost = 25 },
-        { id = 228, name = "Polymorph: Chicken",  itemType = "spell", quantity = "1", costType = "Community Tokens", cost = 25 },
         { id = 28271, name = "Polymorph: Turtle",  itemType = "spell", quantity = "1", costType = "Community Tokens", cost = 25 },
         { id = 28272, name = "Polymorph: Pig",  itemType = "spell", quantity = "1", costType = "Community Tokens", cost = 25 },
         { id = 61025, name = "Polymorph: Snake",  itemType = "spell", quantity = "1", costType = "Community Tokens", cost = 25 },
