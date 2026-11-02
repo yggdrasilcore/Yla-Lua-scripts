@@ -182,6 +182,17 @@ end
 
 local function AwaitInjection(event, player)
     if player:IsBot() then return end
+    if not player:IsInWorld() then
+        local name = player:GetName()
+        CreateLuaEvent(function(eventid)
+            local p = GetPlayerByName(name) -- nil until the player actually enters world
+            if p then
+                RemoveEventById(eventid)
+                AwaitInjection(0, p)
+            end
+        end, 1000, 30)
+        return
+    end
 	player:QueueWardenPayload()
 	player:SetData("ModuleInit", false)
     pushingModule[player:GetGUIDLow()] = true
