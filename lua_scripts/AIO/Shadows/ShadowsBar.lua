@@ -917,18 +917,7 @@ local function CreateBotControlBar()
                 end
             end)
         elseif button.info.text == "Summon" then
-            SendChatMessage(".shadowsmenu", "GUILD")
-            local delayFrame = CreateFrame("Frame")
-            delayFrame.timeElapsed = 0
-            delayFrame:SetScript("OnUpdate", function(self, elapsed)
-                self.timeElapsed = self.timeElapsed + elapsed
-                if self.timeElapsed >= 0.5 then
-                    self:SetScript("OnUpdate", nil)
-                    if GossipTitleButton3 then
-                        GossipTitleButton3:Click()
-                    end
-                end
-            end)
+            SendChatMessage(".shadows summon", "GUILD")
         elseif button.info.text == "Shadows Chatter" then
             button.state = not button.state
             button.border:SetAlpha(button.state and 1 or 0)
