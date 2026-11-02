@@ -287,7 +287,8 @@ local function OnLevelUp(event, player, oldLevel)
     if player:GetAreaId() == 609 then return end
     if (player:GetQuestStatus(QUEST_ID) == 6) then return end
     if player:HasItem(TELEPORT_ITEM, 1) then return end
-    player:AddItem(39163, 1)
+    if player:HasItem(QUEST_ITEM, 1) then return end
+    player:AddItem(QUEST_ITEM, 1)
     player:SendBroadcastMessage("You hear mysterious whispers echo in the horizon... An unknown item from the void appears!")
 end
 
