@@ -44,14 +44,14 @@ local function OnShadowsEventCommand(event, player, command)
     elseif command == "stopshadowsevent" then
         player:RemoveAura(IMMUNE_ALL)
         player:RemoveAura(SHACKLE_AURA)
-        player:Data():Set("shadowsTeleportReason", nil)
-        player:Data():Set("ShadowsQuestState", 0)
         if not player:Data():Get("shadowsTeleportReason") or player:Data():Get("shadowsTeleportReason") == "failed" then
             if player and player:GetAreaId() == AREA_ID and (player:HasItem(TELEPORT_ITEM) or player:HasItem(QUEST_ITEM)) then
                 player:RemoveItem(TELEPORT_ITEM, 1)
                 player:RemoveItem(QUEST_ITEM, 1)
                 player:RemoveQuest(QUEST_ID)
                 player:AddItem(QUEST_ITEM, 1)
+                player:Data():Set("shadowsTeleportReason", nil)
+                player:Data():Set("ShadowsQuestState", 0)
                 if player:Data():Get("OldMap") then
                     player:Teleport(player:Data():Get("OldMap"), player:Data():Get("OldX"), player:Data():Get("OldY"), player:Data():Get("OldZ"), player:Data():Get("OldO"))
                 else
@@ -61,6 +61,8 @@ local function OnShadowsEventCommand(event, player, command)
                 player:SendBroadcastMessage("You didn't help your shadows in time and they got pulled into the Twisting Nether! Try again later.")
             end
         else
+            player:Data():Set("shadowsTeleportReason", nil)
+            player:Data():Set("ShadowsQuestState", 0)
             if player:Data():Get("OldMap") then
                 player:Teleport(player:Data():Get("OldMap"), player:Data():Get("OldX"), player:Data():Get("OldY"), player:Data():Get("OldZ"), player:Data():Get("OldO"))
             else
