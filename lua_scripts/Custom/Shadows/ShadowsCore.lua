@@ -1000,7 +1000,7 @@ local function OnBotCommand(event, player, command)
             end
         end
         player:Data():Set("ShadowsSummonCD", os.time() + BotSummonCD)
-        return true
+        return false
     end
     if string.find(command, "^shadows bot ") then
         local guid = player:GetGUIDLow()
