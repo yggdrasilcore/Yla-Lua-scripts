@@ -285,6 +285,7 @@ end
 -- Player map event OnLevelUp
 local function OnLevelUp(event, player, oldLevel)
     if player:GetAreaId() == 609 then return end
+    if player:GetLevel() < minShadowsLevel then return end
     if (player:GetQuestStatus(QUEST_ID) == 6) then return end
     if player:HasItem(TELEPORT_ITEM, 1) then return end
     if player:HasItem(QUEST_ITEM, 1) then return end
