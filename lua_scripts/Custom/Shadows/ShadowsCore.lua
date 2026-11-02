@@ -984,11 +984,11 @@ local function OnBotCommand(event, player, command)
         local cd = player:Data():Get("ShadowsSummonCD") or 0
         if cd >= os.time() then
             player:SendAreaTriggerMessage("Your shadows summon is on cooldown for " .. math.floor((cd - os.time()) / 60) .. " minutes and " .. ((cd - os.time()) % 60) .. " seconds.")
-            return true
+            return false
         end
         if player:GetBotsCount() == 0 then
             player:SendAreaTriggerMessage("You have no active shadows.")
-            return true
+            return false
         end
         for _, bot in ipairs(player:GetBots()) do
             if bot then
