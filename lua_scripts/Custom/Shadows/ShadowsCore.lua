@@ -275,11 +275,25 @@ local function ShadowsHello(player)
 end
 
 local function GetSortedBots(player)
+    local guidByName = {}
+    local available = player:Data():Get("ShadowsAvailable")
+    if available and available.AsTable then available = available:AsTable() end
+    if type(available) == "table" then
+        for _, row in ipairs(available) do
+            guidByName[row.name] = row.guid
+        end
+    end
+
     local bots = {}
     for _, bot in ipairs(player:GetBots()) do
         if bot then table.insert(bots, bot) end
     end
-    table.sort(bots, function(a, b) return a:GetGUIDLow() < b:GetGUIDLow() end)
+    table.sort(bots, function(a, b)
+        local ga = guidByName[a:GetName()] or 0
+        local gb = guidByName[b:GetName()] or 0
+        if ga ~= gb then return ga < gb end
+        return a:GetName() < b:GetName()
+    end)
     return bots
 end
 
