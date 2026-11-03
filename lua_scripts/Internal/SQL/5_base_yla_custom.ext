@@ -157,7 +157,13 @@ CREATE TABLE `ycore_yla`.`character_login_transfer` (
   `guid` int DEFAULT NULL,
   `itemid` int DEFAULT NULL,
   `count` int DEFAULT NULL,
-  `type` int DEFAULT NULL
+  `type` int DEFAULT NULL,
+  `bag` int DEFAULT NULL,
+  `slot` int DEFAULT NULL,
+  `enchant` int DEFAULT NULL,
+  `gem1` int DEFAULT NULL,
+  `gem2` int DEFAULT NULL,
+  `gem3` int DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;]],
 [[
 
