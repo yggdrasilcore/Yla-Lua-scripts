@@ -168,6 +168,17 @@ local function XPDialogue(event, creature, who)
     end
 end
 
+local function DeadTwig(event, creature, who)
+    if who:ToPlayer() and creature:GetDistance(who) < 10 and creature:IsWithinLoS(who) then
+        if not (who:GetClass() == 6) then return end -- Only proceed if DK
+        if not lastGreeting[creature:GetGUIDLow()] or (lastGreeting[creature:GetGUIDLow()] and (lastGreeting[creature:GetGUIDLow()] < os.time())) then
+            lastGreeting[creature:GetGUIDLow()] = os.time() + 90
+            creature:SendUnitSay("There's a deep fire smoldering within me, Death Knight "..who:GetName()..". It allows you to Runeforge on my stumps.", 0)
+            creature:PerformEmote(1)
+        end
+    end
+end
+
 local function InstanceDialogue(event, creature, who)
     if who:ToPlayer() and creature:GetDistance(who) < 10 and creature:IsWithinLoS(who) then
         if not lastGreeting[creature:GetGUIDLow()] or (lastGreeting[creature:GetGUIDLow()] and (lastGreeting[creature:GetGUIDLow()] < os.time())) then
@@ -1205,6 +1216,7 @@ RegisterCreatureEvent(190090, 27, InstanceDialogue) -- XP changer pets
 RegisterCreatureEvent(190091, 27, PetRenameDialogue) -- Pet renamer
 RegisterCreatureEvent(190092, 27, Guild) -- Guild guy
 RegisterCreatureEvent(190098, 27, ApproachBear) -- Morph bear
+RegisterCreatureEvent(95015, 27, DeadTwig) -- Dead Twig DK Trainer, Runeforging gossip
 RegisterCreatureEvent(401250, 6, Feathers) -- feathers event citizen
 populatePlayerMorphCache()
 
