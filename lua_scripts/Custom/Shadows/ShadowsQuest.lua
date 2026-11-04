@@ -18,7 +18,8 @@ local EventLocation = {-639.76, -259.62, 352.58, 2.27}
 -- World event onCommand
 local function OnShadowsEventCommand(event, player, command)
     if command == "startshadowsevent" and player:HasItem(TELEPORT_ITEM) then
-    
+        if player:GetAreaId() == 609 then return false end
+        
         if (player:GetAreaId() == AREA_ID) then
             player:SendAreaTriggerMessage("You can't save your shadows from this location! Try again someplace else.")
             player:SendBroadcastMessage("You can't save your shadows from this location! Try again someplace else.")
@@ -80,7 +81,9 @@ end
 local function ShadowsMap(event, player)
     if player:GetAreaId() == AREA_ID then
         if player:HasQuest(QUEST_ID) then
-        
+            
+            player:SetPhaseMask(1, true)
+            
             local playerLocation = {player:GetLocation()}
             if not ((player:GetX() >= EventLocation[1]-1 and player:GetX() <= EventLocation[1]+1) and
                     (player:GetY() >= EventLocation[2]-1 and player:GetY() <= EventLocation[2]+1)) then
@@ -280,6 +283,7 @@ end
 
 -- Item map event onUseItem, bridges to world state through deferred command exec
 local function ShadowsTeleItem(event, player, item, target)
+    if player:GetAreaId() == 609 then return false end
     player:RunCommand("startshadowsevent")
     return false
 end
