@@ -47,14 +47,19 @@ local function AddSpecialFrame(name)
     end
 end
 
-local function SetDialogBackdrop(frame, bgFile, r, g, b, a)
+local function SetDialogBackdrop(frame, opts)
     frame:SetBackdrop({
-        bgFile = bgFile,
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true, tileSize = 16, edgeSize = 16,
-        insets = { left = 4, right = 4, top = 4, bottom = 4 },
+        bgFile = opts.bgFile or "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = opts.edgeFile or "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true,
+        tileSize = opts.tileSize or 16,
+        edgeSize = opts.edgeSize or 16,
+        insets = opts.insets or { left = 4, right = 4, top = 4, bottom = 4 },
     })
-    frame:SetBackdropColor(r, g, b, a)
+    local color = opts.bgColor
+    if color then
+        frame:SetBackdropColor(color[1], color[2], color[3], color[4])
+    end
 end
 
 local function MakeMovable(frame)
@@ -65,9 +70,9 @@ local function MakeMovable(frame)
     frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
 end
 
-local function AddCloseButton(frame, onClose)
+local function AddCloseButton(frame, onClose, x, y)
     local button = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
-    button:SetPoint("TOPRIGHT", 2, 0)
+    button:SetPoint("TOPRIGHT", x or 2, y or 0)
     button:SetScript("OnClick", function()
         frame:Hide()
         if onClose then onClose() end
@@ -78,22 +83,22 @@ end
 -- Standard dialog frame: centered, skinable, movable, titled, with close button.
 local function CreateDialog(name, width, height, title, opts)
     opts = opts or {}
-    local bg = opts.bgColor or {0.1, 0.1, 0.1, 0.9}
     local frame = CreateFrame("Frame", name, UIParent)
     frame:SetSize(width, height)
     frame:SetPoint("CENTER")
     frame:SetFrameStrata(opts.strata or "DIALOG")
     if opts.level then frame:SetFrameLevel(opts.level) end
     if opts.toplevel then frame:SetToplevel(true) end
-    SetDialogBackdrop(frame, opts.bgFile or "Interface\\Tooltips\\UI-Tooltip-Background", bg[1], bg[2], bg[3], bg[4])
+    SetDialogBackdrop(frame, opts)
     if opts.movable ~= false then MakeMovable(frame) end
     if title then
         local text = frame:CreateFontString(nil, "OVERLAY", opts.font or "GameFontNormalLarge")
         text:SetPoint("TOP", 0, opts.titleY or -12)
         text:SetText(title)
     end
-    AddCloseButton(frame, opts.onClose)
+    AddCloseButton(frame, opts.onClose, opts.closeX, opts.closeY)
     AddSpecialFrame(name)
+    if opts.hidden then frame:Hide() end
     return frame
 end
 
@@ -259,28 +264,27 @@ local function ShowShadowsSettingsPanel()
         autoOpenText:SetText("Automatically Open Shadows Bar If Grouped With Shadows")
         autoOpenText:SetTextColor(1, 1, 1)
 
-        local keyBindButton = CreateFrame("Button", "ShadowsKeybindButton", frame, "UIPanelButtonTemplate")
-        keyBindButton:SetPoint("TOPLEFT", checkBox, "BOTTOMLEFT", 0, -10)
-        keyBindButton:SetSize(230, 30)
-        keyBindButton:SetText("Shadows Bar Keyboard Shortcuts")
-        keyBindButton:SetScript("OnClick", function()
-            SlashCmdList["SHADOWSHORTCUTS"]()
-        end)
+        local function AddOptionButton(name, text, anchor, onClick)
+            local button = CreateFrame("Button", name, frame, "UIPanelButtonTemplate")
+            button:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -10)
+            button:SetSize(230, 30)
+            button:SetText(text)
+            button:SetScript("OnClick", onClick)
+            return button
+        end
 
-        local resetButton = CreateFrame("Button", "ShadowsResetButton", frame, "UIPanelButtonTemplate")
-        resetButton:SetPoint("TOPLEFT", keyBindButton, "BOTTOMLEFT", 0, -10)
-        resetButton:SetSize(230, 30)
-        resetButton:SetText("Reset Shadows Bar")
-        resetButton:SetScript("OnClick", function()
-            BotControlBar:Hide()
-            SlashCmdList["BOTCONTROLBAR"]()
-        end)
+        local keyBindButton = AddOptionButton("ShadowsKeybindButton", "Shadows Bar Keyboard Shortcuts",
+            checkBox, function()
+                SlashCmdList["SHADOWSHORTCUTS"]()
+            end)
 
-        local resetShadowsButton = CreateFrame("Button", "ResetBotAIButton", frame, "UIPanelButtonTemplate")
-        resetShadowsButton:SetPoint("TOPLEFT", resetButton, "BOTTOMLEFT", 0, -10)
-        resetShadowsButton:SetSize(230, 30)
-        resetShadowsButton:SetText("Reset Shadows Settings")
-        resetShadowsButton:SetScript("OnClick", function()
+        local resetButton = AddOptionButton("ShadowsResetButton", "Reset Shadows Bar",
+            keyBindButton, function()
+                BotControlBar:Hide()
+                SlashCmdList["BOTCONTROLBAR"]()
+            end)
+
+        AddOptionButton("ResetBotAIButton", "Reset Shadows Settings", resetButton, function()
             SendChatMessage(".unmuteshadows", "GUILD")
             SendChatMessage("reset botAI", GetGroupChannel())
         end)
@@ -370,10 +374,8 @@ AIO.AddSavedVar("BOT_BAR_SETTINGS")
 
 local function CreateBotControlBar()
     local itemCache = {}
-    local lastUpdate = 0
     local itemListFrame
     local questCache = {}
-    local questLastUpdate = 0
 
     local messageQueue = {}
     local messageCount = 0
@@ -454,6 +456,37 @@ local function CreateBotControlBar()
         end)
     end
 
+    -- Collect matching whispers, then hand the list to onDone once the stream
+    -- has been quiet for opts.debounce seconds, or after opts.timeout seconds.
+    local function AwaitShadowWhispers(filter, onDone, opts)
+        opts = opts or {}
+        local responses = {}
+        local lastReceive = GetTime()
+
+        local responseFrame = CreateFrame("Frame")
+        responseFrame:RegisterEvent("CHAT_MSG_WHISPER")
+        responseFrame:SetScript("OnEvent", function(self, event, msg, sender)
+            if filter(msg, sender) then
+                table.insert(responses, msg)
+                lastReceive = GetTime()
+            end
+        end)
+
+        local waitFrame = CreateFrame("Frame")
+        waitFrame.elapsed = 0
+        waitFrame:SetScript("OnUpdate", function(self, elapsed)
+            self.elapsed = self.elapsed + elapsed
+            local quiet = #responses >= (opts.minResponses or 1)
+                and (GetTime() - lastReceive) >= (opts.debounce or 0)
+            if quiet or self.elapsed >= (opts.timeout or 5) then
+                responseFrame:UnregisterEvent("CHAT_MSG_WHISPER")
+                self:SetScript("OnUpdate", nil)
+                onDone(responses)
+            end
+        end)
+        return responseFrame
+    end
+
     local frame = CreateFrame("Frame", "BotControlBar", UIParent, "SecureHandlerStateTemplate")
     frame:EnableMouse(true)
     frame:SetMovable(true)
@@ -480,7 +513,7 @@ local function CreateBotControlBar()
     local originalWidth, originalHeight = 400, 50
     frame.originalAspectRatio = originalWidth / originalHeight
 
-    SetDialogBackdrop(frame, "Interface\\Tooltips\\UI-Tooltip-Background", 0, 0, 0, 0.8)
+    SetDialogBackdrop(frame, {bgColor = {0, 0, 0, 0.8}})
 
     local resizeHandle = CreateFrame("Button", nil, frame)
     resizeHandle:SetSize(16, 16)
@@ -551,17 +584,34 @@ local function CreateBotControlBar()
     frame.combatGroup = combatGroup
     frame.buttons = buttons
 
+    local function ShowButtonTooltip(button, anyMode)
+        GameTooltip:SetOwner(button, "ANCHOR_TOP")
+        GameTooltip:SetText(button.info.text, 1, 1, 1)
+        if button.info.toggle then
+            GameTooltip:AddLine(button.state and "|cFF00FF00Enabled|r" or "|cFFFF0000Disabled|r", 1, 1, 1)
+        elseif button.state and (anyMode or frame.currentMode == "combat") then
+            GameTooltip:AddLine("|cFF00FF00Active|r", 1, 1, 1)
+        end
+        GameTooltip:Show()
+    end
+
     local function UpdateButtonTooltip(button)
         if GameTooltip:IsOwned(button) then
-            GameTooltip:SetOwner(button, "ANCHOR_TOP")
-            GameTooltip:SetText(button.info.text, 1, 1, 1)
-            if button.info.toggle then
-                GameTooltip:AddLine(button.state and "|cFF00FF00Enabled|r" or "|cFFFF0000Disabled|r", 1, 1, 1)
-            elseif button.state and frame.currentMode == "combat" then
-                GameTooltip:AddLine("|cFF00FF00Active|r", 1, 1, 1)
-            end
-            GameTooltip:Show()
+            ShowButtonTooltip(button)
         end
+    end
+
+    local function StyleIconButton(button, icon, borderWidth, borderHeight)
+        button.icon = button:CreateTexture(nil, "ARTWORK")
+        button.icon:SetAllPoints()
+        button.icon:SetTexture("Interface\\Icons\\"..icon)
+
+        button.border = button:CreateTexture(nil, "OVERLAY")
+        button.border:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
+        button.border:SetBlendMode("ADD")
+        button.border:SetAlpha(0)
+        button.border:SetPoint("CENTER", button, "CENTER", 0, 1)
+        button.border:SetSize(borderWidth, borderHeight)
     end
 
     local function CreateButton(i, btnInfo, buttonWidth, buttonHeight, spacing)
@@ -570,26 +620,10 @@ local function CreateBotControlBar()
         button:SetPoint("LEFT", frame, "LEFT", 10 + ((i - 1) * (buttonWidth + spacing)), 0)
         button.info = btnInfo
 
-        button.icon = button:CreateTexture(nil, "ARTWORK")
-        button.icon:SetAllPoints()
-        button.icon:SetTexture("Interface\\Icons\\"..btnInfo.icon)
-
-        button.border = button:CreateTexture(nil, "OVERLAY")
-        button.border:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
-        button.border:SetBlendMode("ADD")
-        button.border:SetAlpha(0)
-        button.border:SetPoint("CENTER", button, "CENTER", 0, 1)
-        button.border:SetSize(buttonWidth * 1.60, buttonHeight * 1.60)
+        StyleIconButton(button, btnInfo.icon, buttonWidth * 1.60, buttonHeight * 1.60)
 
         button:SetScript("OnEnter", function(self)
-            GameTooltip:SetOwner(self, "ANCHOR_TOP")
-            GameTooltip:SetText(self.info.text, 1, 1, 1)
-            if self.info.toggle then
-                GameTooltip:AddLine(self.state and "|cFF00FF00Enabled|r" or "|cFFFF0000Disabled|r", 1, 1, 1)
-            elseif self.state then
-                GameTooltip:AddLine("|cFF00FF00Active|r", 1, 1, 1)
-            end
-            GameTooltip:Show()
+            ShowButtonTooltip(self, true)
         end)
         button:SetScript("OnLeave", function() GameTooltip:Hide() end)
         button:SetScript("OnMouseDown", function(self)
@@ -738,16 +772,7 @@ local function CreateBotControlBar()
         command = "changemode",
     }
 
-    modeButton.icon = modeButton:CreateTexture(nil, "ARTWORK")
-    modeButton.icon:SetAllPoints()
-    modeButton.icon:SetTexture("Interface\\Icons\\"..modeButton.info.icon)
-
-    modeButton.border = modeButton:CreateTexture(nil, "OVERLAY")
-    modeButton.border:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
-    modeButton.border:SetBlendMode("ADD")
-    modeButton.border:SetAlpha(0)
-    modeButton.border:SetPoint("CENTER", modeButton, "CENTER", 0, 1)
-    modeButton.border:SetSize(20 * 1.50, 20 * 1.50)
+    StyleIconButton(modeButton, modeButton.info.icon, 20 * 1.50, 20 * 1.50)
     modeButton:SetFrameLevel(frame:GetFrameLevel() + 2)
 
     modeButton:SetScript("OnEnter", function(self)
@@ -831,12 +856,8 @@ local function CreateBotControlBar()
 
     local function RequestQuestData(command, abandon)
         wipe(questCache)
-        questLastUpdate = 0
-        SendThrottledChatMessage(command)
 
-        local questFrame = CreateFrame("Frame")
-        questFrame:RegisterEvent("CHAT_MSG_WHISPER")
-        questFrame:SetScript("OnEvent", function(self, event, msg, sender)
+        AwaitShadowWhispers(function(msg, sender)
             local data = questCache[sender]
             if not data then
                 data = {completed = {}, incompleted = {}, summary = ""}
@@ -859,25 +880,13 @@ local function CreateBotControlBar()
                     table.insert(data[data.currentSection], questLink)
                 end
             end
+            return true
+        end, function(responses)
+            if #responses == 0 then return end
+            if abandon then ShowQuestAbandonList() else ShowQuestList() end
+        end, {debounce = 1})
 
-            questLastUpdate = GetTime()
-        end)
-
-        local timer = CreateFrame("Frame")
-        timer.elapsed = 0
-        timer:SetScript("OnUpdate", function(self, elapsed)
-            self.elapsed = self.elapsed + elapsed
-
-            if questLastUpdate > 0 and (GetTime() - questLastUpdate) >= 1 and next(questCache) then
-                if abandon then ShowQuestAbandonList() else ShowQuestList() end
-                questLastUpdate = 0
-                questFrame:UnregisterEvent("CHAT_MSG_WHISPER")
-                self:SetScript("OnUpdate", nil)
-            elseif self.elapsed >= 5 then
-                questFrame:UnregisterEvent("CHAT_MSG_WHISPER")
-                self:SetScript("OnUpdate", nil)
-            end
-        end)
+        SendThrottledChatMessage(command)
     end
 
     local function OpenUtilityDropdown(button)
@@ -930,40 +939,22 @@ local function CreateBotControlBar()
         local info = button.info
 
         if info.action == "objects" then
-            SendThrottledChatMessage("los")
-
-            local responseReceived = false
-            local responseFrame = CreateFrame("Frame")
-            responseFrame:RegisterEvent("CHAT_MSG_WHISPER")
-            responseFrame:SetScript("OnEvent", function(self, event, msg)
+            AwaitShadowWhispers(function(msg)
                 local lowerMsg = msg:lower()
-                if lowerMsg:match("spell") or lowerMsg:match("quest") then return end
+                if lowerMsg:match("spell") or lowerMsg:match("quest") then return false end
                 local itemName = msg:match("%[(.-)%]")
-                if itemName then
-                    responseReceived = true
-                    if not itemCache[itemName] then
-                        itemCache[itemName] = true
-                        lastUpdate = GetTime()
-                    end
-                end
-            end)
-
-            local timer = CreateFrame("Frame")
-            timer.elapsed = 0
-            timer:SetScript("OnUpdate", function(self, elapsed)
-                self.elapsed = self.elapsed + elapsed
-
-                if self.elapsed >= 5 and not responseReceived then
+                if not itemName or itemCache[itemName] then return false end
+                itemCache[itemName] = true
+                return true
+            end, function(responses)
+                if #responses == 0 then
                     UIErrorsFrame:AddMessage("No usable objects nearby.", 1.0, 1.0, 0.0, 1.0, 6)
-                    responseFrame:UnregisterEvent("CHAT_MSG_WHISPER")
-                    self:SetScript("OnUpdate", nil)
-                elseif lastUpdate > 0 and (GetTime() - lastUpdate) >= 1 and next(itemCache) then
+                else
                     ShowItemList()
-                    lastUpdate = 0
-                    responseFrame:UnregisterEvent("CHAT_MSG_WHISPER")
-                    self:SetScript("OnUpdate", nil)
                 end
-            end)
+            end, {debounce = 1})
+
+            SendThrottledChatMessage("los")
         elseif info.action == "summon" then
             SendChatMessage(".shadows summon", "GUILD")
         elseif info.action == "chatter" then
@@ -1010,6 +1001,27 @@ local function CreateBotControlBar()
         return _G["BotControlBarButton"..i]
     end
 
+    local function HideBarButtons(fromIndex, toIndex)
+        for i = fromIndex, toIndex do
+            local button = GetBarButtonByIndex(i)
+            if button then button:Hide() end
+        end
+    end
+
+    local function GetOrCreateBarButton(i, info)
+        local button = GetBarButtonByIndex(i)
+        if not button then
+            return CreateButton(i, info, 36, 36, 2)
+        end
+
+        button:Show()
+        button:SetSize(36, 36)
+        button:SetPoint("LEFT", frame, "LEFT", 10 + ((i - 1) * (36 + 2)), 0)
+        button.info = info
+        button.icon:SetTexture("Interface\\Icons\\"..info.icon)
+        return button
+    end
+
     local function SwitchMode()
         if frame.currentMode == "combat" then
             frame.previousCombatToggleStates = SaveToggleStates(frame.originalButtons, frame.originalButtons)
@@ -1019,53 +1031,28 @@ local function CreateBotControlBar()
             frame.currentMode = "utility"
             SetModeInfo("Combat Mode", "Ability_DualWield")
 
-            for i = 1, #frame.originalButtons do
-                local button = GetBarButtonByIndex(i)
-                if button then button:Hide() end
-            end
+            HideBarButtons(1, #frame.originalButtons)
 
             frame.buttons = utilityButtons
             for i, info in ipairs(utilityButtons) do
-                local button = GetBarButtonByIndex(i)
-                if not button then
-                    button = CreateButton(i, info, 36, 36, 2)
-                else
-                    button:Show()
-                    button:SetSize(36, 36)
-                    button:SetPoint("LEFT", frame, "LEFT", 10 + ((i - 1) * (36 + 2)), 0)
-                    button.info = info
-                    button.icon:SetTexture("Interface\\Icons\\"..info.icon)
-                    button.border:SetAlpha(0)
-                    button.state = false
-                end
+                local button = GetOrCreateBarButton(i, info)
 
                 if info.toggle then
                     button.state = info.default or false
-                    button.border:SetAlpha(button.state and 1 or 0)
+                    if frame.previousUtilityToggleStates and frame.previousUtilityToggleStates[info.text] ~= nil then
+                        button.state = frame.previousUtilityToggleStates[info.text]
+                    end
+                else
+                    button.state = false
                 end
+                button.border:SetAlpha(button.state and 1 or 0)
 
                 button:SetScript("OnClick", function(self)
                     HandleUtilityButtonAction(self)
                 end)
             end
 
-            for _, info in ipairs(utilityButtons) do
-                if info.toggle then
-                    local button = GetBarButtonByIndex(tIndexOf(utilityButtons, info))
-                    if button then
-                        button.state = info.default or false
-                        if frame.previousUtilityToggleStates and frame.previousUtilityToggleStates[info.text] ~= nil then
-                            button.state = frame.previousUtilityToggleStates[info.text]
-                        end
-                        button.border:SetAlpha(button.state and 1 or 0)
-                    end
-                end
-            end
-
-            for i = #utilityButtons + 1, #frame.originalButtons do
-                local button = GetBarButtonByIndex(i)
-                if button then button:Hide() end
-            end
+            HideBarButtons(#utilityButtons + 1, #frame.originalButtons)
 
             AdjustButtons(frame)
         else
@@ -1074,10 +1061,7 @@ local function CreateBotControlBar()
             frame.currentMode = "combat"
             SetModeInfo("Utility Mode", "Spell_Shadow_Teleport")
 
-            for i = 1, #utilityButtons do
-                local button = GetBarButtonByIndex(i)
-                if button then button:Hide() end
-            end
+            HideBarButtons(1, #utilityButtons)
             if dropdown then dropdown:Hide() end
 
             frame.buttons = frame.originalButtons
@@ -1085,16 +1069,7 @@ local function CreateBotControlBar()
             frame.combatGroup = frame.originalCombatGroup
 
             for i, info in ipairs(frame.originalButtons) do
-                local button = GetBarButtonByIndex(i)
-                if not button then
-                    button = CreateButton(i, info, 36, 36, 2)
-                else
-                    button:Show()
-                    button:SetSize(36, 36)
-                    button:SetPoint("LEFT", frame, "LEFT", 10 + ((i - 1) * (36 + 2)), 0)
-                    button.info = info
-                    button.icon:SetTexture("Interface\\Icons\\"..info.icon)
-                end
+                local button = GetOrCreateBarButton(i, info)
 
                 SetCombatButtonClickHandler(button)
 
@@ -1116,10 +1091,7 @@ local function CreateBotControlBar()
                 button.border:SetAlpha(button.state and 1 or 0)
             end
 
-            for i = #frame.originalButtons + 1, #utilityButtons do
-                local button = GetBarButtonByIndex(i)
-                if button then button:Hide() end
-            end
+            HideBarButtons(#frame.originalButtons + 1, #utilityButtons)
 
             AdjustButtons(frame)
         end
@@ -1223,65 +1195,59 @@ local function CreateBotControlBar()
         itemListFrame:Show()
     end
 
-    local questListFrame
+    local questListFrame, abandonListFrame
 
-    function ShowQuestList()
-        if not questListFrame then
-            questListFrame = CreateScrollList("ShadowQuestListFrame", 400, 500, "Quest Progress", {
+    local function BeginQuestList(frame, name, title)
+        if not frame then
+            frame = CreateScrollList(name, 400, 500, title, {
                 childWidth = 360,
                 rightInset = -30,
             })
-            questListFrame.content = {}
+            frame.content = {}
         end
 
-        for _, region in ipairs(questListFrame.content) do
+        for _, region in ipairs(frame.content) do
             region:Hide()
         end
-        wipe(questListFrame.content)
+        wipe(frame.content)
+        return frame
+    end
 
-        local child = questListFrame.scrollChild
-
-        local function AddLine(font, text, xOffset, yOffset, color, width)
-            local line = child:CreateFontString(nil, "OVERLAY", font)
-            line:SetPoint("TOPLEFT", xOffset, -yOffset)
-            line:SetText(text)
-            if color then line:SetTextColor(color[1], color[2], color[3]) end
-            if width then
-                line:SetWidth(width)
-                line:SetJustifyH("LEFT")
-            end
-            tinsert(questListFrame.content, line)
-            return line
+    local function AddQuestLine(frame, font, text, xOffset, yOffset, color, width)
+        local line = frame.scrollChild:CreateFontString(nil, "OVERLAY", font)
+        line:SetPoint("TOPLEFT", xOffset, -yOffset)
+        line:SetText(text)
+        if color then line:SetTextColor(color[1], color[2], color[3]) end
+        if width then
+            line:SetWidth(width)
+            line:SetJustifyH("LEFT")
         end
+        tinsert(frame.content, line)
+        return line
+    end
+
+    function ShowQuestList()
+        questListFrame = BeginQuestList(questListFrame, "ShadowQuestListFrame", "Quest Progress")
 
         local yOffset = 0
         for sender, data in pairs(questCache) do
-            AddLine("GameFontNormalLarge", sender, 5, yOffset, {1, 0.82, 0})
+            AddQuestLine(questListFrame, "GameFontNormalLarge", sender, 5, yOffset, {1, 0.82, 0})
             yOffset = yOffset + 20
 
-            if #data.incompleted > 0 then
-                AddLine("GameFontNormal", "--- Incompleted quests ---", 10, yOffset, {1, 0.5, 0.5})
+            local function AddSection(title, color, quests)
+                if #quests == 0 then return end
+                AddQuestLine(questListFrame, "GameFontNormal", title, 10, yOffset, color)
                 yOffset = yOffset + 15
-                for _, quest in ipairs(data.incompleted) do
-                    AddLine("GameFontNormal", quest, 15, yOffset, nil, 340)
+                for _, quest in ipairs(quests) do
+                    AddQuestLine(questListFrame, "GameFontNormal", quest, 15, yOffset, nil, 340)
                     yOffset = yOffset + 15
                 end
             end
 
-            if #data.completed > 0 then
-                AddLine("GameFontNormal", "--- Completed quests ---", 10, yOffset, {0.5, 1, 0.5})
-                yOffset = yOffset + 15
-                for _, quest in ipairs(data.completed) do
-                    AddLine("GameFontNormal", quest, 15, yOffset, nil, 340)
-                    yOffset = yOffset + 15
-                end
-            end
-
+            AddSection("--- Incompleted quests ---", {1, 0.5, 0.5}, data.incompleted)
+            AddSection("--- Completed quests ---", {0.5, 1, 0.5}, data.completed)
             if data.summary ~= "" then
-                AddLine("GameFontNormal", "--- Summary ---", 10, yOffset, {0.5, 0.5, 1})
-                yOffset = yOffset + 15
-                AddLine("GameFontNormal", data.summary, 15, yOffset, nil, 340)
-                yOffset = yOffset + 15
+                AddSection("--- Summary ---", {0.5, 0.5, 1}, {data.summary})
             end
 
             yOffset = yOffset + 10
@@ -1291,36 +1257,13 @@ local function CreateBotControlBar()
         questListFrame:Show()
     end
 
-    local abandonListFrame
-
     function ShowQuestAbandonList()
-        if not abandonListFrame then
-            abandonListFrame = CreateScrollList("ShadowQuestAbandonFrame", 400, 500, "Which quest would you like to abandon?", {
-                childWidth = 360,
-                rightInset = -30,
-            })
-            abandonListFrame.content = {}
-        end
-
-        for _, region in ipairs(abandonListFrame.content) do
-            region:Hide()
-        end
-        wipe(abandonListFrame.content)
-
-        local child = abandonListFrame.scrollChild
-
-        local function AddLine(font, text, xOffset, yOffset, color)
-            local line = child:CreateFontString(nil, "OVERLAY", font)
-            line:SetPoint("TOPLEFT", xOffset, -yOffset)
-            line:SetText(text)
-            if color then line:SetTextColor(color[1], color[2], color[3]) end
-            tinsert(abandonListFrame.content, line)
-            return line
-        end
+        abandonListFrame = BeginQuestList(abandonListFrame, "ShadowQuestAbandonFrame",
+            "Which quest would you like to abandon?")
 
         local yOffset = 0
         for sender, data in pairs(questCache) do
-            AddLine("GameFontNormalLarge", sender, 5, yOffset, {1, 0.82, 0})
+            AddQuestLine(abandonListFrame, "GameFontNormalLarge", sender, 5, yOffset, {1, 0.82, 0})
             yOffset = yOffset + 20
 
             local allQuests = {}
@@ -1332,7 +1275,7 @@ local function CreateBotControlBar()
             end
 
             for _, questLink in ipairs(allQuests) do
-                local button = CreateFrame("Button", nil, child)
+                local button = CreateFrame("Button", nil, abandonListFrame.scrollChild)
                 button:SetSize(340, 20)
                 button:SetPoint("TOPLEFT", 10, -yOffset)
 
@@ -1382,9 +1325,7 @@ local function CreateBotControlBar()
             return
         end
 
-        local responseFrame = CreateFrame("Frame")
-        responseFrame:RegisterEvent("CHAT_MSG_WHISPER")
-        responseFrame:SetScript("OnEvent", function(self, event, msg, sender)
+        AwaitShadowWhispers(function(msg, sender)
             local lowerMsg = msg:lower()
             if lowerMsg:match("tank") then
                 table.insert(roleData.tanks, sender)
@@ -1393,32 +1334,12 @@ local function CreateBotControlBar()
             elseif lowerMsg:match("dps") then
                 table.insert(roleData.dps, sender)
             end
-        end)
+            return true
+        end, function()
+            DisplayRoleWindow(roleData)
+        end, {minResponses = 0, debounce = 0.5})
 
         SendThrottledChatMessage("co ?", channel)
-
-        local waitFrame = CreateFrame("Frame")
-        waitFrame.elapsed = 0
-        waitFrame.lastReceive = GetTime()
-        waitFrame:SetScript("OnUpdate", function(self, elapsed)
-            self.elapsed = self.elapsed + elapsed
-
-            if (GetTime() - self.lastReceive) >= 0.5 then
-                DisplayRoleWindow(roleData)
-                responseFrame:UnregisterEvent("CHAT_MSG_WHISPER")
-                self:SetScript("OnUpdate", nil)
-            elseif self.elapsed >= 5 then
-                DisplayRoleWindow(roleData)
-                responseFrame:UnregisterEvent("CHAT_MSG_WHISPER")
-                self:SetScript("OnUpdate", nil)
-            end
-        end)
-
-        local originalOnEvent = responseFrame:GetScript("OnEvent")
-        responseFrame:SetScript("OnEvent", function(self, event, msg, sender)
-            originalOnEvent(self, event, msg, sender)
-            waitFrame.lastReceive = GetTime()
-        end)
     end
 
     local CLASS_ICON_TCOORDS = {
@@ -1586,67 +1507,66 @@ local function CreateBotControlBar()
         selectionFrame:Show()
     end
 
+    -- Modal list of text buttons. Talent management, shadow selection and
+    -- respec selection differ only in title, width and what a click does.
+    local function CreatePicker(name, width, buttonWidth, title, items, opts)
+        local existing = _G[name]
+        if existing then existing:Hide() end
+
+        local picker = CreateDialog(name, width, 100 + (#items * 30), title, opts)
+        for i, item in ipairs(items) do
+            local button = CreateTextButton(picker, buttonWidth, 25, item.text, function()
+                opts.onSelect(item)
+                picker:Hide()
+            end)
+            button:SetPoint("TOP", 0, -50 - ((i - 1) * 30))
+        end
+        picker:Show()
+        return picker
+    end
+
     function ShowTalentManagementPrompt()
         if _G["ShadowTalentSelectionFrame"] then
             _G["ShadowTalentSelectionFrame"]:Show()
             return
         end
 
-        local matches = {}
+        local items = {}
         for name in pairs(cachedNames) do
-            table.insert(matches, name)
+            table.insert(items, {text = name, name = name})
         end
 
-        if #matches == 0 then
+        if #items == 0 then
             return
         end
 
-        local selectionFrame = CreateDialog("ShadowTalentSelectionFrame", 400, 100 + (#matches * 30),
-            "Which shadow's talents do you want to manage?", {
+        CreatePicker("ShadowTalentSelectionFrame", 400, 360,
+            "Which shadow's talents do you want to manage?", items, {
                 font = "GameFontNormal",
                 titleY = -20,
                 strata = "FULLSCREEN_DIALOG",
                 bgFile = "Interface\\Buttons\\WHITE8X8",
                 bgColor = {0, 0, 0, 1},
+                onSelect = function(item)
+                    ShowTalentManagementWindow(item.name)
+                end,
             })
-
-        for i, name in ipairs(matches) do
-            local button = CreateTextButton(selectionFrame, 360, 25, name, function()
-                ShowTalentManagementWindow(name)
-                selectionFrame:Hide()
-            end)
-            button:SetPoint("TOP", 0, -50 - ((i - 1) * 30))
-        end
-
-        selectionFrame:Show()
     end
 
     local function WaitForShadowMessage(shadowName, matcher, popupKey, popupText)
-        local responseFrame = CreateFrame("Frame")
-        responseFrame:RegisterEvent("CHAT_MSG_WHISPER")
-        responseFrame:SetScript("OnEvent", function(self, event, msg, sender)
-            if sender == shadowName and matcher(msg) then
-                StaticPopupDialogs[popupKey] = {
-                    text = popupText(msg),
-                    button1 = "OK",
-                    timeout = 0,
-                    whileDead = true,
-                    hideOnEscape = true,
-                    preferredIndex = 3,
-                }
-                StaticPopup_Show(popupKey)
-                self:UnregisterEvent("CHAT_MSG_WHISPER")
-            end
-        end)
-
-        local timeout = CreateFrame("Frame")
-        timeout.elapsed = 0
-        timeout:SetScript("OnUpdate", function(self, elapsed)
-            self.elapsed = self.elapsed + elapsed
-            if self.elapsed >= 5 then
-                responseFrame:UnregisterEvent("CHAT_MSG_WHISPER")
-                self:SetScript("OnUpdate", nil)
-            end
+        AwaitShadowWhispers(function(msg, sender)
+            return sender == shadowName and matcher(msg)
+        end, function(responses)
+            if #responses == 0 then return end
+            StaticPopupDialogs[popupKey] = {
+                text = popupText(responses[1]),
+                button1 = "OK",
+                timeout = 0,
+                whileDead = true,
+                hideOnEscape = true,
+                preferredIndex = 3,
+            }
+            StaticPopup_Show(popupKey)
         end)
     end
 
@@ -1732,33 +1652,17 @@ local function CreateBotControlBar()
             _G["ShadowTalentResponseFrame"]:Hide()
         end
 
-        local talentResponse
-        local responseFrame = CreateFrame("Frame")
-        responseFrame:RegisterEvent("CHAT_MSG_WHISPER")
-        responseFrame:SetScript("OnEvent", function(self, event, msg, sender)
-            if sender == shadowName and msg:match("My current talent spec is:") then
-                talentResponse = msg
-                self:UnregisterEvent("CHAT_MSG_WHISPER")
+        AwaitShadowWhispers(function(msg, sender)
+            return sender == shadowName and msg:match("My current talent spec is:")
+        end, function(responses)
+            if #responses == 0 then
+                print("No response received from "..shadowName)
+            else
+                ShowTalentResponsePopup(responses[1])
             end
         end)
 
         SendThrottledChatMessage("talents", "WHISPER", nil, shadowName)
-
-        local waitFrame = CreateFrame("Frame")
-        waitFrame.elapsed = 0
-        waitFrame:SetScript("OnUpdate", function(self, elapsed)
-            self.elapsed = self.elapsed + elapsed
-
-            if talentResponse then
-                ShowTalentResponsePopup(talentResponse)
-                responseFrame:UnregisterEvent("CHAT_MSG_WHISPER")
-                self:SetScript("OnUpdate", nil)
-            elseif self.elapsed >= 5 then
-                print("No response received from "..shadowName)
-                responseFrame:UnregisterEvent("CHAT_MSG_WHISPER")
-                self:SetScript("OnUpdate", nil)
-            end
-        end)
     end
 
     function ShowTalentResponsePopup(responseText)
@@ -1794,41 +1698,17 @@ local function CreateBotControlBar()
             _G["ShadowRespecFrame"]:Hide()
         end
 
-        local respecResponse = {}
-        local lastReceiveTime = 0
-
-        local responseFrame = CreateFrame("Frame")
-        responseFrame:RegisterEvent("CHAT_MSG_WHISPER")
-        responseFrame:SetScript("OnEvent", function(self, event, msg, sender)
-            if sender == shadowName then
-                if msg:match("%d+%.") or msg:match("%(") then
-                    table.insert(respecResponse, msg)
-                    lastReceiveTime = GetTime()
-                end
+        AwaitShadowWhispers(function(msg, sender)
+            return sender == shadowName and (msg:match("%d+%.") or msg:match("%("))
+        end, function(responses)
+            if #responses == 0 then
+                print("No talent specs available for "..shadowName)
+            else
+                ShowRespecSelectionPopup(shadowName, responses)
             end
-        end)
+        end, {debounce = 0.5})
 
         SendThrottledChatMessage("talents spec list", "WHISPER", nil, shadowName)
-
-        local waitFrame = CreateFrame("Frame")
-        waitFrame.elapsed = 0
-        waitFrame:SetScript("OnUpdate", function(self, elapsed)
-            self.elapsed = self.elapsed + elapsed
-
-            if #respecResponse > 0 and lastReceiveTime > 0 and (GetTime() - lastReceiveTime) >= 0.5 then
-                ShowRespecSelectionPopup(shadowName, respecResponse)
-                responseFrame:UnregisterEvent("CHAT_MSG_WHISPER")
-                self:SetScript("OnUpdate", nil)
-            elseif self.elapsed >= 5 then
-                if #respecResponse == 0 then
-                    print("No talent specs available for "..shadowName)
-                else
-                    ShowRespecSelectionPopup(shadowName, respecResponse)
-                end
-                responseFrame:UnregisterEvent("CHAT_MSG_WHISPER")
-                self:SetScript("OnUpdate", nil)
-            end
-        end)
     end
 
     function ShowRespecSelectionPopup(shadowName, specList)
@@ -1836,29 +1716,26 @@ local function CreateBotControlBar()
             _G["ShadowTalentResponseFrame"]:Hide()
         end
 
-        local popup = CreateDialog("ShadowRespecFrame", 400, 100 + (#specList * 30),
-            "Select Talent Spec for "..shadowName, {
-                strata = "TOOLTIP",
-                bgFile = "Interface\\Buttons\\WHITE8X8",
-                bgColor = {0, 0, 0, 1},
-            })
-
-        for i, specLine in ipairs(specList) do
+        local items = {}
+        for _, specLine in ipairs(specList) do
             local specName = specLine:match("%d+%.%s*(.-)%s*%(")
             if not specName then
                 specName = specLine:match("%d+%.%s*(.*)")
             end
-
-            local button = CreateTextButton(popup, 360, 25, specLine, function()
-                if specName then
-                    SendThrottledChatMessage("talents spec "..specName, "WHISPER", nil, shadowName)
-                end
-                popup:Hide()
-            end)
-            button:SetPoint("TOP", 0, -50 - ((i - 1) * 30))
+            table.insert(items, {text = specLine, name = specName})
         end
 
-        popup:Show()
+        CreatePicker("ShadowRespecFrame", 400, 360,
+            "Select Talent Spec for "..shadowName, items, {
+                strata = "TOOLTIP",
+                bgFile = "Interface\\Buttons\\WHITE8X8",
+                bgColor = {0, 0, 0, 1},
+                onSelect = function(item)
+                    if item.name then
+                        SendThrottledChatMessage("talents spec "..item.name, "WHISPER", nil, shadowName)
+                    end
+                end,
+            })
     end
 
     function HasShadowClass(class)
@@ -1871,43 +1748,32 @@ local function CreateBotControlBar()
     end
 
     function PromptShadowSelection(class, callback)
-        local matches = {}
+        local items = {}
         for name, cachedClass in pairs(cachedNames) do
             if cachedClass and string.upper(cachedClass) == string.upper(class) then
-                table.insert(matches, name)
+                table.insert(items, {text = name, name = name})
             end
         end
 
-        if #matches == 0 then
+        if #items == 0 then
             return
-        elseif #matches == 1 then
-            callback(matches[1])
+        elseif #items == 1 then
+            callback(items[1].name)
             return
         end
 
-        if _G["ShadowSelectionFrame"] then
-            _G["ShadowSelectionFrame"]:Hide()
-        end
-
-        local selectionFrame = CreateDialog("ShadowSelectionFrame", 300, 100 + (#matches * 30),
-            "Which shadow do you add this strategy to?", {
+        CreatePicker("ShadowSelectionFrame", 300, 260,
+            "Which shadow do you add this strategy to?", items, {
                 font = "GameFontNormal",
                 titleY = -20,
                 strata = "FULLSCREEN_DIALOG",
                 bgFile = "Interface\\Buttons\\WHITE8X8",
                 bgColor = {0, 0, 0, 1},
                 movable = false,
+                onSelect = function(item)
+                    callback(item.name)
+                end,
             })
-
-        for i, name in ipairs(matches) do
-            local button = CreateTextButton(selectionFrame, 260, 25, name, function()
-                callback(name)
-                selectionFrame:Hide()
-            end)
-            button:SetPoint("TOP", 0, -50 - ((i - 1) * 30))
-        end
-
-        selectionFrame:Show()
     end
 
     local function BuildStrategyCommand(strategy, others)
@@ -1952,14 +1818,6 @@ local function CreateBotControlBar()
 
     local activeClassFrame = nil
 
-    local function CenterColumn(buttons, xOffset, columnWidth, yStart, step)
-        local startX = xOffset + ((columnWidth - buttons[1]:GetWidth()) / 2)
-        for i, button in ipairs(buttons) do
-            button:ClearAllPoints()
-            button:SetPoint("TOPLEFT", startX, -(yStart + ((i - 1) * step)))
-        end
-    end
-
     local function ShowClassSettings(globalVar, frameName, width, height, title, build)
         if activeClassFrame then
             activeClassFrame:Hide()
@@ -1992,80 +1850,92 @@ local function CreateBotControlBar()
         return CreateVerticalIconButton(parent, width, height, "Interface\\Icons\\"..icon, text)
     end
 
+    -- Strategy entries list only their own strategy and icon; the `others` list
+    -- is always the rest of the group, so derive it instead of repeating it.
+    local function DeriveOthers(items)
+        for _, item in ipairs(items) do
+            local others = {}
+            for _, other in ipairs(items) do
+                if other.strategy ~= item.strategy then
+                    tinsert(others, other.strategy)
+                end
+            end
+            item.others = others
+        end
+        return items
+    end
+
+    local function AddStrategyColumn(parent, items, opts)
+        DeriveOthers(items)
+        local x = opts.x + ((opts.columnWidth - opts.buttonWidth) / 2)
+        for i, item in ipairs(items) do
+            local button = CreateStrategyButton(parent, opts.buttonWidth, 60, item.icon, item.name)
+            button:SetPoint("TOPLEFT", x, -(opts.yStart + ((i - 1) * (opts.step or 70))))
+            button:SetScript("OnClick", function()
+                opts.onSelect(item)
+            end)
+        end
+    end
+
     function ShowPaladinSettings()
         ShowClassSettings("paladinFrame", "ShadowPaladinSettingsFrame", 600, 550, "Paladin Settings", function(classFrame)
-            local blessingsLabel = classFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-            blessingsLabel:SetPoint("TOP", -140, -40)
-            blessingsLabel:SetText("Blessing Strategies:")
-
-            local blessings = {
-                {name = "Might", strategy = "bdps", others = {"bmana", "bstats", "bhealth"}, icon = "Spell_Holy_FistOfJustice"},
-                {name = "Wisdom", strategy = "bmana", others = {"bdps", "bstats", "bhealth"}, icon = "Spell_Holy_SealOfWisdom"},
-                {name = "Kings", strategy = "bstats", others = {"bdps", "bmana", "bhealth"}, icon = "Spell_Magic_MageArmor"},
-                {name = "Sanctuary", strategy = "bhealth", others = {"bdps", "bmana", "bstats"}, icon = "Spell_Nature_LightningShield"},
-            }
-
-            local blessingButtons = {}
-            for i, blessing in ipairs(blessings) do
-                local button = CreateStrategyButton(classFrame, 120, 60, blessing.icon, blessing.name)
-                button:SetPoint("TOPLEFT", 30, -60 - ((i - 1) * 70))
-                button:SetScript("OnClick", function()
-                    SendStrategyToShadow("PALADIN", "paladin", blessing.strategy, blessing.others, {"co "}, blessing.name)
-                end)
-                tinsert(blessingButtons, button)
+            local function AddLabel(text, x)
+                local label = classFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                label:SetPoint("TOP", x, -40)
+                label:SetText(text)
             end
-            CenterColumn(blessingButtons, 10, 280, 60, 70)
 
-            local aurasLabel = classFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-            aurasLabel:SetPoint("TOP", 140, -40)
-            aurasLabel:SetText("Aura Strategies:")
+            AddLabel("Blessing Strategies:", -140)
+            AddStrategyColumn(classFrame, {
+                {name = "Might", strategy = "bdps", icon = "Spell_Holy_FistOfJustice"},
+                {name = "Wisdom", strategy = "bmana", icon = "Spell_Holy_SealOfWisdom"},
+                {name = "Kings", strategy = "bstats", icon = "Spell_Magic_MageArmor"},
+                {name = "Sanctuary", strategy = "bhealth", icon = "Spell_Nature_LightningShield"},
+            }, {
+                buttonWidth = 120, x = 10, columnWidth = 280, yStart = 60,
+                onSelect = function(blessing)
+                    SendStrategyToShadow("PALADIN", "paladin", blessing.strategy,
+                        blessing.others, {"co "}, blessing.name)
+                end,
+            })
 
-            local auras = {
-                {name = "Fire Resistance", strategy = "rfire", others = {"rfrost", "rshadow", "baoe", "barmor", "bcast", "bspeed"}, icon = "Spell_Fire_SealOfFire"},
-                {name = "Frost Resistance", strategy = "rfrost", others = {"rfire", "rshadow", "baoe", "barmor", "bcast", "bspeed"}, icon = "Spell_Frost_WizardMark"},
-                {name = "Shadow Resistance", strategy = "rshadow", others = {"rfire", "rfrost", "baoe", "barmor", "bcast", "bspeed"}, icon = "Spell_Shadow_SealOfKings"},
-                {name = "Retribution", strategy = "baoe", others = {"rfire", "rfrost", "rshadow", "barmor", "bcast", "bspeed"}, icon = "Spell_Holy_AuraOfLight"},
-                {name = "Devotion", strategy = "barmor", others = {"rfire", "rfrost", "rshadow", "baoe", "bcast", "bspeed"}, icon = "Spell_Holy_DevotionAura"},
-                {name = "Concentration", strategy = "bcast", others = {"rfire", "rfrost", "rshadow", "baoe", "barmor", "bspeed"}, icon = "Spell_Holy_MindSooth"},
-                {name = "Crusader", strategy = "bspeed", others = {"rfire", "rfrost", "rshadow", "baoe", "barmor", "bcast"}, icon = "Spell_Holy_CrusaderAura"},
-            }
-
-            local auraButtons = {}
-            for i, aura in ipairs(auras) do
-                local button = CreateStrategyButton(classFrame, 140, 60, aura.icon, aura.name)
-                button:SetPoint("TOPLEFT", 310, -60 - ((i - 1) * 70))
-                button:SetScript("OnClick", function()
-                    SendStrategyToShadow("PALADIN", "paladin", aura.strategy, aura.others, {"co ", "nc "}, aura.name)
-                end)
-                tinsert(auraButtons, button)
-            end
-            CenterColumn(auraButtons, 300, 280, 60, 70)
+            AddLabel("Aura Strategies:", 140)
+            AddStrategyColumn(classFrame, {
+                {name = "Fire Resistance", strategy = "rfire", icon = "Spell_Fire_SealOfFire"},
+                {name = "Frost Resistance", strategy = "rfrost", icon = "Spell_Frost_WizardMark"},
+                {name = "Shadow Resistance", strategy = "rshadow", icon = "Spell_Shadow_SealOfKings"},
+                {name = "Retribution", strategy = "baoe", icon = "Spell_Holy_AuraOfLight"},
+                {name = "Devotion", strategy = "barmor", icon = "Spell_Holy_DevotionAura"},
+                {name = "Concentration", strategy = "bcast", icon = "Spell_Holy_MindSooth"},
+                {name = "Crusader", strategy = "bspeed", icon = "Spell_Holy_CrusaderAura"},
+            }, {
+                buttonWidth = 140, x = 300, columnWidth = 280, yStart = 60,
+                onSelect = function(aura)
+                    SendStrategyToShadow("PALADIN", "paladin", aura.strategy,
+                        aura.others, {"co ", "nc "}, aura.name)
+                end,
+            })
         end)
     end
 
     function ShowHunterSettings()
         ShowClassSettings("hunterFrame", "ShadowHunterSettingsFrame", 400, 350, "Hunter Aspect Settings", function(classFrame)
-            local aspectsLabel = classFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-            aspectsLabel:SetPoint("TOP", 0, -40)
-            aspectsLabel:SetText("Aspect Strategies:")
+            local label = classFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            label:SetPoint("TOP", 0, -40)
+            label:SetText("Aspect Strategies:")
 
-            local aspects = {
-                {name = "Hawk/Dragonhawk", strategy = "bdps", others = {"bspeed", "bmana", "rnature"}, icon = "ability_hunter_pet_dragonhawk"},
-                {name = "Pack", strategy = "bspeed", others = {"bdps", "bmana", "rnature"}, icon = "Ability_Mount_WhiteTiger"},
-                {name = "Viper", strategy = "bmana", others = {"bdps", "bspeed", "rnature"}, icon = "Ability_Hunter_AspectOfTheViper"},
-                {name = "Wild", strategy = "rnature", others = {"bdps", "bspeed", "bmana"}, icon = "Spell_Nature_ProtectionformNature"},
-            }
-
-            local aspectButtons = {}
-            for i, aspect in ipairs(aspects) do
-                local button = CreateStrategyButton(classFrame, 180, 60, aspect.icon, aspect.name)
-                button:SetPoint("TOPLEFT", 30, -70 - ((i - 1) * 70))
-                button:SetScript("OnClick", function()
-                    SendStrategyToShadow("HUNTER", "hunter", aspect.strategy, aspect.others, {"co "}, aspect.name)
-                end)
-                tinsert(aspectButtons, button)
-            end
-            CenterColumn(aspectButtons, 0, 400, 70, 70)
+            AddStrategyColumn(classFrame, {
+                {name = "Hawk/Dragonhawk", strategy = "bdps", icon = "ability_hunter_pet_dragonhawk"},
+                {name = "Pack", strategy = "bspeed", icon = "Ability_Mount_WhiteTiger"},
+                {name = "Viper", strategy = "bmana", icon = "Ability_Hunter_AspectOfTheViper"},
+                {name = "Wild", strategy = "rnature", icon = "Spell_Nature_ProtectionformNature"},
+            }, {
+                buttonWidth = 180, x = 0, columnWidth = 400, yStart = 70,
+                onSelect = function(aspect)
+                    SendStrategyToShadow("HUNTER", "hunter", aspect.strategy,
+                        aspect.others, {"co "}, aspect.name)
+                end,
+            })
         end)
     end
 
@@ -2080,19 +1950,15 @@ local function CreateBotControlBar()
             noteLabel:SetText("(Defaults: Affliction=Felhunter, Demonology=Felguard, Destruction=Imp)")
             noteLabel:SetTextColor(0.7, 0.7, 0.7)
 
-            local pets = {
-                {name = "Imp", strategy = "imp", icon = "Spell_Shadow_Summonimp", others = {"voidwalker", "succubus", "felhunter", "felguard"}},
-                {name = "Voidwalker", strategy = "voidwalker", icon = "Spell_Shadow_SummonVoidWalker", others = {"imp", "succubus", "felhunter", "felguard"}},
-                {name = "Succubus", strategy = "succubus", icon = "Spell_Shadow_SummonSuccubus", others = {"imp", "voidwalker", "felhunter", "felguard"}},
-                {name = "Felhunter", strategy = "felhunter", icon = "Spell_Shadow_SummonFelHunter", others = {"imp", "voidwalker", "succubus", "felguard"}},
-                {name = "Felguard", strategy = "felguard", icon = "Spell_Shadow_SummonFelGuard", others = {"imp", "voidwalker", "succubus", "felhunter"}},
-            }
-
-            local petButtons = {}
-            for i, pet in ipairs(pets) do
-                local button = CreateStrategyButton(classFrame, 150, 60, pet.icon, pet.name)
-                button:SetPoint("TOPLEFT", 30, -75 - ((i - 1) * 70))
-                button:SetScript("OnClick", function()
+            AddStrategyColumn(classFrame, {
+                {name = "Imp", strategy = "imp", icon = "Spell_Shadow_Summonimp"},
+                {name = "Voidwalker", strategy = "voidwalker", icon = "Spell_Shadow_SummonVoidWalker"},
+                {name = "Succubus", strategy = "succubus", icon = "Spell_Shadow_SummonSuccubus"},
+                {name = "Felhunter", strategy = "felhunter", icon = "Spell_Shadow_SummonFelHunter"},
+                {name = "Felguard", strategy = "felguard", icon = "Spell_Shadow_SummonFelGuard"},
+            }, {
+                buttonWidth = 150, x = 0, columnWidth = 450, yStart = 75,
+                onSelect = function(pet)
                     if not HasShadowClass("WARLOCK") then
                         print("No warlock shadow found.")
                         return
@@ -2115,10 +1981,8 @@ local function CreateBotControlBar()
                         SendThrottledChatMessage("nc "..BuildStrategyCommand(pet.strategy, others), "WHISPER", nil, targetName)
                         print("Shadow "..targetName.." has enabled "..pet.name)
                     end)
-                end)
-                tinsert(petButtons, button)
-            end
-            CenterColumn(petButtons, 0, 450, 75, 70)
+                end,
+            })
         end)
     end
 
@@ -2165,37 +2029,30 @@ local function CreateBotControlBar()
 
     function ShowShamanSettings()
         ShowClassSettings("shamanFrame", "ShadowShamanSettingsFrame", 800, 430, "Shaman Totem Settings", function(classFrame)
-            local totems = {
-                water = {
-                    {name = "Healing Stream", strategy = "healing stream", others = {"mana spring", "cleansing", "fire resistance"}, icon = "INV_Spear_04"},
-                    {name = "Mana Spring", strategy = "mana spring", others = {"healing stream", "cleansing", "fire resistance"}, icon = "Spell_Nature_ManaRegenTotem"},
-                    {name = "Cleansing", strategy = "cleansing", others = {"healing stream", "mana spring", "fire resistance"}, icon = "Spell_Frost_SummonWaterElemental"},
-                    {name = "Fire Resistance", strategy = "fire resistance", others = {"healing stream", "mana spring", "cleansing"}, icon = "Spell_FireResistanceTotem_01"},
-                },
-                earth = {
-                    {name = "Stoneskin", strategy = "stoneskin", others = {"strength of the earth", "tremor"}, icon = "Spell_Nature_StoneSkinTotem"},
-                    {name = "Strength of Earth", strategy = "strength of the earth", others = {"stoneskin", "tremor"}, icon = "Spell_Nature_EarthBindTotem"},
-                    {name = "Tremor", strategy = "tremor", others = {"stoneskin", "strength of the earth"}, icon = "Spell_Nature_TremorTotem"},
-                },
-                fire = {
-                    {name = "Searing", strategy = "searing", others = {"magma", "flametongue", "frost resistance", "wrath"}, icon = "Spell_Fire_SearingTotem"},
-                    {name = "Magma", strategy = "magma", others = {"searing", "flametongue", "frost resistance", "wrath"}, icon = "Spell_Fire_SelfDestruct"},
-                    {name = "Flametongue", strategy = "flametongue", others = {"searing", "magma", "frost resistance", "wrath"}, icon = "Spell_Nature_GuardianWard"},
-                    {name = "Frost Resistance", strategy = "frost resistance", others = {"searing", "magma", "flametongue", "wrath"}, icon = "Spell_FrostResistanceTotem_01"},
-                    {name = "Totem of Wrath", strategy = "totem of wrath", others = {"frost resistance", "searing", "magma", "flametongue"}, icon = "Spell_Fire_TotemOfWrath"},
-                },
-                air = {
-                    {name = "Windfury", strategy = "windfury", others = {"wrath of air", "nature resistance"}, icon = "Spell_Nature_Windfury"},
-                    {name = "Wrath of Air", strategy = "wrath of air", others = {"windfury", "nature resistance"}, icon = "Spell_Nature_SlowingTotem"},
-                    {name = "Nature Resistance", strategy = "nature resistance", others = {"windfury", "wrath of air"}, icon = "Spell_Nature_NatureResistanceTotem"},
-                },
-            }
-
             local categories = {
-                {name = "Water", type = "water", xOffset = 20},
-                {name = "Earth", type = "earth", xOffset = 220},
-                {name = "Fire", type = "fire", xOffset = 420},
-                {name = "Air", type = "air", xOffset = 620},
+                {name = "Water", xOffset = 20, totems = {
+                    {name = "Healing Stream", strategy = "healing stream", icon = "INV_Spear_04"},
+                    {name = "Mana Spring", strategy = "mana spring", icon = "Spell_Nature_ManaRegenTotem"},
+                    {name = "Cleansing", strategy = "cleansing", icon = "Spell_Frost_SummonWaterElemental"},
+                    {name = "Fire Resistance", strategy = "fire resistance", icon = "Spell_FireResistanceTotem_01"},
+                }},
+                {name = "Earth", xOffset = 220, totems = {
+                    {name = "Stoneskin", strategy = "stoneskin", icon = "Spell_Nature_StoneSkinTotem"},
+                    {name = "Strength of Earth", strategy = "strength of the earth", icon = "Spell_Nature_EarthBindTotem"},
+                    {name = "Tremor", strategy = "tremor", icon = "Spell_Nature_TremorTotem"},
+                }},
+                {name = "Fire", xOffset = 420, totems = {
+                    {name = "Searing", strategy = "searing", icon = "Spell_Fire_SearingTotem"},
+                    {name = "Magma", strategy = "magma", icon = "Spell_Fire_SelfDestruct"},
+                    {name = "Flametongue", strategy = "flametongue", icon = "Spell_Nature_GuardianWard"},
+                    {name = "Frost Resistance", strategy = "frost resistance", icon = "Spell_FrostResistanceTotem_01"},
+                    {name = "Totem of Wrath", strategy = "totem of wrath", icon = "Spell_Fire_TotemOfWrath"},
+                }},
+                {name = "Air", xOffset = 620, totems = {
+                    {name = "Windfury", strategy = "windfury", icon = "Spell_Nature_Windfury"},
+                    {name = "Wrath of Air", strategy = "wrath of air", icon = "Spell_Nature_SlowingTotem"},
+                    {name = "Nature Resistance", strategy = "nature resistance", icon = "Spell_Nature_NatureResistanceTotem"},
+                }},
             }
 
             for _, category in ipairs(categories) do
@@ -2203,13 +2060,13 @@ local function CreateBotControlBar()
                 label:SetPoint("TOP", classFrame, "TOPLEFT", category.xOffset + 75, -40)
                 label:SetText(category.name..":")
 
-                for i, totem in ipairs(totems[category.type]) do
-                    local button = CreateStrategyButton(classFrame, 140, 60, totem.icon, totem.name)
-                    button:SetPoint("TOPLEFT", category.xOffset, -70 - ((i - 1) * 70))
-                    button:SetScript("OnClick", function()
-                        SendStrategyToShadow("SHAMAN", "shaman", totem.strategy, totem.others, {"co "}, "Totem: "..totem.name)
-                    end)
-                end
+                AddStrategyColumn(classFrame, category.totems, {
+                    buttonWidth = 140, x = category.xOffset, columnWidth = 140, yStart = 70,
+                    onSelect = function(totem)
+                        SendStrategyToShadow("SHAMAN", "shaman", totem.strategy,
+                            totem.others, {"co "}, "Totem: "..totem.name)
+                    end,
+                })
             end
         end)
     end
@@ -2230,6 +2087,8 @@ local function CreateBotControlBar()
             bgColor = {0, 0, 0, 1},
         })
 
+        local currentY = -50
+
         local function CreateSetupButton(text, icon, onClick)
             local button = CreateHorizontalIconButton(setupFrame, 140, 40,
                 "Interface\\Icons\\"..icon, text, {iconX = 5, textGap = 5, justifyLeft = true})
@@ -2240,47 +2099,39 @@ local function CreateBotControlBar()
             return button
         end
 
-        local function CenterRow(buttons, yOffset)
+        local function AddSection(text)
+            local line = setupFrame:CreateTexture(nil, "ARTWORK")
+            line:SetTexture(1, 1, 1)
+            line:SetVertexColor(0.5, 0.5, 0.5, 1)
+            line:SetHeight(1)
+            line:SetPoint("TOPLEFT", setupFrame, "TOPLEFT", 20, currentY)
+            line:SetPoint("TOPRIGHT", setupFrame, "TOPRIGHT", -20, currentY)
+
+            currentY = currentY - 10
+            local label = setupFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            label:SetPoint("TOP", setupFrame, "TOP", 0, currentY)
+            label:SetText(text)
+            currentY = currentY - 30
+        end
+
+        local function AddRow(buttons)
             local spacing = 10
-            local totalWidth = 0
-            for i, button in ipairs(buttons) do
+            local totalWidth = (#buttons - 1) * spacing
+            for _, button in ipairs(buttons) do
                 totalWidth = totalWidth + button:GetWidth()
-                if i < #buttons then
-                    totalWidth = totalWidth + spacing
-                end
             end
 
             local startX = (frameWidth - totalWidth) / 2
             for _, button in ipairs(buttons) do
                 button:ClearAllPoints()
-                button:SetPoint("TOPLEFT", setupFrame, "TOPLEFT", startX, yOffset)
+                button:SetPoint("TOPLEFT", setupFrame, "TOPLEFT", startX, currentY)
                 startX = startX + button:GetWidth() + spacing
             end
+            currentY = currentY - 50
         end
 
-        local function AddSeparator(yOffset)
-            local line = setupFrame:CreateTexture(nil, "ARTWORK")
-            line:SetTexture(1, 1, 1)
-            line:SetVertexColor(0.5, 0.5, 0.5, 1)
-            line:SetHeight(1)
-            line:SetPoint("TOPLEFT", setupFrame, "TOPLEFT", 20, yOffset)
-            line:SetPoint("TOPRIGHT", setupFrame, "TOPRIGHT", -20, yOffset)
-        end
-
-        local function AddSectionLabel(text, yOffset)
-            local label = setupFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-            label:SetPoint("TOP", setupFrame, "TOP", 0, yOffset)
-            label:SetText(text)
-        end
-
-        local currentY = -50
-
-        AddSeparator(currentY)
-        currentY = currentY - 10
-        AddSectionLabel("General Setup:", currentY)
-        currentY = currentY - 30
-
-        local row1 = {
+        AddSection("General Setup:")
+        AddRow({
             CreateSetupButton("Shadows Menu", "Spell_Shadow_AntiShadow", function()
                 SendThrottledChatMessage(".shadowsmenu", "GUILD")
             end),
@@ -2293,36 +2144,22 @@ local function CreateBotControlBar()
                 ShowShadowsShortcutsMenu()
                 setupFrame:Hide()
             end),
-        }
-        CenterRow(row1, currentY)
-
-        currentY = currentY - 50
+        })
         currentY = currentY - 40
 
-        AddSeparator(currentY)
-        currentY = currentY - 10
-        AddSectionLabel("Group Loadout:", currentY)
-        currentY = currentY - 30
-
-        local row2 = {
+        AddSection("Group Loadout:")
+        AddRow({
             CreateSetupButton("Talents", "Ability_Marksmanship", function()
                 ShowTalentManagementPrompt()
             end),
             CreateSetupButton("Role", "Ability_Hunter_MasterMarksman", function()
                 ShowRoleManagementWindow()
             end),
-        }
-        CenterRow(row2, currentY)
-
-        currentY = currentY - 50
+        })
         currentY = currentY - 40
 
-        AddSeparator(currentY)
-        currentY = currentY - 10
-        AddSectionLabel("Class Settings:", currentY)
-        currentY = currentY - 30
-
-        local row3 = {
+        AddSection("Class Settings:")
+        AddRow({
             CreateSetupButton("Paladin", "INV_Helmet_06", function()
                 ShowPaladinSettings()
             end),
@@ -2332,22 +2169,15 @@ local function CreateBotControlBar()
             CreateSetupButton("Hunter", "INV_Weapon_Bow_07", function()
                 ShowHunterSettings()
             end),
-        }
-        CenterRow(row3, currentY)
-
-        currentY = currentY - 50
-
-        local row4 = {
+        })
+        AddRow({
             CreateSetupButton("Warlock", "Spell_Nature_FaerieFire", function()
                 ShowWarlockSettings()
             end),
             CreateSetupButton("Priest", "INV_Staff_30", function()
                 ShowPriestSettings()
             end),
-        }
-        CenterRow(row4, currentY)
-
-        currentY = currentY - 50
+        })
 
         setupFrame:SetSize(frameWidth, math.abs(currentY) + 20)
         setupFrame:Show()
@@ -2392,28 +2222,21 @@ local function CreateBotControlBar()
             frame.modeButton:Click()
         end
 
-        local delayFrame = CreateFrame("Frame")
-        delayFrame.timeElapsed = 0
-        delayFrame:SetScript("OnUpdate", function(self, elapsed)
-            self.timeElapsed = self.timeElapsed + elapsed
-            if self.timeElapsed >= 0.5 then
-                for i, info in ipairs(frame.buttons) do
-                    local button = _G["BotControlBarButton"..i]
-                    if button and button.state then
-                        if info.toggle then
-                            button:Click()
-                            button:Click()
-                        else
-                            button:Click()
-                        end
+        AfterDelay(0.5, function()
+            for i, info in ipairs(frame.buttons) do
+                local button = _G["BotControlBarButton"..i]
+                if button and button.state then
+                    if info.toggle then
+                        button:Click()
+                        button:Click()
+                    else
+                        button:Click()
                     end
                 end
+            end
 
-                if wasInUtilityMode then
-                    frame.modeButton:Click()
-                end
-
-                self:SetScript("OnUpdate", nil)
+            if wasInUtilityMode then
+                frame.modeButton:Click()
             end
         end)
     end
@@ -2422,19 +2245,9 @@ local function CreateBotControlBar()
         if msg and msg:lower():match("ai was reset to defaults") and not self.waitingForReset then
             self.waitingForReset = true
 
-            if not self.throttleFrame then
-                self.throttleFrame = CreateFrame("Frame")
-            end
-
-            self.throttleFrame:SetScript("OnUpdate", function(throttleFrame, elapsed)
-                throttleFrame.elapsed = (throttleFrame.elapsed or 0) + elapsed
-
-                if throttleFrame.elapsed >= 2 then
-                    ReapplyShadowSettings()
-                    resetDetectionFrame.waitingForReset = false
-                    throttleFrame.elapsed = 0
-                    throttleFrame:SetScript("OnUpdate", nil)
-                end
+            AfterDelay(2, function()
+                ReapplyShadowSettings()
+                resetDetectionFrame.waitingForReset = false
             end)
         end
     end)
@@ -2469,47 +2282,32 @@ function ShadowShortcuts.UpdateKeyTexts()
 end
 
 function ShadowShortcuts.CreateConfigWindow()
-    local frame = CreateFrame("Frame", "ShadowShortcutsConfig", UIParent)
-    frame:SetWidth(400)
-    frame:SetHeight(500)
-    frame:SetPoint("CENTER")
-    frame:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-        tile = true, tileSize = 32, edgeSize = 32,
-        insets = { left = 11, right = 12, top = 12, bottom = 11 },
-    })
-    frame:SetMovable(true)
-    frame:EnableMouse(true)
-    frame:RegisterForDrag("LeftButton")
-    frame:SetScript("OnDragStart", frame.StartMoving)
-    frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
-    frame:SetFrameStrata("DIALOG")
-    frame:SetToplevel(true)
-    frame:Hide()
-
-    local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    title:SetPoint("TOP", 0, -15)
-    title:SetText("Shadows Bar Keyboard Shortcuts")
-
-    local closeButton = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
-    closeButton:SetPoint("TOPRIGHT", -5, -5)
-    closeButton:SetScript("OnClick", function() frame:Hide() end)
+    local frame = CreateDialog("ShadowShortcutsConfig", 400, 500,
+        "Shadows Bar Keyboard Shortcuts", {
+            font = "GameFontNormal",
+            titleY = -15,
+            toplevel = true,
+            hidden = true,
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+            tileSize = 32,
+            edgeSize = 32,
+            insets = {left = 11, right = 12, top = 12, bottom = 11},
+            closeX = -5,
+            closeY = -5,
+        })
 
     ShadowShortcuts.buttons = {
         {text = "Show/Hide Control Bar", buttonName = "BotControlBarToggleButton", action = "BOTCONTROLBAR_TOGGLE"},
         {text = "Mode Button", buttonName = "BotControlBarModeButton", action = "BOTCONTROLBAR_MODE"},
-        {text = "Button 1", buttonName = "BotControlBarButton1", action = "BOTCONTROLBAR_BUTTON1"},
-        {text = "Button 2", buttonName = "BotControlBarButton2", action = "BOTCONTROLBAR_BUTTON2"},
-        {text = "Button 3", buttonName = "BotControlBarButton3", action = "BOTCONTROLBAR_BUTTON3"},
-        {text = "Button 4", buttonName = "BotControlBarButton4", action = "BOTCONTROLBAR_BUTTON4"},
-        {text = "Button 5", buttonName = "BotControlBarButton5", action = "BOTCONTROLBAR_BUTTON5"},
-        {text = "Button 6", buttonName = "BotControlBarButton6", action = "BOTCONTROLBAR_BUTTON6"},
-        {text = "Button 7", buttonName = "BotControlBarButton7", action = "BOTCONTROLBAR_BUTTON7"},
-        {text = "Button 8", buttonName = "BotControlBarButton8", action = "BOTCONTROLBAR_BUTTON8"},
-        {text = "Button 9", buttonName = "BotControlBarButton9", action = "BOTCONTROLBAR_BUTTON9"},
-        {text = "Button 10", buttonName = "BotControlBarButton10", action = "BOTCONTROLBAR_BUTTON10"},
     }
+    for i = 1, 10 do
+        table.insert(ShadowShortcuts.buttons, {
+            text = "Button "..i,
+            buttonName = "BotControlBarButton"..i,
+            action = "BOTCONTROLBAR_BUTTON"..i,
+        })
+    end
 
     ShadowShortcuts.configButtons = {}
 
@@ -2544,7 +2342,6 @@ function ShadowShortcuts.CreateConfigWindow()
     end
 
     ShadowShortcuts.UpdateKeyTexts()
-    AddSpecialFrame("ShadowShortcutsConfig")
 
     return frame
 end
