@@ -1803,7 +1803,7 @@ local function CreateBotControlBar()
         local unitId = GetUnitIdByName(name)
         if not unitId then return false end
 
-        local masterDemoIds = {23785, 23822, 23823, 23824, 23825}
+        local masterDemoIds = {23759, 23760, 23761, 23762, 23784, 23785, 23822, 23823, 23824, 23825, 23826, 23827, 23828, 23829, 23830, 23831, 23832, 23833, 23834, 23835, 23836, 23837, 23838, 23839, 23840, 23841, 23842, 23843, 23844, 35702, 35703, 35704, 35705, 35706, 35708}
         for i = 1, 40 do
             local buffName, _, _, _, _, _, _, _, _, _, spellId = UnitAura(unitId, i, "HELPFUL")
             if not buffName then break end
