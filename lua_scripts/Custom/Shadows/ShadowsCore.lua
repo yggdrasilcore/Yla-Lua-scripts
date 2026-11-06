@@ -413,7 +413,7 @@ local function ShadowsGossipSelect(event, player, object, sender, intid, code, m
     elseif intid == 6 then  -- Show list of active shadows to remove
         ListActiveShadows(player)
 	elseif intid == 7 then
-		if player:GetData("ShadowBarStatusChecked") then
+		if player:Data():Get("ShadowBarStatusChecked") then
 			player:SendAddonMessage("ShadowsBar", "SETTINGS", 7, player)
 		else
 			player:SendAreaTriggerMessage("Your shadow bar settings are loading, please try again in a few seconds.")
@@ -552,7 +552,7 @@ function SetShadowsBarData()
     -- Group players by their account ID and collect all GUIDs
     for _, player in pairs(GetPlayersInWorld()) do
         if player then
-			player:SetData("ShadowBarStatusChecked", true)
+			player:Data():Set("ShadowBarStatusChecked", true)
             local guid = player:GetGUIDLow()
             table.insert(allGuids, guid)
         end
@@ -1094,7 +1094,7 @@ local function OnBotCommand(event, player, command)
 		player:SendBroadcastMessage("Automatic shadows bar disabled.")
 		return false
 	elseif command == "shadowsbarstatus" then
-		player:SetData("ShadowBarStatusChecked", true)
+		player:Data():Set("ShadowBarStatusChecked", true)
 		if not player:IsInGroup() then
 			if player:Data():Get("ShadowsBarData") then
 				player:SendAddonMessage("ShadowsBar", "OPEN", 7, player)
