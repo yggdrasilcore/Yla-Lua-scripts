@@ -44,12 +44,11 @@ end
 
 local function OnLadyDeathwhisperCombat(event, player, enemy)
     if enemy and enemy:GetEntry() == LADY_DEATHWHISPER_ENTRY then
-        if not enemy:Data():Get("EventActive") then    
-            enemy:Data():Set("EventActive", true)
+        if not enemy:Data():Get("EventActive") then
             if player:GetDifficulty() == 0 or player:GetDifficulty() == 2 then
-                enemy:RegisterEvent(LadyDeathwhisper10Loop, 2500, 20)
+                enemy:Data():Set("EventActive", enemy:RegisterEvent(LadyDeathwhisper10Loop, 2500, 20))
             elseif player:GetDifficulty() == 1 or player:GetDifficulty() == 3 then
-                enemy:RegisterEvent(LadyDeathwhisper25Loop, 2500, 20)
+                enemy:Data():Set("EventActive", enemy:RegisterEvent(LadyDeathwhisper25Loop, 2500, 20))
             end
         end
     end

@@ -44,6 +44,9 @@ local SUPPRESS_MS                = 900000
 local MESH_STEP                  = 2
 local ANGLE_STEP                 = 10
 
+local AIR_PHASE_INTERVAL         = 124000
+local HEARTBEAT_STALE            = 2000
+
 local function InRoom(p)
     return p:GetX() > 4537 and p:GetX() < 4635
         and p:GetY() > 2729 and p:GetY() < 2808
@@ -87,7 +90,7 @@ local function UpdateMesh(boss, dynobjs)
     local sig = GetDynobjSignature(dynobjs)
     if sig == boss:Data():Get("BQMeshSignature") then return end
     boss:Data():Set("BQMeshSignature", sig)
-    local mesh = boss:Data():Get("BQBaseMesh")
+    local mesh = boss:Data():Get("BQBaseMesh"):AsTable()
     local valid = {}
     for i, p in ipairs(mesh) do
         valid[i] = true
@@ -125,8 +128,9 @@ local function GetSafePos(boss, x, y, maxSearchRadius, dynobjs)
         return {x, y, map:GetNearestFloor(x, y, 405)}
     end
     if not boss:Data():Get("BQBaseMesh") then BuildBaseMesh(boss) end
-    local mesh = boss:Data():Get("BQBaseMesh")
-    local valid = boss:Data():Get("BQMeshValid") or {}
+    local mesh = boss:Data():Get("BQBaseMesh"):AsTable()
+    local valid = boss:Data():Get("BQMeshValid")
+    if valid then valid = valid:AsTable() else valid = {} end
     local maxSq = maxSearchRadius and (maxSearchRadius * maxSearchRadius) or math.huge
     local best, bestSq = nil, math.huge
     for i, p in ipairs(mesh) do
@@ -178,16 +182,21 @@ end
 -- Role positions
 -- ============================================================
 
-local function GetHealerPos(healer, occupied, dynobjs)
+local function GetHealerPos(boss, healer, occupied, dynobjs)
     local locked = healer:Data():Get("BQHealerPos")
-    if locked and IsPosValid(locked[1], locked[2], dynobjs) then
-        return locked
+    if locked then
+        locked = locked:AsTable()
+        if IsPosValid(locked[1], locked[2], dynobjs) then
+            return locked[1], locked[2], locked[3]
+        end
     end
-    local pos = FindBestSpot(boss, CENTER[1], CENTER[2], HEALER_RADIUS, HEALER_RADIUS,
-                             occupied, dynobjs)
-    pos = pos or {CENTER[1], CENTER[2], boss:GetMap():GetNearestFloor(CENTER[1], CENTER[2], 405)}
-    healer:Data():Set("BQHealerPos", pos)
-    return pos
+    local spot = FindBestSpot(boss, CENTER[1], CENTER[2], HEALER_RADIUS, HEALER_RADIUS,
+                              occupied, dynobjs)
+    if not spot then
+        spot = {CENTER[1], CENTER[2], boss:GetMap():GetNearestFloor(CENTER[1], CENTER[2], 405)}
+    end
+    healer:Data():Set("BQHealerPos", spot)
+    return spot[1], spot[2], spot[3]
 end
 
 local function IsBehindBoss(boss, x, y)
@@ -200,12 +209,12 @@ local function GetMeleePos(boss, occupied, dynobjs)
                         function(x, y) return IsBehindBoss(boss, x, y) end)
 end
 
-local function GetRangedPos(boss, occupied, healerPositions, dynobjs)
+local function GetRangedPos(boss, occupied, healerPos, dynobjs)
     local bx, by = boss:GetX(), boss:GetY()
     return FindBestSpot(boss, bx, by, RANGED_RADIUS, RANGED_RADIUS, occupied, dynobjs,
                         function(x, y)
         if boss:GetExactDistance2d(x, y) > RANGED_LIMIT then return false end
-        for _, hp in ipairs(healerPositions) do
+        for _, hp in pairs(healerPos) do
             if math.sqrt((x - hp[1]) ^ 2 + (y - hp[2]) ^ 2) <= RANGED_LIMIT then
                 return true
             end
@@ -214,7 +223,7 @@ local function GetRangedPos(boss, occupied, healerPositions, dynobjs)
     end)
 end
 
-local function GetAirPos(occupied, dynobjs)
+local function GetAirPos(boss, occupied, dynobjs)
     return FindBestSpot(boss, CENTER[1], CENTER[2], AIR_RADIUS, AIR_RADIUS, occupied, dynobjs)
 end
 
@@ -254,7 +263,8 @@ end
 local function GetSwarmWaypoint(bot, dynobjs)
     local path = bot:Data():Get("BQSwarmPath")
     local index = bot:Data():Get("BQSwarmIndex") or 1
-    if not path or index > #path then
+    if path then path = path:AsTable() end
+    if not path or not path[index] then
         path = BuildSwarmPath(bot, dynobjs)
         index = 1
     end
@@ -286,13 +296,11 @@ local function GetBiteTarget(bot, allPlayers)
         if IsBiteable(p, bot) then
             local d = bot:GetExactDistance2d(p)
             if IsTank(p) or p:HasHealSpec() then
-                -- Tank or healer: kept as closest, only used when no DPS is left.
                 if d < tankDist then
                     tankDist = d
                     tank = p
                 end
             else
-                -- DPS in melee range: kept as highest HP.
                 if bot:IsWithinDist2d(p, 5) then
                     local hp = p:GetHealth()
                     if hp > meleeHp then
@@ -300,7 +308,6 @@ local function GetBiteTarget(bot, allPlayers)
                         melee = p
                     end
                 end
-                -- DPS anywhere: kept as closest.
                 if d < nearDist then
                     nearDist = d
                     near = p
@@ -308,7 +315,6 @@ local function GetBiteTarget(bot, allPlayers)
             end
         end
     end
-    -- Priority: melee-range DPS, then closest DPS, then closest healer/tank.
     return melee or near or tank
 end
 
@@ -399,10 +405,16 @@ end
 -- ============================================================
 
 local function MoveBot(boss, bot, pos, tolerance, dynobjs)
+    print("MoveBot "..bot:GetName().." desired "..tostring(pos[1])..","..tostring(pos[2])..","..tostring(pos[3]))
     local x, y = ClampToRoom(pos[1], pos[2])
     local safe = GetSafePos(boss, x, y, 15, dynobjs)
+    print("MoveBot "..bot:GetName().." clamped "..tostring(x)..","..tostring(y).." safe "..tostring(safe and safe[1])..","..tostring(safe and safe[2])..","..tostring(safe and safe[3]))
     if not safe then return end
-    if not IsAtPos(bot, safe[1], safe[2], tolerance) then
+    local atPos = IsAtPos(bot, safe[1], safe[2], tolerance)
+    local loc = {bot:GetLocation()}
+    print("MoveBot "..bot:GetName().." atPos="..tostring(atPos).." cur "..tostring(loc[1])..","..tostring(loc[2])..","..tostring(loc[3]).." suppressed="..tostring(bot:IsMovementSuppressed()))
+    if not atPos then
+        print("MoveBot MOVING "..bot:GetName().." to "..tostring(safe[1])..","..tostring(safe[2])..","..tostring(safe[3]))
         MoveImmediately(bot, safe[1], safe[2], safe[3])
     end
 end
@@ -438,8 +450,6 @@ local function OnInciteTerrorApply(event, unit, aura)
     end
 end
 RegisterAuraEvent(SPELL_INCITE_TERROR, 1, OnInciteTerrorApply)
-
-local AIR_PHASE_INTERVAL         = 124000
 
 local function PrepareAirPhase(boss)
     local map = boss:GetMap()
@@ -498,32 +508,48 @@ local function CleanupBQ(boss)
         end
     end
     boss:Data():Set("BQCombatStart", nil)
+    boss:Data():Set("BQCombatTime", nil)
+    boss:Data():Set("BQHeartbeat", nil)
     boss:Data():Set("BQAirPrep", nil)
+    boss:Data():Set("BQBaseMesh", nil)
 end
 
 local function BQLoop(eventId, delay, repeats, boss)
+    print("BQLoop ENTER boss="..tostring(boss and boss:GetName()).." dead="..tostring(boss and boss:IsDead()).." incombat="..tostring(boss and boss:IsInCombat()))
     if boss:IsDead() or not boss:IsInCombat() then
+        print("BQLoop STOP: boss dead or out of combat")
         CleanupBQ(boss)
         StopLuaEvent(boss)
         return
     end
 
+    local combatTime = (boss:Data():Get("BQCombatTime") or 0) + 200
+    boss:Data():Set("BQCombatTime", combatTime)
+    boss:Data():Set("BQHeartbeat", GetCurrTime())
+
     local dynobjs = boss:GetDynamicObjectsInRange(100, SWARMING_SHADOWS_DYNOBJ)
+    print("BQLoop dynobjs="..#dynobjs)
     UpdateMesh(boss, dynobjs)
 
+    local nearby = boss:GetPlayersInRange(100)
+    print("BQLoop players in 100yd="..#nearby)
     local allPlayers = {}
-    for _, p in ipairs(boss:GetPlayersInRange(100)) do
-        if InRoom(p) then table.insert(allPlayers, p) end
+    for _, p in ipairs(nearby) do
+        local inRoom = InRoom(p)
+        print("BQLoop player "..p:GetName().." bot="..tostring(p:IsBot()).." alive="..tostring(p:IsAlive())
+            .." incombat="..tostring(p:IsInCombat()).." xyz="..tostring(p:GetX())..","..tostring(p:GetY())..","..tostring(p:GetZ())
+            .." inRoom="..tostring(inRoom))
+        if inRoom then table.insert(allPlayers, p) end
     end
     local bots = {}
     for _, p in ipairs(allPlayers) do
         if p:IsAlive() and p:IsInCombat() and p:IsBot() then
-            table.insert(bots, p)
+            table.insert(bots, p:ToShadow())
         end
     end
+    print("BQLoop allPlayers="..#allPlayers.." bots="..#bots)
     if #bots == 0 then
-        CleanupBQ(boss)
-        StopLuaEvent(boss)
+        print("BQLoop: no bots in room, idling")
         return
     end
 
@@ -532,9 +558,6 @@ local function BQLoop(eventId, delay, repeats, boss)
     boss:Data():Set("BQCombatStart", combatStart)
     local inPull = (now - combatStart) < PULL_DURATION
     local airPhase = boss:HasAura(SPELL_INCITE_TERROR)
-
-    local combatTime = (boss:Data():Get("CombatTime") or 0) + 200
-    boss:Data():Set("CombatTime", combatTime)
 
     if not airPhase and combatTime >= AIR_PHASE_INTERVAL - 2000 then
         if not boss:Data():Get("BQAirPrep") then
@@ -565,14 +588,12 @@ local function BQLoop(eventId, delay, repeats, boss)
     table.sort(botMelee, SortByName)
     table.sort(botRanged, SortByName)
 
-    -- Pull threat
     if inPull and not boss:Data():Get("BQPullThreatApplied") then
         if mainTank then boss:AddThreat(mainTank, 10000) end
         if offTank and offTank:IsBot() then boss:AddThreat(offTank, 8000) end
         boss:Data():Set("BQPullThreatApplied", true)
     end
 
-    -- Healer locked positions
     local healerSet = {}
     for _, h in ipairs(botHealers) do
         healerSet[tostring(h:GetGUID())] = true
@@ -584,14 +605,14 @@ local function BQLoop(eventId, delay, repeats, boss)
         end
     end
 
-    local healerPos, healerPositions = {}, {}
+    local healerPos = {}
     for _, healer in ipairs(botHealers) do
-        local pos = GetHealerPos(healer, healerOccupied, dynobjs)
-        healerPos[tostring(healer:GetGUID())] = pos
-        table.insert(healerPositions, pos)
+        local x, y, z = GetHealerPos(boss, healer, healerOccupied, dynobjs)
+        print("BQLoop healer "..healer:GetName().." pos="..tostring(x)..","..tostring(y)..","..tostring(z))
+        healerPos[tostring(healer:GetGUID())] = {x, y, z}
+        table.insert(healerOccupied, {x = x, y = y})
     end
 
-    -- Melee spread behind the boss
     local meleePos = {}
     if #botMelee > 0 then
         local meleeSet = {}
@@ -613,7 +634,6 @@ local function BQLoop(eventId, delay, repeats, boss)
         end
     end
 
-    -- Ranged spread around the boss
     local rangedPos = {}
     if #botRanged > 0 then
         local rangedSet = {}
@@ -627,7 +647,7 @@ local function BQLoop(eventId, delay, repeats, boss)
             end
         end
         for _, r in ipairs(botRanged) do
-            local pos = GetRangedPos(boss, occupied, healerPositions, dynobjs)
+            local pos = GetRangedPos(boss, occupied, healerPos, dynobjs)
             if pos then
                 rangedPos[tostring(r:GetGUID())] = pos
                 table.insert(occupied, {x = pos[1], y = pos[2]})
@@ -635,7 +655,6 @@ local function BQLoop(eventId, delay, repeats, boss)
         end
     end
 
-    -- Air-phase spread up to 25 yds from center
     local airPos = {}
     if airPhase then
         local occupied = {}
@@ -646,7 +665,7 @@ local function BQLoop(eventId, delay, repeats, boss)
         end
         for _, bot in ipairs(bots) do
             if not bot:HasHealSpec() then
-                local pos = GetAirPos(occupied, dynobjs)
+                local pos = GetAirPos(boss, occupied, dynobjs)
                 if pos then
                     airPos[tostring(bot:GetGUID())] = pos
                     table.insert(occupied, {x = pos[1], y = pos[2]})
@@ -662,9 +681,14 @@ local function BQLoop(eventId, delay, repeats, boss)
 
     for _, bot in ipairs(bots) do
         local guidKey = tostring(bot:GetGUID())
+        print("BQLoop bot "..bot:GetName().." healer="..tostring(bot:HasHealSpec()).." tank="..tostring(IsTank(bot))
+            .." melee="..tostring(bot:HasMeleeSpec()))
 
-        if not bot:IsMovementSuppressed() then
-            shadow:SuppressMovement(SUPPRESS_MS)
+        if bot:IsMovementSuppressed() then
+            print("BQLoop "..bot:GetName().." already suppressed")
+        else
+            bot:SuppressMovement(SUPPRESS_MS)
+            print("BQLoop "..bot:GetName().." suppressed for "..tostring(SUPPRESS_MS))
         end
 
         local isSwarmer = bot:HasAura(SPELL_SWARMING_SHADOWS)
@@ -718,10 +742,14 @@ local function BQLoop(eventId, delay, repeats, boss)
 
         if desired then
             MoveBot(boss, bot, desired, 2.5, dynobjs)
+        else
+            print("NO DESIRED for "..bot:GetName().." air="..tostring(airPhase)
+                .." swarmer="..tostring(isSwarmer).." pact="..tostring(isPact)
+                .." bite="..tostring(isBloodthirst))
         end
     end
 
-    boss:RegisterEvent(BQLoop, 200, 1)
+    print("BQLoop tick bots="..#bots.." time="..combatTime.." air="..tostring(airPhase))
 end
 
 -- ============================================================
@@ -729,19 +757,28 @@ end
 -- ============================================================
 
 local function BQOnEnterCombat(event, player, boss)
+    print("BQOnEnterCombat player="..tostring(player and player:GetName()).." boss="..tostring(boss and boss:GetName()).." entry="..tostring(boss and boss:GetEntry()))
     if not boss or not (boss:GetEntry() == BLOOD_QUEEN_ENTRY) then return end
 
     local shadow = player:ToShadow()
     if shadow then
+        print("shadow "..shadow:GetName().." found attacking BQL!")
         shadow:SuppressMovement(SUPPRESS_MS)
         shadow:ToggleCombatStrategy("-icc")
+    else
+        print("player "..player:GetName().." is not a shadow.")
     end
 
     if player:GetDifficulty() > 1 then
         ApplyHiddenBuffsToShadows(player)
     end
 
-    if boss:Data():Get("EventActive") == true then return end
+    local heartbeat = boss:Data():Get("BQHeartbeat")
+    if heartbeat and GetTimeDiff(heartbeat) < HEARTBEAT_STALE then
+        print("BQ enter: loop already running, heartbeat age="..GetTimeDiff(heartbeat).."ms")
+        return
+    end
+    print("BQ enter: starting loop")
 
     BuildBaseMesh(boss)
     local map = boss:GetMap()
@@ -753,16 +790,20 @@ local function BQOnEnterCombat(event, player, boss)
         end
     end
 
+    boss:Data():Set("BQCombatTime", 0)
     boss:Data():Set("BQCombatStart", os.time())
     boss:Data():Set("BQPullThreatApplied", nil)
     boss:Data():Set("BQAirPrep", nil)
     boss:Data():Set("BQMeshSignature", nil)
-
-    StartLuaEvent(boss, BQLoop)
+    print("BQ enter: registering loop")
+    boss:Data():Set("BQHeartbeat", GetCurrTime())
+    StartLuaEvent(boss, BQLoop, 200, 0)
+    print("BQ enter: after StartLuaEvent EventActive="..tostring(boss:Data():Get("EventActive")))
 end
 RegisterPlayerEvent(33, BQOnEnterCombat)
 
 local function BQOnLeaveCombat(event, player)
+    print("BQOnLeaveCombat player="..tostring(player and player:GetName()).." map="..tostring(player and player:GetMapId()))
     if not (player:GetMapId() == 631) then return end
     local shadow = player:ToShadow()
     if shadow then
