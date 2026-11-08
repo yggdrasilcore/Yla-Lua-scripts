@@ -29,14 +29,14 @@ local function OnNPCSpawn(event, creature)
 end
 
 local function OnReset(event, creature)
-    creature:SetData("shockwave_timer", math.random(20000, 25000))
-    creature:SetData("enrage_timer", math.random(11000, 14000))
-    creature:SetData("frenzied", 0)
+    creature:Data():Set("shockwave_timer", math.random(20000, 25000))
+    creature:Data():Set("enrage_timer", math.random(11000, 14000))
+    creature:Data():Set("frenzied", 0)
 end
 
 local function OnDamageTaken(event, creature, attacker, damage)
-    if creature:GetData("frenzied") == 0 and creature:GetMap():IsHeroic() and creature:GetHealthPct() < 20 then
-        creature:SetData("frenzied", 1)
+    if creature:Data():Get("frenzied") == 0 and creature:GetMap():IsHeroic() and creature:GetHealthPct() < 20 then
+        creature:Data():Set("frenzied", 1)
         creature:CastSpell(creature, SPELL_FRENZY, true)
     end
 end
@@ -55,7 +55,7 @@ local function OnUpdateAI(event, creature, diff)
         return
     end
 
-    local shockwave_timer = creature:GetData("shockwave_timer")
+    local shockwave_timer = creature:Data():Get("shockwave_timer")
     if not shockwave_timer or shockwave_timer <= diff then
         creature:CastSpell(creature:GetVictim(), SPELL_SHOCKWAVE, false)
 
@@ -71,18 +71,18 @@ local function OnUpdateAI(event, creature, diff)
             end
         end
             
-        creature:SetData("shockwave_timer", math.random(20000, 25000))
+        creature:Data():Set("shockwave_timer", math.random(20000, 25000))
     else
-        creature:SetData("shockwave_timer", shockwave_timer - diff)
+        creature:Data():Set("shockwave_timer", shockwave_timer - diff)
     end
 
     -- Handle Enrage
-    local enrage_timer = creature:GetData("enrage_timer")
+    local enrage_timer = creature:Data():Get("enrage_timer")
     if not enrage_timer or enrage_timer <= diff then
         creature:CastSpell(creature, SPELL_ENRAGE, false)
-        creature:SetData("enrage_timer", math.random(11000, 14000))
+        creature:Data():Set("enrage_timer", math.random(11000, 14000))
     else
-        creature:SetData("enrage_timer", enrage_timer - diff)
+        creature:Data():Set("enrage_timer", enrage_timer - diff)
     end
 end
 

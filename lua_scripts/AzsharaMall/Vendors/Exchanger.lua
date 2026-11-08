@@ -35,7 +35,7 @@ end
 local function BuyCurrency(player, itemId, cost, amount, currencyName, costCurrency)
     print("BuyCurrency called:", itemId, cost, amount, currencyName, costCurrency)
     local totalCost = cost * amount
-    local rewardMult = player:GetData("RewardMultiplier") or 1
+    local rewardMult = player:Data():Get("RewardMultiplier") or 1
     local actualAmount = amount * rewardMult
     if player:HasItem(costCurrency, totalCost) then
         player:RemoveItem(costCurrency, totalCost)
@@ -50,7 +50,7 @@ end
 local function BuyHonorPoints(player, cost, amount, costCurrency)
     print("BuyHonorPoints called:", cost, amount, costCurrency)
     local totalCost = cost * amount
-    local rewardMult = player:GetData("RewardMultiplier") or 1
+    local rewardMult = player:Data():Get("RewardMultiplier") or 1
     local honorAmount = rewardMult * amount
     local currentHonor = player:GetHonorPoints()
     if currentHonor + honorAmount > HONOR_CAP then
@@ -95,12 +95,12 @@ local function ShowAmountMenu(player, creature, currencyId, cost, currencyName, 
     player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-26:0|tBack", 0, 99)
     player:GossipSendMenu(12, creature, 60)
     
-    player:SetData("SelectedCurrencyId", currencyId)
-    player:SetData("SelectedCurrencyCost", cost)
-    player:SetData("SelectedCurrencyName", currencyName)
-    player:SetData("SelectedCostCurrency", costCurrency)
-    player:SetData("IsHonorPurchase", isHonor and 1 or 0)
-    player:SetData("RewardMultiplier", mult)
+    player:Data():Set("SelectedCurrencyId", currencyId)
+    player:Data():Set("SelectedCurrencyCost", cost)
+    player:Data():Set("SelectedCurrencyName", currencyName)
+    player:Data():Set("SelectedCostCurrency", costCurrency)
+    player:Data():Set("IsHonorPurchase", isHonor and 1 or 0)
+    player:Data():Set("RewardMultiplier", mult)
 end
 
 local function OnGossipSelect(event, player, creature, sender, intid, code)
@@ -142,7 +142,7 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
         elseif intid == 205 then amount = 50
         elseif intid == 206 then amount = 100
         elseif intid == 207 then
-            local rewardMult = player:GetData("RewardMultiplier") or 1
+            local rewardMult = player:Data():Get("RewardMultiplier") or 1
             local desiredItems = tonumber(code)
             if not desiredItems or desiredItems <= 0 then
                 player:SendBroadcastMessage("Invalid amount. Please enter a positive number.")
@@ -161,12 +161,12 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
 
         print("Selected amount:", amount)
 
-        local currencyId = player:GetData("SelectedCurrencyId")
-        local cost = player:GetData("SelectedCurrencyCost")
-        local currencyName = player:GetData("SelectedCurrencyName")
-        local costCurrency = player:GetData("SelectedCostCurrency")
-        local isHonor = player:GetData("IsHonorPurchase") == 1
-        local rewardMult = player:GetData("RewardMultiplier") or 1
+        local currencyId = player:Data():Get("SelectedCurrencyId")
+        local cost = player:Data():Get("SelectedCurrencyCost")
+        local currencyName = player:Data():Get("SelectedCurrencyName")
+        local costCurrency = player:Data():Get("SelectedCostCurrency")
+        local isHonor = player:Data():Get("IsHonorPurchase") == 1
+        local rewardMult = player:Data():Get("RewardMultiplier") or 1
 
         local totalCost = cost * amount
         local actualAmount = amount * rewardMult
@@ -174,14 +174,14 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
         player:GossipMenuAddItem(1, confirmMessage, 0, 300, false, confirmMessage)
         player:GossipSendMenu(12, creature, 60)
         
-        player:SetData("BuyAmount", amount)
+        player:Data():Set("BuyAmount", amount)
     elseif intid == 300 then
-        local amount = player:GetData("BuyAmount")
-        local currencyId = player:GetData("SelectedCurrencyId")
-        local cost = player:GetData("SelectedCurrencyCost")
-        local currencyName = player:GetData("SelectedCurrencyName")
-        local costCurrency = player:GetData("SelectedCostCurrency")
-        local isHonor = player:GetData("IsHonorPurchase") == 1
+        local amount = player:Data():Get("BuyAmount")
+        local currencyId = player:Data():Get("SelectedCurrencyId")
+        local cost = player:Data():Get("SelectedCurrencyCost")
+        local currencyName = player:Data():Get("SelectedCurrencyName")
+        local costCurrency = player:Data():Get("SelectedCostCurrency")
+        local isHonor = player:Data():Get("IsHonorPurchase") == 1
 
         if not amount or not currencyId or not cost or not currencyName then
             player:SendBroadcastMessage("An error occurred. Please try again.")

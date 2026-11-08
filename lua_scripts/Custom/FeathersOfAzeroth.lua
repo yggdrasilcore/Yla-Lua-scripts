@@ -363,11 +363,11 @@ local function CheckZ(eventId, delay, repeats, player)
   end
   
    if not mountId or not ZonesToCheckZ(player) then
-       player:SetData("MountEvent", false)
+       player:Data():Set("MountEvent", false)
        return
    end
   
-  local currentLocKey = player:GetData("CurrentLocKey") or "Loc1"
+  local currentLocKey = player:Data():Get("CurrentLocKey") or "Loc1"
   local nextLocKey = currentLocKey == "Loc1" and "Loc2" or "Loc1"
   
   local maxAllowedZ = MAX_Z
@@ -411,12 +411,12 @@ local function CheckZ(eventId, delay, repeats, player)
   end
   
   if z <= teleportZ then
-      player:SetData(currentLocKey, string.format("%f,%f,%f,%f", x, y, z, o))
-      player:SetData("CurrentLocKey", nextLocKey)
+      player:Data():Set(currentLocKey, string.format("%f,%f,%f,%f", x, y, z, o))
+      player:Data():Set("CurrentLocKey", nextLocKey)
   end
   
   if z > maxAllowedZ and canTeleport then
-      local prevLoc = player:GetData(nextLocKey)
+      local prevLoc = player:Data():Get(nextLocKey)
       if prevLoc then
           local lastX, lastY, lastZ, lastO = prevLoc:match("([^,]+),([^,]+),([^,]+),([^,]+)")
           lastX, lastY, lastZ, lastO = tonumber(lastX), tonumber(lastY), tonumber(lastZ), tonumber(lastO)
@@ -426,9 +426,9 @@ local function CheckZ(eventId, delay, repeats, player)
           player:Teleport(mapId, x, y, teleportZ, o)
       end
       
-       if not player:GetData("LastWarning") or os.time() - player:GetData("LastWarning") >= 5 then
+       if not player:Data():Get("LastWarning") or os.time() - player:Data():Get("LastWarning") >= 5 then
            player:SendBroadcastMessage("You can't fly that high in this area!")
-           player:SetData("LastWarning", os.time())
+           player:Data():Set("LastWarning", os.time())
        end
    end
    player:RegisterEvent(CheckZ, 200, 1)
@@ -608,8 +608,8 @@ end
 local function checkMount(player)
 	for _, id in ipairs(FLYING_MOUNTS) do
 		if player:HasAura(id) then
-			if not player:GetData("MountEvent") then
-				player:SetData("MountEvent", true)
+			if not player:Data():Get("MountEvent") then
+				player:Data():Set("MountEvent", true)
 				player:RegisterEvent(CheckZ, 200, 1)
 				print("[Feathers of Azeroth]: Starting zone-based Z check")
 			end

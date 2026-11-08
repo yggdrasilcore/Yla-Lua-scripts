@@ -1,5 +1,5 @@
 function StopLuaEvent(unit)
     unit:RemoveEvents()
-    unit:SetData("EventActive", nil)
-    unit:SetData("CombatTime", nil)
+    unit:Data():Set("EventActive", nil)
+    unit:Data():Set("CombatTime", nil)
 end

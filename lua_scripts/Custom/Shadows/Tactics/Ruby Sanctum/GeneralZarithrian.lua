@@ -2,11 +2,11 @@ if GetStateMapId() ~= 724 then return end
 
 local function GeneralZarithrian(eventId, delay, repeats, zarithrian)
     if zarithrian:IsDead() or not zarithrian:IsInCombat() then        
-        zarithrian:SetData("CachedMainTank", nil)
-        zarithrian:SetData("CachedOffTank", nil)
-        zarithrian:SetData("CombatStartTime", nil)
-        zarithrian:SetData("LastSwapTime", nil)
-        zarithrian:SetData("TankingAdds", nil)
+        zarithrian:Data():Set("CachedMainTank", nil)
+        zarithrian:Data():Set("CachedOffTank", nil)
+        zarithrian:Data():Set("CombatStartTime", nil)
+        zarithrian:Data():Set("LastSwapTime", nil)
+        zarithrian:Data():Set("TankingAdds", nil)
         
         StopLuaEvent(zarithrian)
         return
@@ -28,13 +28,13 @@ local function GeneralZarithrian(eventId, delay, repeats, zarithrian)
     local offTankPos = {x = 3039, y = 513, z = 89.11}
     local rangedCenter = {x = 3024, y = 527, z = 89}
     
-    local combatStartTime = zarithrian:GetData("CombatStartTime")
-    local lastSwapTime = zarithrian:GetData("LastSwapTime")
+    local combatStartTime = zarithrian:Data():Get("CombatStartTime")
+    local lastSwapTime = zarithrian:Data():Get("LastSwapTime")
     
     if not combatStartTime then
         combatStartTime = os.time()
-        zarithrian:SetData("CombatStartTime", combatStartTime)
-        zarithrian:SetData("LastSwapTime", combatStartTime)
+        zarithrian:Data():Set("CombatStartTime", combatStartTime)
+        zarithrian:Data():Set("LastSwapTime", combatStartTime)
         lastSwapTime = combatStartTime
     end
     
@@ -66,12 +66,12 @@ local function GeneralZarithrian(eventId, delay, repeats, zarithrian)
     if not useNormalTactics or hasRealPlayerTank then
         if mainTank and mainTankIsBot then
             local adds = zarithrian:GetCreaturesInRange(100, 39814)
-            local tankingAdds = zarithrian:GetData("TankingAdds") or false
+            local tankingAdds = zarithrian:Data():Get("TankingAdds") or false
             
             if combatTime > 0 and (combatTime - (lastSwapTime - combatStartTime)) >= 30 then
                 tankingAdds = not tankingAdds
-                zarithrian:SetData("TankingAdds", tankingAdds)
-                zarithrian:SetData("LastSwapTime", os.time())
+                zarithrian:Data():Set("TankingAdds", tankingAdds)
+                zarithrian:Data():Set("LastSwapTime", os.time())
             end
             
             if tankingAdds then
@@ -105,7 +105,7 @@ local function GeneralZarithrian(eventId, delay, repeats, zarithrian)
         
         if offTank and offTankIsBot then
             local adds = zarithrian:GetCreaturesInRange(100, 39814)
-            local tankingAdds = zarithrian:GetData("TankingAdds") or false
+            local tankingAdds = zarithrian:Data():Get("TankingAdds") or false
             
             if not tankingAdds then
                 if not IsAtPos(offTank, offTankPos.x, offTankPos.y, 2) then
@@ -137,11 +137,11 @@ local function GeneralZarithrian(eventId, delay, repeats, zarithrian)
         end
     else
         if combatTime > 0 and (combatTime - (lastSwapTime - combatStartTime)) >= 30 then
-            local tempMainName = zarithrian:GetData("CachedMainTank")
-            local tempOffName = zarithrian:GetData("CachedOffTank")
-            zarithrian:SetData("CachedMainTank", tempOffName)
-            zarithrian:SetData("CachedOffTank", tempMainName)
-            zarithrian:SetData("LastSwapTime", os.time())
+            local tempMainName = zarithrian:Data():Get("CachedMainTank")
+            local tempOffName = zarithrian:Data():Get("CachedOffTank")
+            zarithrian:Data():Set("CachedMainTank", tempOffName)
+            zarithrian:Data():Set("CachedOffTank", tempMainName)
+            zarithrian:Data():Set("LastSwapTime", os.time())
             
             mainTank, offTank = IdentifyTanks(zarithrian)
             mainTankIsBot = mainTank and mainTank:IsBot() or false
@@ -292,7 +292,7 @@ local function GeneralZarithrian(eventId, delay, repeats, zarithrian)
             local px, py = player:GetX(), player:GetY()
             
             if px < rangedCenter.x - 10 or px > rangedCenter.x + 10 or py < rangedCenter.y - 15 or py > rangedCenter.y + 15 then
-                local lastMoved = player:GetData("LastMovedZarithrian") or 0
+                local lastMoved = player:Data():Get("LastMovedZarithrian") or 0
                 local currentTime = os.time()
                 
                 if currentTime - lastMoved >= 5 then
@@ -300,7 +300,7 @@ local function GeneralZarithrian(eventId, delay, repeats, zarithrian)
                     local targetY = rangedCenter.y + math.random(-15, 15)
                     local targetZ = map:GetHeight(targetX, targetY)
                     player:MoveTo(1, targetX, targetY, targetZ, true)
-                    player:SetData("LastMovedZarithrian", currentTime)
+                    player:Data():Set("LastMovedZarithrian", currentTime)
                 end
             end
         end
@@ -313,10 +313,10 @@ local function GeneralZarithrian(eventId, delay, repeats, zarithrian)
         for _, player in pairs(playersNearAdd) do
             local name = player:GetName()
             if player:IsBot() then
-                local lastDamageTime = player:GetData("LastFlamecallerDamage") or 0
+                local lastDamageTime = player:Data():Get("LastFlamecallerDamage") or 0
                 if currentTime - lastDamageTime >= 2 then
                     player:DealDamage(add, add:GetMaxHealth() * (math.random() * 0.01 + 0.015))
-                    player:SetData("LastFlamecallerDamage", currentTime)
+                    player:Data():Set("LastFlamecallerDamage", currentTime)
                 end
             end
         end

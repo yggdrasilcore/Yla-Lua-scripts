@@ -155,8 +155,8 @@ local function ShowCategoryContents(player, creature, category, page)
     player:GossipSendMenu(12, creature, 60)
 
     -- Store the current category and page in the player's temporary storage
-    player:SetData("CurrentCategory", category)
-    player:SetData("CurrentPage", page)
+    player:Data():Set("CurrentCategory", category)
+    player:Data():Set("CurrentPage", page)
 end
 
 local function VIPmenu(player, creature)
@@ -389,13 +389,13 @@ local function TwiggyGossipSelect(event, player, creature, sender, intId, code)
 		player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-22:0|tBack", 0, 50)
 		player:GossipSendMenu(12, creature, 60)
 	elseif intId == 998 or intId == 997 then
-		local currentCategory = player:GetData("CurrentCategory")
-		local currentPage = player:GetData("CurrentPage")
+		local currentCategory = player:Data():Get("CurrentCategory")
+		local currentPage = player:Data():Get("CurrentPage")
 		local newPage = intId == 998 and currentPage + 1 or currentPage - 1
 		ShowCategoryContents(player, creature, currentCategory, newPage)
 	elseif intId == 999 then
-		local currentCategory = player:GetData("CurrentCategory")
-		local currentPage = player:GetData("CurrentPage")
+		local currentCategory = player:Data():Get("CurrentCategory")
+		local currentPage = player:Data():Get("CurrentPage")
 		local newPage = intId == 999 and currentPage
 		ShowCategoryContents(player, creature, currentCategory, newPage)
 	elseif intId == 501 then

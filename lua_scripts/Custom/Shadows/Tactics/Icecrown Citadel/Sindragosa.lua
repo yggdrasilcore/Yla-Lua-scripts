@@ -2,7 +2,7 @@ if GetStateMapId() ~= 631 then return end
 
 function CombatCheck(eventId, delay, repeats, sindragosa)
     if sindragosa:IsDead() or not sindragosa:IsInCombat() then
-        sindragosa:SetData("SindyEventOn", nil)
+        sindragosa:Data():Set("SindyEventOn", nil)
         RemoveEventById(eventId)
         return
     end
@@ -80,11 +80,11 @@ function CombatCheck(eventId, delay, repeats, sindragosa)
 			if healthPct > 35 then
 				shouldDamage = true
 			else
-				if not tomb:GetData("TombTime") then
-					tomb:SetData("TombTime", currentTime)
+				if not tomb:Data():Get("TombTime") then
+					tomb:Data():Set("TombTime", currentTime)
 				end
 				
-				local tombAge = currentTime - tomb:GetData("TombTime")
+				local tombAge = currentTime - tomb:Data():Get("TombTime")
 				if tombAge > 9 then
 					shouldDamage = true
 				end
@@ -95,7 +95,7 @@ function CombatCheck(eventId, delay, repeats, sindragosa)
 				
 				for _, player in pairs(playersNearTomb) do
 					if player:IsBot() then
-						local lastDamageTime = player:GetData("LastTombDamage") or 0
+						local lastDamageTime = player:Data():Get("LastTombDamage") or 0
 						
 						if currentTime - lastDamageTime >= 1.5 then
 							local nearestTomb = player:GetNearestCreature(10, 36980, 0)
@@ -109,7 +109,7 @@ function CombatCheck(eventId, delay, repeats, sindragosa)
 									player:DealDamage(nearestTomb, baseDamage * 1.5)
 								end
 								
-								player:SetData("LastTombDamage", currentTime)
+								player:Data():Set("LastTombDamage", currentTime)
 							end
 						end
 					end
@@ -121,8 +121,8 @@ end
 
 function OnSindyCombat(event, player, enemy)
     if enemy and enemy:GetEntry() == 36853 then
-        if not enemy:GetData("SindyEventOn") then
-            enemy:SetData("SindyEventOn", true)
+        if not enemy:Data():Get("SindyEventOn") then
+            enemy:Data():Set("SindyEventOn", true)
             enemy:RegisterEvent(CombatCheck, 300, 0)
         end
     end

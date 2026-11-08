@@ -127,9 +127,9 @@ end
 
 local function WhisperBagsFull(player, data)
     local throttleKey = "BagsFullWhisper_" .. data.itemId
-    local lastWhisper = player:GetData(throttleKey)
+    local lastWhisper = player:Data():Get(throttleKey)
     if lastWhisper and os.time() - lastWhisper < 120 then return end
-    player:SetData(throttleKey, os.time())
+    player:Data():Set(throttleKey, os.time())
 
     local masterName = player:IsBot()
     local master
@@ -232,8 +232,8 @@ local function OnMapChange(event, player)
     if not player then return end
     if not player:IsBot() then return end
     AdoptQuestItemGO()
-    if player:GetData("BotQuestLoopActive") then return end
-    player:SetData("BotQuestLoopActive", true)
+    if player:Data():Get("BotQuestLoopActive") then return end
+    player:Data():Set("BotQuestLoopActive", true)
     player:RegisterEvent(CheckForQuestGOs, {20000, 30000}, 0)
 end
 

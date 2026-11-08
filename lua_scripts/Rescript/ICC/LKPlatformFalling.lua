@@ -30,7 +30,7 @@ end
 
 local function CheckPositions(eventid, delay, repeats, player)
     if not player:IsInCombat() or player:GetAreaId() ~= 4859 then
-        player:SetData("PositionCheckActive", nil)
+        player:Data():Set("PositionCheckActive", nil)
         RemoveEventById(eventid)
         return
     end
@@ -62,8 +62,8 @@ local function OnEnterCombat(event, player, enemy)
     
     if not (player:GetAreaId() == 4859) then return end
     
-    if not player:GetData("PositionCheckActive") then
-        player:SetData("PositionCheckActive", true)
+    if not player:Data():Get("PositionCheckActive") then
+        player:Data():Set("PositionCheckActive", true)
         player:RegisterEvent(CheckPositions, 1000, 1500)
     end
 end

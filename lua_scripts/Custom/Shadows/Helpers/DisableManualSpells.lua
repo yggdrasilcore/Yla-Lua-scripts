@@ -146,7 +146,7 @@ function DisableManualSpells(player)
     
     if not player:IsBot() then return end
     
-    if player:GetData("RemovedManualSpells") then return end
+    if player:Data():Get("RemovedManualSpells") then return end
     
     local guidLow = player:GetGUIDLow()
     local playerName = player:GetName():gsub("'", "''")
@@ -171,7 +171,7 @@ function DisableManualSpells(player)
         
         CharDBExecute("REPLACE INTO ycore_yla.disable_shadows_spells (guid, spell_id) VALUES " .. table.concat(values, ", "))
         RemovedPlayerSpells[guidLow] = playerSpellsToRemove
-        player:SetData("RemovedManualSpells", true)
+        player:Data():Set("RemovedManualSpells", true)
         PrintInfo("[DisableManualSpells] Cached and saved " .. #playerSpellsToRemove .. " spells for " .. playerName)
     end
 end
@@ -181,7 +181,7 @@ local function OnMapChange(event, player)
     
     if not player:IsBot() then return end
     
-    player:SetData("RemovedManualSpells", false)
+    player:Data():Set("RemovedManualSpells", false)
     
     local guidLow = player:GetGUIDLow()
     local cachedSpells = RemovedPlayerSpells[guidLow]
@@ -243,7 +243,7 @@ local function OnLeaveCombat(event, player)
             end
         end
         player:SaveToDB()
-        player:SetData("RemovedManualSpells", false)
+        player:Data():Set("RemovedManualSpells", false)
     end
 end
 

@@ -168,7 +168,7 @@ local function PushInitModule(eventid, delay, repeats)
         pushingName[eventid] = nil
         return
     end
-	if(player:GetData("ModuleInit") == true) then
+	if(player:Data():Get("ModuleInit") == true) then
 		RemoveEventById(eventid)
 		SendAddonInjector(player)
         pushingModule[player:GetGUIDLow()] = nil
@@ -194,7 +194,7 @@ local function AwaitInjection(event, player)
         return
     end
 	player:QueueWardenPayload()
-	player:SetData("ModuleInit", false)
+	player:Data():Set("ModuleInit", false)
     pushingModule[player:GetGUIDLow()] = true
 	local pushId = CreateLuaEvent(PushInitModule, 1000, 75)
     pushingName[pushId] = player:GetName()
@@ -202,15 +202,15 @@ end
 
 
 local function SetReloadFlag(event, packet, player)
-	player:SetData("JustReloaded", os.time() + reloadGraceTimer) -- Sets JustReloaded flag on cancel logout, which fires immediately before a reload
+	player:Data():Set("JustReloaded", os.time() + reloadGraceTimer) -- Sets JustReloaded flag on cancel logout, which fires immediately before a reload
 end
 
 local function AwaitPacketInjection(event, packet, player)
     if player:IsBot() then return end
-    if player:GetData("JustReloaded") and player:GetData("JustReloaded") > os.time() and not pushingModule[player:GetGUIDLow()] then -- Inject only if both cancel logout AND set action bars called close to each other, and not currently injecting to player 
+    if player:Data():Get("JustReloaded") and player:Data():Get("JustReloaded") > os.time() and not pushingModule[player:GetGUIDLow()] then -- Inject only if both cancel logout AND set action bars called close to each other, and not currently injecting to player 
         player:QueueWardenPayload()
-        player:SetData("ModuleInit", false)
-        player:SetData("JustReloaded", nil) -- Remove the reload flag we just set
+        player:Data():Set("ModuleInit", false)
+        player:Data():Set("JustReloaded", nil) -- Remove the reload flag we just set
         pushingModule[player:GetGUIDLow()] = true
         local pushId = CreateLuaEvent(PushInitModule, 1000, 75)
         pushingName[pushId] = player:GetName()
@@ -227,7 +227,7 @@ local function OnAddonMessageReceived(event, player, _type, header, data, target
             if(header == "wc") then
                 if(data == "loaded") then
                     -- module is loaded and ready to receive data
-                    player:SetData("ModuleInit", true)
+                    player:Data():Set("ModuleInit", true)
                 elseif(data == "kill") then
                     if (killLimit[name] and killLimit[name] == os.time()) then
                         return

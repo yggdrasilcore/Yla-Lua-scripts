@@ -22,22 +22,22 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
             end
         end
         
-        baltharus:SetData("CachedMainTank", nil)
-        baltharus:SetData("CachedOffTank", nil)
-        baltharus:SetData("CombatStartTime", nil)
-        baltharus:SetData("MovedToWaitSpot", nil)
-        baltharus:SetData("SkullSet", nil)
-        baltharus:SetData("MovedThisCast", nil)
-        baltharus:SetData("MovedForOrientation", nil)
-        baltharus:SetData("TempestTargetX", nil)
-        baltharus:SetData("TempestTargetY", nil)
-        baltharus:SetData("TempestTargetZ", nil)
-        baltharus:SetData("LastMainTankTargetX", nil)
-        baltharus:SetData("LastMainTankTargetY", nil)
-        baltharus:SetData("MainTankLastX", nil)
-        baltharus:SetData("MainTankLastY", nil)
-        baltharus:SetData("OffTankLastX", nil)
-        baltharus:SetData("OffTankLastY", nil)
+        baltharus:Data():Set("CachedMainTank", nil)
+        baltharus:Data():Set("CachedOffTank", nil)
+        baltharus:Data():Set("CombatStartTime", nil)
+        baltharus:Data():Set("MovedToWaitSpot", nil)
+        baltharus:Data():Set("SkullSet", nil)
+        baltharus:Data():Set("MovedThisCast", nil)
+        baltharus:Data():Set("MovedForOrientation", nil)
+        baltharus:Data():Set("TempestTargetX", nil)
+        baltharus:Data():Set("TempestTargetY", nil)
+        baltharus:Data():Set("TempestTargetZ", nil)
+        baltharus:Data():Set("LastMainTankTargetX", nil)
+        baltharus:Data():Set("LastMainTankTargetY", nil)
+        baltharus:Data():Set("MainTankLastX", nil)
+        baltharus:Data():Set("MainTankLastY", nil)
+        baltharus:Data():Set("OffTankLastX", nil)
+        baltharus:Data():Set("OffTankLastY", nil)
         
         StopLuaEvent(baltharus) 
         return 
@@ -63,9 +63,9 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
         if player:IsInGroup() then setter = player break end
     end
 
-    if setter and not baltharus:GetData("SkullSet") then
+    if setter and not baltharus:Data():Get("SkullSet") then
         SetTargetIconDeferred(setter, 7, baltharus)
-        baltharus:SetData("SkullSet", true)
+        baltharus:Data():Set("SkullSet", true)
     end
     
     local map = baltharus:GetMap()
@@ -73,11 +73,11 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
     local pullSpot = {x = 3152, y = 495, z = 72.25}
     local waitSpot = {x = 3169, y = 502, z = 72.03}
     
-    local combatStartTime = baltharus:GetData("CombatStartTime")
+    local combatStartTime = baltharus:Data():Get("CombatStartTime")
     
     if not combatStartTime then
         combatStartTime = os.time()
-        baltharus:SetData("CombatStartTime", combatStartTime)
+        baltharus:Data():Set("CombatStartTime", combatStartTime)
     end
     
     local combatTime = os.time() - combatStartTime
@@ -107,14 +107,14 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
         if clone:IsAlive() and clone:IsInCombat() then
             table.insert(bossTargets, clone)
             
-            if not clone:GetData("UsedSpawnDefensive") and mainTank and offTank then
+            if not clone:Data():Get("UsedSpawnDefensive") and mainTank and offTank then
                 if mainTank:IsBot() then
                     UseDefensive(mainTank)
                 end
                 if offTank:IsBot() then
                     UseDefensive(offTank)
                 end
-                clone:SetData("UsedSpawnDefensive", true)
+                clone:Data():Set("UsedSpawnDefensive", true)
             end
         end
     end
@@ -187,13 +187,13 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
             mainTank:AddAura(54861, mainTank)
         end
     else
-        local hasMovedToWaitSpot = baltharus:GetData("MovedToWaitSpot")
+        local hasMovedToWaitSpot = baltharus:Data():Get("MovedToWaitSpot")
         if not hasMovedToWaitSpot then
             if mainTank and mainTank:IsBot() and not IsAtPos(mainTank, waitSpot.x, waitSpot.y, 2) then
                 mainTank:MoveTo(1, waitSpot.x, waitSpot.y, waitSpot.z, true)
             elseif (mainTank and mainTank:IsBot() and IsAtPos(mainTank, waitSpot.x, waitSpot.y, 2)) or 
                (mainTank and not mainTank:IsBot() and combatTime > 15) then
-                baltharus:SetData("MovedToWaitSpot", true)
+                baltharus:Data():Set("MovedToWaitSpot", true)
             end
         else
             local castingBosses = {}
@@ -239,14 +239,14 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
                     offTank:RemoveAura(35340) 
                 end
 
-                local movedThisCast = baltharus:GetData("MovedThisCast") or {}
+                local movedThisCast = baltharus:Data():Get("MovedThisCast") or {}
                 local needsNewPosition = false
                 
                 if bossNotFacingCounterClockwise then
-                    local lastOrientationMove = baltharus:GetData("MovedForOrientation") or 0
+                    local lastOrientationMove = baltharus:Data():Get("MovedForOrientation") or 0
                     if os.time() >= lastOrientationMove + 5 then
                         needsNewPosition = true
-                        baltharus:SetData("MovedForOrientation", os.time())
+                        baltharus:Data():Set("MovedForOrientation", os.time())
                     end
                 elseif #castingBosses > 0 then
                     for _, boss in ipairs(castingBosses) do
@@ -265,8 +265,8 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
                     local newAngle = currentAngle + angleIncrement
                     local finalPos = CalculateCirclePosition(map, stackPos.x, stackPos.y, 35, newAngle)
                     
-                    local lastX = baltharus:GetData("LastMainTankTargetX")
-                    local lastY = baltharus:GetData("LastMainTankTargetY")
+                    local lastX = baltharus:Data():Get("LastMainTankTargetX")
+                    local lastY = baltharus:Data():Get("LastMainTankTargetY")
                     
                     if not lastX or math.abs(finalPos.x - lastX) > 1 or math.abs(finalPos.y - lastY) > 1 then
                         --print("NEW POSITION - Main tank at: " .. tx .. ", " .. ty .. ", " .. mainTank:GetZ())
@@ -274,31 +274,31 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
                         --print("NEW POSITION - Current angle: " .. currentAngle .. ", New angle: " .. newAngle)
                     end
                     
-                    baltharus:SetData("TempestTargetX", finalPos.x)
-                    baltharus:SetData("TempestTargetY", finalPos.y)
-                    baltharus:SetData("TempestTargetZ", finalPos.z)
-                    baltharus:SetData("LastMainTankTargetX", finalPos.x)
-                    baltharus:SetData("LastMainTankTargetY", finalPos.y)
+                    baltharus:Data():Set("TempestTargetX", finalPos.x)
+                    baltharus:Data():Set("TempestTargetY", finalPos.y)
+                    baltharus:Data():Set("TempestTargetZ", finalPos.z)
+                    baltharus:Data():Set("LastMainTankTargetX", finalPos.x)
+                    baltharus:Data():Set("LastMainTankTargetY", finalPos.y)
                     
                     if mainTank:IsBot() then
-                        baltharus:SetData("MainTankLastX", nil)
-                        baltharus:SetData("MainTankLastY", nil)
+                        baltharus:Data():Set("MainTankLastX", nil)
+                        baltharus:Data():Set("MainTankLastY", nil)
                         
                         mainTank:MoveStop()
                     end
                 end
                 
-                baltharus:SetData("MovedThisCast", movedThisCast)
+                baltharus:Data():Set("MovedThisCast", movedThisCast)
                 
                 if mainTank and mainTank:IsBot() then
-                    local targetX = baltharus:GetData("TempestTargetX")
-                    local targetY = baltharus:GetData("TempestTargetY")
-                    local targetZ = baltharus:GetData("TempestTargetZ")
+                    local targetX = baltharus:Data():Get("TempestTargetX")
+                    local targetY = baltharus:Data():Get("TempestTargetY")
+                    local targetZ = baltharus:Data():Get("TempestTargetZ")
                     
                     if targetX then
                         local currentX, currentY = mainTank:GetX(), mainTank:GetY()
-                        local lastX = baltharus:GetData("MainTankLastX")
-                        local lastY = baltharus:GetData("MainTankLastY")
+                        local lastX = baltharus:Data():Get("MainTankLastX")
+                        local lastY = baltharus:Data():Get("MainTankLastY")
                         
                         local needsTeleport = false
                         if lastX and lastY then
@@ -325,12 +325,12 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
                                 mainTank:NearTeleport(newX, newY, newZ, mainTank:GetO())
                                 --print("TELEPORT - Main tank teleported to: " .. newX .. ", " .. newY .. ", " .. newZ)
                                 
-                                baltharus:SetData("MainTankLastX", newX)
-                                baltharus:SetData("MainTankLastY", newY)
+                                baltharus:Data():Set("MainTankLastX", newX)
+                                baltharus:Data():Set("MainTankLastY", newY)
                             end
                         else
-                            baltharus:SetData("MainTankLastX", currentX)
-                            baltharus:SetData("MainTankLastY", currentY)
+                            baltharus:Data():Set("MainTankLastX", currentX)
+                            baltharus:Data():Set("MainTankLastY", currentY)
                         end
                         
                         mainTank:MoveTo(1, targetX, targetY, targetZ, true)
@@ -343,11 +343,11 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
                     end
                 end
             else
-                baltharus:SetData("MovedThisCast", nil)
-                baltharus:SetData("MainTankLastX", nil)
-                baltharus:SetData("MainTankLastY", nil)
-                baltharus:SetData("OffTankLastX", nil)
-                baltharus:SetData("OffTankLastY", nil)
+                baltharus:Data():Set("MovedThisCast", nil)
+                baltharus:Data():Set("MainTankLastX", nil)
+                baltharus:Data():Set("MainTankLastY", nil)
+                baltharus:Data():Set("OffTankLastX", nil)
+                baltharus:Data():Set("OffTankLastY", nil)
                 if mainTank and mainTank:IsBot() and mainTank:HasAura(35340) then 
                     mainTank:RemoveAura(35340) 
                 end
@@ -384,8 +384,8 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
                     otPos = CalculateCirclePosition(map, stackPos.x, stackPos.y, 35, safeAngle)
                     
                     local currentX, currentY = offTank:GetX(), offTank:GetY()
-                    local lastX = baltharus:GetData("OffTankLastX")
-                    local lastY = baltharus:GetData("OffTankLastY")
+                    local lastX = baltharus:Data():Get("OffTankLastX")
+                    local lastY = baltharus:Data():Get("OffTankLastY")
                     
                     local needsTeleport = false
                     if lastX and lastY then
@@ -412,19 +412,19 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
                             offTank:NearTeleport(newX, newY, newZ, offTank:GetO())
                             --print("TELEPORT - Off tank teleported to: " .. newX .. ", " .. newY .. ", " .. newZ)
                             
-                            baltharus:SetData("OffTankLastX", newX)
-                            baltharus:SetData("OffTankLastY", newY)
+                            baltharus:Data():Set("OffTankLastX", newX)
+                            baltharus:Data():Set("OffTankLastY", newY)
                         end
                     else
-                        baltharus:SetData("OffTankLastX", currentX)
-                        baltharus:SetData("OffTankLastY", currentY)
+                        baltharus:Data():Set("OffTankLastX", currentX)
+                        baltharus:Data():Set("OffTankLastY", currentY)
                     end
                     
                     offTank:AddAura(54861, offTank)
                 elseif #castingBosses > 0 then
                     local currentX, currentY = offTank:GetX(), offTank:GetY()
-                    local lastX = baltharus:GetData("OffTankLastX")
-                    local lastY = baltharus:GetData("OffTankLastY")
+                    local lastX = baltharus:Data():Get("OffTankLastX")
+                    local lastY = baltharus:Data():Get("OffTankLastY")
                     
                     local needsTeleport = false
                     if lastX and lastY then
@@ -451,12 +451,12 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
                             offTank:NearTeleport(newX, newY, newZ, offTank:GetO())
                             --print("TELEPORT - Off tank teleported to: " .. newX .. ", " .. newY .. ", " .. newZ)
                             
-                            baltharus:SetData("OffTankLastX", newX)
-                            baltharus:SetData("OffTankLastY", newY)
+                            baltharus:Data():Set("OffTankLastX", newX)
+                            baltharus:Data():Set("OffTankLastY", newY)
                         end
                     else
-                        baltharus:SetData("OffTankLastX", currentX)
-                        baltharus:SetData("OffTankLastY", currentY)
+                        baltharus:Data():Set("OffTankLastX", currentX)
+                        baltharus:Data():Set("OffTankLastY", currentY)
                     end
                     
                     offTank:AddAura(54861, offTank)

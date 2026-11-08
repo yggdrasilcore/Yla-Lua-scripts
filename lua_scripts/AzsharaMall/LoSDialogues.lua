@@ -1145,8 +1145,8 @@ end
 
 local function ApproachBear(event, creature, who)
     if who:ToPlayer() then
-        if not creature:GetData("MorphEvent") then
-            creature:SetData("MorphEvent", true)
+        if not creature:Data():Get("MorphEvent") then
+            creature:Data():Set("MorphEvent", true)
             local masters = {}
             local creaturesInRange = creature:GetCreaturesInRange(200, MASTER_ENTRY)
             
@@ -1155,10 +1155,10 @@ local function ApproachBear(event, creature, who)
             end
             
             for _, master in pairs(masters) do
-                if master:GetData("MorphEventActive") then
+                if master:Data():Get("MorphEventActive") then
                     return
                 end
-                master:SetData("MorphEventActive", true)
+                master:Data():Set("MorphEventActive", true)
                 MorphScript(master)
             end
             
@@ -1170,10 +1170,10 @@ local function ApproachBear(event, creature, who)
             end
 
             for _, observer in pairs(observers) do
-                if observer:GetData("MorphEventActive") then
+                if observer:Data():Get("MorphEventActive") then
                     return
                 end
-                observer:SetData("MorphEventActive", true)
+                observer:Data():Set("MorphEventActive", true)
                 ObserverScript(observer)
             end
         end

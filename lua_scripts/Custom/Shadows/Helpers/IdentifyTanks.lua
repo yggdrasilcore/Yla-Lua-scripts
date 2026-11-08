@@ -36,14 +36,14 @@ function IdentifyTanks(creature)
         mainTank, offTank = realMainTank, realOffTank
     else
         local function getCachedTank(dataKey)
-            local tankName = creature:GetData(dataKey)
+            local tankName = creature:Data():Get(dataKey)
             if tankName then
                 for _, player in ipairs(players) do
                     if player:GetName() == tankName and player:IsAlive() and player:IsInCombat() then
                         return player
                     end
                 end
-                creature:SetData(dataKey, nil)
+                creature:Data():Set(dataKey, nil)
             end
             return nil
         end
@@ -72,10 +72,10 @@ function IdentifyTanks(creature)
             else
                 local botOffTank = findBestBotTank(realMainTank)
                 if botOffTank then
-                    if creature:GetData("CachedMainTank") == botOffTank:GetName() then
-                        creature:SetData("CachedMainTank", nil)
+                    if creature:Data():Get("CachedMainTank") == botOffTank:GetName() then
+                        creature:Data():Set("CachedMainTank", nil)
                     end
-                    creature:SetData("CachedOffTank", botOffTank:GetName())
+                    creature:Data():Set("CachedOffTank", botOffTank:GetName())
                     mainTank, offTank = realMainTank, botOffTank
                 else
                     mainTank, offTank = realMainTank, nil
@@ -88,10 +88,10 @@ function IdentifyTanks(creature)
             else
                 local botMainTank = findBestBotTank(realOffTank)
                 if botMainTank then
-                    if creature:GetData("CachedOffTank") == botMainTank:GetName() then
-                        creature:SetData("CachedOffTank", nil)
+                    if creature:Data():Get("CachedOffTank") == botMainTank:GetName() then
+                        creature:Data():Set("CachedOffTank", nil)
                     end
-                    creature:SetData("CachedMainTank", botMainTank:GetName())
+                    creature:Data():Set("CachedMainTank", botMainTank:GetName())
                     mainTank, offTank = botMainTank, realOffTank
                 else
                     mainTank, offTank = nil, realOffTank
@@ -113,20 +113,20 @@ function IdentifyTanks(creature)
                 
                 if #botTanks >= 2 then
                     table.sort(botTanks, function(a, b) return a:GetMaxHealth() > b:GetMaxHealth() end)
-                    if creature:GetData("CachedOffTank") == botTanks[1]:GetName() then
-                        creature:SetData("CachedOffTank", nil)
+                    if creature:Data():Get("CachedOffTank") == botTanks[1]:GetName() then
+                        creature:Data():Set("CachedOffTank", nil)
                     end
-                    creature:SetData("CachedMainTank", botTanks[1]:GetName())
-                    if creature:GetData("CachedMainTank") == botTanks[2]:GetName() then
-                        creature:SetData("CachedMainTank", nil)
+                    creature:Data():Set("CachedMainTank", botTanks[1]:GetName())
+                    if creature:Data():Get("CachedMainTank") == botTanks[2]:GetName() then
+                        creature:Data():Set("CachedMainTank", nil)
                     end
-                    creature:SetData("CachedOffTank", botTanks[2]:GetName())
+                    creature:Data():Set("CachedOffTank", botTanks[2]:GetName())
                     mainTank, offTank = botTanks[1], botTanks[2]
                 elseif #botTanks == 1 then
-                    if creature:GetData("CachedOffTank") == botTanks[1]:GetName() then
-                        creature:SetData("CachedOffTank", nil)
+                    if creature:Data():Get("CachedOffTank") == botTanks[1]:GetName() then
+                        creature:Data():Set("CachedOffTank", nil)
                     end
-                    creature:SetData("CachedMainTank", botTanks[1]:GetName())
+                    creature:Data():Set("CachedMainTank", botTanks[1]:GetName())
                     mainTank, offTank = botTanks[1], nil
                 end
             end
@@ -135,18 +135,18 @@ function IdentifyTanks(creature)
     
     if mainTank and offTank and mainTank:GetGUID() == offTank:GetGUID() then
         offTank = nil
-        creature:SetData("CachedOffTank", nil)
+        creature:Data():Set("CachedOffTank", nil)
     end
     
-    local lastMain = creature:GetData("LastAssignedMain")
-    local lastOff = creature:GetData("LastAssignedOff")
+    local lastMain = creature:Data():Get("LastAssignedMain")
+    local lastOff = creature:Data():Get("LastAssignedOff")
     local currentMain = mainTank and mainTank:GetName() or nil
     local currentOff = offTank and offTank:GetName() or nil
     
     if currentMain ~= lastMain or currentOff ~= lastOff then
         print(string.format("[IdentifyTanks] Tanks assigned - Main: %s, Off: %s", currentMain or "none", currentOff or "none"))
-        creature:SetData("LastAssignedMain", currentMain)
-        creature:SetData("LastAssignedOff", currentOff)
+        creature:Data():Set("LastAssignedMain", currentMain)
+        creature:Data():Set("LastAssignedOff", currentOff)
     end
     
     return mainTank, offTank

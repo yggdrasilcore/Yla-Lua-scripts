@@ -64,8 +64,8 @@ local function BronjahmTactics(player)
         
         -- Always mark Soul Fragments with skull to make shadows focus them
         if SoulFragment then
-            if not SoulFragment:GetData("SkullSet") then
-                SoulFragment:SetData("SkullSet", true)
+            if not SoulFragment:Data():Get("SkullSet") then
+                SoulFragment:Data():Set("SkullSet", true)
                 SetTargetIconDeferred(player, 7, SoulFragment)
             end
         end

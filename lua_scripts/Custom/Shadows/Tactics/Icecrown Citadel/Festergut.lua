@@ -88,10 +88,10 @@ local function FestergutLoop(eventId, delay, repeats, festergut)
 
     -- for _, bot in ipairs(bots) do DisableManualSpells(bot) end
 
-    local gooX    = festergut:GetData("GooX")
-    local gooY    = festergut:GetData("GooY")
-    local gooZ    = festergut:GetData("GooZ")
-    local gooTime = festergut:GetData("GooTime")
+    local gooX    = festergut:Data():Get("GooX")
+    local gooY    = festergut:Data():Get("GooY")
+    local gooZ    = festergut:Data():Get("GooZ")
+    local gooTime = festergut:Data():Get("GooTime")
     local gooPos  = (gooX and gooY and gooZ and gooTime and (os.time() - gooTime < 10))
                     and {gooX, gooY, gooZ} or nil
 
@@ -103,36 +103,36 @@ local function FestergutLoop(eventId, delay, repeats, festergut)
     end
 
     local anySporeActive  = #sporePlayers > 0
-    local sporeDetectTime = festergut:GetData("SporeDetectTime")
+    local sporeDetectTime = festergut:Data():Get("SporeDetectTime")
 
     if anySporeActive then
         if not sporeDetectTime then
-            festergut:SetData("SporeDetectTime", os.time())
-            festergut:SetData("CachedSporeCount", #sporePlayers)
-            festergut:SetData("SporeAssignmentDone", nil)
+            festergut:Data():Set("SporeDetectTime", os.time())
+            festergut:Data():Set("CachedSporeCount", #sporePlayers)
+            festergut:Data():Set("SporeAssignmentDone", nil)
         end
     else
         if sporeDetectTime and (os.time() - sporeDetectTime > 10) then
-            festergut:SetData("SporeDetectTime", nil)
-            festergut:SetData("CachedSporeCount", nil)
-            festergut:SetData("SporeAssignmentDone", nil)
+            festergut:Data():Set("SporeDetectTime", nil)
+            festergut:Data():Set("CachedSporeCount", nil)
+            festergut:Data():Set("SporeAssignmentDone", nil)
             for _, bot in ipairs(bots) do
-                bot:SetData("FestergutSpreadPos", nil)
+                bot:Data():Set("FestergutSpreadPos", nil)
             end
-            festergut:SetData("LastHCReassignTime", nil)
+            festergut:Data():Set("LastHCReassignTime", nil)
         end
     end
 
-    local wasSporeActive = festergut:GetData("WasSporeActive") or false
+    local wasSporeActive = festergut:Data():Get("WasSporeActive") or false
     if wasSporeActive and not anySporeActive then
         for _, bot in ipairs(bots) do
-            bot:SetData("FestergutSpreadPos", nil)
+            bot:Data():Set("FestergutSpreadPos", nil)
         end
-        festergut:SetData("LastHCReassignTime", nil)
+        festergut:Data():Set("LastHCReassignTime", nil)
     end
-    festergut:SetData("WasSporeActive", anySporeActive)
+    festergut:Data():Set("WasSporeActive", anySporeActive)
 
-    local cachedSporeCount = festergut:GetData("CachedSporeCount") or #sporePlayers
+    local cachedSporeCount = festergut:Data():Get("CachedSporeCount") or #sporePlayers
 
     local botTanks   = {}
     local botMelee   = {}
@@ -249,7 +249,7 @@ function FestergutHandleSpore(festergut, bots, sporePlayers, cachedSporeCount, g
         table.insert(sporePositions, PushFromGoo(pos, gooPos))
     end
 
-    if not festergut:GetData("SporeAssignmentDone") then
+    if not festergut:Data():Get("SporeAssignmentDone") then
         local victim = festergut:GetVictim()
 
         local victimSpore = nil
@@ -275,7 +275,7 @@ function FestergutHandleSpore(festergut, bots, sporePlayers, cachedSporeCount, g
 
         local pos1Player = priorityPos1[1]
         if pos1Player then
-            festergut:SetData("SporeAssigned1", pos1Player:GetName())
+            festergut:Data():Set("SporeAssigned1", pos1Player:GetName())
             assignedNames[pos1Player:GetName()] = true
         end
 
@@ -288,30 +288,30 @@ function FestergutHandleSpore(festergut, bots, sporePlayers, cachedSporeCount, g
 
         if #sporePositions >= 2 and #remaining >= 1 then
             if #sporePositions == 2 or #remaining == 1 then
-                festergut:SetData("SporeAssigned2", remaining[1]:GetName())
+                festergut:Data():Set("SporeAssigned2", remaining[1]:GetName())
             elseif #remaining >= 2 then
                 local r1, r2 = remaining[1], remaining[2]
                 local p2, p3 = sporePositions[2], sporePositions[3]
                 local distA  = r1:GetDistance2d(p2[1], p2[2]) + r2:GetDistance2d(p3[1], p3[2])
                 local distB  = r1:GetDistance2d(p3[1], p3[2]) + r2:GetDistance2d(p2[1], p2[2])
                 if distA <= distB then
-                    festergut:SetData("SporeAssigned2", r1:GetName())
-                    festergut:SetData("SporeAssigned3", r2:GetName())
+                    festergut:Data():Set("SporeAssigned2", r1:GetName())
+                    festergut:Data():Set("SporeAssigned3", r2:GetName())
                 else
-                    festergut:SetData("SporeAssigned2", r2:GetName())
-                    festergut:SetData("SporeAssigned3", r1:GetName())
+                    festergut:Data():Set("SporeAssigned2", r2:GetName())
+                    festergut:Data():Set("SporeAssigned3", r1:GetName())
                 end
             end
         end
 
-        festergut:SetData("SporePositionCount", #sporePositions)
-        festergut:SetData("SporeAssignmentDone", true)
+        festergut:Data():Set("SporePositionCount", #sporePositions)
+        festergut:Data():Set("SporeAssignmentDone", true)
     end
 
-    local posCount = festergut:GetData("SporePositionCount") or #sporePositions
+    local posCount = festergut:Data():Get("SporePositionCount") or #sporePositions
 
     for i = 1, posCount do
-        local assignedName = festergut:GetData("SporeAssigned" .. i)
+        local assignedName = festergut:Data():Get("SporeAssigned" .. i)
         if assignedName and sporePositions[i] then
             for _, sp in ipairs(sporePlayers) do
                 if sp:GetName() == assignedName and sp:IsBot() then
@@ -444,7 +444,7 @@ local function RecalcHCPositions(festergut, botHealers, botCasters, botTanks, al
         end
 
         if bestPos then
-            player:SetData("FestergutSpreadPos", bestPos)
+            player:Data():Set("FestergutSpreadPos", bestPos)
             table.insert(occupied,       {x = bestPos.x, y = bestPos.y})
             table.insert(healerPositions, bestPos)
         end
@@ -498,7 +498,7 @@ local function RecalcHCPositions(festergut, botHealers, botCasters, botTanks, al
         end
 
         if bestPos then
-            player:SetData("FestergutSpreadPos", bestPos)
+            player:Data():Set("FestergutSpreadPos", bestPos)
             table.insert(occupied, {x = bestPos.x, y = bestPos.y})
         end
     end
@@ -508,12 +508,12 @@ function FestergutHandleHealersCasters(festergut, botHealers, botCasters, botTan
     if #botHealers == 0 and #botCasters == 0 then return end
 
     local now        = os.time()
-    local lastRecalc = festergut:GetData("LastHCReassignTime") or 0
+    local lastRecalc = festergut:Data():Get("LastHCReassignTime") or 0
     local forceRecalc = false
 
     if not forceRecalc then
         for _, player in ipairs(botHealers) do
-            local pos = player:GetData("FestergutSpreadPos")
+            local pos = player:Data():Get("FestergutSpreadPos")
             if not pos or (gooPos and NearGoo(pos.x, pos.y, gooPos)) then
                 forceRecalc = true; break
             end
@@ -522,7 +522,7 @@ function FestergutHandleHealersCasters(festergut, botHealers, botCasters, botTan
 
     if not forceRecalc then
         for _, player in ipairs(botCasters) do
-            local pos = player:GetData("FestergutSpreadPos")
+            local pos = player:Data():Get("FestergutSpreadPos")
             if not pos or (gooPos and NearGoo(pos.x, pos.y, gooPos)) then
                 forceRecalc = true; break
             end
@@ -531,11 +531,11 @@ function FestergutHandleHealersCasters(festergut, botHealers, botCasters, botTan
 
     if forceRecalc or (now - lastRecalc) >= HC_RECALC_INTERVAL then
         RecalcHCPositions(festergut, botHealers, botCasters, botTanks, allPlayers, gooPos)
-        festergut:SetData("LastHCReassignTime", now)
+        festergut:Data():Set("LastHCReassignTime", now)
     end
 
     for _, player in ipairs(botHealers) do
-        local pos = player:GetData("FestergutSpreadPos")
+        local pos = player:Data():Get("FestergutSpreadPos")
         if pos and not IsAtPos(player, pos.x, pos.y, 2) then
             MoveImmediately(player, pos.x, pos.y, pos.z)
         elseif pos then
@@ -544,7 +544,7 @@ function FestergutHandleHealersCasters(festergut, botHealers, botCasters, botTan
     end
 
     for _, player in ipairs(botCasters) do
-        local pos = player:GetData("FestergutSpreadPos")
+        local pos = player:Data():Get("FestergutSpreadPos")
         if pos and not IsAtPos(player, pos.x, pos.y, 2) then
             MoveImmediately(player, pos.x, pos.y, pos.z)
         elseif pos then
@@ -562,18 +562,18 @@ local function FestergutOnEnterCombat(event, player, festergut)
         local players = festergut:GetPlayersInRange(100)
         for _, p in ipairs(players) do
             if p:IsBot() then
-                p:SetData("FestergutSpreadPos", nil)
+                p:Data():Set("FestergutSpreadPos", nil)
             end
         end
-        festergut:SetData("SporeDetectTime", nil)
-        festergut:SetData("CachedSporeCount", nil)
-        festergut:SetData("SporeAssignmentDone", nil)
-        festergut:SetData("WasSporeActive", nil)
-        festergut:SetData("GooX", nil)
-        festergut:SetData("GooY", nil)
-        festergut:SetData("GooZ", nil)
-        festergut:SetData("GooTime", nil)
-        festergut:SetData("LastHCReassignTime", nil)
+        festergut:Data():Set("SporeDetectTime", nil)
+        festergut:Data():Set("CachedSporeCount", nil)
+        festergut:Data():Set("SporeAssignmentDone", nil)
+        festergut:Data():Set("WasSporeActive", nil)
+        festergut:Data():Set("GooX", nil)
+        festergut:Data():Set("GooY", nil)
+        festergut:Data():Set("GooZ", nil)
+        festergut:Data():Set("GooTime", nil)
+        festergut:Data():Set("LastHCReassignTime", nil)
         local shadow = player:ToShadow()
         if shadow then shadow:ToggleCombatStrategy("-icc") end
         if player:GetDifficulty() > 1 then ApplyHiddenBuffsToShadows(player) end
@@ -609,10 +609,10 @@ function OnMalleableGooCast(event, caster, spell, skipCheck)
         local festergut = target:GetNearestCreature(100, FESTERGUT_ENTRY, 0)
         if festergut then
             --print("[Festergut] Malleable Goo cast at: " .. x .. ", " .. y .. ", " .. z)
-            festergut:SetData("GooX", x)
-            festergut:SetData("GooY", y)
-            festergut:SetData("GooZ", z)
-            festergut:SetData("GooTime", os.time())
+            festergut:Data():Set("GooX", x)
+            festergut:Data():Set("GooY", y)
+            festergut:Data():Set("GooZ", z)
+            festergut:Data():Set("GooTime", os.time())
         end
     end
 end

@@ -3,7 +3,7 @@ if GetStateMapId() ~= 37 then return end
 local targetName = "Twogga"
 
 local function resetChase(eventId, delay, repeats, creature)
-    creature:GetNearestCreature(200, 110003):SetData("isChaseInProgress", nil)
+    creature:GetNearestCreature(200, 110003):Data():Set("isChaseInProgress", nil)
     creature:RemoveEvents()
     
     creature:SendUnitEmote(creature:GetName().." tags "..targetName..".")
@@ -27,7 +27,7 @@ local function resetChase(eventId, delay, repeats, creature)
 end
 
 local function startChase(eventId, delay, repeats, creature)
-    if creature:GetNearestCreature(200, 110003):GetData("isChaseInProgress") then
+    if creature:GetNearestCreature(200, 110003):Data():Get("isChaseInProgress") then
         return
     end
     
@@ -44,7 +44,7 @@ local function startChase(eventId, delay, repeats, creature)
     
     if target then
         target:RemoveEvents()
-        creature:GetNearestCreature(200, 110003):SetData("isChaseInProgress", true)
+        creature:GetNearestCreature(200, 110003):Data():Set("isChaseInProgress", true)
         targetName = target:GetName()       
         local dialogueNo = math.random(1,5)
         local aura = creature:AddAura(61204, creature)
@@ -96,7 +96,7 @@ local function OnSchoolSpawn(event, creature, _)
         creature:MoveRandom(20)
     end
     
-    if event == 27 and creature:GetData("chaseActive") then return end
+    if event == 27 and creature:Data():Get("chaseActive") then return end
     
     local entry = creature:GetEntry()
     
@@ -107,7 +107,7 @@ local function OnSchoolSpawn(event, creature, _)
             local chaser = creature:GetNearestCreature(100, 231980)
             if chaser then
                 chaser:RegisterEvent(startChase, 1000, 1)
-                creature:SetData("chaseActive", true)
+                creature:Data():Set("chaseActive", true)
             end
         end
         

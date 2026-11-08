@@ -57,12 +57,12 @@ local function SyncCurrencyOnLogin(player, accountId)
                 return 
             end
             
-            player:SetData("CurrencySynced", true)
-            if player:GetData(currencyId) then 
+            player:Data():Set("CurrencySynced", true)
+            if player:Data():Get(currencyId) then 
                 print("[AccountCurrency] SyncCurrencyOnLogin: Currency " .. currencyId .. " already synced for player " .. name)
                 return 
             end
-            player:SetData(currencyId, true)
+            player:Data():Set(currencyId, true)
             
             local accountCurrencyCount
             if query then 
@@ -96,7 +96,7 @@ local function AccountWideCurrency(event, player)
     
     if event == 28 then -- PLAYER_EVENT_ON_MAP_CHANGE
         print("[AccountCurrency] AccountWideCurrency: Map change event for player " .. playerName)
-        if player:GetData("CurrencySynced") then 
+        if player:Data():Get("CurrencySynced") then 
             print("[AccountCurrency] AccountWideCurrency: Currency already synced for player " .. playerName .. ", skipping")
             return 
         end

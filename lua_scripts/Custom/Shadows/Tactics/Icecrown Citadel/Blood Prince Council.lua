@@ -48,14 +48,14 @@ local function ShootKinetics(eventId, delay, repeats, player)
         local bombs = player:GetCreaturesInRange(200, 38454)
         if bombs then
             for _, bomb in ipairs(bombs) do
-                local last = bomb:GetData("LastFailsafeAttack")
+                local last = bomb:Data():Get("LastFailsafeAttack")
                 if not last or os.time() - last >= 4 then
                     local failsafeSpells = {62249, 38400}
                     local chosenSpell = failsafeSpells[math.random(1, 2)]
                     player:StopSpellCast()
                     player:CastSpell(bomb, chosenSpell, false)
                     player:DealDamage(bomb, math.random(501, 5938), false, 6, chosenSpell)
-                    bomb:SetData("LastFailsafeAttack", os.time())
+                    bomb:Data():Set("LastFailsafeAttack", os.time())
                     break
                 end
             end

@@ -251,7 +251,7 @@ local function ShadowsHello(player)
     player:GossipClearMenu()
     local maxBotsForPlayer = maxBotCount
 
-    if not player:GetData("LoginTime") then player:SetData("LoginTime", os.time()) end
+    if not player:Data():Get("LoginTime") then player:Data():Set("LoginTime", os.time()) end
 
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_gizmo_02:40:40:-24:0|tHow to use shadows", 0, 2)
 
@@ -611,7 +611,7 @@ local function ShadowsLogin(event, player) -- Lazy persistent storage solution. 
             group:SetLeader(master:GetGUID())
         end
     else
-        player:SetData("LoginTime", os.time())
+        player:Data():Set("LoginTime", os.time())
         
         CharDBQueryAsync("SELECT data FROM ycore_yla.character_custom_data WHERE guid = "..guid.." AND type = 98", function(result)
             if result then
@@ -1071,7 +1071,7 @@ local function OnBotCommand(event, player, command)
     end
 
 	if command == "shadowslogin" then
-		if player:GetData("LoginTime") and (player:GetData("LoginTime") < os.time() + 5) then
+		if player:Data():Get("LoginTime") and (player:Data():Get("LoginTime") < os.time() + 5) then
 			local accountId = player:GetAccountId()
 			local name = player:GetName()
 			local characters = {}

@@ -1,12 +1,12 @@
 local function StartAntiClipCheck(player)
-    player:SetData("LastPosX", player:GetX())
-    player:SetData("LastPosY", player:GetY())
-    player:SetData("LastPosZ", player:GetZ())
+    player:Data():Set("LastPosX", player:GetX())
+    player:Data():Set("LastPosY", player:GetY())
+    player:Data():Set("LastPosZ", player:GetZ())
     
     local eventId = player:RegisterEvent(function(e, d, r, player)
-        local lastX = player:GetData("LastPosX")
-        local lastY = player:GetData("LastPosY")
-        local lastZ = player:GetData("LastPosZ")
+        local lastX = player:Data():Get("LastPosX")
+        local lastY = player:Data():Get("LastPosY")
+        local lastZ = player:Data():Get("LastPosZ")
         if not lastX then return end
         
         local curX, curY, curZ = player:GetX(), player:GetY(), player:GetZ()
@@ -32,12 +32,12 @@ local function StartAntiClipCheck(player)
 			end
 		end
 
-        player:SetData("LastPosX", curX)
-        player:SetData("LastPosY", curY)
-        player:SetData("LastPosZ", curZ)
+        player:Data():Set("LastPosX", curX)
+        player:Data():Set("LastPosY", curY)
+        player:Data():Set("LastPosZ", curZ)
     end, 150, 0)
     
-    player:SetData("StartAntiClipCheck", eventId)
+    player:Data():Set("StartAntiClipCheck", eventId)
 end
 
 local function SendAntiCheatChecks(player)
@@ -53,18 +53,18 @@ local function SendAntiCheatChecks(player)
         player:SendAddonMessage("AIO_AntiCheat_Water", tostring(player:IsUnderWater()), 7, player)
     end, 1000, 0)
     
-    player:SetData("SendAntiCheatChecks", eventId)
+    player:Data():Set("SendAntiCheatChecks", eventId)
 end
 
 local function StartElunaAnticheat(event, player)
     if player:IsBot() then return end
     
-    if player:GetData("SendAntiCheatChecks") then 
-        player:RemoveEventById(player:GetData("SendAntiCheatChecks"))
+    if player:Data():Get("SendAntiCheatChecks") then 
+        player:RemoveEventById(player:Data():Get("SendAntiCheatChecks"))
     end 
     
-    if player:GetData("StartAntiClipCheck") then
-        player:RemoveEventById(player:GetData("StartAntiClipCheck"))
+    if player:Data():Get("StartAntiClipCheck") then
+        player:RemoveEventById(player:Data():Get("StartAntiClipCheck"))
     end
     
     SendAntiCheatChecks(player)

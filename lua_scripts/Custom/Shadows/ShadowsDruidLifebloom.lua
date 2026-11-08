@@ -45,9 +45,9 @@ local function OnMapChange(event, player)
     if not player:IsBot() then return end
     if player:GetClass() ~= 11 then return end
 
-    if player:GetData("lifebloomeventstarted") then return end
+    if player:Data():Get("lifebloomeventstarted") then return end
 
-    player:SetData("lifebloomeventstarted", true)
+    player:Data():Set("lifebloomeventstarted", true)
     player:RegisterEvent(OnLifebloomTick, 1000, 0)
 end
 
