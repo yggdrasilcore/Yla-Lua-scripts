@@ -13,8 +13,11 @@ function OnEnterHoR(event, player)
     
     player:RegisterEvent(function(event, d, r, player)
         if not (player:GetMapId() == 668) then return end
-        ToggleShadowsScript(player, "icc", false)
-        ToggleShadowsScript(player, "utgarde keep", false)
+        local shadow = player:ToShadow()
+        if shadow then
+            shadow:ToggleCombatStrategy("-icc")
+            shadow:ToggleCombatStrategy("-utgarde keep")
+        end
      end, 5000, 1)
         
     local LK = player:GetNearestCreature(4000, LK_ID)

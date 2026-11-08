@@ -574,7 +574,8 @@ local function FestergutOnEnterCombat(event, player, festergut)
         festergut:SetData("GooZ", nil)
         festergut:SetData("GooTime", nil)
         festergut:SetData("LastHCReassignTime", nil)
-        ToggleShadowsScript(player, "icc", false)
+        local shadow = player:ToShadow()
+        if shadow then shadow:ToggleCombatStrategy("-icc") end
         if player:GetDifficulty() > 1 then ApplyHiddenBuffsToShadows(player) end
         StartLuaEvent(festergut, FestergutLoop)
     end
