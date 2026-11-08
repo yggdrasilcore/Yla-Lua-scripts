@@ -310,13 +310,10 @@ local SetChatterButtonState
 local function SetShadowsChatterEnabled(enabled)
     SHADOWS_CHATTER_SETTINGS.enabled = enabled
     if SetChatterButtonState then SetChatterButtonState(enabled) end
-    local checkbox = _G["ShadowsChatterCheckbox"]
-    if checkbox then checkbox:SetChecked(enabled) end
 end
 
 local SHADOWS_PANEL_WIDGETS = {
     "ShadowsBarCheckbox",
-    "ShadowsChatterCheckbox",
     "ShadowsKeybindButton",
     "ShadowsResetButton",
     "ResetBotAIButton",
@@ -369,18 +366,6 @@ local function ShowShadowsSettingsPanel()
         autoOpenText:SetText("Automatically Open Shadows Bar If Grouped With Shadows")
         autoOpenText:SetTextColor(1, 1, 1)
 
-        local chatterCheckBox = CreateFrame("CheckButton", "ShadowsChatterCheckbox", frame, "InterfaceOptionsCheckButtonTemplate")
-        chatterCheckBox:SetPoint("TOPLEFT", checkBox, "BOTTOMLEFT", 0, -8)
-        chatterCheckBox:SetText("Enable Shadows Chatter")
-        chatterCheckBox:SetScript("OnClick", function(self)
-            SendChatMessage(self:GetChecked() and ".shadowschatteron" or ".shadowschatteroff", "GUILD")
-        end)
-
-        local chatterText = chatterCheckBox:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-        chatterText:SetPoint("LEFT", chatterCheckBox, "RIGHT", 4, 0)
-        chatterText:SetText("Keeps Shadows Chatty When You Log Back In")
-        chatterText:SetTextColor(1, 1, 1)
-
         local function AddOptionButton(name, text, anchor, onClick)
             local button = CreateFrame("Button", name, frame, "UIPanelButtonTemplate")
             button:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -10)
@@ -391,7 +376,7 @@ local function ShowShadowsSettingsPanel()
         end
 
         local keyBindButton = AddOptionButton("ShadowsKeybindButton", "Shadows Bar Keyboard Shortcuts",
-            chatterCheckBox, function()
+            checkBox, function()
                 SlashCmdList["SHADOWSHORTCUTS"]()
             end)
 
@@ -414,16 +399,11 @@ local function ShowShadowsSettingsPanel()
         if ShadowsBarStatus == "DISABLED" or ShadowsBarToggleStatus == "CLOSED" then
             checkBox:SetChecked(false)
         end
-        chatterCheckBox:SetChecked(SHADOWS_CHATTER_SETTINGS.enabled)
     else
         frame:Show()
         local checkBox = _G["ShadowsBarCheckbox"]
         if checkBox then
             checkBox:SetChecked(ShadowsBarToggleStatus == "OPEN")
-        end
-        local chatterCheckBox = _G["ShadowsChatterCheckbox"]
-        if chatterCheckBox then
-            chatterCheckBox:SetChecked(SHADOWS_CHATTER_SETTINGS.enabled)
         end
         SetShadowsPanelWidgetsVisible(true)
     end
@@ -2340,6 +2320,7 @@ local function CreateBotControlBar()
     end
 
     SLASH_BOTCONTROLBAR1 = "/shadowsbar"
+    SLASH_BOTCONTROLBAR2 = "/shadowbar"
     SlashCmdList["BOTCONTROLBAR"] = function()
         if frame:IsShown() then
             frame:Hide()
