@@ -47,19 +47,60 @@ local function AddSpecialFrame(name)
     end
 end
 
-local function SetDialogBackdrop(frame, opts)
+-----------------------------------------------------------
+-- Parchment theme (matches the Yggdrasil Store window)
+-----------------------------------------------------------
+local PARCHMENT = "Interface\\AchievementFrame\\UI-Achievement-Parchment-Horizontal"
+local DIALOG_BORDER = "Interface\\DialogFrame\\UI-DialogBox-Border"
+local GOLD_BORDER = "Interface\\Tooltips\\UI-Tooltip-Border"
+
+local THEME = {
+    frameBg = {0.24, 0.19, 0.14, 1},
+    frameBorder = {0.65, 0.52, 0.20, 1},
+    headerBg = {0.32, 0.26, 0.18, 1},
+    headerBorder = {0.55, 0.45, 0.15, 1},
+    buttonBg = {0.30, 0.22, 0.10, 1},
+    buttonBgHighlight = {0.45, 0.32, 0.14, 1},
+    borderHover = {0.95, 0.80, 0.30, 1},
+    title = {0.95, 0.82, 0.30},
+    goldText = {1, 0.82, 0},
+    subtleText = {0.80, 0.70, 0.50},
+    divider = {0.55, 0.45, 0.15, 1},
+}
+
+local function ApplyParchment(frame, bgColor, edgeFile, edgeSize)
     frame:SetBackdrop({
-        bgFile = opts.bgFile or "Interface\\Tooltips\\UI-Tooltip-Background",
-        edgeFile = opts.edgeFile or "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true,
-        tileSize = opts.tileSize or 16,
-        edgeSize = opts.edgeSize or 16,
-        insets = opts.insets or { left = 4, right = 4, top = 4, bottom = 4 },
+        bgFile = PARCHMENT,
+        edgeFile = edgeFile or GOLD_BORDER,
+        tile = false,
+        edgeSize = edgeSize or 12,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 },
     })
-    local color = opts.bgColor
-    if color then
-        frame:SetBackdropColor(color[1], color[2], color[3], color[4])
+    local color = bgColor or THEME.frameBg
+    frame:SetBackdropColor(color[1], color[2], color[3], color[4])
+    local border = THEME.frameBorder
+    frame:SetBackdropBorderColor(border[1], border[2], border[3], border[4])
+end
+
+local function SetDialogBackdrop(frame, opts)
+    local bgFile = opts.bgFile or PARCHMENT
+    local bgColor = opts.bgColor or THEME.frameBg
+    if bgFile == PARCHMENT then
+        ApplyParchment(frame, opts.bgColor, opts.edgeFile or GOLD_BORDER, opts.edgeSize or 12)
+        return
     end
+
+    frame:SetBackdrop({
+        bgFile = bgFile,
+        edgeFile = opts.edgeFile or DIALOG_BORDER,
+        tile = opts.tile,
+        tileSize = opts.tileSize or 32,
+        edgeSize = opts.edgeSize or 16,
+        insets = opts.insets or { left = 8, right = 8, top = 8, bottom = 8 },
+    })
+    frame:SetBackdropColor(bgColor[1], bgColor[2], bgColor[3], bgColor[4])
+    local border = THEME.frameBorder
+    frame:SetBackdropBorderColor(border[1], border[2], border[3], border[4])
 end
 
 local function MakeMovable(frame)
@@ -95,6 +136,15 @@ local function CreateDialog(name, width, height, title, opts)
         local text = frame:CreateFontString(nil, "OVERLAY", opts.font or "GameFontNormalLarge")
         text:SetPoint("TOP", 0, opts.titleY or -12)
         text:SetText(title)
+        text:SetTextColor(THEME.title[1], THEME.title[2], THEME.title[3])
+        local divider = frame:CreateTexture(nil, "ARTWORK")
+        divider:SetTexture("Interface\\Buttons\\WHITE8X8")
+        local gold = THEME.divider
+        divider:SetVertexColor(gold[1], gold[2], gold[3], gold[4])
+        divider:SetHeight(2)
+        local dividerY = (opts.titleY or -12) - 18
+        divider:SetPoint("TOPLEFT", frame, "TOPLEFT", 30, dividerY)
+        divider:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -30, dividerY)
     end
     AddCloseButton(frame, opts.onClose, opts.closeX, opts.closeY)
     AddSpecialFrame(name)
@@ -106,8 +156,21 @@ local function CreateScrollList(name, width, height, title, opts)
     opts = opts or {}
     local frame = CreateDialog(name, width, height, title, {
         font = "GameFontNormal",
-        bgColor = {0.1, 0.1, 0.1, 0.9},
     })
+    local panel = CreateFrame("Frame", nil, frame)
+    panel:SetPoint("TOPLEFT", 10, -32)
+    panel:SetPoint("BOTTOMRIGHT", -10, 10)
+    panel:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Background",
+        edgeFile = GOLD_BORDER,
+        tile = false,
+        edgeSize = 12,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 },
+    })
+    local panelBg = THEME.headerBg
+    panel:SetBackdropColor(panelBg[1], panelBg[2], panelBg[3], panelBg[4])
+    local panelBorder = THEME.headerBorder
+    panel:SetBackdropBorderColor(panelBorder[1], panelBorder[2], panelBorder[3], panelBorder[4])
     local scrollFrame = CreateFrame("ScrollFrame", nil, frame)
     scrollFrame:SetPoint("TOPLEFT", 10, -30)
     scrollFrame:SetPoint("BOTTOMRIGHT", opts.rightInset or -10, 10)
@@ -151,6 +214,34 @@ local function SetHoverText(button, region)
     button:SetScript("OnLeave", function() region:SetTextColor(1, 0.82, 0) end)
 end
 
+-- Gold plaque background used by the buttons inside the dialogs.
+local function StyleGoldPlaque(button, text)
+    ApplyParchment(button, THEME.buttonBg, GOLD_BORDER, 10)
+    if text then
+        button.text = button:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        button.text:SetPoint("CENTER")
+        button.text:SetWidth(button:GetWidth() - 10)
+        button.text:SetJustifyH("CENTER")
+        button.text:SetText(text)
+    end
+    local gold = THEME.goldText
+    if button.text then button.text:SetTextColor(gold[1], gold[2], gold[3]) end
+    button:SetScript("OnEnter", function(self)
+        local hover = THEME.buttonBgHighlight
+        self:SetBackdropColor(hover[1], hover[2], hover[3], hover[4])
+        local border = THEME.borderHover
+        self:SetBackdropBorderColor(border[1], border[2], border[3], border[4])
+        if self.text then self.text:SetTextColor(1, 1, 1) end
+    end)
+    button:SetScript("OnLeave", function(self)
+        local bg = THEME.buttonBg
+        self:SetBackdropColor(bg[1], bg[2], bg[3], bg[4])
+        local border = THEME.headerBorder
+        self:SetBackdropBorderColor(border[1], border[2], border[3], border[4])
+        if self.text then self.text:SetTextColor(gold[1], gold[2], gold[3]) end
+    end)
+end
+
 local function CreateHorizontalIconButton(parent, width, height, iconPath, text, opts)
     opts = opts or {}
     local button = CreateFrame("Button", nil, parent)
@@ -163,7 +254,7 @@ local function CreateHorizontalIconButton(parent, width, height, iconPath, text,
     button.text:SetPoint("LEFT", button.icon, "RIGHT", opts.textGap or 10, 0)
     button.text:SetText(text)
     if opts.justifyLeft then button.text:SetJustifyH("LEFT") end
-    SetHoverText(button)
+    StyleGoldPlaque(button)
     return button
 end
 
@@ -177,19 +268,20 @@ local function CreateVerticalIconButton(parent, width, height, iconPath, text)
     button.text = button:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     button.text:SetPoint("TOP", button.icon, "BOTTOM", 0, -5)
     button.text:SetText(text)
-    SetHoverText(button)
+    StyleGoldPlaque(button)
     return button
 end
 
 local function CreateTextButton(parent, width, height, text, onClick)
     local button = CreateFrame("Button", nil, parent)
     button:SetSize(width, height)
-    button.text = button:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    button.text:SetPoint("CENTER")
-    button.text:SetText(text)
+    StyleGoldPlaque(button, text)
     if onClick then button:SetScript("OnClick", onClick) end
-    SetHoverText(button)
     return button
+end
+
+local function CreateGoldButton(parent, width, height, text, onClick)
+    return CreateTextButton(parent, width, height, text, onClick)
 end
 
 local function SetSimpleTooltip(button, text)
@@ -210,8 +302,21 @@ local shadowButton
 local ShadowsBarStatus = "ENABLED"
 local ShadowsBarToggleStatus = "ENABLED"
 
+SHADOWS_CHATTER_SETTINGS = SHADOWS_CHATTER_SETTINGS or { enabled = true }
+AIO.AddSavedVar("SHADOWS_CHATTER_SETTINGS")
+
+local SetChatterButtonState
+
+local function SetShadowsChatterEnabled(enabled)
+    SHADOWS_CHATTER_SETTINGS.enabled = enabled
+    if SetChatterButtonState then SetChatterButtonState(enabled) end
+    local checkbox = _G["ShadowsChatterCheckbox"]
+    if checkbox then checkbox:SetChecked(enabled) end
+end
+
 local SHADOWS_PANEL_WIDGETS = {
     "ShadowsBarCheckbox",
+    "ShadowsChatterCheckbox",
     "ShadowsKeybindButton",
     "ShadowsResetButton",
     "ResetBotAIButton",
@@ -264,6 +369,18 @@ local function ShowShadowsSettingsPanel()
         autoOpenText:SetText("Automatically Open Shadows Bar If Grouped With Shadows")
         autoOpenText:SetTextColor(1, 1, 1)
 
+        local chatterCheckBox = CreateFrame("CheckButton", "ShadowsChatterCheckbox", frame, "InterfaceOptionsCheckButtonTemplate")
+        chatterCheckBox:SetPoint("TOPLEFT", checkBox, "BOTTOMLEFT", 0, -8)
+        chatterCheckBox:SetText("Enable Shadows Chatter")
+        chatterCheckBox:SetScript("OnClick", function(self)
+            SendChatMessage(self:GetChecked() and ".shadowschatteron" or ".shadowschatteroff", "GUILD")
+        end)
+
+        local chatterText = chatterCheckBox:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+        chatterText:SetPoint("LEFT", chatterCheckBox, "RIGHT", 4, 0)
+        chatterText:SetText("Keeps Shadows Chatty When You Log Back In")
+        chatterText:SetTextColor(1, 1, 1)
+
         local function AddOptionButton(name, text, anchor, onClick)
             local button = CreateFrame("Button", name, frame, "UIPanelButtonTemplate")
             button:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -10)
@@ -274,7 +391,7 @@ local function ShowShadowsSettingsPanel()
         end
 
         local keyBindButton = AddOptionButton("ShadowsKeybindButton", "Shadows Bar Keyboard Shortcuts",
-            checkBox, function()
+            chatterCheckBox, function()
                 SlashCmdList["SHADOWSHORTCUTS"]()
             end)
 
@@ -297,11 +414,16 @@ local function ShowShadowsSettingsPanel()
         if ShadowsBarStatus == "DISABLED" or ShadowsBarToggleStatus == "CLOSED" then
             checkBox:SetChecked(false)
         end
+        chatterCheckBox:SetChecked(SHADOWS_CHATTER_SETTINGS.enabled)
     else
         frame:Show()
         local checkBox = _G["ShadowsBarCheckbox"]
         if checkBox then
             checkBox:SetChecked(ShadowsBarToggleStatus == "OPEN")
+        end
+        local chatterCheckBox = _G["ShadowsChatterCheckbox"]
+        if chatterCheckBox then
+            chatterCheckBox:SetChecked(SHADOWS_CHATTER_SETTINGS.enabled)
         end
         SetShadowsPanelWidgetsVisible(true)
     end
@@ -830,7 +952,7 @@ local function CreateBotControlBar()
             },
         },
         {text = "Summon", icon = "Spell_Shadow_Teleport", command = ".shadowsmenu", action = "summon"},
-        {text = "Shadows Chatter", icon = "Spell_Holy_Silence", toggle = true, default = true, command = ".muteshadow", action = "chatter"},
+        {text = "Shadows Chatter", icon = "Spell_Holy_Silence", toggle = true, default = SHADOWS_CHATTER_SETTINGS.enabled, action = "chatter"},
         {
             text = "Quest",
             icon = "INV_Letter_11",
@@ -851,6 +973,21 @@ local function CreateBotControlBar()
             },
         },
     }
+
+    local function SetChatterState(enabled)
+        for _, info in ipairs(utilityButtons) do
+            if info.action == "chatter" then
+                local button = _G["BotControlBarButton"..tIndexOf(utilityButtons, info)]
+                if button then
+                    button.state = enabled
+                    button.border:SetAlpha(enabled and 1 or 0)
+                end
+                break
+            end
+        end
+    end
+
+    SetChatterButtonState = SetChatterState
 
     local dropdown
 
@@ -958,9 +1095,9 @@ local function CreateBotControlBar()
         elseif info.action == "summon" then
             SendChatMessage(".shadows summon", "GUILD")
         elseif info.action == "chatter" then
-            button.state = not button.state
-            button.border:SetAlpha(button.state and 1 or 0)
-            SendChatMessage(button.state and ".unmuteshadows" or ".muteshadows", "GUILD")
+            local enabled = not button.state
+            SetShadowsChatterEnabled(enabled)
+            SendChatMessage(enabled and ".shadowschatteron" or ".shadowschatteroff", "GUILD")
             UpdateButtonTooltip(button)
         elseif info.dropdown then
             OpenUtilityDropdown(button)
@@ -1375,8 +1512,10 @@ local function CreateBotControlBar()
 
         local roleFrame = CreateDialog("ShadowRoleManagementFrame", frameWidth, frameHeight, "Group Roles", {
             strata = "FULLSCREEN_DIALOG",
-            bgFile = "Interface\\Buttons\\WHITE8X8",
-            bgColor = {0, 0, 0, 1},
+            bgFile = PARCHMENT,
+            edgeFile = DIALOG_BORDER,
+            edgeSize = 32,
+            bgColor = THEME.frameBg,
             level = 100,
         })
 
@@ -1398,6 +1537,7 @@ local function CreateBotControlBar()
             button.text:SetPoint("LEFT", 20, 0)
             button.text:SetText(playerName)
             button.text:SetJustifyH("LEFT")
+            button.text:SetTextColor(THEME.goldText[1], THEME.goldText[2], THEME.goldText[3])
             button:SetScript("OnClick", function()
                 ShowRoleChangePrompt(playerName)
             end)
@@ -1420,13 +1560,13 @@ local function CreateBotControlBar()
             local header = roleFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
             header:SetPoint("TOPLEFT", column.xOffset + 25, -40)
             header:SetText(column.title..":")
-            header:SetTextColor(1, 0.82, 0)
+            header:SetTextColor(THEME.title[1], THEME.title[2], THEME.title[3])
 
             if #column.data == 0 then
                 local noneText = roleFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
                 noneText:SetPoint("TOPLEFT", column.xOffset + 20, -65)
                 noneText:SetText("None")
-                noneText:SetTextColor(0.5, 0.5, 0.5)
+                noneText:SetTextColor(THEME.subtleText[1], THEME.subtleText[2], THEME.subtleText[3])
             else
                 for i, playerName in ipairs(column.data) do
                     CreatePlayerButton(playerName, column.xOffset, -65 - ((i - 1) * 25))
@@ -1461,8 +1601,10 @@ local function CreateBotControlBar()
         local selectionFrame = CreateDialog("ShadowRoleSelectionFrame", 400, 250,
             "What role do you want to assign to \nshadow "..shadowName.."?", {
                 strata = "FULLSCREEN_DIALOG",
-                bgFile = "Interface\\Buttons\\WHITE8X8",
-                bgColor = {0, 0, 0, 1},
+                bgFile = PARCHMENT,
+                edgeFile = DIALOG_BORDER,
+                edgeSize = 32,
+                bgColor = THEME.frameBg,
                 level = 110,
             })
 
@@ -1545,8 +1687,10 @@ local function CreateBotControlBar()
                 font = "GameFontNormal",
                 titleY = -20,
                 strata = "FULLSCREEN_DIALOG",
-                bgFile = "Interface\\Buttons\\WHITE8X8",
-                bgColor = {0, 0, 0, 1},
+                bgFile = PARCHMENT,
+                edgeFile = DIALOG_BORDER,
+                edgeSize = 32,
+                bgColor = THEME.frameBg,
                 onSelect = function(item)
                     ShowTalentManagementWindow(item.name)
                 end,
@@ -1582,8 +1726,10 @@ local function CreateBotControlBar()
         talentFrame = CreateDialog("ShadowTalentManagementFrame", 400, 300,
             "Talent Management: "..shadowName, {
                 strata = "FULLSCREEN_DIALOG",
-                bgFile = "Interface\\Buttons\\WHITE8X8",
-                bgColor = {0, 0, 0, 1},
+                bgFile = PARCHMENT,
+                edgeFile = DIALOG_BORDER,
+                edgeSize = 32,
+                bgColor = THEME.frameBg,
             })
         talentFrame.shadowName = shadowName
 
@@ -1672,23 +1818,23 @@ local function CreateBotControlBar()
 
         local popup = CreateDialog("ShadowTalentResponseFrame", 500, 150, nil, {
             strata = "TOOLTIP",
-            bgFile = "Interface\\Buttons\\WHITE8X8",
-            bgColor = {0, 0, 0, 1},
+            bgFile = PARCHMENT,
+            edgeFile = DIALOG_BORDER,
+            edgeSize = 32,
+            bgColor = THEME.frameBg,
         })
 
         local text = popup:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         text:SetPoint("TOP", 0, -30)
         text:SetWidth(460)
         text:SetJustifyH("CENTER")
+        text:SetTextColor(THEME.goldText[1], THEME.goldText[2], THEME.goldText[3])
         text:SetText(responseText:match("(.-)Talents usage") or responseText)
 
-        local okButton = CreateFrame("Button", nil, popup, "UIPanelButtonTemplate")
-        okButton:SetSize(100, 30)
-        okButton:SetPoint("BOTTOM", 0, 20)
-        okButton:SetText("OK")
-        okButton:SetScript("OnClick", function()
+        local okButton = CreateGoldButton(popup, 100, 30, "OK", function()
             popup:Hide()
         end)
+        okButton:SetPoint("BOTTOM", 0, 20)
 
         popup:Show()
     end
@@ -1728,8 +1874,10 @@ local function CreateBotControlBar()
         CreatePicker("ShadowRespecFrame", 400, 360,
             "Select Talent Spec for "..shadowName, items, {
                 strata = "TOOLTIP",
-                bgFile = "Interface\\Buttons\\WHITE8X8",
-                bgColor = {0, 0, 0, 1},
+                bgFile = PARCHMENT,
+                edgeFile = DIALOG_BORDER,
+                edgeSize = 32,
+                bgColor = THEME.frameBg,
                 onSelect = function(item)
                     if item.name then
                         SendThrottledChatMessage("talents spec "..item.name, "WHISPER", nil, shadowName)
@@ -1767,8 +1915,10 @@ local function CreateBotControlBar()
                 font = "GameFontNormal",
                 titleY = -20,
                 strata = "FULLSCREEN_DIALOG",
-                bgFile = "Interface\\Buttons\\WHITE8X8",
-                bgColor = {0, 0, 0, 1},
+                bgFile = PARCHMENT,
+                edgeFile = DIALOG_BORDER,
+                edgeSize = 32,
+                bgColor = THEME.frameBg,
                 movable = false,
                 onSelect = function(item)
                     callback(item.name)
@@ -1833,8 +1983,10 @@ local function CreateBotControlBar()
 
         local classFrame = CreateDialog(frameName, width, height, title, {
             strata = "FULLSCREEN",
-            bgFile = "Interface\\Buttons\\WHITE8X8",
-            bgColor = {0, 0, 0, 1},
+            bgFile = PARCHMENT,
+            edgeFile = DIALOG_BORDER,
+            edgeSize = 32,
+            bgColor = THEME.frameBg,
             onClose = function()
                 activeClassFrame = nil
             end,
@@ -1948,7 +2100,7 @@ local function CreateBotControlBar()
             local noteLabel = classFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
             noteLabel:SetPoint("TOP", 0, -55)
             noteLabel:SetText("(Defaults: Affliction=Felhunter, Demonology=Felguard, Destruction=Imp)")
-            noteLabel:SetTextColor(0.7, 0.7, 0.7)
+            noteLabel:SetTextColor(THEME.subtleText[1], THEME.subtleText[2], THEME.subtleText[3])
 
             AddStrategyColumn(classFrame, {
                 {name = "Imp", strategy = "imp", icon = "Spell_Shadow_Summonimp"},
@@ -2083,8 +2235,10 @@ local function CreateBotControlBar()
 
         local frameWidth = 500
         setupFrame = CreateDialog("ShadowGroupSetupFrame", frameWidth, 100, "Group Setup", {
-            bgFile = "Interface\\Buttons\\WHITE8X8",
-            bgColor = {0, 0, 0, 1},
+            bgFile = PARCHMENT,
+            edgeFile = DIALOG_BORDER,
+            edgeSize = 32,
+            bgColor = THEME.frameBg,
         })
 
         local currentY = -50
@@ -2101,15 +2255,17 @@ local function CreateBotControlBar()
 
         local function AddSection(text)
             local line = setupFrame:CreateTexture(nil, "ARTWORK")
-            line:SetTexture(1, 1, 1)
-            line:SetVertexColor(0.5, 0.5, 0.5, 1)
-            line:SetHeight(1)
+            line:SetTexture("Interface\\Buttons\\WHITE8X8")
+            local gold = THEME.divider
+            line:SetVertexColor(gold[1], gold[2], gold[3], gold[4])
+            line:SetHeight(2)
             line:SetPoint("TOPLEFT", setupFrame, "TOPLEFT", 20, currentY)
             line:SetPoint("TOPRIGHT", setupFrame, "TOPRIGHT", -20, currentY)
 
             currentY = currentY - 10
             local label = setupFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
             label:SetPoint("TOP", setupFrame, "TOP", 0, currentY)
+            label:SetTextColor(THEME.title[1], THEME.title[2], THEME.title[3])
             label:SetText(text)
             currentY = currentY - 30
         end
@@ -2259,6 +2415,9 @@ CreateBotControlBar()
 
 BotControlBar:Hide()
 
+-- Show the state we have until the server replies with the authoritative stored state.
+SetChatterButtonState(SHADOWS_CHATTER_SETTINGS.enabled)
+
 -----------------------------------------------------------
 -- Shadows bar keyboard shortcuts
 -----------------------------------------------------------
@@ -2288,11 +2447,10 @@ function ShadowShortcuts.CreateConfigWindow()
             titleY = -15,
             toplevel = true,
             hidden = true,
-            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-            tileSize = 32,
+            bgFile = PARCHMENT,
+            edgeFile = DIALOG_BORDER,
             edgeSize = 32,
-            insets = {left = 11, right = 12, top = 12, bottom = 11},
+            bgColor = THEME.frameBg,
             closeX = -5,
             closeY = -5,
         })
@@ -2313,10 +2471,7 @@ function ShadowShortcuts.CreateConfigWindow()
 
     local lastButton
     for _, buttonInfo in ipairs(ShadowShortcuts.buttons) do
-        local button = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-        button:SetWidth(200)
-        button:SetHeight(25)
-        button:SetText(buttonInfo.text)
+        local button = CreateGoldButton(frame, 200, 25, buttonInfo.text)
 
         if lastButton then
             button:SetPoint("TOP", lastButton, "BOTTOM", 0, -10)
@@ -2327,6 +2482,7 @@ function ShadowShortcuts.CreateConfigWindow()
 
         local keyText = button:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         keyText:SetPoint("LEFT", button, "RIGHT", 10, 0)
+        keyText:SetTextColor(THEME.goldText[1], THEME.goldText[2], THEME.goldText[3])
         keyText:SetText("Not bound")
 
         button:SetScript("OnClick", function()
@@ -2522,7 +2678,11 @@ end
 
 local function onShadowsBarAddonMessage(self, event, prefix, message, channel, sender)
     if prefix == "ShadowsBar" then
-        if message and message:find("ENABLED") then
+        if message and message:find("CHATTERON") then
+            SetShadowsChatterEnabled(true)
+        elseif message and message:find("CHATTEROFF") then
+            SetShadowsChatterEnabled(false)
+        elseif message and message:find("ENABLED") then
             ShadowsBarStatus = "ENABLED"
             BotControlBar:Show()
         elseif message and message:find("DISABLED") then
