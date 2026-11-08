@@ -1095,6 +1095,7 @@ local function OnBotCommand(event, player, command)
 		return false
 	elseif command == "shadowsbarstatus" then
 		player:Data():Set("ShadowBarStatusChecked", true)
+		LoadShadowsChatterState(player)
 		if not player:IsInGroup() then
 			if player:Data():Get("ShadowsBarData") then
 				player:SendAddonMessage("ShadowsBar", "OPEN", 7, player)
