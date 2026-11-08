@@ -187,10 +187,10 @@ local function LichKingLoop(eventId, delay, repeats, lk)
     lk:RegisterEvent(LichKingLoop, 200, 1)
 end
 
-local function OnLKCombat(event, player, enemy)
-    if enemy and enemy:GetEntry() == 36597 then
-        StartLuaEvent(enemy, LichKingLoop)
-    end
+local function OnLKCombat(event, enemy, target)
+    if not enemy or enemy:GetEntry() ~= 36597 then return end
+    if enemy:Data():Get("EventActive") then return end
+    StartLuaEvent(enemy, LichKingLoop)
 end
 
 function OnSoulReaperCast(event, caster, spell, skipCheck)
@@ -219,13 +219,13 @@ local function OnReload(player)
             local LK = player:GetNearestCreature(100, 36597)
             if not LK then return end
             if LK:IsInCombat() then
-                OnLKCombat(_, player, LK)
+                OnLKCombat(_, LK, player)
             end
         end
     end
 end
 
 if GetStateMap() then for _, player in ipairs(GetStateMap():GetPlayers()) do OnReload(player) end end
-RegisterPlayerEvent(33, OnLKCombat)
+RegisterCreatureEvent(36597, 1, OnLKCombat)
 RegisterSpellEvent(69409, 2, OnSoulReaperCast)
 RegisterSpellEvent(72762, 1, OnDefilePrepare)

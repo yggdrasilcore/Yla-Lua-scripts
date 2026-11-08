@@ -85,13 +85,16 @@ local function LichKingChaseLoop(eventId, delay, repeats, lk)
     lk:RegisterEvent(LichKingChaseLoop, 500, 1)
 end
 
-local function LichKingChaseOnEnterCombat(event, player, enemy)
-    if not (player:GetMapId() == 668) then return end
-    if enemy and enemy:GetEntry() == LK_ID then
-        StartLuaEvent(enemy, LichKingChaseLoop)
+local function LichKingChaseOnEnterCombat(event, enemy, target)
+    if not enemy or enemy:GetEntry() ~= LK_ID or enemy:GetMapId() ~= 668 then return end
+
+    for _, player in ipairs(enemy:GetPlayersInRange(100)) do
         ApplyHiddenBuffsToShadows(player)
     end
+
+    if enemy:Data():Get("EventActive") then return end
+    StartLuaEvent(enemy, LichKingChaseLoop)
 end
 
-RegisterPlayerEvent(33, LichKingChaseOnEnterCombat)
+RegisterCreatureEvent(LK_ID, 1, LichKingChaseOnEnterCombat)
 RegisterPlayerEvent(28, OnEnterHoR)

@@ -557,31 +557,36 @@ end
 -- Enter Combat
 -- ============================================================
 
-local function FestergutOnEnterCombat(event, player, festergut)
-    if festergut and festergut:GetEntry() == FESTERGUT_ENTRY then
-        local players = festergut:GetPlayersInRange(100)
-        for _, p in ipairs(players) do
-            if p:IsBot() then
-                p:Data():Set("FestergutSpreadPos", nil)
-            end
-        end
-        festergut:Data():Set("SporeDetectTime", nil)
-        festergut:Data():Set("CachedSporeCount", nil)
-        festergut:Data():Set("SporeAssignmentDone", nil)
-        festergut:Data():Set("WasSporeActive", nil)
-        festergut:Data():Set("GooX", nil)
-        festergut:Data():Set("GooY", nil)
-        festergut:Data():Set("GooZ", nil)
-        festergut:Data():Set("GooTime", nil)
-        festergut:Data():Set("LastHCReassignTime", nil)
+local function FestergutOnEnterCombat(event, festergut, target)
+    if not festergut or festergut:GetEntry() ~= FESTERGUT_ENTRY then return end
+
+    for _, player in ipairs(festergut:GetPlayersInRange(100)) do
         local shadow = player:ToShadow()
         if shadow then shadow:ToggleCombatStrategy("-icc") end
         if player:GetDifficulty() > 1 then ApplyHiddenBuffsToShadows(player) end
-        StartLuaEvent(festergut, FestergutLoop)
     end
+
+    if festergut:Data():Get("EventActive") then return end
+
+    local players = festergut:GetPlayersInRange(100)
+    for _, p in ipairs(players) do
+        if p:IsBot() then
+            p:Data():Set("FestergutSpreadPos", nil)
+        end
+    end
+    festergut:Data():Set("SporeDetectTime", nil)
+    festergut:Data():Set("CachedSporeCount", nil)
+    festergut:Data():Set("SporeAssignmentDone", nil)
+    festergut:Data():Set("WasSporeActive", nil)
+    festergut:Data():Set("GooX", nil)
+    festergut:Data():Set("GooY", nil)
+    festergut:Data():Set("GooZ", nil)
+    festergut:Data():Set("GooTime", nil)
+    festergut:Data():Set("LastHCReassignTime", nil)
+    StartLuaEvent(festergut, FestergutLoop)
 end
 
-RegisterPlayerEvent(33, FestergutOnEnterCombat)
+RegisterCreatureEvent(FESTERGUT_ENTRY, 1, FestergutOnEnterCombat)
 
 -- ============================================================
 -- Spell Events

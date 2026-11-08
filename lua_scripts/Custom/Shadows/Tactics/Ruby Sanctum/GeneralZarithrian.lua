@@ -325,10 +325,10 @@ local function GeneralZarithrian(eventId, delay, repeats, zarithrian)
     zarithrian:RegisterEvent(GeneralZarithrian, 200, 1)
 end
 
-local function GeneralZarithianOnEnterCombat(event, player, creature)
-    if creature and creature:GetEntry() == 39746 then
-        StartLuaEvent(creature, GeneralZarithrian)
-    end
+local function GeneralZarithianOnEnterCombat(event, creature, target)
+    if not creature or creature:GetEntry() ~= 39746 then return end
+    if creature:Data():Get("EventActive") then return end
+    StartLuaEvent(creature, GeneralZarithrian)
 end
 
-RegisterPlayerEvent(33, GeneralZarithianOnEnterCombat)
+RegisterCreatureEvent(39746, 1, GeneralZarithianOnEnterCombat)

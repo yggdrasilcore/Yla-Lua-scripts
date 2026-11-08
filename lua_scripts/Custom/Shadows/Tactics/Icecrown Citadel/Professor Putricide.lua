@@ -57,10 +57,10 @@ local function ProfessorPutricideLoop(eventId, delay, repeats, putricide)
     putricide:RegisterEvent(ProfessorPutricideLoop, 500, 1)
 end
 
-local function OnProfessorPutricideCombat(event, player, enemy)
-    if enemy and enemy:GetEntry() == 36678 then
-        StartLuaEvent(enemy, ProfessorPutricideLoop)
-    end
+local function OnProfessorPutricideCombat(event, enemy, target)
+    if not enemy or enemy:GetEntry() ~= 36678 then return end
+    if enemy:Data():Get("EventActive") then return end
+    StartLuaEvent(enemy, ProfessorPutricideLoop)
 end
 
-RegisterPlayerEvent(33, OnProfessorPutricideCombat)
+RegisterCreatureEvent(36678, 1, OnProfessorPutricideCombat)

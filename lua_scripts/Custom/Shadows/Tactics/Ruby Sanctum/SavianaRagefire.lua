@@ -142,10 +142,10 @@ local function SavianaRagefireLoop(eventId, delay, repeats, saviana)
     saviana:RegisterEvent(SavianaRagefireLoop, 200, 1)
 end
 
-local function SavianaRagefireOnEnterCombat(event, player, saviana)
-    if saviana and saviana:GetEntry() == 39747 then
-        StartLuaEvent(saviana, SavianaRagefireLoop)
-    end
+local function SavianaRagefireOnEnterCombat(event, saviana, target)
+    if not saviana or saviana:GetEntry() ~= 39747 then return end
+    if saviana:Data():Get("EventActive") then return end
+    StartLuaEvent(saviana, SavianaRagefireLoop)
 end
 
-RegisterPlayerEvent(33, SavianaRagefireOnEnterCombat)
+RegisterCreatureEvent(39747, 1, SavianaRagefireOnEnterCombat)

@@ -555,10 +555,10 @@ local function BaltharusLoop(eventId, delay, repeats, baltharus)
     baltharus:RegisterEvent(BaltharusLoop, 200, 1)
 end
 
-local function BaltharusOnEnterCombat(event, player, creature)
-    if creature and creature:GetEntry() == 39751 then
-        StartLuaEvent(creature, BaltharusLoop)
-    end
+local function BaltharusOnEnterCombat(event, creature, target)
+    if not creature or creature:GetEntry() ~= 39751 then return end
+    if creature:Data():Get("EventActive") then return end
+    StartLuaEvent(creature, BaltharusLoop)
 end
 
-RegisterPlayerEvent(33, BaltharusOnEnterCombat)
+RegisterCreatureEvent(39751, 1, BaltharusOnEnterCombat)

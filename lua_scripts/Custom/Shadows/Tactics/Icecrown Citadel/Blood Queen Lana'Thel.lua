@@ -45,7 +45,6 @@ local MESH_STEP                  = 2
 local ANGLE_STEP                 = 10
 
 local AIR_PHASE_INTERVAL         = 124000
-local HEARTBEAT_STALE            = 2000
 
 local function InRoom(p)
     return p:GetX() > 4537 and p:GetX() < 4635
@@ -509,7 +508,6 @@ local function CleanupBQ(boss)
     end
     boss:Data():Set("BQCombatStart", nil)
     boss:Data():Set("BQCombatTime", nil)
-    boss:Data():Set("BQHeartbeat", nil)
     boss:Data():Set("BQAirPrep", nil)
     boss:Data():Set("BQBaseMesh", nil)
 end
@@ -525,7 +523,6 @@ local function BQLoop(eventId, delay, repeats, boss)
 
     local combatTime = (boss:Data():Get("BQCombatTime") or 0) + 200
     boss:Data():Set("BQCombatTime", combatTime)
-    boss:Data():Set("BQHeartbeat", GetCurrTime())
 
     local dynobjs = boss:GetDynamicObjectsInRange(100, SWARMING_SHADOWS_DYNOBJ)
     print("BQLoop dynobjs="..#dynobjs)
@@ -756,26 +753,24 @@ end
 -- Events
 -- ============================================================
 
-local function BQOnEnterCombat(event, player, boss)
-    print("BQOnEnterCombat player="..tostring(player and player:GetName()).." boss="..tostring(boss and boss:GetName()).." entry="..tostring(boss and boss:GetEntry()))
+local function BQOnEnterCombat(event, boss, target)
+    print("BQOnEnterCombat target="..tostring(target and target:GetName()).." boss="..tostring(boss and boss:GetName()).." entry="..tostring(boss and boss:GetEntry()))
     if not boss or not (boss:GetEntry() == BLOOD_QUEEN_ENTRY) then return end
 
-    local shadow = player:ToShadow()
-    if shadow then
-        print("shadow "..shadow:GetName().." found attacking BQL!")
-        shadow:SuppressMovement(SUPPRESS_MS)
-        shadow:ToggleCombatStrategy("-icc")
-    else
-        print("player "..player:GetName().." is not a shadow.")
+    for _, player in ipairs(boss:GetPlayersInRange(100)) do
+        local shadow = player:ToShadow()
+        if shadow then
+            shadow:SuppressMovement(SUPPRESS_MS)
+            shadow:ToggleCombatStrategy("-icc")
+        end
+
+        if player:GetDifficulty() > 1 then
+            ApplyHiddenBuffsToShadows(player)
+        end
     end
 
-    if player:GetDifficulty() > 1 then
-        ApplyHiddenBuffsToShadows(player)
-    end
-
-    local heartbeat = boss:Data():Get("BQHeartbeat")
-    if heartbeat and GetTimeDiff(heartbeat) < HEARTBEAT_STALE then
-        print("BQ enter: loop already running, heartbeat age="..GetTimeDiff(heartbeat).."ms")
+    if boss:Data():Get("EventActive") then
+        print("BQ enter: loop already running")
         return
     end
     print("BQ enter: starting loop")
@@ -796,11 +791,10 @@ local function BQOnEnterCombat(event, player, boss)
     boss:Data():Set("BQAirPrep", nil)
     boss:Data():Set("BQMeshSignature", nil)
     print("BQ enter: registering loop")
-    boss:Data():Set("BQHeartbeat", GetCurrTime())
     StartLuaEvent(boss, BQLoop, 200, 0)
     print("BQ enter: after StartLuaEvent EventActive="..tostring(boss:Data():Get("EventActive")))
 end
-RegisterPlayerEvent(33, BQOnEnterCombat)
+RegisterCreatureEvent(BLOOD_QUEEN_ENTRY, 1, BQOnEnterCombat)
 
 local function BQOnLeaveCombat(event, player)
     print("BQOnLeaveCombat player="..tostring(player and player:GetName()).." map="..tostring(player and player:GetMapId()))

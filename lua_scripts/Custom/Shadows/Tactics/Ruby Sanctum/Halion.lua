@@ -553,8 +553,10 @@ local function HalionLoop(eventId, delay, repeats, halion)
     halion:RegisterEvent(HalionLoop, TICK_FREQUENCY, 1)
 end
 
-local function HalionOnEnterCombat(event, player, halion)
-    if halion and halion:GetEntry() == HALION_ENTRY then
+local function HalionOnEnterCombat(event, halion, target)
+    if not halion or halion:GetEntry() ~= HALION_ENTRY then return end
+
+    for _, player in ipairs(halion:GetPlayersInRange(100)) do
         player:Data():Set("HalionPos", nil)
         player:Data():Set("HalionSide", nil)
         player:Data():Set("HalionInsidePos", nil)
@@ -565,15 +567,15 @@ local function HalionOnEnterCombat(event, player, halion)
         player:Data():Set("OutsideGroup", nil)
         player:Data():Set("InsideGroup", nil)
         player:Data():Set("BehindWaypoint", nil)
-        
-        halion:Data():Set("CombatTime", 0)
-		
-		ApplyHiddenBuffsToShadows(player)
-        StartLuaEvent(halion, HalionLoop)
+        ApplyHiddenBuffsToShadows(player)
     end
+
+    if halion:Data():Get("EventActive") then return end
+    halion:Data():Set("CombatTime", 0)
+    StartLuaEvent(halion, HalionLoop)
 end
 
-RegisterPlayerEvent(33, HalionOnEnterCombat)
+RegisterCreatureEvent(HALION_ENTRY, 1, HalionOnEnterCombat)
 
 function HalionCheckInsideCombat(eventId, delay, repeats, player)
     if not player:IsInCombat() then StopLuaEvent(player) return end
