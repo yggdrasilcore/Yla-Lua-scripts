@@ -2213,7 +2213,8 @@ local function CreateBotControlBar()
             return
         end
 
-        local frameWidth = 500
+        local frameWidth = 620
+        local setupButtonWidth = 180
         setupFrame = CreateDialog("ShadowGroupSetupFrame", frameWidth, 100, "Group Setup", {
             bgFile = PARCHMENT,
             edgeFile = DIALOG_BORDER,
@@ -2224,8 +2225,9 @@ local function CreateBotControlBar()
         local currentY = -50
 
         local function CreateSetupButton(text, icon, onClick)
-            local button = CreateHorizontalIconButton(setupFrame, 140, 40,
-                "Interface\\Icons\\"..icon, text, {iconX = 5, textGap = 5, justifyLeft = true})
+            local button = CreateHorizontalIconButton(setupFrame, setupButtonWidth, 40,
+                "Interface\\Icons\\"..icon, text, {iconX = 5, textGap = 8, justifyLeft = true})
+            button.text:SetWidth(setupButtonWidth - 5 - 32 - 8 - 5)
             button:SetScript("OnClick", function()
                 AIO.Handle("ShadowsCache", "RequestCache")
                 onClick()
