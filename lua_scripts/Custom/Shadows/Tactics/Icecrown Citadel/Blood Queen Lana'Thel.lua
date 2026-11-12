@@ -84,25 +84,21 @@ local function BuildBaseMesh(boss)
     boss:Data():Set("BQBaseMesh", mesh)
 end
 
-local function GetDynobjSignature(dynobjs)
+local function UpdateMesh(boss, SwarmingShadows)
+    if not boss:Data():Get("BQBaseMesh") then BuildBaseMesh(boss) end
     local parts = {}
-    for _, d in ipairs(dynobjs) do
+    for _, d in ipairs(SwarmingShadows) do
         table.insert(parts, string.format("%.1f:%.1f", d:GetX(), d:GetY()))
     end
     table.sort(parts)
-    return table.concat(parts, "|")
-end
-
-local function UpdateMesh(boss, dynobjs)
-    if not boss:Data():Get("BQBaseMesh") then BuildBaseMesh(boss) end
-    local sig = GetDynobjSignature(dynobjs)
+    local sig = table.concat(parts, "|")
     if sig == boss:Data():Get("BQMeshSignature") then return end
     boss:Data():Set("BQMeshSignature", sig)
     local mesh = boss:Data():Get("BQBaseMesh"):AsTable()
     local valid = {}
     for i, p in ipairs(mesh) do
         valid[i] = true
-        for _, d in ipairs(dynobjs) do
+        for _, d in ipairs(SwarmingShadows) do
             local dx, dy = p.x - d:GetX(), p.y - d:GetY()
             if dx * dx + dy * dy < 25 then
                 valid[i] = false
@@ -120,8 +116,8 @@ local function ClampToRoom(x, y)
     return CENTER[1] + dx / d * ROOM_RADIUS, CENTER[2] + dy / d * ROOM_RADIUS
 end
 
-local function IsPosValid(x, y, dynobjs)
-    for _, d in ipairs(dynobjs) do
+local function IsPosValid(x, y, SwarmingShadows)
+    for _, d in ipairs(SwarmingShadows) do
         if d:GetExactDistance2d(x, y) < 5 then
             return false
         end
@@ -129,10 +125,10 @@ local function IsPosValid(x, y, dynobjs)
     return true
 end
 
-local function GetSafePos(boss, x, y, maxSearchRadius, dynobjs)
+local function GetSafePos(boss, x, y, maxSearchRadius, SwarmingShadows)
     x, y = ClampToRoom(x, y)
     local map = boss:GetMap()
-    if IsPosValid(x, y, dynobjs) then
+    if IsPosValid(x, y, SwarmingShadows) then
         return {x, y, map:GetNearestFloor(x, y, 405)}
     end
     if not boss:Data():Get("BQBaseMesh") then BuildBaseMesh(boss) end
@@ -145,7 +141,7 @@ local function GetSafePos(boss, x, y, maxSearchRadius, dynobjs)
         if valid[i] then
             local dx, dy = p.x - x, p.y - y
             local d2 = dx * dx + dy * dy
-            if d2 <= maxSq and d2 < bestSq and IsPosValid(p.x, p.y, dynobjs) then
+            if d2 <= maxSq and d2 < bestSq and IsPosValid(p.x, p.y, SwarmingShadows) then
                 bestSq = d2
                 best = p
             end
@@ -160,7 +156,7 @@ end
 -- Closest candidate to an ideal point (or, in spread mode, the candidate
 -- farthest from everyone) that stays `separation` away from occupied units.
 -- Falls back to the most separated candidate when the spacing cannot be met.
-local function FindBestSpot(boss, cx, cy, minRadius, maxRadius, idealX, idealY, spread, occupied, dynobjs, filter, separation)
+local function FindBestSpot(boss, cx, cy, minRadius, maxRadius, idealX, idealY, spread, occupied, SwarmingShadows, filter, separation)
     separation = separation or SEPARATION
     local best, bestScore = nil, nil
     local fallback, fallbackD = nil, -1
@@ -170,7 +166,7 @@ local function FindBestSpot(boss, cx, cy, minRadius, maxRadius, idealX, idealY, 
             local angle = ai * ANGLE_STEP * math.pi / 180
             local x = cx + math.cos(angle) * radius
             local y = cy + math.sin(angle) * radius
-            if IsPosValid(x, y, dynobjs) and (not filter or filter(x, y)) then
+            if IsPosValid(x, y, SwarmingShadows) and (not filter or filter(x, y)) then
                 local minD = math.huge
                 for _, p in ipairs(occupied) do
                     local d = math.sqrt((x - p.x) ^ 2 + (y - p.y) ^ 2)
@@ -222,8 +218,8 @@ local function NearHealer(x, y, healerPos)
     return count == 0
 end
 
-local function IsSpotValid(boss, role, x, y, dynobjs, healerPos)
-    if not IsPosValid(x, y, dynobjs) then return false end
+local function IsSpotValid(boss, role, x, y, SwarmingShadows, healerPos)
+    if not IsPosValid(x, y, SwarmingShadows) then return false end
     local d = math.sqrt((x - CENTER[1]) ^ 2 + (y - CENTER[2]) ^ 2)
     if role == "healer" then
         return d <= HEALER_MAX_RADIUS + 0.5
@@ -260,7 +256,7 @@ end
 -- healer -> melee -> ranged, so on a conflict ranged DPS move first, melee
 -- DPS second and healers third. Real players and tanks are never moved.
 local function ComputePositions(boss, bots, allPlayers, botHealers, botMelee, botRanged,
-                                storedHealer, storedMelee, storedRanged, storedAir, dynobjs, airPhase)
+                                storedHealer, storedMelee, storedRanged, storedAir, SwarmingShadows, airPhase)
     local function Copy(tbl)
         local out = {}
         if tbl then
@@ -328,7 +324,7 @@ local function ComputePositions(boss, bots, allPlayers, botHealers, botMelee, bo
                     -- Lower priority: it will move out of the way later.
                 else
                     local pos = role and GetStored(role, key)
-                    if pos and IsSpotValid(boss, role, pos[1], pos[2], dynobjs, healerPos) then
+                    if pos and IsSpotValid(boss, role, pos[1], pos[2], SwarmingShadows, healerPos) then
                         table.insert(occupied, {x = pos[1], y = pos[2]})
                     else
                         table.insert(occupied, {x = p:GetX(), y = p:GetY()})
@@ -357,7 +353,7 @@ local function ComputePositions(boss, bots, allPlayers, botHealers, botMelee, bo
             local forced = bot:Data():Get("BQRespot")
             local occupied = Occupied(key, rank)
             local keep = spot
-                and IsSpotValid(boss, role, spot[1], spot[2], dynobjs, healerPos)
+                and IsSpotValid(boss, role, spot[1], spot[2], SwarmingShadows, healerPos)
                 and not Conflicts(spot[1], spot[2], occupied, separation)
             if forced or not keep then
                 spot = find(bot, occupied)
@@ -372,7 +368,7 @@ local function ComputePositions(boss, bots, allPlayers, botHealers, botMelee, bo
         local tx = CENTER[1] + math.cos(ang) * HEALER_MAX_RADIUS
         local ty = CENTER[2] + math.sin(ang) * HEALER_MAX_RADIUS
         return FindBestSpot(boss, CENTER[1], CENTER[2], 0, HEALER_MAX_RADIUS,
-                            tx, ty, false, occupied, dynobjs)
+                            tx, ty, false, occupied, SwarmingShadows)
     end)
 
     if airPhase then
@@ -386,7 +382,7 @@ local function ComputePositions(boss, bots, allPlayers, botHealers, botMelee, bo
             local tx = CENTER[1] + math.cos(ang) * AIR_RADIUS
             local ty = CENTER[2] + math.sin(ang) * AIR_RADIUS
             return FindBestSpot(boss, CENTER[1], CENTER[2], AIR_RADIUS, AIR_RADIUS,
-                                tx, ty, false, occupied, dynobjs)
+                                tx, ty, false, occupied, SwarmingShadows)
         end)
     else
         -- Melee second: fan out on the ring 10 yd behind the boss.
@@ -396,14 +392,14 @@ local function ComputePositions(boss, bots, allPlayers, botHealers, botMelee, bo
             local tx = bx + math.cos(ang) * 10
             local ty = by + math.sin(ang) * 10
             return FindBestSpot(boss, bx, by, 1, 10,
-                                tx, ty, false, occupied, dynobjs,
+                                tx, ty, false, occupied, SwarmingShadows,
                                 function(x, y) return IsBehindBoss(boss, x, y) end)
         end)
         -- Ranged last: closest spot to center inside the 15-30 yd band that
         -- is within 40 yd of a healer.
         Assign("ranged", botRanged, function(_, occupied)
             return FindBestSpot(boss, CENTER[1], CENTER[2], RANGED_MIN, RANGED_MAX,
-                                CENTER[1], CENTER[2], false, occupied, dynobjs,
+                                CENTER[1], CENTER[2], false, occupied, SwarmingShadows,
                                 function(x, y) return NearHealer(x, y, healerPos) end)
         end)
     end
@@ -418,10 +414,10 @@ local function HasSpotFor(tbl, list)
     return true
 end
 
-local function SpotsBlocked(dynobjs, ...)
+local function SpotsBlocked(SwarmingShadows, ...)
     for _, tbl in ipairs({...}) do
         for _, pos in pairs(tbl) do
-            if not IsPosValid(pos[1], pos[2], dynobjs) then return true end
+            if not IsPosValid(pos[1], pos[2], SwarmingShadows) then return true end
         end
     end
     return false
@@ -439,14 +435,14 @@ local SWARM_MIN_RADIUS           = ROOM_RADIUS - 2 * SWARM_DETOUR
 
 -- A point on the 37-yard edge at the given angle. If the trail is in the way,
 -- pull the point inward one 5-yard step at a time, but only as far as needed.
-local function SwarmEdgePoint(angle, dynobjs, bot)
+local function SwarmEdgePoint(angle, SwarmingShadows, bot)
     local radius = ROOM_RADIUS
     local x, y = 0, 0
     while radius >= SWARM_MIN_RADIUS do
         x = CENTER[1] + math.cos(angle) * radius
         y = CENTER[2] + math.sin(angle) * radius
         local blocked = false
-        for _, t in ipairs(dynobjs) do
+        for _, t in ipairs(SwarmingShadows) do
             if t:GetExactDistance2d(x, y) < SWARM_SAFE then
                 blocked = true
                 break
@@ -459,14 +455,14 @@ local function SwarmEdgePoint(angle, dynobjs, bot)
 end
 
 -- Worst trail clearance along one direction of the 40-yard edge run.
-local function SwarmClearance(angle, dir, dynobjs)
+local function SwarmClearance(angle, dir, SwarmingShadows)
     local step = SWARM_STEP_YARDS / ROOM_RADIUS
     local minD = math.huge
     for i = 1, math.floor(SWARM_LENGTH_YARDS / SWARM_STEP_YARDS) do
         local a = angle + dir * step * i
         local x = CENTER[1] + math.cos(a) * ROOM_RADIUS
         local y = CENTER[2] + math.sin(a) * ROOM_RADIUS
-        for _, t in ipairs(dynobjs) do
+        for _, t in ipairs(SwarmingShadows) do
             local dd = t:GetExactDistance2d(x, y)
             if dd < minD then minD = dd end
         end
@@ -477,7 +473,7 @@ end
 -- Trail the 37-yard edge for 40 yards. The direction is picked once at the
 -- start, as the side of the edge with the most clearance from existing
 -- shadows, so the run does not steer into the other swarmers' trail.
-local function GetSwarmWaypoint(bot, dynobjs)
+local function GetSwarmWaypoint(bot, SwarmingShadows)
     local dx = bot:GetX() - CENTER[1]
     local dy = bot:GetY() - CENTER[2]
     if dx == 0 and dy == 0 then dx = 1 end
@@ -487,7 +483,7 @@ local function GetSwarmWaypoint(bot, dynobjs)
     local dir = bot:Data():Get("BQSwarmDir")
     if not start or not dir then
         start = angle
-        dir = (SwarmClearance(angle, -1, dynobjs) >= SwarmClearance(angle, 1, dynobjs)) and -1 or 1
+        dir = (SwarmClearance(angle, -1, SwarmingShadows) >= SwarmClearance(angle, 1, SwarmingShadows)) and -1 or 1
         bot:Data():Set("BQSwarmStart", start)
         bot:Data():Set("BQSwarmDir", dir)
     end
@@ -502,7 +498,7 @@ local function GetSwarmWaypoint(bot, dynobjs)
 
     -- Aim one step ahead of the bot's current angle so it keeps hugging the ring.
     local step = SWARM_STEP_YARDS / ROOM_RADIUS
-    return SwarmEdgePoint(angle + dir * step, dynobjs, bot)
+    return SwarmEdgePoint(angle + dir * step, SwarmingShadows, bot)
 end
 
 -- ============================================================
@@ -601,9 +597,9 @@ end
 -- Tanks
 -- ============================================================
 
-local function GetSafeTankGround(boss, dynobjs)
+local function GetSafeTankGround(boss, SwarmingShadows)
     local pushFrom, pushDist = nil, math.huge
-    for _, d in ipairs(dynobjs) do
+    for _, d in ipairs(SwarmingShadows) do
         local tankDist = d:GetExactDistance2d(TANK_GROUND[1], TANK_GROUND[2])
         if tankDist < 5 and tankDist < pushDist then
             pushDist = tankDist
@@ -615,7 +611,7 @@ local function GetSafeTankGround(boss, dynobjs)
         end
     end
     if not pushFrom then
-        return GetSafePos(boss, TANK_GROUND[1], TANK_GROUND[2], 15, dynobjs)
+        return GetSafePos(boss, TANK_GROUND[1], TANK_GROUND[2], 15, SwarmingShadows)
     end
     local dx = TANK_GROUND[1] - pushFrom:GetX()
     local dy = TANK_GROUND[2] - pushFrom:GetY()
@@ -629,10 +625,10 @@ local function GetSafeTankGround(boss, dynobjs)
         x = TANK_GROUND[1] + ox / od * 10
         y = TANK_GROUND[2] + oy / od * 10
     end
-    return GetSafePos(boss, x, y, 15, dynobjs)
+    return GetSafePos(boss, x, y, 15, SwarmingShadows)
 end
 
-local function GetTankDesired(boss, botTanks, mainTank, offTank, inPull, dynobjs)
+local function GetDesiredTankPosition(boss, botTanks, mainTank, offTank, inPull, SwarmingShadows)
     local desired = {}
     local function Move(tank, x, y)
         if math.sqrt((tank:GetX() - x) ^ 2 + (tank:GetY() - y) ^ 2) > 3 then
@@ -640,23 +636,47 @@ local function GetTankDesired(boss, botTanks, mainTank, offTank, inPull, dynobjs
         end
     end
 
+    local function RightOf(x, y, o)
+        local rx = x + math.sin(o) * 1.5
+        local ry = y - math.cos(o) * 1.5
+        local dx, dy = rx - CENTER[1], ry - CENTER[2]
+        if dx * dx + dy * dy <= ROOM_RADIUS * ROOM_RADIUS then
+            return rx, ry
+        end
+        return x, y
+    end
+
     if inPull then
         if mainTank and mainTank:IsBot() then Taunt(mainTank, boss, true) end
         if boss:GetExactDistance2d(CENTER[1], CENTER[2]) > 7 then
             for _, tank in ipairs(botTanks) do Move(tank, CENTER[1], CENTER[2]) end
         else
-            local ground = GetSafeTankGround(boss, dynobjs)
+            local ground = GetSafeTankGround(boss, SwarmingShadows)
             for _, tank in ipairs(botTanks) do Move(tank, ground[1], ground[2]) end
         end
         return desired
     end
 
     if mainTank and mainTank:IsBot() then
-        local ground = GetSafeTankGround(boss, dynobjs)
-        for _, tank in ipairs(botTanks) do Move(tank, ground[1], ground[2]) end
+        local ground = GetSafeTankGround(boss, SwarmingShadows)
+        local ox, oy = RightOf(ground[1], ground[2], mainTank:GetO())
+        for _, tank in ipairs(botTanks) do
+            if offTank and tank:GetGUID() == offTank:GetGUID() and tank:GetGUID() ~= mainTank:GetGUID() then
+                desired[tostring(tank:GetGUID())] =
+                    {ox, oy, boss:GetMap():GetNearestFloor(ox, oy, 405)}
+            else
+                Move(tank, ground[1], ground[2])
+            end
+        end
     elseif mainTank and offTank and offTank:IsBot() then
-        desired[tostring(offTank:GetGUID())] =
-            {mainTank:GetX(), mainTank:GetY(), mainTank:GetZ()}
+        local rx, ry = RightOf(mainTank:GetX(), mainTank:GetY(), mainTank:GetO())
+        if rx == mainTank:GetX() and ry == mainTank:GetY() then
+            desired[tostring(offTank:GetGUID())] =
+                {mainTank:GetX(), mainTank:GetY(), mainTank:GetZ()}
+        else
+            desired[tostring(offTank:GetGUID())] =
+                {rx, ry, boss:GetMap():GetNearestFloor(rx, ry, 405)}
+        end
     end
     return desired
 end
@@ -665,9 +685,9 @@ end
 -- Movement
 -- ============================================================
 
-local function MoveBot(boss, bot, pos, tolerance, dynobjs, silence)
+local function MoveBot(boss, bot, pos, tolerance, SwarmingShadows, silence)
     local x, y = ClampToRoom(pos[1], pos[2])
-    local safe = GetSafePos(boss, x, y, 15, dynobjs)
+    local safe = GetSafePos(boss, x, y, 15, SwarmingShadows)
     if not safe then return end
     local atPos = IsAtPos(bot, safe[1], safe[2], tolerance)
     if atPos then
@@ -877,8 +897,8 @@ local function BQLoop(eventId, delay, repeats, boss)
     local combatTime = (boss:Data():Get("BQCombatTime") or 0) + 200
     boss:Data():Set("BQCombatTime", combatTime)
 
-    local dynobjs = boss:GetCreaturesInRange(100, SWARMING_SHADOWS_NPC)
-    UpdateMesh(boss, dynobjs)
+    local SwarmingShadows = boss:GetCreaturesInRange(100, SWARMING_SHADOWS_NPC)
+    UpdateMesh(boss, SwarmingShadows)
 
     local nearby = boss:GetPlayersInRange(100)
     local allPlayers = {}
@@ -960,10 +980,10 @@ local function BQLoop(eventId, delay, repeats, boss)
         or boss:Data():Get("BQPositionAir") ~= airPhase
         or respot
         or combatTime - lastCalc >= POSITION_REFRESH_MS
-        or SpotsBlocked(dynobjs, healerPos)
+        or SpotsBlocked(SwarmingShadows, healerPos)
     if not needCalc then
         if airPhase then
-            needCalc = SpotsBlocked(dynobjs, airPos)
+            needCalc = SpotsBlocked(SwarmingShadows, airPos)
             if not needCalc then
                 for _, bot in ipairs(bots) do
                     if not bot:HasHealSpec() and not airPos[tostring(bot:GetGUID())] then
@@ -975,13 +995,13 @@ local function BQLoop(eventId, delay, repeats, boss)
         else
             needCalc = not HasSpotFor(meleePos, botMelee)
                 or not HasSpotFor(rangedPos, botRanged)
-                or SpotsBlocked(dynobjs, meleePos, rangedPos)
+                or SpotsBlocked(SwarmingShadows, meleePos, rangedPos)
         end
     end
     if needCalc then
         healerPos, meleePos, rangedPos, airPos = ComputePositions(
             boss, bots, allPlayers, botHealers, botMelee, botRanged,
-            healerPos, meleePos, rangedPos, airPos, dynobjs, airPhase)
+            healerPos, meleePos, rangedPos, airPos, SwarmingShadows, airPhase)
         for _, bot in ipairs(bots) do bot:Data():Set("BQRespot", nil) end
         boss:Data():Set("BQHealerSpots", healerPos)
         boss:Data():Set("BQMeleeSpots", meleePos)
@@ -992,7 +1012,7 @@ local function BQLoop(eventId, delay, repeats, boss)
     end
 
     local tankDesired = airPhase and {}
-        or GetTankDesired(boss, botTanks, mainTank, offTank, inPull, dynobjs)
+        or GetDesiredTankPosition(boss, botTanks, mainTank, offTank, inPull, SwarmingShadows)
 
     -- When the shadow main tank is on the tank spot, pull the boss onto the
     -- center spot.
@@ -1019,7 +1039,7 @@ local function BQLoop(eventId, delay, repeats, boss)
 
         if isSwarmer then
             DisableSpellCast(bot, 0.2)
-            local x, y, z = GetSwarmWaypoint(bot, dynobjs)
+            local x, y, z = GetSwarmWaypoint(bot, SwarmingShadows)
             if x then MoveSwarmer(bot, x, y, z, 1.0) end
         end
 
@@ -1072,7 +1092,7 @@ local function BQLoop(eventId, delay, repeats, boss)
 
         if desired then
             if silence then DisableSpellCast(bot, 0.2) end
-            MoveBot(boss, bot, desired, 1.0, dynobjs, silence)
+            MoveBot(boss, bot, desired, 1.0, SwarmingShadows, silence)
         end
     end
 end
