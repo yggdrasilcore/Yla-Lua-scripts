@@ -218,6 +218,10 @@ local function NearHealer(x, y, healerPos)
     return count == 0
 end
 
+local function NearBoss(boss, x, y)
+    return boss:GetExactDistance2d(x, y) <= RANGED_LIMIT
+end
+
 local function IsSpotValid(boss, role, x, y, SwarmingShadows, healerPos)
     if not IsPosValid(x, y, SwarmingShadows) then return false end
     local d = math.sqrt((x - CENTER[1]) ^ 2 + (y - CENTER[2]) ^ 2)
@@ -226,8 +230,8 @@ local function IsSpotValid(boss, role, x, y, SwarmingShadows, healerPos)
     elseif role == "melee" then
         return boss:GetExactDistance2d(x, y) <= 10.5 and IsBehindBoss(boss, x, y)
     elseif role == "ranged" then
-        return d >= RANGED_MIN - 0.5 and d <= RANGED_MAX + 0.5
-            and NearHealer(x, y, healerPos or {})
+        return NearHealer(x, y, healerPos or {})
+            and NearBoss(boss, x, y)
     elseif role == "air" then
         return math.abs(d - AIR_RADIUS) <= 1
     end
@@ -396,11 +400,16 @@ local function ComputePositions(boss, bots, allPlayers, botHealers, botMelee, bo
                                 function(x, y) return IsBehindBoss(boss, x, y) end)
         end)
         -- Ranged last: closest spot to center inside the 15-30 yd band that
-        -- is within 40 yd of a healer.
+        -- is within 40 yd of the boss and of a healer.
         Assign("ranged", botRanged, function(_, occupied)
-            return FindBestSpot(boss, CENTER[1], CENTER[2], RANGED_MIN, RANGED_MAX,
-                                CENTER[1], CENTER[2], false, occupied, SwarmingShadows,
-                                function(x, y) return NearHealer(x, y, healerPos) end)
+            local limits = function(x, y)
+                return NearBoss(boss, x, y) and NearHealer(x, y, healerPos)
+            end
+            local spot = FindBestSpot(boss, CENTER[1], CENTER[2], RANGED_MIN, RANGED_MAX,
+                                      CENTER[1], CENTER[2], false, occupied, SwarmingShadows, limits)
+            if spot then return spot end
+            return FindBestSpot(boss, CENTER[1], CENTER[2], 0, RANGED_MAX,
+                                CENTER[1], CENTER[2], false, occupied, SwarmingShadows, limits)
         end)
     end
 
