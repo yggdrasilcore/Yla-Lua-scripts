@@ -514,6 +514,7 @@ function FestergutHandleHealersCasters(festergut, botHealers, botCasters, botTan
     if not forceRecalc then
         for _, player in ipairs(botHealers) do
             local pos = player:Data():Get("FestergutSpreadPos")
+            if pos then pos = pos:AsTable() end
             if not pos or (gooPos and NearGoo(pos.x, pos.y, gooPos)) then
                 forceRecalc = true; break
             end
@@ -523,6 +524,7 @@ function FestergutHandleHealersCasters(festergut, botHealers, botCasters, botTan
     if not forceRecalc then
         for _, player in ipairs(botCasters) do
             local pos = player:Data():Get("FestergutSpreadPos")
+            if pos then pos = pos:AsTable() end
             if not pos or (gooPos and NearGoo(pos.x, pos.y, gooPos)) then
                 forceRecalc = true; break
             end
@@ -536,6 +538,7 @@ function FestergutHandleHealersCasters(festergut, botHealers, botCasters, botTan
 
     for _, player in ipairs(botHealers) do
         local pos = player:Data():Get("FestergutSpreadPos")
+        if pos then pos = pos:AsTable() end
         if pos and not IsAtPos(player, pos.x, pos.y, 2) then
             MoveImmediately(player, pos.x, pos.y, pos.z)
         elseif pos then
@@ -545,6 +548,7 @@ function FestergutHandleHealersCasters(festergut, botHealers, botCasters, botTan
 
     for _, player in ipairs(botCasters) do
         local pos = player:Data():Get("FestergutSpreadPos")
+        if pos then pos = pos:AsTable() end
         if pos and not IsAtPos(player, pos.x, pos.y, 2) then
             MoveImmediately(player, pos.x, pos.y, pos.z)
         elseif pos then
