@@ -132,5 +132,12 @@ if GetStateMapId() == -1 then
     RegisterPlayerEvent(42, OnAIOAntiCheatCommand)
 else
     RegisterPlayerEvent(28, StartElunaAnticheat)
-    for _, player in ipairs(GetStateMap() and GetStateMap():GetPlayers() or {}) do StartElunaAnticheat(nil, player) end
+    for _, player in ipairs(GetStateMap() and GetStateMap():GetPlayers() or {}) do
+        player:Data():Set("LastPosX", nil)
+        player:Data():Set("LastPosY", nil)
+        player:Data():Set("LastPosZ", nil)
+        player:Data():Set("StartAntiClipCheck", nil)
+        player:Data():Set("SendAntiCheatChecks", nil)
+        StartElunaAnticheat(nil, player)
+    end
 end
