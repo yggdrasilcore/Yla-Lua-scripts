@@ -1,5 +1,7 @@
 if GetStateMapId() ~= 631 then return end
 
+local positionCheckActive = {}
+
 local function IsOnLKPlatform(x, y)
     local polygon = {
         {457, -2104},
@@ -30,7 +32,7 @@ end
 
 local function CheckPositions(eventid, delay, repeats, player)
     if not player:IsInCombat() or player:GetAreaId() ~= 4859 then
-        player:Data():Set("PositionCheckActive", nil)
+        positionCheckActive[player:GetGUIDLow()] = nil
         RemoveEventById(eventid)
         return
     end
@@ -62,8 +64,8 @@ local function OnEnterCombat(event, player, enemy)
     
     if not (player:GetAreaId() == 4859) then return end
     
-    if not player:Data():Get("PositionCheckActive") then
-        player:Data():Set("PositionCheckActive", true)
+    if not positionCheckActive[player:GetGUIDLow()] then
+        positionCheckActive[player:GetGUIDLow()] = true
         player:RegisterEvent(CheckPositions, 1000, 1500)
     end
 end

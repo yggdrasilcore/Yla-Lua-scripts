@@ -557,7 +557,7 @@ end
 
 local function BaltharusOnEnterCombat(event, creature, target)
     if not creature or creature:GetEntry() ~= 39751 then return end
-    if creature:Data():Get("EventActive") then return end
+    if IsLuaEventActive(creature) then return end
     StartLuaEvent(creature, BaltharusLoop)
 end
 

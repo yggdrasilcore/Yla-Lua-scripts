@@ -189,7 +189,7 @@ end
 
 local function OnLKCombat(event, enemy, target)
     if not enemy or enemy:GetEntry() ~= 36597 then return end
-    if enemy:Data():Get("EventActive") then return end
+    if IsLuaEventActive(enemy) then return end
     StartLuaEvent(enemy, LichKingLoop)
 end
 

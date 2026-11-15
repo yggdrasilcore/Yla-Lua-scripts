@@ -92,7 +92,7 @@ local function LichKingChaseOnEnterCombat(event, enemy, target)
         ApplyHiddenBuffsToShadows(player)
     end
 
-    if enemy:Data():Get("EventActive") then return end
+    if IsLuaEventActive(enemy) then return end
     StartLuaEvent(enemy, LichKingChaseLoop)
 end
 

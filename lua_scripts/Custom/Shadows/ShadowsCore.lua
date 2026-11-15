@@ -8,8 +8,9 @@ local BOT_TELE_VISUAL   = 64446
 local BotSummonCD       = 10 * 60 -- 10 minutes
 
 local addCmdTimer       =   {}
--- Per-player logout/kick timers live in player:Data("ShadowsLogoutEv")
--- (masters hold "ShadowsLogoutEv:<bot>"), not in a file-local name-keyed table.
+-- Per-player logout/kick timers live in logoutEvents (file-local, reset on reload);
+-- masters use a "m:<masterGUID>:<bot>" key.
+local logoutEvents = {}
 local disallowedZones   =   {4298}--, 4197, 3628, 3666} -- Scarlet Enclave (DK start area), Wintergrasp, Halaa
 local AllowInBattlefield = false -- Default: False. Prevents usage of shadows in Wintergrasp.
 
@@ -665,7 +666,7 @@ function CheckActiveBots(eventid, delay, repeats, uninvitedPlayer)
             print("Bot removed: " ..uninvitedPlayerName.. ".")
             print("Leader: " ..player:GetName())
         end, 100, 1)
-        uninvitedPlayer:Data():Set("ShadowsLogoutEv", nil)
+        logoutEvents[uninvitedPlayer:GetGUIDLow()] = nil
     end
 end
 
@@ -675,13 +676,13 @@ function UninviteGroupGUID(event, packet, player)
     local reason = packet:ReadString()
     local uninvitedPlayer = GetPlayerByGUID(guid)
     if uninvitedPlayer then
-        if not uninvitedPlayer:Data():Get("ShadowsLogoutEv") then
+        if not logoutEvents[uninvitedPlayer:GetGUIDLow()] then
 			local ksh = uninvitedPlayer:ToShadow()
 			local km = ksh and ksh:GetMaster()
 			local kickGuard = km and km:Data():Get("ShadowsDontKick:" .. uninvitedPlayer:GetName())
 			if kickGuard and kickGuard > os.time() then return end
 			--print("shadows debug - uninvited GUID")
-            uninvitedPlayer:Data():Set("ShadowsLogoutEv", uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1))
+            logoutEvents[uninvitedPlayer:GetGUIDLow()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
         end 
     end
 end
@@ -691,13 +692,13 @@ function UninviteGroup(event, packet, player)
     local uninvitedPlayerName = packet:ReadString()
     local uninvitedPlayer = GetPlayerByName(uninvitedPlayerName)
     if uninvitedPlayer then
-        if not uninvitedPlayer:Data():Get("ShadowsLogoutEv") then
+        if not logoutEvents[uninvitedPlayer:GetGUIDLow()] then
 			local ksh = uninvitedPlayer:ToShadow()
 			local km = ksh and ksh:GetMaster()
 			local kickGuard = km and km:Data():Get("ShadowsDontKick:" .. uninvitedPlayer:GetName())
 			if kickGuard and kickGuard > os.time() then return end
 			--print("shadows debug - uninvited group")
-            uninvitedPlayer:Data():Set("ShadowsLogoutEv", uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1))
+            logoutEvents[uninvitedPlayer:GetGUIDLow()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
         end
     end
 end
@@ -706,13 +707,13 @@ end
 local function LeaveGroup(event, group, guid, method, kicker, reason)
     local uninvitedPlayer = GetPlayerByGUID(guid)
     if uninvitedPlayer then
-        if not uninvitedPlayer:Data():Get("ShadowsLogoutEv") then
+        if not logoutEvents[uninvitedPlayer:GetGUIDLow()] then
 			local ksh = uninvitedPlayer:ToShadow()
 			local km = ksh and ksh:GetMaster()
 			local kickGuard = km and km:Data():Get("ShadowsDontKick:" .. uninvitedPlayer:GetName())
 			if kickGuard and kickGuard > os.time() then return end
 			--print("shadows debug - leaving group")
-            uninvitedPlayer:Data():Set("ShadowsLogoutEv", uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1))
+            logoutEvents[uninvitedPlayer:GetGUIDLow()] = uninvitedPlayer:RegisterEvent(CheckActiveBots, 100, 1)
         end
     end
 end
@@ -724,14 +725,15 @@ local function DisbandGroup(event, group)
         local master = memberShadow and memberShadow:GetMaster()
         if master then
             local botName = member:GetName()
-            if not master:Data():Get("ShadowsLogoutEv:" .. botName) then
-                master:Data():Set("ShadowsLogoutEv:" .. botName, master:RegisterEvent(function(_, _, _, player)
+            local key = "m:" .. master:GetGUIDLow() .. ":" .. botName
+            if not logoutEvents[key] then
+                logoutEvents[key] = master:RegisterEvent(function(_, _, _, player)
 					local kickGuard = player:Data():Get("ShadowsDontKick:" .. botName)
 					if kickGuard and kickGuard > os.time() then return end
                     player:RunCommand(".shadows bot remove " .. botName)
                     print("Removing "..botName.." from disbanded group")
-                    player:Data():Set("ShadowsLogoutEv:" .. botName, nil)
-                end, 100, 1))
+                    logoutEvents[key] = nil
+                end, 100, 1)
             end
         end
     end

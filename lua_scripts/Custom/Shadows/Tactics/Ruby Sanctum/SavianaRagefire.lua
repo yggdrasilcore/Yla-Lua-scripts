@@ -144,7 +144,7 @@ end
 
 local function SavianaRagefireOnEnterCombat(event, saviana, target)
     if not saviana or saviana:GetEntry() ~= 39747 then return end
-    if saviana:Data():Get("EventActive") then return end
+    if IsLuaEventActive(saviana) then return end
     StartLuaEvent(saviana, SavianaRagefireLoop)
 end
 

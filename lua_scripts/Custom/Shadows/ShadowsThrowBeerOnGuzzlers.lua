@@ -12,6 +12,7 @@ local LOOP_DELAY_MS = 250
 local LOOP_REPEATS = 1200
 local BEER_REFETCH_SEC = 60
 local THROW_COOLDOWN_SEC = 3
+local guzzlerEventStarted = {}
 
 local function IsInBrewfestAmbushWindow()
     local secsPastHour = GetGameTime() % 3600
@@ -128,7 +129,7 @@ local function CleanupShadow(bot, eventId)
         end
         bot:Data():Set("ClaimedGuzzlerGUID", nil)
     end
-    bot:Data():Set("GuzzlerEventStarted", false)
+    guzzlerEventStarted[bot:GetGUIDLow()] = nil
     if eventId then
         bot:RemoveEventById(eventId)
     end
@@ -138,13 +139,13 @@ local function TryStartShadowLoop(bot)
     if not bot or not bot:IsBot() then
         return false
     end
-    if bot:Data():Get("GuzzlerEventStarted") then
+    if guzzlerEventStarted[bot:GetGUIDLow()] then
         return false
     end
     if bot:IsDead() then
         return false
     end
-    bot:Data():Set("GuzzlerEventStarted", true)
+    guzzlerEventStarted[bot:GetGUIDLow()] = true
     bot:Data():Set("ClaimedGuzzlerGUID", nil)
     bot:RegisterEvent(ShadowsFightGuzzlersLoop, LOOP_DELAY_MS, LOOP_REPEATS)
     return true
@@ -162,7 +163,7 @@ function ShadowsFightGuzzlersLoop(event, delays, repeats, player)
         CleanupShadow(player, nil)
         return
     else
-        player:Data():Set("GuzzlerEventStarted", true)
+        guzzlerEventStarted[player:GetGUIDLow()] = true
     end
 
     local guzzler = FindClaimableGuzzler(player)
@@ -209,7 +210,7 @@ local function ShadowsFightGuzzlers(event, player, item, target)
     if not player:GetNearestCreature(SEARCH_RANGE, GUZZLER_ENTRY) then return end
 
     for _, bot in ipairs(player:GetPlayersInRange(SEARCH_RANGE)) do
-        if bot:IsBot() and not bot:Data():Get("GuzzlerEventStarted") then
+        if bot:IsBot() and not guzzlerEventStarted[bot:GetGUIDLow()] then
             TryStartShadowLoop(bot)
         end
     end

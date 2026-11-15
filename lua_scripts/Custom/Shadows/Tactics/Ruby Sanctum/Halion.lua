@@ -570,7 +570,7 @@ local function HalionOnEnterCombat(event, halion, target)
         ApplyHiddenBuffsToShadows(player)
     end
 
-    if halion:Data():Get("EventActive") then return end
+    if IsLuaEventActive(halion) then return end
     halion:Data():Set("CombatTime", 0)
     StartLuaEvent(halion, HalionLoop)
 end

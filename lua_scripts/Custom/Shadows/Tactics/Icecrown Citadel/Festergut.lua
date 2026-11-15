@@ -570,14 +570,16 @@ local function FestergutOnEnterCombat(event, festergut, target)
         if player:GetDifficulty() > 1 then ApplyHiddenBuffsToShadows(player) end
     end
 
-    if festergut:Data():Get("EventActive") then return end
-
     local players = festergut:GetPlayersInRange(100)
     for _, p in ipairs(players) do
         if p:IsBot() then
             p:Data():Set("FestergutSpreadPos", nil)
         end
     end
+    festergut:Data():Set("CachedMainTank", nil)
+    festergut:Data():Set("CachedOffTank", nil)
+    festergut:Data():Set("LastAssignedMain", nil)
+    festergut:Data():Set("LastAssignedOff", nil)
     festergut:Data():Set("SporeDetectTime", nil)
     festergut:Data():Set("CachedSporeCount", nil)
     festergut:Data():Set("SporeAssignmentDone", nil)

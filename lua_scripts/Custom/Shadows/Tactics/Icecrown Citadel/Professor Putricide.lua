@@ -59,7 +59,7 @@ end
 
 local function OnProfessorPutricideCombat(event, enemy, target)
     if not enemy or enemy:GetEntry() ~= 36678 then return end
-    if enemy:Data():Get("EventActive") then return end
+    if IsLuaEventActive(enemy) then return end
     StartLuaEvent(enemy, ProfessorPutricideLoop)
 end
 

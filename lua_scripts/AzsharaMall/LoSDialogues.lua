@@ -2,6 +2,8 @@
 if GetStateMapId() ~= 37 then return end
 local hasDialogueEvent = {}
 local lastGreeting = {}
+local morphEventStarted = {}
+local morphEventActive = {}
 
 local APPRENTICE_ENTRY = 110007
 local MASTER_ENTRY = 110008
@@ -1145,8 +1147,8 @@ end
 
 local function ApproachBear(event, creature, who)
     if who:ToPlayer() then
-        if not creature:Data():Get("MorphEvent") then
-            creature:Data():Set("MorphEvent", true)
+        if not morphEventStarted[creature:GetGUIDLow()] then
+            morphEventStarted[creature:GetGUIDLow()] = true
             local masters = {}
             local creaturesInRange = creature:GetCreaturesInRange(200, MASTER_ENTRY)
             
@@ -1155,10 +1157,10 @@ local function ApproachBear(event, creature, who)
             end
             
             for _, master in pairs(masters) do
-                if master:Data():Get("MorphEventActive") then
+                if morphEventActive[master:GetGUIDLow()] then
                     return
                 end
-                master:Data():Set("MorphEventActive", true)
+                morphEventActive[master:GetGUIDLow()] = true
                 MorphScript(master)
             end
             
@@ -1170,10 +1172,10 @@ local function ApproachBear(event, creature, who)
             end
 
             for _, observer in pairs(observers) do
-                if observer:Data():Get("MorphEventActive") then
+                if morphEventActive[observer:GetGUIDLow()] then
                     return
                 end
-                observer:Data():Set("MorphEventActive", true)
+                morphEventActive[observer:GetGUIDLow()] = true
                 ObserverScript(observer)
             end
         end

@@ -1,6 +1,7 @@
 local FeathersItem = 20739
 local FeathersSpell = 29118
 local MOUNTS_PER_PAGE = 10
+local mountEvent = {}
 local MOUNT_DATA = {}
 local MOUNT_ICONS = {}
 local FLYING_MOUNTS = {
@@ -363,7 +364,7 @@ local function CheckZ(eventId, delay, repeats, player)
   end
   
    if not mountId or not ZonesToCheckZ(player) then
-       player:Data():Set("MountEvent", false)
+       mountEvent[player:GetGUIDLow()] = nil
        return
    end
   
@@ -608,8 +609,8 @@ end
 local function checkMount(player)
 	for _, id in ipairs(FLYING_MOUNTS) do
 		if player:HasAura(id) then
-			if not player:Data():Get("MountEvent") then
-				player:Data():Set("MountEvent", true)
+			if not mountEvent[player:GetGUIDLow()] then
+				mountEvent[player:GetGUIDLow()] = true
 				player:RegisterEvent(CheckZ, 200, 1)
 				print("[Feathers of Azeroth]: Starting zone-based Z check")
 			end

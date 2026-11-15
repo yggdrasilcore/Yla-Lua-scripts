@@ -4,8 +4,7 @@ local LADY_DEATHWHISPER_ENTRY = 36855
 
 local function LadyDeathwhisper10Loop(eventId, delay, repeats, deathwhisper)
     if deathwhisper:IsDead() or not deathwhisper:IsInCombat() then
-        deathwhisper:RemoveEvents()
-        deathwhisper:Data():Set("EventActive", nil)
+        StopLuaEvent(deathwhisper)
         return
     end
     
@@ -15,8 +14,7 @@ local function LadyDeathwhisper10Loop(eventId, delay, repeats, deathwhisper)
         local nearestPlayer = darnavan:GetNearestPlayer(200)
         if nearestPlayer then
             SetTargetIconDeferred(nearestPlayer, 4, darnavan)
-            deathwhisper:RemoveEvents()
-            deathwhisper:Data():Set("EventActive", nil)
+            StopLuaEvent(deathwhisper)
             return
         end
     end
@@ -24,8 +22,7 @@ end
 
 local function LadyDeathwhisper25Loop(eventId, delay, repeats, deathwhisper)
     if deathwhisper:IsDead() or not deathwhisper:IsInCombat() then
-        deathwhisper:RemoveEvents()
-        deathwhisper:Data():Set("EventActive", nil)
+        StopLuaEvent(deathwhisper)
         return
     end
     
@@ -35,8 +32,7 @@ local function LadyDeathwhisper25Loop(eventId, delay, repeats, deathwhisper)
         local nearestPlayer = darnavan:GetNearestPlayer(200)
         if nearestPlayer then
             SetTargetIconDeferred(nearestPlayer, 4, darnavan)
-            deathwhisper:RemoveEvents()
-            deathwhisper:Data():Set("EventActive", nil)
+            StopLuaEvent(deathwhisper)
             return
         end
     end
@@ -44,11 +40,11 @@ end
 
 local function OnLadyDeathwhisperCombat(event, player, enemy)
     if enemy and enemy:GetEntry() == LADY_DEATHWHISPER_ENTRY then
-        if not enemy:Data():Get("EventActive") then
+        if not IsLuaEventActive(enemy) then
             if player:GetDifficulty() == 0 or player:GetDifficulty() == 2 then
-                enemy:Data():Set("EventActive", enemy:RegisterEvent(LadyDeathwhisper10Loop, 2500, 20))
+                StartLuaEvent(enemy, LadyDeathwhisper10Loop, 2500, 20)
             elseif player:GetDifficulty() == 1 or player:GetDifficulty() == 3 then
-                enemy:Data():Set("EventActive", enemy:RegisterEvent(LadyDeathwhisper25Loop, 2500, 20))
+                StartLuaEvent(enemy, LadyDeathwhisper25Loop, 2500, 20)
             end
         end
     end

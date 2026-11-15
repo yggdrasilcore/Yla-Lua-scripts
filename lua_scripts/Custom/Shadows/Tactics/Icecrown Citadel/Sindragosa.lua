@@ -1,8 +1,10 @@
 if GetStateMapId() ~= 631 then return end
 
+local sindyEventOn = false
+
 function CombatCheck(eventId, delay, repeats, sindragosa)
     if sindragosa:IsDead() or not sindragosa:IsInCombat() then
-        sindragosa:Data():Set("SindyEventOn", nil)
+        sindyEventOn = false
         RemoveEventById(eventId)
         return
     end
@@ -121,8 +123,8 @@ end
 
 function OnSindyCombat(event, player, enemy)
     if enemy and enemy:GetEntry() == 36853 then
-        if not enemy:Data():Get("SindyEventOn") then
-            enemy:Data():Set("SindyEventOn", true)
+        if not sindyEventOn then
+            sindyEventOn = true
             enemy:RegisterEvent(CombatCheck, 300, 0)
         end
     end

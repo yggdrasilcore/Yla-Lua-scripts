@@ -140,11 +140,7 @@ end
 
 local function RegisterPlayerCheck(event, player)
     if player:IsBot() then return end
-    local existingEvent = player:Data():Get("MapGlitchEvent")
-    if existingEvent then player:RemoveEventById(existingEvent) end
-
     local eventId = player:RegisterEvent(CheckPlayer, 1000, 0)
-    player:Data():Set("MapGlitchEvent", eventId)
 end
 
 RegisterPlayerEvent(28, RegisterPlayerCheck)

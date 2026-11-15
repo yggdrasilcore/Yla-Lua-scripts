@@ -1125,7 +1125,7 @@ local function BQOnEnterCombat(event, boss, target)
         end
     end
 
-    if boss:Data():Get("EventActive") then
+    if IsLuaEventActive(boss) then
         print("BQ enter: loop already running")
         return
     end
