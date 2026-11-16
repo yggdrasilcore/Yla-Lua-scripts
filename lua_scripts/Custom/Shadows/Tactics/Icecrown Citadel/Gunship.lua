@@ -718,11 +718,33 @@ function GunshipLoop(eventId, delay, repeats, player)
     end
 end
 
+local function SuppressGunshipMovement(player)
+    local shadow = player:ToShadow()
+    if shadow then shadow:SuppressMovement(900000) end
+end
+
+local function ReleaseGunshipMovement(player)
+    local shadow = player:ToShadow()
+    if shadow then shadow:ClearMovementSuppression() end
+end
+
+local function GunshipFightOngoing()
+    if not GetStateMap() then return false end
+    for _, other in ipairs(GetStateMap():GetPlayers()) do
+        if other:IsInCombat() then return true end
+    end
+    return false
+end
+
 local function GunshipOnEnterCombat(event, player, creature)
     if player:GetMapId() ~= 631 then return end
     if not player:IsBot() then return end
     local pz = player:GetZ()
-    if pz < 410 or pz > 500 then return end -- Ignore bots elsewhere
+    if pz < 410 or pz > 500 then
+        -- Late joiner: fight already running, just pin this bot too
+        if GunshipFightOngoing() then SuppressGunshipMovement(player) end
+        return
+    end
     
     local zafod = player:GetNearestCreature(200, ZAFOD) -- Only start if on/near gunship/Zafod
     if not zafod then return end
@@ -733,69 +755,33 @@ local function GunshipOnEnterCombat(event, player, creature)
     if player:GetDifficulty() > 1 then ApplyHiddenBuffsToShadows(player) end -- Buff on HC
     
     player:Data():Set("FightOver", false)
+
+    SuppressGunshipMovement(player)
     
     player:RegisterEvent(GunshipLoop, 200, 1)
 end
 
-local function RootOnSkybreaker(eventId, delay, repeats, player)
-    if not (player:GetMapId() == 631) then
-        player:RemoveEventById(eventId)
-        return
-    end
-    
-    local OnSkybreakerDeck = player:GetNearestCreature(200, 37519)
-    if not OnSkybreakerDeck then return end
-    
+local function RootOnGunshipCaptain(event, player, object, sender, intid, code, menu_id)
+    if not (player:GetMapId() == 631) then return end
+    if not player:IsBot() then return end
+    AddRootAura(player, 45000)
+    return true
 end
+
+RegisterCreatureGossipEvent(MURADIN_ENTRY, 2, RootOnGunshipCaptain)
+RegisterCreatureGossipEvent(SAURFANG_ENTRY, 2, RootOnGunshipCaptain)
 
 local function HandleMapEvents(event, player)
     HandleRocketPack(event, player)
-    if not (player:GetMapId() == 631) then return end
-    if not player:IsBot() then return end
-    player:RegisterEvent(RootOnSkybreaker, 10000, 0)
 end
 
-local function AllianceGunshipLock(event, creature)
-    local transport = creature:GetTransport()
-    if not transport then return end
-    local tEntry = transport:GetEntry()
-    local cx, cy, cz, co = creature:GetLocation()
-    
-    if tEntry == SKYBREAKER and cz > 195 then return end
-    if tEntry == OGRIMS_HAMMER and cz > 218 then return end
-    if cz > 460 then return end
-
-    local ox = creature:Data():Get("LockPosX")
-    local oy = creature:Data():Get("LockPosY")
-    local oz = creature:Data():Get("LockPosZ")
-    if not ox then
-        creature:Data():Set("LockPosX", cx)
-        creature:Data():Set("LockPosY", cy)
-        creature:Data():Set("LockPosZ", cz)
-        return
-    end
-    local dist = math.sqrt((cx - ox)^2 + (cy - oy)^2 + (cz - oz)^2)
-    local shouldRoot = dist > 1
-
-    local RootZ = 189.5
-    if tEntry == OGRIMS_HAMMER then RootZ = 214 end
-    local players = creature:GetPlayersInRange(100)
-    
-    for _, player in ipairs(players) do
-        if player:GetZ() > 230 then return end
-        if player:IsBot() then
-            if player:GetZ() < RootZ then
-                player:NearTeleport(player:GetX(), player:GetY(), RootZ, player:GetO())
-            end
-            if shouldRoot then
-                AddToFactionTransport(player)
-                AddRootAura(player, 45000)
-            end
-        end
-    end
-end
-
-RegisterCreatureEvent(37519, 7, AllianceGunshipLock)
 RegisterPlayerEvent(33, GunshipOnEnterCombat)
 RegisterPlayerEvent(28, HandleMapEvents) -- Remove rocket pack visual
+
+local function GunshipOnLeaveCombat(event, player)
+    if not (player:GetMapId() == 631) then return end
+    if not player:IsBot() then return end
+    ReleaseGunshipMovement(player)
+end
+RegisterPlayerEvent(34, GunshipOnLeaveCombat)
 if GetStateMap() then for _, player in ipairs(GetStateMap():GetPlayers()) do GunshipOnEnterCombat(nil, player, nil) end end
