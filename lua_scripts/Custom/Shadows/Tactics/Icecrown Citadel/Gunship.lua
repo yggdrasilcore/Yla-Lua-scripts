@@ -763,9 +763,11 @@ end
 
 local function RootOnGunshipCaptain(event, player, object, sender, intid, code, menu_id)
     if not (player:GetMapId() == 631) then return end
-    if not player:IsBot() then return end
-    AddRootAura(player, 45000)
-    return true
+    for _, player in ipairs(GetStateMap():GetPlayers()) do
+        if player:IsBot() then
+            AddRootAura(player, 45000)
+        end
+    end
 end
 
 RegisterCreatureGossipEvent(MURADIN_ENTRY, 2, RootOnGunshipCaptain)
