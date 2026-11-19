@@ -13,9 +13,27 @@ local SKYBREAKER_ENTRY         = 37540
 -- Spells
 local ROCKET_PACK_SPELL        = 68645
 local ORGRIMS_HAMMER_DECK_AURA = 70121
+-- Cannons
+local CANNON_ALLY_ENTRY        = 36838
+local CANNON_HORDE_ENTRY       = 36839
+-- TODO: fill in the real cannon spell IDs
+local CANNON_BLAST_ALLY        = 0
+local CANNON_BLAST_HORDE       = 0
+local INCINERATING_BLAST_ALLY  = 0
+local INCINERATING_BLAST_HORDE = 0
+local RIDE_VEHICLE_SPELL       = 46598
+local CANNON_COOLDOWN          = 1
 -- Trash, misc.
 local KORKRON_ENTRIES          = { 36957, 36960 }
 local SKYBREAKERS_ENTRIES      = { 36950, 36961 }
+local CANNON_TARGET_ENTRIES    = {
+    36982, -- Kor'kron Rocketeer
+    36978, -- Skybreaker Mortar Soldier
+    36969, -- Skybreaker Rifleman
+    36968, -- Kor'kron Axethrower
+    SAURFANG_ENTRY,
+    MURADIN_ENTRY,
+}
 local ZAFOD                    = 37184
 
 -- TRANSPORTS
@@ -183,6 +201,74 @@ local function MarkTargetSkull(player, target)
     SetTargetIconDeferred(player, 7, target)
 end
 
+local function FindCannonTarget(player)
+    for _, entry in ipairs(CANNON_TARGET_ENTRIES) do
+        local targets = player:GetCreaturesInRange(200, entry, 1, 1)
+        if targets[1] then
+            return targets[1]
+        end
+    end
+    return nil
+end
+
+local function HandleCannonFire(player)
+    local vehicle = player:GetVehicle()
+    if not vehicle then return end
+
+    local cannon = vehicle:GetOwner()
+    local entry = cannon:GetEntry()
+    if entry ~= CANNON_ALLY_ENTRY and entry ~= CANNON_HORDE_ENTRY then return end
+
+    if (player:Data():Get("GunshipCannonCooldown") or 0) > os.time() then return end
+
+    local target = FindCannonTarget(player)
+    if not target then return end
+
+    local cannonBlast, incineratingBlast
+    if entry == CANNON_ALLY_ENTRY then
+        cannonBlast, incineratingBlast = CANNON_BLAST_ALLY, INCINERATING_BLAST_ALLY
+    else
+        cannonBlast, incineratingBlast = CANNON_BLAST_HORDE, INCINERATING_BLAST_HORDE
+    end
+
+    local shots = (player:Data():Get("GunshipCannonShots") or 0) + 1
+    player:Data():Set("GunshipCannonShots", shots)
+
+    local spell = cannonBlast
+    if shots % 5 == 0 then
+        spell = incineratingBlast
+    end
+    cannon:CastSpell(target, spell, true)
+    player:Data():Set("GunshipCannonCooldown", os.time() + CANNON_COOLDOWN)
+end
+
+local function HandleCannonEntry(player)
+    if player:IsOnVehicle() then return false end
+    if IsTank(player) or player:HasHealSpec() then return false end
+
+    local best, bestDist
+    for _, entry in ipairs({ CANNON_ALLY_ENTRY, CANNON_HORDE_ENTRY }) do
+        for _, cannon in ipairs(player:GetCreaturesInRange(100, entry, 0, 1)) do
+            local kit = cannon:GetVehicleKit()
+            if kit and not kit:GetPassenger(0) and not cannon:HasAura(69704) and not cannon:HasAura(69705) then
+                local dist = player:GetDistance(cannon)
+                if not best or dist < bestDist then
+                    best, bestDist = cannon, dist
+                end
+            end
+        end
+    end
+
+    if not best then return false end
+
+    if player:GetDistance(best) > 5 then
+        MoveImmediately(player, best:GetX(), best:GetY(), best:GetZ())
+    else
+        player:CastSpell(best, RIDE_VEHICLE_SPELL, true)
+    end
+    return true
+end
+
 local function GunshipHordeActions(eventId, delay, repeats, player)
     if player:IsDead() or not player:IsInCombat() or not (player:GetMapId() == 631) then
         StopLuaEvent(player)
@@ -190,6 +276,7 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
     end
 
     if player:IsOnVehicle() then
+        HandleCannonFire(player)
         player:RegisterEvent(GunshipLoop, 200, 1)
         return
     end
@@ -231,6 +318,11 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
     end
 
     if pz > HORDE_JUMP_EXEMPT and (py >= HORDE_ORGIM_Y_LIMIT and py <= HORDE_SKYBREAKER_Y_LIMIT) then -- Don't queue multiple commands mid-air, let bot AI fix height bugs
+        player:RegisterEvent(GunshipLoop, 200, 1)
+        return
+    end
+
+    if HandleCannonEntry(player) then
         player:RegisterEvent(GunshipLoop, 200, 1)
         return
     end
@@ -463,6 +555,7 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
     end
 
     if player:IsOnVehicle() then
+        HandleCannonFire(player)
         player:RegisterEvent(GunshipLoop, 200, 1)
         return
     end
@@ -494,6 +587,11 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
     end
 
     if pz > 468 then -- Don't queue multiple commands mid-air, let bot AI fix height bugs
+        player:RegisterEvent(GunshipLoop, 200, 1)
+        return
+    end
+
+    if HandleCannonEntry(player) then
         player:RegisterEvent(GunshipLoop, 200, 1)
         return
     end
