@@ -718,16 +718,6 @@ function GunshipLoop(eventId, delay, repeats, player)
     end
 end
 
-local function SuppressGunshipMovement(player)
-    local shadow = player:ToShadow()
-    if shadow then shadow:SuppressMovement(900000) end
-end
-
-local function ReleaseGunshipMovement(player)
-    local shadow = player:ToShadow()
-    if shadow then shadow:ClearMovementSuppression() end
-end
-
 local function GunshipFightOngoing()
     if not GetStateMap() then return false end
     for _, other in ipairs(GetStateMap():GetPlayers()) do
@@ -739,12 +729,7 @@ end
 local function GunshipOnEnterCombat(event, player, creature)
     if player:GetMapId() ~= 631 then return end
     if not player:IsBot() then return end
-    local pz = player:GetZ()
-    if pz < 410 or pz > 500 then
-        -- Late joiner: fight already running, just pin this bot too
-        if GunshipFightOngoing() then SuppressGunshipMovement(player) end
-        return
-    end
+    if player:GetZ() < 410 or player:GetZ() > 500 then return end
     
     local zafod = player:GetNearestCreature(200, ZAFOD) -- Only start if on/near gunship/Zafod
     if not zafod then return end
@@ -753,10 +738,8 @@ local function GunshipOnEnterCombat(event, player, creature)
     HandleRocketPack(event, player) -- Add rocket pack visual on enter combat
     
     if player:GetDifficulty() > 1 then ApplyHiddenBuffsToShadows(player) end -- Buff on HC
-    
-    player:Data():Set("FightOver", false)
 
-    SuppressGunshipMovement(player)
+    -- player:ToShadow():SuppressMovement(900000) -- Not supported on Gunship yet, must set target manually first
     
     player:RegisterEvent(GunshipLoop, 200, 1)
 end
@@ -772,18 +755,15 @@ end
 
 RegisterCreatureGossipEvent(MURADIN_ENTRY, 2, RootOnGunshipCaptain)
 RegisterCreatureGossipEvent(SAURFANG_ENTRY, 2, RootOnGunshipCaptain)
-
-local function HandleMapEvents(event, player)
-    HandleRocketPack(event, player)
-end
-
 RegisterPlayerEvent(33, GunshipOnEnterCombat)
-RegisterPlayerEvent(28, HandleMapEvents) -- Remove rocket pack visual
+RegisterPlayerEvent(28, HandleRocketPack) -- Remove rocket pack visual
 
 local function GunshipOnLeaveCombat(event, player)
     if not (player:GetMapId() == 631) then return end
     if not player:IsBot() then return end
-    ReleaseGunshipMovement(player)
+    player:ToShadow():ClearMovementSuppression()
 end
+
 RegisterPlayerEvent(34, GunshipOnLeaveCombat)
+
 if GetStateMap() then for _, player in ipairs(GetStateMap():GetPlayers()) do GunshipOnEnterCombat(nil, player, nil) end end
