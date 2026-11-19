@@ -1,7 +1,4 @@
 services:
   yggdrasilcore-worldserver:
     volumes:
-      - ./ygg_confs/lua_scripts:/yggdrasilcore/lua_scripts
-      - ${DOCKER_VOL_DATA:-yggdrasilcore-client-data}:/yggdrasilcore/env/dist/data
-    env_file:
-      - ygg_confs/worldserver.env
+      - ./Yla-Lua-scripts/lua_scripts:/yggdrasilcore/lua_scripts
