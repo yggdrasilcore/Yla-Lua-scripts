@@ -1,23 +1,24 @@
-WorldDBExecute("DELETE FROM spell_linked_spell WHERE spell_trigger IN (69381, 69378)") -- Wipe DB links for faulty Drums scripts
-WorldDBExecute("DELETE FROM spell_script_names WHERE spell_id IN (69377)") -- Wipe DB link to faulty Runescroll of Fortitude script
+if GetStateMapId() == -1 then
+    WorldDBExecute("DELETE FROM spell_linked_spell WHERE spell_trigger IN (69381, 69378)") -- Wipe DB links for faulty Drums scripts
+    WorldDBExecute("DELETE FROM spell_script_names WHERE spell_id IN (69377)") -- Wipe DB link to faulty Runescroll of Fortitude script
+end
+
+if GetStateMapId() == -1 then return end
 
 local function CastOnGroup(player, spellId)
-    local group = player:GetGroup()
-    if not group then
-        player:CastSpell(player, spellId, true)
-        local pet = player:GetPet()
-        if pet then
-            player:CastSpell(pet, spellId, true)
-        end
-        return
+    player:CastSpell(player, spellId, true)
+    local playerPet = player:GetPet()
+    if playerPet then
+        player:CastSpell(playerPet, spellId, true)
     end
-
-    local members = group:GetMembers()
-    for _, member in ipairs(members) do
-        player:CastSpell(member, spellId, true)
-        local pet = member:GetPet()
-        if pet then
-            player:CastSpell(pet, spellId, true)
+    for _, member in pairs(player:GetPlayersInRange(100)) do
+        if member and member ~= player
+            and (player:IsInSameGroupWith(member) or player:IsInSameRaidWith(member)) then
+            player:CastSpell(member, spellId, true)
+            local pet = member:GetPet()
+            if pet then
+                player:CastSpell(pet, spellId, true)
+            end
         end
     end
 end

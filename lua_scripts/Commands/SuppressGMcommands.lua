@@ -1,3 +1,5 @@
+if GetStateMapId() ~= -1 then return end
+
 function GMcommands(event, player, command)
     if player and player:GetGMRank() == 0 and string.find(command, "gm") then
         player:SendBroadcastMessage("Command '" .. command .. "' does not exist.")

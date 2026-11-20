@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 37 then return end
+
 local NPC_ID = 190098
 
 local function OnGossipHello(event, player, object)
@@ -20,7 +22,7 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
 
         player:GossipSendMenu(1, object)
     elseif intid == 2 then
-        player:SendAddonMessage("CustomShop", "openstore", 7, player) -- No debug
+        player:SendAddonMessage("StoreOpenSearch", "Medallion", 7, player)
         player:GossipComplete()
     elseif intid == 3 then
         player:GossipComplete()

@@ -1,9 +1,9 @@
 local FeathersItem = 20739
 local FeathersSpell = 29118
 local MOUNTS_PER_PAGE = 10
+local mountEvent = {}
 local MOUNT_DATA = {}
 local MOUNT_ICONS = {}
-local standardmount = {}
 local FLYING_MOUNTS = {
     3363, 8153, 32235, 32239, 32240,
     32242, 32243, 32244, 32245, 32246, 32289, 32290, 32292, 32295, 32296, 32297, 32345,
@@ -226,11 +226,8 @@ local SW_ENTRANCE = {
 }
 
 -- Query spell names and icons from spell_dbc and build the lookup tables
-do
-   local MOUNT_DATA = MOUNT_DATA or {}
-   local MOUNT_ICONS = MOUNT_ICONS or {}
-   
-   WorldDBQueryAsync("SELECT ID, Name_Lang_enUS, SpellIconID FROM spell_dbc WHERE ID IN (3363, 8153, 32235, 32239, 32240, 32242, 32243, 32244, 32245, 32246, 32289, 32290, 32292, 32295, 32296, 32297, 32345, 33943, 37015, 39798, 39800, 39801, 39802, 39803, 39910, 40120, 40192, 40212, 41513, 41514, 41515, 41516, 41517, 41518, 42667, 42668, 42673, 42679, 43810, 43927, 44151, 44153, 44317, 44655, 44744, 44824, 44825, 44827, 46197, 46199, 47037, 48023, 49193, 51617, 51960, 54726, 54727, 54729, 54903, 58615, 59567, 59568, 59569, 59570, 59571, 59650, 59961, 59976, 59996, 60002, 60021, 60024, 60025, 60099, 61229, 61230, 61289, 61294, 61309, 61442, 61444, 61446, 61451, 61996, 61997, 62048, 63796, 63844, 63956, 63963, 64927, 65439, 66087, 66088, 67336, 69395, 71346, 71347, 71810, 72283, 72284, 72807, 72808, 74854, 74855, 75596, 75973, 75617, 75618, 76153)", 
+local function LoadMountData()
+    WorldDBQueryAsync("SELECT ID, Name_Lang_enUS, SpellIconID FROM spell_dbc WHERE ID IN (3363, 8153, 32235, 32239, 32240, 32242, 32243, 32244, 32245, 32246, 32289, 32290, 32292, 32295, 32296, 32297, 32345, 33943, 37015, 39798, 39800, 39801, 39802, 39803, 39910, 40120, 40192, 40212, 41513, 41514, 41515, 41516, 41517, 41518, 42667, 42668, 42673, 42679, 43810, 43927, 44151, 44153, 44317, 44655, 44744, 44824, 44825, 44827, 46197, 46199, 47037, 48023, 49193, 51617, 51960, 54726, 54727, 54729, 54903, 58615, 59567, 59568, 59569, 59570, 59571, 59650, 59961, 59976, 59996, 60002, 60021, 60024, 60025, 60099, 61229, 61230, 61289, 61294, 61309, 61442, 61444, 61446, 61451, 61996, 61997, 62048, 63796, 63844, 63956, 63963, 64927, 65439, 66087, 66088, 67336, 69395, 71346, 71347, 71810, 72283, 72284, 72807, 72808, 74854, 74855, 75596, 75973, 75617, 75618, 76153)",
    function(result)
        local spellIconIds = {}
        local spellIds = {}
@@ -264,17 +261,44 @@ do
            end
            
            WorldDBQueryAsync(string.format("SELECT ID, SpellIconID FROM spell_dbc WHERE ID IN (%s)", table.concat(spellIds, ",")),
-           function(spellResult)
-               if spellResult then
-                   repeat
-                       local spellId = spellResult:GetUInt32(0)
-                       local iconId = spellResult:GetUInt32(1)
-                       MOUNT_ICONS[spellId] = iconPaths[iconId]
-                   until not spellResult:NextRow()
-               end
-           end)
-       end)
-   end)
+            function(spellResult)
+                if spellResult then
+                    repeat
+                        local spellId = spellResult:GetUInt32(0)
+                        local iconId = spellResult:GetUInt32(1)
+                        MOUNT_ICONS[spellId] = iconPaths[iconId]
+                    until not spellResult:NextRow()
+                end
+                if SetWorldData then
+                    SetWorldData("FeathersMountData", {data = MOUNT_DATA, icons = MOUNT_ICONS})
+                end
+                local n = 0
+                for _ in pairs(MOUNT_DATA) do n = n + 1 end
+                print("[Feathers of Azeroth]: Published " .. n .. " mounts to world data")
+            end)
+        end)
+    end)
+end
+
+local function AdoptFeathersMountData()
+    local shared = GetWorldData("FeathersMountData")
+    if type(shared) == "table" and shared.AsTable then
+        shared = shared:AsTable()
+    end
+    if type(shared) ~= "table" or type(shared.data) ~= "table" then
+        return false
+    end
+    for k, v in pairs(shared.data) do MOUNT_DATA[k] = v end
+    if type(shared.icons) == "table" then
+        for k, v in pairs(shared.icons) do MOUNT_ICONS[k] = v end
+    end
+    return true
+end
+
+-- World queries names/icons once and publishes them; map states adopt on
+-- demand when a menu opens (world -> map).
+if GetStateMapId() == -1 then
+    LoadMountData()
 end
 
 local function IsInOldWorld(player)
@@ -339,14 +363,12 @@ local function CheckZ(eventId, delay, repeats, player)
       end
   end
   
-  if not mountId or not ZonesToCheckZ(player) then
-      player:RemoveEventById(eventId)
-      print("[Feathers of Azeroth]: Z check event removed from "..player:GetGUIDLow())
-      player:SetData("MountEvent", false)
-      return
-  end
+   if not mountId or not ZonesToCheckZ(player) then
+       mountEvent[player:GetGUIDLow()] = nil
+       return
+   end
   
-  local currentLocKey = player:GetData("CurrentLocKey") or "Loc1"
+  local currentLocKey = player:Data():Get("CurrentLocKey") or "Loc1"
   local nextLocKey = currentLocKey == "Loc1" and "Loc2" or "Loc1"
   
   local maxAllowedZ = MAX_Z
@@ -390,12 +412,12 @@ local function CheckZ(eventId, delay, repeats, player)
   end
   
   if z <= teleportZ then
-      player:SetData(currentLocKey, string.format("%f,%f,%f,%f", x, y, z, o))
-      player:SetData("CurrentLocKey", nextLocKey)
+      player:Data():Set(currentLocKey, string.format("%f,%f,%f,%f", x, y, z, o))
+      player:Data():Set("CurrentLocKey", nextLocKey)
   end
   
   if z > maxAllowedZ and canTeleport then
-      local prevLoc = player:GetData(nextLocKey)
+      local prevLoc = player:Data():Get(nextLocKey)
       if prevLoc then
           local lastX, lastY, lastZ, lastO = prevLoc:match("([^,]+),([^,]+),([^,]+),([^,]+)")
           lastX, lastY, lastZ, lastO = tonumber(lastX), tonumber(lastY), tonumber(lastZ), tonumber(lastO)
@@ -405,11 +427,12 @@ local function CheckZ(eventId, delay, repeats, player)
           player:Teleport(mapId, x, y, teleportZ, o)
       end
       
-      if not player:GetData("LastWarning") or os.time() - player:GetData("LastWarning") >= 5 then
-          player:SendBroadcastMessage("You can't fly that high in this area!")
-          player:SetData("LastWarning", os.time())
-      end
-  end
+       if not player:Data():Get("LastWarning") or os.time() - player:Data():Get("LastWarning") >= 5 then
+           player:SendBroadcastMessage("You can't fly that high in this area!")
+           player:Data():Set("LastWarning", os.time())
+       end
+   end
+   player:RegisterEvent(CheckZ, 200, 1)
 end
 
 -- Start gossip management
@@ -448,13 +471,21 @@ end
 local function ShowMountMenu(event, player, item, target, page, isStandardMount)
     page = page or 1
     
-    -- Get available mounts for this player
+    -- Mount list comes from the static FLYING_MOUNTS table; MOUNT_DATA and
+    -- MOUNT_ICONS are display-only (names/icons) with fallbacks. Shared data
+    -- is adopted on demand (world -> map).
+    if next(MOUNT_DATA) == nil then
+        AdoptFeathersMountData()
+    end
     local availableMounts = {}
-    for spellId, spellName in pairs(MOUNT_DATA) do
+    local knownMounts = 0
+    for _ in pairs(MOUNT_DATA) do knownMounts = knownMounts + 1 end
+    for _, spellId in ipairs(FLYING_MOUNTS) do
         if player:HasSpell(spellId) then
             table.insert(availableMounts, spellId)
         end
     end
+    print("[Feathers of Azeroth]: Mount menu for " .. player:GetName() .. ": " .. knownMounts .. " indexed, " .. #availableMounts .. " known")
     
     local totalMounts = #availableMounts
     local maxPages = math.ceil(totalMounts / MOUNTS_PER_PAGE)
@@ -473,13 +504,14 @@ local function ShowMountMenu(event, player, item, target, page, isStandardMount)
     
     for i = startIndex, endIndex do
         local spellId = availableMounts[i]
-        local spellName = MOUNT_DATA[spellId]
+        local spellName = MOUNT_DATA[spellId] or ("Spell " .. tostring(spellId))
         local iconPath = MOUNT_ICONS[spellId]
         if spellId == 75596 then 
             iconPath = "Interface/ICONS/ability_mount_frostyflyingcarpet"
         elseif spellId == 75973 then 
             iconPath = "Interface/ICONS/ability_mount_rocketmount2"
 		end
+        iconPath = iconPath or "Interface/ICONS/inv_misc_questionmark"
         -- Add icon to gossip menu item
         if isStandardMount then
             player:GossipMenuAddItem(4, "|T" .. iconPath .. ":32:32:-22:0|t" .. spellName, 0, 800000 + spellId)
@@ -530,16 +562,16 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
         local currentPage = intid - 500000
         ShowMountMenu(event, player, nil, nil, currentPage - 1, true)
     elseif intid == 300002 then
-        standardmount[player:GetGUIDLow()] = nil
+        player:Data():Set("FeathersStandardMount", nil)
         print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is nil")
         player:SendBroadcastMessage("Standard mount removed.")
-        CharDBExecute(string.format("DELETE FROM character_flight WHERE guid = %d", player:GetGUIDLow()))
+        CharDBExecute(string.format("DELETE FROM ycore_yla.character_flight WHERE guid = %d", player:GetGUIDLow()))
         ShowManageStandardMount(event, player)
     elseif intid == 300003 then
-        standardmount[player:GetGUIDLow()] = nil
+        player:Data():Set("FeathersStandardMount", nil)
         print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is nil")
         player:SendBroadcastMessage("Standard mount removed.")
-        CharDBExecute(string.format("DELETE FROM character_flight WHERE guid = %d", player:GetGUIDLow()))
+        CharDBExecute(string.format("DELETE FROM ycore_yla.character_flight WHERE guid = %d", player:GetGUIDLow()))
         ShowManageStandardMountCmd(event, player)
     elseif intid == 600000 then
         ShowManageStandardMount(event, player)
@@ -552,9 +584,9 @@ local function OnGossipSelect(event, player, object, sender, intid, code, menu_i
     elseif intid >= 800000 then
         -- Mount selected as standard
         local mountId = intid - 800000
-        standardmount[player:GetGUIDLow()] = mountId
-        print("[Feathers of Azeroth]: Selecting standard mount for "..player:GetName().." is ".. standardmount[player:GetGUIDLow()].." (mount ID "..mountId..")")
-        CharDBExecute(string.format("REPLACE INTO character_flight (guid, standardmount) VALUES (%d, %d)", player:GetGUIDLow(), mountId))
+        player:Data():Set("FeathersStandardMount", mountId)
+        print("[Feathers of Azeroth]: Selecting standard mount for "..player:GetName().." is ".. tostring(player:Data():Get("FeathersStandardMount")) .." (mount ID "..mountId..")")
+        CharDBExecute(string.format("REPLACE INTO ycore_yla.character_flight (guid, standardmount) VALUES (%d, %d)", player:GetGUIDLow(), mountId))
         player:SendBroadcastMessage("Standard mount set successfully.")
         player:GossipComplete()
     elseif intid > 0 then
@@ -577,9 +609,9 @@ end
 local function checkMount(player)
 	for _, id in ipairs(FLYING_MOUNTS) do
 		if player:HasAura(id) then
-			if not player:GetData("MountEvent") then
-				player:SetData("MountEvent", true)
-				player:RegisterEvent(CheckZ, 200, 0)
+			if not mountEvent[player:GetGUIDLow()] then
+				mountEvent[player:GetGUIDLow()] = true
+				player:RegisterEvent(CheckZ, 200, 1)
 				print("[Feathers of Azeroth]: Starting zone-based Z check")
 			end
 		end
@@ -614,9 +646,10 @@ local function OnUseItem(event, player, item, target)
         return false
     end
     
-    if standardmount[player:GetGUIDLow()] and not player:IsCasting() then
-        player:CastSpell(player, standardmount[player:GetGUIDLow()], false)
-        print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is ".. standardmount[player:GetGUIDLow()])
+    local standardMount = player:Data():Get("FeathersStandardMount")
+    if standardMount and not player:IsCasting() then
+        player:CastSpell(player, standardMount, false)
+        print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is ".. standardMount)
 		CheckFlyableArea(event, player, player:GetZoneId(), player:GetAreaId())
     else
         ShowMountMenu(event, player, item, target, 1)
@@ -643,12 +676,12 @@ end
 
 local function LoadStandardMount(event, player)
     local guid = player:GetGUIDLow()
-    local result = CharDBQuery(string.format("SELECT standardmount FROM character_flight WHERE guid = %d", guid))
+    local result = CharDBQuery(string.format("SELECT standardmount FROM ycore_yla.character_flight WHERE guid = %d", guid))
     if result then
         local mountId = result:GetUInt32(0)
         if mountId  then
-            standardmount[guid] = mountId
-            print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is ".. standardmount[player:GetGUIDLow()])
+            player:Data():Set("FeathersStandardMount", mountId)
+            print("[Feathers of Azeroth]: Standard mount for "..player:GetName().." is ".. mountId)
         end
     end
 end
@@ -656,8 +689,14 @@ end
 local function OnLoadScript()
     local dbQueryTable = {}
     
-    local players = GetPlayersInWorld()
-    for _, player in pairs(players) do
+    local players
+    if GetStateMapId() == -1 then
+        players = GetPlayersInWorld()
+    else
+        local map = GetStateMap()
+        players = map and map:GetPlayers()
+    end
+    for _, player in ipairs(players or {}) do
         if player:HasItem(FeathersItem) then
             table.insert(dbQueryTable, player:GetGUIDLow())
 			CheckFlyableArea(event, player, player:GetZoneId(), player:GetAreaId())
@@ -666,7 +705,7 @@ local function OnLoadScript()
     
     -- If we found any players with the item, query their standard mounts
     if #dbQueryTable > 0 then
-        local queryStr = string.format("SELECT guid, standardmount FROM character_flight WHERE guid IN (%s)", 
+        local queryStr = string.format("SELECT guid, standardmount FROM ycore_yla.character_flight WHERE guid IN (%s)", 
             table.concat(dbQueryTable, ","))
         local result = CharDBQuery(queryStr)
         
@@ -675,7 +714,12 @@ local function OnLoadScript()
                 local guid = result:GetUInt32(0)
                 local mountId = result:GetUInt32(1)
                 if mountId then
-                    standardmount[guid] = mountId
+                    local p
+                    if GetStateMapId() == -1 then p = GetPlayerByGUID(guid)
+                    else for _, q in ipairs(GetStateMap():GetPlayers()) do
+                        if q:GetGUIDLow() == guid then p = q break end
+                    end end
+                    if p then p:Data():Set("FeathersStandardMount", mountId) end
                 end
             until not result:NextRow()
         end
@@ -742,19 +786,23 @@ local function OnCastFlyingMount(event, player, spell)
 end
 
 OnLoadScript()
-WorldDBExecute("UPDATE item_template SET description = 'This item has the ability to wrap the wings of your flying mounts with the Feathers of Azeroth, permitting their use in Azeroth.' WHERE entry = 20739")
-CharDBExecute("CREATE TABLE IF NOT EXISTS character_flight (guid INT UNSIGNED NOT NULL, standardmount INT UNSIGNED, X FLOAT, Y FLOAT, Z FLOAT, O FLOAT, var1 INT UNSIGNED, var2 INT UNSIGNED, var3 INT UNSIGNED, PRIMARY KEY (guid))")
-RegisterPlayerEvent(3, LoadStandardMount)
-RegisterPlayerEvent(27, CheckFlyableArea)
-RegisterPlayerEvent(28, OnMapChange)
-RegisterPlayerEvent(42, OnCommand)
-RegisterItemEvent(FeathersItem, 2, OnUseItem)
-RegisterPlayerGossipEvent(182746573, 2, OnGossipSelect)
-RegisterPacketEvent(0x346, 5, OnMoveSetFly) -- If a player tries to fly, check if they should be able to
-RegisterSpellEvent(75973, 2, OnX53orInvincible)
-RegisterSpellEvent(72282, 2, OnX53orInvincible)
-RegisterSpellEvent(72283, 2, OnX53orInvincible)
-RegisterSpellEvent(72284, 2, OnX53orInvincible)
-for _, spellId in ipairs(FLYING_MOUNTS) do
-    RegisterSpellEvent(spellId, 1, OnCastFlyingMount)
+
+if GetStateMapId() == -1 then
+    WorldDBExecute("UPDATE item_template SET description = 'This item has the ability to wrap the wings of your flying mounts with the Feathers of Azeroth, permitting their use in Azeroth.' WHERE entry = 20739")
+    CharDBExecute("CREATE TABLE IF NOT EXISTS ycore_yla.character_flight (guid INT UNSIGNED NOT NULL, standardmount INT UNSIGNED, X FLOAT, Y FLOAT, Z FLOAT, O FLOAT, var1 INT UNSIGNED, var2 INT UNSIGNED, var3 INT UNSIGNED, PRIMARY KEY (guid))")
+    RegisterPlayerEvent(3, LoadStandardMount)
+    RegisterPlayerEvent(42, OnCommand)
+    RegisterPacketEvent(0x346, 5, OnMoveSetFly) -- If a player tries to fly, check if they should be able to
+else
+    RegisterPlayerEvent(27, CheckFlyableArea)
+    RegisterPlayerEvent(28, OnMapChange)
+    RegisterItemEvent(FeathersItem, 2, OnUseItem)
+    RegisterPlayerGossipEvent(182746573, 2, OnGossipSelect)
+    RegisterSpellEvent(75973, 2, OnX53orInvincible)
+    RegisterSpellEvent(72282, 2, OnX53orInvincible)
+    RegisterSpellEvent(72283, 2, OnX53orInvincible)
+    RegisterSpellEvent(72284, 2, OnX53orInvincible)
+    for _, spellId in ipairs(FLYING_MOUNTS) do
+        RegisterSpellEvent(spellId, 1, OnCastFlyingMount)
+    end
 end

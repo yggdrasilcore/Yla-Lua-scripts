@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 632 then return end
+
 local BRONJAHM_ID           = 36497
 local BRONJAHM_CENTER_POS   = { 5297, 2506, 686.07 }
 local BRONJAHM_RADIUS       = 22
@@ -62,12 +64,9 @@ local function BronjahmTactics(player)
         
         -- Always mark Soul Fragments with skull to make shadows focus them
         if SoulFragment then
-            local group = player:GetGroup()
-            if group then
-                if not SoulFragment:GetData("SkullSet") then
-                    SoulFragment:SetData("SkullSet", true)
-                    group:SetTargetIcon(7, SoulFragment:GetGUID(), player:GetGUID())
-                end
+            if not SoulFragment:Data():Get("SkullSet") then
+                SoulFragment:Data():Set("SkullSet", true)
+                SetTargetIconDeferred(player, 7, SoulFragment)
             end
         end
         
@@ -220,4 +219,4 @@ local function OnEnterFoS(event, player)
 end
 
 RegisterPlayerEvent(28, OnEnterFoS)
-for _, player in ipairs(GetPlayersInWorld()) do OnEnterFoS(nil, player) end
+if GetStateMap() then for _, player in ipairs(GetStateMap():GetPlayers()) do OnEnterFoS(nil, player) end end

@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 668 then return end
+
 -- HOR TACTICS
 
 local RISEN_WITCH_DOCTOR_ID = 36941
@@ -11,18 +13,17 @@ function OnEnterHoR(event, player)
     
     player:RegisterEvent(function(event, d, r, player)
         if not (player:GetMapId() == 668) then return end
-        TogglePlayerbotScript(player, "icc", false)
-        TogglePlayerbotScript(player, "utgarde keep", false)
+        local shadow = player:ToShadow()
+        if shadow then
+            shadow:ToggleCombatStrategy("-icc")
+            shadow:ToggleCombatStrategy("-utgarde keep")
+        end
      end, 5000, 1)
         
     local LK = player:GetNearestCreature(4000, LK_ID)
     
     if LK then
-        local group = player:GetGroup()
-        
-        if group then
-            group:SetTargetIcon(4, LK:GetGUID(), player:GetGUID())
-        end
+        SetTargetIconDeferred(player, 4, LK)
     end
 end
 
@@ -84,13 +85,16 @@ local function LichKingChaseLoop(eventId, delay, repeats, lk)
     lk:RegisterEvent(LichKingChaseLoop, 500, 1)
 end
 
-local function LichKingChaseOnEnterCombat(event, player, enemy)
-    if not (player:GetMapId() == 668) then return end
-    if enemy and enemy:GetEntry() == LK_ID then
-        StartLuaEvent(enemy, LichKingChaseLoop)
+local function LichKingChaseOnEnterCombat(event, enemy, target)
+    if not enemy or enemy:GetEntry() ~= LK_ID or enemy:GetMapId() ~= 668 then return end
+
+    for _, player in ipairs(enemy:GetPlayersInRange(100)) do
         ApplyHiddenBuffsToShadows(player)
     end
+
+    if IsLuaEventActive(enemy) then return end
+    StartLuaEvent(enemy, LichKingChaseLoop)
 end
 
-RegisterPlayerEvent(33, LichKingChaseOnEnterCombat)
+RegisterCreatureEvent(LK_ID, 1, LichKingChaseOnEnterCombat)
 RegisterPlayerEvent(28, OnEnterHoR)

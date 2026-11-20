@@ -1,3 +1,5 @@
+if GetStateMapId() ~= -1 then return end
+
 local function CombatCheck(event, player, command)
     if command == "combat" then
         local target = player:GetSelection()

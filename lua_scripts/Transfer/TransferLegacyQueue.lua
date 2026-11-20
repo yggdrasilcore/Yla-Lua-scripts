@@ -1,3 +1,5 @@
+if GetStateMapId() ~= -1 then return end
+
 local function OnFirstLogin(event, player)
     if player:GetMapId() == 571 then
         local guid = player:GetGUIDLow()
@@ -9,7 +11,7 @@ local function OnFirstLogin(event, player)
         end, 1000, 1)
         
         CreateLuaEvent(function()
-            CharDBQueryAsync("SELECT command FROM acore_eluna.legacy_transfer_queue WHERE guid = "..guid, function(query)
+            CharDBQueryAsync("SELECT command FROM ycore_yla.legacy_transfer_queue WHERE guid = "..guid, function(query)
                 if query then
                     local commands = {}
                     repeat
@@ -18,7 +20,7 @@ local function OnFirstLogin(event, player)
                     for _, command in ipairs(commands) do
                         RunCommand(command)
                     end
-                    CharDBExecute("DELETE FROM acore_eluna.legacy_transfer_queue WHERE guid = "..guid)
+                    CharDBExecute("DELETE FROM ycore_yla.legacy_transfer_queue WHERE guid = "..guid)
                 end
             end)
         end, 10000, 1)

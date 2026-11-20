@@ -1,7 +1,10 @@
+if GetStateMapId() ~= -1 then return end
+local debugprint = 0
+
 local function OnCommand(event, player, command)
     if command:lower() == "combatstop" then
         local gmRank = player:GetGMRank()
-        local cbstoptime = player:GetData("cbstoptime")
+        local cbstoptime = player:Data():Get("cbstoptime")
         local currentTime = os.time()
         if gmRank > 2 then
             if debugprint == 1 then

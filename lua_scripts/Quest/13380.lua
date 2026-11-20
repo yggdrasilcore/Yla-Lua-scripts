@@ -1,10 +1,15 @@
+if GetStateMapId() == -1 then return end
+
 local playersInArea = {}
 local checkEventId = nil
 
 local function ScanAndDespawn()
     local playerCount = 0
     for name, _ in pairs(playersInArea) do
-        local player = GetPlayerByName(name)
+        local player
+        for _, p in ipairs(GetStateMap():GetPlayers()) do
+            if p:GetName() == name then player = p break end
+        end
         if player and player:IsInWorld() then
             local nearGargoyles = player:GetCreaturesInRange(150, 32769) -- Gargoyle Ambusher npc ID
             for _, gargoyle in ipairs(nearGargoyles) do

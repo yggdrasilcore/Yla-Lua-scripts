@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 631 then return end
+
 local function GetNearestSafePoint(x, y)
     local safePoints = {
         {4356, 3265}, {4417, 3207}, {4356, 3157}, {4288, 3192}
@@ -55,10 +57,10 @@ local function ProfessorPutricideLoop(eventId, delay, repeats, putricide)
     putricide:RegisterEvent(ProfessorPutricideLoop, 500, 1)
 end
 
-local function OnProfessorPutricideCombat(event, player, enemy)
-    if enemy and enemy:GetEntry() == 36678 then
-        StartLuaEvent(enemy, ProfessorPutricideLoop)
-    end
+local function OnProfessorPutricideCombat(event, enemy, target)
+    if not enemy or enemy:GetEntry() ~= 36678 then return end
+    if IsLuaEventActive(enemy) then return end
+    StartLuaEvent(enemy, ProfessorPutricideLoop)
 end
 
-RegisterPlayerEvent(33, OnProfessorPutricideCombat)
+RegisterCreatureEvent(36678, 1, OnProfessorPutricideCombat)

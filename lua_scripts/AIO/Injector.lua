@@ -1,6 +1,8 @@
 -- Require libs and whatever else has payloads defined
 require('lualzw')
 require('Smallfolk')
+if GetStateMapId() ~= -1 then return end
+
 require('Payloads')
 
 -- Name of the global table storing the injected functionality
@@ -65,11 +67,17 @@ local WardenLoader = {
 	}
 }
 
+local function LuaQuote(s)
+	return '"' .. s:gsub('[%z\1-\31\\"]', function(c)
+		return string.format("\\%03d", string.byte(c))
+	end) .. '"'
+end
+
 function Player:SendLargePayload(addon, version, cache, comp, data)
 	comp = comp or 0;
 	cache = cache or 0;
 	local chunk = {}
-	local max_size = 900
+	local max_size = 500
 
 	if(comp == 1) then
 		-- payload should be compressed using lzw
@@ -107,7 +115,7 @@ function Player:SendLargePayload(addon, version, cache, comp, data)
 		end
 		istr = istr..tostring(i)
 
-		self:SendAddonMessage("ws", "_G['"..cGTN.."'].f.p('"..istr.."', '"..cstr.."', '"..addon.."', "..version..", "..cache..", "..comp..", [["..chunk[i].."]])", 7, self)
+		self:SendAddonMessage("ws", "_G['"..cGTN.."'].f.p('"..istr.."', '"..cstr.."', '"..addon.."', "..version..", "..cache..", "..comp..", "..LuaQuote(chunk[i])..")", 7, self)
 	end
 end
 
@@ -133,12 +141,14 @@ local function SendAddonInjector(player)
 	-- Concatenate
 	player:SendAddonMessage("ws", "_G['"..cGTN.."'].f.c = function(a) local b='' for _,d in ipairs(a) do b=b..d end; return b end", 7, player) 
 	-- Execute
-	player:SendAddonMessage("ws", "_G['"..cGTN.."'].f.e = function(n) local t=_G['"..cGTN.."']; local lt = t.s[n] local fn = t.f.c(lt.ca); _G[n..'payload'] = {v = lt.v, p = fn}; if(lt.co==1) then fn = lualzw.decompress(fn) end t.f.l(fn, n) t.s[n]=nil end", 7, player)
+	player:SendAddonMessage("ws", "_G['"..cGTN.."'].f.e = function(n) local t=_G['"..cGTN.."']; local lt = t.s[n]; if not lt or lt.done then return end lt.done = true; local fn = t.f.c(lt.ca); _G[n..'payload'] = {v = lt.v, p = fn, h = t.f.h(fn)}; if(lt.co==1) then fn = lualzw.decompress(fn) end t.f.l(fn, n) t.s[n]=nil end", 7, player)
 	-- Process
-	player:SendAddonMessage("ws", "_G['"..cGTN.."'].f.p = function(a, b, n, v, c, co, s) local t,tc=_G['"..cGTN.."'], _G['"..cGTN.."'].s; if not tc[n] then tc[n] = {['v']=v, ['co']=co, ['c']=c, ['ca']={}} end local lt = tc[n] a=tonumber(a) b=tonumber(b) table.insert(lt.ca, a, s) if a == b and #lt.ca == b then t.f.e(n) end end", 7, player)
+	player:SendAddonMessage("ws", "_G['"..cGTN.."'].f.p = function(a, b, n, v, c, co, s) local t,tc=_G['"..cGTN.."'], _G['"..cGTN.."'].s; a=tonumber(a) b=tonumber(b) local lt=tc[n]; if not lt or lt.v~=v or lt.b~=b then lt={['v']=v, ['co']=co, ['c']=c, ['b']=b, ['ca']={}} tc[n]=lt end; if lt.done then return end; if lt.ca[a] then return end; table.insert(lt.ca, a, s) if a == b and #lt.ca == b then t.f.e(n) end end", 7, player)
+	-- Checksum
+	player:SendAddonMessage("ws", "_G['"..cGTN.."'].f.h = function(s) local h=0 for i=1,#s do h=(h*33+string.byte(s,i))%4294967296 end return h end", 7, player)
 	-- Inform
 	-- One potential issue is dependency load order and requirement, this is something I'll have to look into at some point..
-	player:SendAddonMessage("ws", "_G['"..cGTN.."'].f.i = function(n, v, c, co, s) local t=_G['"..cGTN.."']; if not(t.i[2]) then t.i[2] = tonumber(s) end if(c == 1) then RegisterForSave(n..'payload'); local cc = _G[n..'payload'] if(cc) then if(cc.v == v) then local p = cc.p if(co == 1) then p = lualzw.decompress(p) end t.f.l(p, n) return; end end end SendAddonMessage('wc', 'req'..n, 'WHISPER', UnitName('player')) end", 7, player)
+	player:SendAddonMessage("ws", "_G['"..cGTN.."'].f.i = function(n, v, c, co, s) local t=_G['"..cGTN.."']; if not(t.i[2]) then t.i[2] = tonumber(s) end if(c == 1) then RegisterForSave(n..'payload'); local cc = _G[n..'payload']; if cc and cc.v == v and type(cc.p) == 'string' and cc.h and t.f.h(cc.p) == cc.h then local p = cc.p if(co == 1) then p = lualzw.decompress(p) end t.f.l(p, n) return end _G[n..'payload'] = nil end SendAddonMessage('wc', 'req'..n, 'WHISPER', UnitName('player')) end", 7, player)
 	-- cache registry
 	player:SendAddonMessage("ws", "_G['"..cGTN.."'].f.r = function(a) RegisterForSave(a); end", 7, player) 
 
@@ -151,17 +161,19 @@ local pushingName = {}
 local reloadGraceTimer = 60 -- No. of secs to allow for long/slow reloads
     
 local function PushInitModule(eventid, delay, repeats)
+    if not pushingName[eventid] then return end
     local player = GetPlayerByName(pushingName[eventid])
     if not player then 
 		RemoveEventById(eventid)
         pushingName[eventid] = nil
         return
     end
-	if(player:GetData("ModuleInit") == true) then
+	if(player:Data():Get("ModuleInit") == true) then
 		RemoveEventById(eventid)
 		SendAddonInjector(player)
         pushingModule[player:GetGUIDLow()] = nil
         pushingName[eventid] = nil
+		RemoveEventById(eventid)
 		return
 	end
 
@@ -169,27 +181,38 @@ local function PushInitModule(eventid, delay, repeats)
 end
 
 local function AwaitInjection(event, player)
-    if isPlayerBot[player:GetName()] then return end
+    if player:IsBot() then return end
+    if not player:IsInWorld() then
+        local name = player:GetName()
+        CreateLuaEvent(function(eventid)
+            local p = GetPlayerByName(name) -- nil until the player actually enters world
+            if p then
+                RemoveEventById(eventid)
+                AwaitInjection(0, p)
+            end
+        end, 1000, 30)
+        return
+    end
 	player:QueueWardenPayload()
-	player:SetData("ModuleInit", false)
+	player:Data():Set("ModuleInit", false)
     pushingModule[player:GetGUIDLow()] = true
-	local pushId = CreateLuaEvent(PushInitModule, 1000, 0)
+	local pushId = CreateLuaEvent(PushInitModule, 1000, 75)
     pushingName[pushId] = player:GetName()
 end
 
 
 local function SetReloadFlag(event, packet, player)
-	player:SetData("JustReloaded", os.time() + reloadGraceTimer) -- Sets JustReloaded flag on cancel logout, which fires immediately before a reload
+	player:Data():Set("JustReloaded", os.time() + reloadGraceTimer) -- Sets JustReloaded flag on cancel logout, which fires immediately before a reload
 end
 
 local function AwaitPacketInjection(event, packet, player)
-    if isPlayerBot[player:GetName()] then return end
-    if player:GetData("JustReloaded") and player:GetData("JustReloaded") > os.time() and not pushingModule[player:GetGUIDLow()] then -- Inject only if both cancel logout AND set action bars called close to each other, and not currently injecting to player 
+    if player:IsBot() then return end
+    if player:Data():Get("JustReloaded") and player:Data():Get("JustReloaded") > os.time() and not pushingModule[player:GetGUIDLow()] then -- Inject only if both cancel logout AND set action bars called close to each other, and not currently injecting to player 
         player:QueueWardenPayload()
-        player:SetData("ModuleInit", false)
-        player:SetData("JustReloaded", nil) -- Remove the reload flag we just set
+        player:Data():Set("ModuleInit", false)
+        player:Data():Set("JustReloaded", nil) -- Remove the reload flag we just set
         pushingModule[player:GetGUIDLow()] = true
-        local pushId = CreateLuaEvent(PushInitModule, 1000, 0)
+        local pushId = CreateLuaEvent(PushInitModule, 1000, 75)
         pushingName[pushId] = player:GetName()
     end
 end
@@ -204,7 +227,7 @@ local function OnAddonMessageReceived(event, player, _type, header, data, target
             if(header == "wc") then
                 if(data == "loaded") then
                     -- module is loaded and ready to receive data
-                    player:SetData("ModuleInit", true)
+                    player:Data():Set("ModuleInit", true)
                 elseif(data == "kill") then
                     if (killLimit[name] and killLimit[name] == os.time()) then
                         return

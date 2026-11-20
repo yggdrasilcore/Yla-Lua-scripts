@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 658 then return end
+
 local MAP_ID            = 658
 
 local GARFROST_ID       = 36494
@@ -89,4 +91,4 @@ local function OnEnterFoS(event, player)
 end
 
 RegisterPlayerEvent(28, OnEnterFoS)
-for _, player in ipairs(GetPlayersInWorld()) do OnEnterFoS(nil, player) end
+if GetStateMap() then for _, player in ipairs(GetStateMap():GetPlayers()) do OnEnterFoS(nil, player) end end

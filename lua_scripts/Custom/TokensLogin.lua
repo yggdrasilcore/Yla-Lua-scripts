@@ -1,5 +1,10 @@
+if GetStateMapId() == -1 then return end
+
 local function SendBroadcastWithCheck(playerGUID, message, itemEntry, itemCount, acc)
-	local player = GetPlayerByGUID(playerGUID)
+	local player
+	for _, p in ipairs(GetStateMap():GetPlayers()) do
+		if p:GetGUIDLow() == GetGUIDLow(playerGUID) then player = p break end
+	end
 	local oldCount = player:GetItemCount(itemEntry)
 	player:AddItem(itemEntry, itemCount)
 	
@@ -11,18 +16,18 @@ local function SendBroadcastWithCheck(playerGUID, message, itemEntry, itemCount,
 	player:SendBroadcastMessage(message)
 	print("Awarding currency "..itemEntry.." quantity "..itemCount.." to acc "..acc)
 	if itemEntry == 20880 then
-		CharDBExecute("UPDATE account_currencies SET vp = 0 WHERE id = " .. acc)
+		CharDBExecute("UPDATE ycore_yla.account_currencies SET vp = 0 WHERE id = " .. acc)
 		player:RegisterEvent(function(_, _, _, player)
-			if not player:GetData("CurrSave") then
-				player:SetData("CurrSave")
+			if not player:Data():Get("CurrSave") then
+				player:Data():Set("CurrSave")
 				player:SaveToDB()
 			end
 		end, 1000)
 	else
-		CharDBExecute("UPDATE account_currencies SET dp = 0 WHERE id = " .. acc)
+		CharDBExecute("UPDATE ycore_yla.account_currencies SET dp = 0 WHERE id = " .. acc)
 		player:RegisterEvent(function(_, _, _, player)
-			if not player:GetData("CurrSave") then
-				player:SetData("CurrSave")
+			if not player:Data():Get("CurrSave") then
+				player:Data():Set("CurrSave")
 				player:SaveToDB()
 			end
 		end, 1500)
@@ -30,17 +35,20 @@ local function SendBroadcastWithCheck(playerGUID, message, itemEntry, itemCount,
 end
 
 local function TokensOnLogin(event, player)
-    if isPlayerBot[player:GetName()] then return end
-    if player:GetData("LoginChecked") then return end
+    if player:IsBot() then return end
+    if player:Data():Get("LoginChecked") then return end
     local acc = player:GetAccountId()
     local playerGUID = player:GetGUID()
     local communitymessage = false
     local votemessage = false
    
-    CharDBQueryAsync("SELECT dp, vp FROM account_currencies WHERE id = " .. acc, function(query)
-        local player = GetPlayerByGUID(playerGUID)
+    CharDBQueryAsync("SELECT dp, vp FROM ycore_yla.account_currencies WHERE id = " .. acc, function(query)
+        local player
+        for _, p in ipairs(GetStateMap():GetPlayers()) do
+            if p:GetGUIDLow() == GetGUIDLow(playerGUID) then player = p break end
+        end
  	    if not player then return end
- 	    player:SetData("LoginChecked", true)
+ 	    player:Data():Set("LoginChecked", true)
         if query then
             local dpValue = query:GetInt32(0)
             local vpValue = query:GetInt32(1)

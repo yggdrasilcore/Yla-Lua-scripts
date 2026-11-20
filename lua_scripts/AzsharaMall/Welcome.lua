@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 37 then return end
+
 -- Event registration
 function OnGossipHello(event, player, creature)
    player:GossipClearMenu()
@@ -15,6 +17,7 @@ function OnGossipHello(event, player, creature)
    player:GossipMenuAddItem(0, "Flight and Riding Services", 0, 10)
    player:GossipMenuAddItem(0, "Pet Services", 0, 11)
    player:GossipMenuAddItem(0, "Repair", 0, 12)
+   player:GossipMenuAddItem(0, "Enchantments", 0, 13)
    player:GossipSendMenu(12, creature)
 end
 
@@ -123,6 +126,12 @@ function OnGossipSelect(event, player, creature, sender, intid, code)
        player:GossipMenuAddItem(0, "Go back", 0, 1)
        player:GossipSendMenu(12, creature)
        
+   elseif(intid == 13) then -- Enchanter
+       player:GossipClearMenu()
+       player:GossipMenuAddItem(0, "You can find a skilled Enchanter that can handle all your Enchantment needs at the westernmost building atop the hill ahead.", 0, 13)
+       player:GossipMenuAddItem(0, "Go back", 0, 1)
+       player:GossipSendMenu(12, creature)
+       
    elseif(intid == 30) then -- alchemy etc
        player:GossipClearMenu()
        player:GossipMenuAddItem(0, "Alchemy, Inscription and Herblaism trainers are present in the tower in the southern quadrant of the valley, south of the moonwell. You can also find raw materials, herbs, for these professions growing around the valley.", 0, 30)
@@ -189,19 +198,19 @@ function OnGossipSelect(event, player, creature, sender, intid, code)
        player:GossipMenuAddItem(0, "Go back", 0, 4)
        player:GossipSendMenu(12, creature)
        
-   elseif(intid == 48) then -- Currency exchanger submenu
+   elseif(intid == 48) then -- Guild submenu
        player:GossipClearMenu()
        player:GossipMenuAddItem(0, "You can purchase guilds and guild services at the westernmost building atop the hill ahead.", 0, 48)
        player:GossipMenuAddItem(0, "Go back", 0, 4)
        player:GossipSendMenu(12, creature)
        
-   elseif(intid == 49) then -- Currency exchanger submenu
+   elseif(intid == 49) then -- Beast master submenu
        player:GossipClearMenu()
        player:GossipMenuAddItem(0, "You can purchase beast master hunter pets at the barn atop the hill ahead.", 0, 49)
        player:GossipMenuAddItem(0, "Go back", 0, 4)
        player:GossipSendMenu(12, creature)
        
-   elseif(intid == 50) then -- Currency exchanger submenu
+   elseif(intid == 50) then -- Professions submenu
        player:GossipClearMenu()
        player:GossipMenuAddItem(0, "You can purchase Grandmaster professions at the westernmost building atop the hill ahead.", 0, 50)
        player:GossipMenuAddItem(0, "Go back", 0, 4)

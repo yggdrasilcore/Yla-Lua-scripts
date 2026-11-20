@@ -1,0 +1,20 @@
+-- Quest race gating is stored in quest_template.AllowableRaces.
+-- 512 = blood elf only; 690 = all Horde races (2 orc + 16 undead + 32 tauren + 128 troll + 512 blood elf), as used by quest 9255.
+-- The 10068-10073 quests remain class-gated through quest_template_addon.AllowableClasses.
+local statements = {
+[[
+UPDATE `quest_template`
+SET `AllowableRaces` = 690
+WHERE `ID` IN (8325, 8326, 8327, 8330, 8334, 8335, 8336, 8338, 8345, 8347, 10068, 10069, 10070, 10071, 10072, 10073);
+]],
+}
+
+local function quest_horde_races()
+    for _, statement in ipairs(statements) do
+        WorldDBQuery(statement)
+    end
+end
+
+CreateLuaEvent(function()
+    YcoreYlaUpdate("quest_horde_races", quest_horde_races)
+end, 5000, 1)

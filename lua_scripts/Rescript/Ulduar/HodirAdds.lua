@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 603 then return end
+
 local function OnEnterCombat(event, player, enemy)
 	if enemy and enemy:GetEntry() == 34133 then
 		

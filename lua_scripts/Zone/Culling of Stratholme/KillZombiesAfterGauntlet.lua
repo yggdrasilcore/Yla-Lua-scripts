@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 595 then return end
+
 local ARTHAS_ENTRY = 26499
 local ZOMBIE_ENTRY = 27737
 
@@ -28,4 +30,9 @@ local function OnPlayerMapChange(event, player)
 end
 
 RegisterPlayerEvent(28, OnPlayerMapChange)
-for _, player in ipairs(GetPlayersInWorld()) do OnPlayerMapChange(_, player) end
+
+if GetStateMap() then
+    for _, player in ipairs(GetStateMap():GetPlayers()) do
+        player:RegisterEvent(OnPlayerMapChange, 5000, 0)
+    end
+end

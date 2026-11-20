@@ -1,4 +1,6 @@
 local ITEM_ENTRY = 41415
+if GetStateMapId() == -1 then return end
+
 local SCROLL_SPELLS = {
     [1] = 58449, -- Strength VIII
     [2] = 58451, -- Agility VIII
@@ -42,20 +44,14 @@ local function OnUse(event, player, item, target)
 end
 
 local function CastOnGroup(player, spellId)
-    local group = player:GetGroup()
-    if not group then
-        -- Not in group, cast on self
-        player:CastSpell(player, spellId, true)
-        local pet = player:GetPet()
-        if pet then
-            player:CastSpell(pet, spellId, true)
-        end
-        return
+    player:CastSpell(player, spellId, true)
+    local playerPet = player:GetPet()
+    if playerPet then
+        player:CastSpell(playerPet, spellId, true)
     end
-    
-    local members = group:GetMembers()
-    for _, member in ipairs(members) do
-        if member and member:IsAlive() and member:IsInWorld() then
+    for _, member in pairs(player:GetPlayersInRange(100)) do
+        if member and member ~= player and member:IsAlive() and member:IsInWorld()
+            and (player:IsInSameGroupWith(member) or player:IsInSameRaidWith(member)) then
             player:CastSpell(member, spellId, true)
             local pet = member:GetPet()
             if pet then

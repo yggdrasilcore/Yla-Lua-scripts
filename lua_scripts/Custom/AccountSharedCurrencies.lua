@@ -1,3 +1,4 @@
+
 -- ----------------------------------------------------------------------------------------------
 -- ACCOUNTWIDE CURRENCY CONFIG 
 --
@@ -15,12 +16,12 @@ local currencyItemIDs = {
 ----------------------------------------------------------------------------------------------------
 local function UpdateAccountCurrency(accountId, currencyId, newCount)
     print("[AccountCurrency] UpdateAccountCurrency: AccountID=" .. accountId .. ", CurrencyID=" .. currencyId .. ", NewCount=" .. newCount)
-    CharDBExecute("INSERT INTO accountwide_currency (accountId, currencyId, count) VALUES (" .. accountId .. ", " .. currencyId .. ", " .. newCount .. ") ON DUPLICATE KEY UPDATE count = " .. newCount)
+    CharDBExecute("INSERT INTO ycore_yla.accountwide_currency (accountId, currencyId, count) VALUES (" .. accountId .. ", " .. currencyId .. ", " .. newCount .. ") ON DUPLICATE KEY UPDATE count = " .. newCount)
 end
 
 local function InitializeAccountCurrencyOnEmptyTable(accountId)
     print("[AccountCurrency] InitializeAccountCurrencyOnEmptyTable: Starting for AccountID=" .. accountId)
-    CharDBQueryAsync("SELECT 1 FROM accountwide_currency WHERE accountId = " .. accountId .. " LIMIT 1", function(result)
+    CharDBQueryAsync("SELECT 1 FROM ycore_yla.accountwide_currency WHERE accountId = " .. accountId .. " LIMIT 1", function(result)
         if not result then
             print("[AccountCurrency] InitializeAccountCurrencyOnEmptyTable: Empty table detected, initializing currencies for AccountID=" .. accountId)
             for _, currencyId in ipairs(currencyItemIDs) do
@@ -46,19 +47,22 @@ local function SyncCurrencyOnLogin(player, accountId)
         local playerCurrencyCount = player:GetItemCount(currencyId)
         print("[AccountCurrency] SyncCurrencyOnLogin: Player " .. name .. " has " .. playerCurrencyCount .. " of currency " .. currencyId)
         
-        CharDBQueryAsync("SELECT count FROM accountwide_currency WHERE accountId = " .. accountId .. " AND currencyId = " .. currencyId, function(query)
-            local player = GetPlayerByName(name)
+        CharDBQueryAsync("SELECT count FROM ycore_yla.accountwide_currency WHERE accountId = " .. accountId .. " AND currencyId = " .. currencyId, function(query)
+            local player
+            for _, p in ipairs(GetStateMap():GetPlayers()) do
+                if p:GetName() == name then player = p break end
+            end
             if not player then 
                 print("[AccountCurrency] SyncCurrencyOnLogin: Player " .. name .. " no longer exists, aborting sync")
                 return 
             end
             
-            player:SetData("CurrencySynced", true)
-            if player:GetData(currencyId) then 
+            player:Data():Set("CurrencySynced", true)
+            if player:Data():Get(currencyId) then 
                 print("[AccountCurrency] SyncCurrencyOnLogin: Currency " .. currencyId .. " already synced for player " .. name)
                 return 
             end
-            player:SetData(currencyId, true)
+            player:Data():Set(currencyId, true)
             
             local accountCurrencyCount
             if query then 
@@ -81,7 +85,7 @@ local function SyncCurrencyOnLogin(player, accountId)
 end
 
 local function AccountWideCurrency(event, player)
-    if isPlayerBot[player:GetName()] then return end
+    if player:IsBot() then return end
     
     if player:GetGMRank() > 0 then return end
     
@@ -92,7 +96,7 @@ local function AccountWideCurrency(event, player)
     
     if event == 28 then -- PLAYER_EVENT_ON_MAP_CHANGE
         print("[AccountCurrency] AccountWideCurrency: Map change event for player " .. playerName)
-        if player:GetData("CurrencySynced") then 
+        if player:Data():Get("CurrencySynced") then 
             print("[AccountCurrency] AccountWideCurrency: Currency already synced for player " .. playerName .. ", skipping")
             return 
         end
@@ -105,7 +109,7 @@ local function AccountWideCurrency(event, player)
     elseif event == 25 then -- PLAYER_EVENT_ON_SAVE        
         for _, currencyId in ipairs(currencyItemIDs) do
             local playerCurrencyCount = player:GetItemCount(currencyId)            
-            CharDBQueryAsync("SELECT count FROM accountwide_currency WHERE accountId = " .. accountId .. " AND currencyId = " .. currencyId, function(query)
+            CharDBQueryAsync("SELECT count FROM ycore_yla.accountwide_currency WHERE accountId = " .. accountId .. " AND currencyId = " .. currencyId, function(query)
                 local accountCurrencyCount
                 if query then 
                     accountCurrencyCount = query:GetUInt32(0) 
@@ -124,6 +128,10 @@ local function AccountWideCurrency(event, player)
     end
 end
 
-print("[AccountCurrency] Script loaded - registering events")
-RegisterPlayerEvent(25, AccountWideCurrency) -- EVENT_ON_SAVE
-RegisterPlayerEvent(28, AccountWideCurrency) -- PLAYER_EVENT_ON_MAP_CHANGE
+if GetStateMapId() == -1 then
+    print("[AccountCurrency] Script loaded - registering events")
+end
+if GetStateMapId() ~= -1 then
+    RegisterPlayerEvent(25, AccountWideCurrency) -- EVENT_ON_SAVE
+    RegisterPlayerEvent(28, AccountWideCurrency) -- PLAYER_EVENT_ON_MAP_CHANGE
+end

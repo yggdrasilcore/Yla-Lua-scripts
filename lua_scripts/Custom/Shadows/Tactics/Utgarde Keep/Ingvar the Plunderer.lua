@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 574 then return end
+
 local INGVAR_ENTRY               = 23954
 
 local UTGARDE_KEEP_MAP_ID        = 574
@@ -94,7 +96,7 @@ local function IngvarLoop(event, delay, repeats, player)
     if distToStage > STAGE_RADIUS then return end
 
     if IsTank(player) then
-        if ingvar:IsInCombat() and player:IsInCombat() and ingvar:GetVictim() == player and not ingvar:GetData("SmashActive") then
+        if ingvar:IsInCombat() and player:IsInCombat() and ingvar:GetVictim() == player and not ingvar:Data():Get("SmashActive") then
             if not IsAtPos(player, TANK_SPOT[1], TANK_SPOT[2], 2) then
                 player:RemoveAura(1604)
                 player:MoveTo(1, TANK_SPOT[1], TANK_SPOT[2], Z_HEIGHT, true)
@@ -111,7 +113,7 @@ local function IngvarLoop(event, delay, repeats, player)
             MoveBehindTarget(player, ingvar, 4)
         end
 
-        if ingvar:GetData("RoarActive") then
+        if ingvar:Data():Get("RoarActive") then
             local pillar = GetClosestPillar(px, py)
             local losX, losY = TryFindLosBreakPos(ingvar, pillar)
 
@@ -131,13 +133,13 @@ local function IngvarLoop(event, delay, repeats, player)
         end
     end
 
-    if ingvar:GetData("SmashActive") and not ingvar:GetData("RoarActive") then
+    if ingvar:Data():Get("SmashActive") and not ingvar:Data():Get("RoarActive") then
         if not ingvar:IsInBack(player, 3*math.pi/2) then
             MoveBehindTarget(player, ingvar, 4)
         end
     end
         
-    if not ingvar:GetData("RoarActive") and not ingvar:GetData("SmashActive") then
+    if not ingvar:Data():Get("RoarActive") and not ingvar:Data():Get("SmashActive") then
         RemoveRootAura(player)
     end
 
@@ -162,22 +164,25 @@ local function OnEnterUtgardeKeep(event, player)
 end
 
 RegisterPlayerEvent(28, OnEnterUtgardeKeep)
-for _, player in ipairs(GetPlayersInWorld()) do OnEnterUtgardeKeep(nil, player) end
+local map = GetStateMap()
+if map then
+    for _, player in ipairs(map:GetPlayers()) do OnEnterUtgardeKeep(nil, player) end
+end
 
 local function OnRoarPrepare(event, caster, spell)
-    caster:SetData("RoarActive", true)
+    caster:Data():Set("RoarActive", true)
 end
 
 local function OnRoarCast(event, caster, spell, skipCheck)
-    caster:SetData("RoarActive", false)
+    caster:Data():Set("RoarActive", false)
 end
 
 local function OnSmashPrepare(event, caster, spell)
-    caster:SetData("SmashActive", true)
+    caster:Data():Set("SmashActive", true)
 end
 
 local function OnSmashCast(event, caster, spell, skipCheck)
-    caster:SetData("SmashActive", false)
+    caster:Data():Set("SmashActive", false)
 end
 
 RegisterSpellEvent(SPELL_STAGGERING_ROAR_N, 1, OnRoarPrepare)

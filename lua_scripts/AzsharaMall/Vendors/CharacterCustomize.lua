@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 37 then return end
+
 local communityTokenItemId 	= 19322 -- ID for Community Tokens
 local voteTokenItemId		= 20880 -- ID for Vote Tokens
 local priceRename			= 5
@@ -10,17 +12,17 @@ local function updateAtLoginCache(player, bitmask)
     -- Check current flags individually
     local currentFlags = 0
 
-    if player:HasAtLoginFlag(1) then currentFlags = bit32.bor(currentFlags, 1) end
-    if player:HasAtLoginFlag(2) then currentFlags = bit32.bor(currentFlags, 2) end
-    if player:HasAtLoginFlag(4) then currentFlags = bit32.bor(currentFlags, 4) end
-    if player:HasAtLoginFlag(8) then currentFlags = bit32.bor(currentFlags, 8) end
-    if player:HasAtLoginFlag(16) then currentFlags = bit32.bor(currentFlags, 16) end
-    if player:HasAtLoginFlag(32) then currentFlags = bit32.bor(currentFlags, 32) end
-    if player:HasAtLoginFlag(64) then currentFlags = bit32.bor(currentFlags, 64) end
-    if player:HasAtLoginFlag(128) then currentFlags = bit32.bor(currentFlags, 128) end
+    if player:HasAtLoginFlag(1) then currentFlags = bit_or(currentFlags, 1) end
+    if player:HasAtLoginFlag(2) then currentFlags = bit_or(currentFlags, 2) end
+    if player:HasAtLoginFlag(4) then currentFlags = bit_or(currentFlags, 4) end
+    if player:HasAtLoginFlag(8) then currentFlags = bit_or(currentFlags, 8) end
+    if player:HasAtLoginFlag(16) then currentFlags = bit_or(currentFlags, 16) end
+    if player:HasAtLoginFlag(32) then currentFlags = bit_or(currentFlags, 32) end
+    if player:HasAtLoginFlag(64) then currentFlags = bit_or(currentFlags, 64) end
+    if player:HasAtLoginFlag(128) then currentFlags = bit_or(currentFlags, 128) end
 
     -- Add the new bitmask to currentFlags
-    local newFlags = bit32.bor(currentFlags, bitmask)
+    local newFlags = bit_or(currentFlags, bitmask)
     
     -- Set the new flags
     player:SetAtLoginFlag(newFlags)

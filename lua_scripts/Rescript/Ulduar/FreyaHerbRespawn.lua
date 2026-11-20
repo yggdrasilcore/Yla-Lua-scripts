@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 603 then return end
+
 local lastPlayerHeartbeat = {}
 local ULDUAR_MAP_ID = 603
 local FREYA_AREA_ID = 4656
@@ -51,7 +53,8 @@ end
 
 RegisterPlayerEvent(28, OnMapChange)
 
-local players = GetPlayersInWorld()
+local players = {}
+if GetStateMap() then for _, p in ipairs(GetStateMap():GetPlayers()) do table.insert(players, p) end end
 for _, player in ipairs(players) do
     if player:GetMapId() == ULDUAR_MAP_ID then
         player:RegisterEvent(OnHeartbeat, 60 * 1000, 0)

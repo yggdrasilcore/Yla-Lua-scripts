@@ -1,3 +1,6 @@
+-- Storm Peaks-only script (map 571): quest 12874 Fervor of the Frostborn (Hyldsmeet).
+if GetStateMapId() ~= 571 then return end
+
 local function OnEnterArea(event, player, oldArea, newArea)
     if newArea == 4428 then
         player:RegisterEvent(function(eventId, delay, repeats, player)

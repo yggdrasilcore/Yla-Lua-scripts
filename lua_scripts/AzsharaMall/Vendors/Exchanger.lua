@@ -1,14 +1,18 @@
+if GetStateMapId() ~= 37 then return end
+
 local NPC_ID = 190000
 
 local VOTE_TOKEN_NAME = "Vote Tokens"
-local TRANSMOG_TOKEN_NAME = "Activity Tokens"
+local ACTIVITY_TOKEN_NAME = "Activity Tokens"
 local COMMUNITY_TOKEN_NAME = "Community Tokens"
 
 local VOTE_TOKEN = 20880
 local COMMUNITY_TOKEN = 19322
 local EMBLEM_OF_FROST = 49426
 local EMBLEM_OF_TRIUMPH = 47241
-local TRANSMOG_TOKEN = 37742
+local ACTIVITY_TOKEN = 37742
+
+local HONOR_CAP = 75000
 
 local function OnGossipHello(event, player, creature)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_QuestionMark:32:32:-26:0|tWhat would you like to exchange?\n \n ", 0, 1)
@@ -19,7 +23,8 @@ local function OnGossipHello(event, player, creature)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-26:0|tCommunity Token", 0, 105)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/achievement_pvp_a_h:32:32:-26:0|tHonor Points\n \n ", 0, 107)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_coin_07:32:32:-26:0|tExchange Activity Tokens:", 0, 1)
-    player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_holy_summonchampion:32:32:-26:0|tEmblem of Triumph\n \n", 0, 103)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_holy_summonchampion:32:32:-26:0|tEmblem of Triumph", 0, 103)
+    player:GossipMenuAddItem(4, "|TInterface/ICONS/achievement_pvp_a_h:32:32:-26:0|tHonor Points\n \n", 0, 110)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_rune_07:32:32:-26:0|tExchange Community Tokens:", 0, 1)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/inv_misc_frostemblem_01:32:32:-26:0|tEmblem of Frost", 0, 108)
     player:GossipMenuAddItem(4, "|TInterface/ICONS/spell_holy_summonchampion:32:32:-26:0|tEmblem of Triumph\n \n", 0, 109)
@@ -30,7 +35,7 @@ end
 local function BuyCurrency(player, itemId, cost, amount, currencyName, costCurrency)
     print("BuyCurrency called:", itemId, cost, amount, currencyName, costCurrency)
     local totalCost = cost * amount
-    local rewardMult = player:GetData("RewardMultiplier") or 1
+    local rewardMult = player:Data():Get("RewardMultiplier") or 1
     local actualAmount = amount * rewardMult
     if player:HasItem(costCurrency, totalCost) then
         player:RemoveItem(costCurrency, totalCost)
@@ -45,9 +50,12 @@ end
 local function BuyHonorPoints(player, cost, amount, costCurrency)
     print("BuyHonorPoints called:", cost, amount, costCurrency)
     local totalCost = cost * amount
-    local rewardMult = player:GetData("RewardMultiplier") or 1
+    local rewardMult = player:Data():Get("RewardMultiplier") or 1
     local honorAmount = rewardMult * amount
-    if player:HasItem(costCurrency, totalCost) then
+    local currentHonor = player:GetHonorPoints()
+    if currentHonor + honorAmount > HONOR_CAP then
+        player:SendBroadcastMessage(string.format("This purchase would exceed the Honor Point cap of %d. You currently have %d.", HONOR_CAP, currentHonor))
+    elseif player:HasItem(costCurrency, totalCost) then
         player:RemoveItem(costCurrency, totalCost)
         player:ModifyHonorPoints(honorAmount)
         player:SendBroadcastMessage(string.format("You've purchased %d Honor Points for %d %s.", honorAmount, totalCost, GetItemLink(costCurrency)))
@@ -64,7 +72,7 @@ local function ShowAmountMenu(player, creature, currencyId, cost, currencyName, 
     elseif costCurrency == 19322 then
         paymentCurrency = COMMUNITY_TOKEN_NAME
     else
-        paymentCurrency = TRANSMOG_TOKEN_NAME
+        paymentCurrency = ACTIVITY_TOKEN_NAME
     end
     
     local priceText
@@ -87,12 +95,12 @@ local function ShowAmountMenu(player, creature, currencyId, cost, currencyName, 
     player:GossipMenuAddItem(4, "|TInterface/ICONS/Trade_Engineering:32:32:-26:0|tBack", 0, 99)
     player:GossipSendMenu(12, creature, 60)
     
-    player:SetData("SelectedCurrencyId", currencyId)
-    player:SetData("SelectedCurrencyCost", cost)
-    player:SetData("SelectedCurrencyName", currencyName)
-    player:SetData("SelectedCostCurrency", costCurrency)
-    player:SetData("IsHonorPurchase", isHonor and 1 or 0)
-    player:SetData("RewardMultiplier", mult)
+    player:Data():Set("SelectedCurrencyId", currencyId)
+    player:Data():Set("SelectedCurrencyCost", cost)
+    player:Data():Set("SelectedCurrencyName", currencyName)
+    player:Data():Set("SelectedCostCurrency", costCurrency)
+    player:Data():Set("IsHonorPurchase", isHonor and 1 or 0)
+    player:Data():Set("RewardMultiplier", mult)
 end
 
 local function OnGossipSelect(event, player, creature, sender, intid, code)
@@ -104,19 +112,21 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
     elseif intid == 102 then
         ShowAmountMenu(player, creature, EMBLEM_OF_TRIUMPH, 1, "Emblem of Triumph", VOTE_TOKEN, false, 1)
     elseif intid == 103 then
-        ShowAmountMenu(player, creature, EMBLEM_OF_TRIUMPH, 15, "Emblem of Triumph", TRANSMOG_TOKEN, false, 1)
+        ShowAmountMenu(player, creature, EMBLEM_OF_TRIUMPH, 15, "Emblem of Triumph", ACTIVITY_TOKEN, false, 1)
     elseif intid == 104 then
-        ShowAmountMenu(player, creature, TRANSMOG_TOKEN, 1, "Activity Token", VOTE_TOKEN, false, 1)
+        ShowAmountMenu(player, creature, ACTIVITY_TOKEN, 1, "Activity Token", VOTE_TOKEN, false, 1)
     elseif intid == 105 then
         ShowAmountMenu(player, creature, COMMUNITY_TOKEN, 10, "Community Token", VOTE_TOKEN, false, 1)
     elseif intid == 106 then
-        ShowAmountMenu(player, creature, TRANSMOG_TOKEN, 1, "Activity Tokens", VOTE_TOKEN, false, 10)
+        ShowAmountMenu(player, creature, ACTIVITY_TOKEN, 1, "Activity Tokens", VOTE_TOKEN, false, 10)
     elseif intid == 107 then
         ShowAmountMenu(player, creature, 0, 1, "Honor Points", VOTE_TOKEN, true, 500)
     elseif intid == 108 then
         ShowAmountMenu(player, creature, EMBLEM_OF_FROST, 1, "Emblem of Frost", COMMUNITY_TOKEN, false, 2)
     elseif intid == 109 then
         ShowAmountMenu(player, creature, EMBLEM_OF_TRIUMPH, 1, "Emblem of Triumph", COMMUNITY_TOKEN, false, 15)
+    elseif intid == 110 then
+        ShowAmountMenu(player, creature, 0, 1, "Honor Points", ACTIVITY_TOKEN, true, 50)
     elseif intid == 99 then
         OnGossipHello(event, player, creature)
     elseif intid == 98 then
@@ -132,7 +142,7 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
         elseif intid == 205 then amount = 50
         elseif intid == 206 then amount = 100
         elseif intid == 207 then
-            local rewardMult = player:GetData("RewardMultiplier") or 1
+            local rewardMult = player:Data():Get("RewardMultiplier") or 1
             local desiredItems = tonumber(code)
             if not desiredItems or desiredItems <= 0 then
                 player:SendBroadcastMessage("Invalid amount. Please enter a positive number.")
@@ -151,12 +161,12 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
 
         print("Selected amount:", amount)
 
-        local currencyId = player:GetData("SelectedCurrencyId")
-        local cost = player:GetData("SelectedCurrencyCost")
-        local currencyName = player:GetData("SelectedCurrencyName")
-        local costCurrency = player:GetData("SelectedCostCurrency")
-        local isHonor = player:GetData("IsHonorPurchase") == 1
-        local rewardMult = player:GetData("RewardMultiplier") or 1
+        local currencyId = player:Data():Get("SelectedCurrencyId")
+        local cost = player:Data():Get("SelectedCurrencyCost")
+        local currencyName = player:Data():Get("SelectedCurrencyName")
+        local costCurrency = player:Data():Get("SelectedCostCurrency")
+        local isHonor = player:Data():Get("IsHonorPurchase") == 1
+        local rewardMult = player:Data():Get("RewardMultiplier") or 1
 
         local totalCost = cost * amount
         local actualAmount = amount * rewardMult
@@ -164,14 +174,14 @@ local function OnGossipSelect(event, player, creature, sender, intid, code)
         player:GossipMenuAddItem(1, confirmMessage, 0, 300, false, confirmMessage)
         player:GossipSendMenu(12, creature, 60)
         
-        player:SetData("BuyAmount", amount)
+        player:Data():Set("BuyAmount", amount)
     elseif intid == 300 then
-        local amount = player:GetData("BuyAmount")
-        local currencyId = player:GetData("SelectedCurrencyId")
-        local cost = player:GetData("SelectedCurrencyCost")
-        local currencyName = player:GetData("SelectedCurrencyName")
-        local costCurrency = player:GetData("SelectedCostCurrency")
-        local isHonor = player:GetData("IsHonorPurchase") == 1
+        local amount = player:Data():Get("BuyAmount")
+        local currencyId = player:Data():Get("SelectedCurrencyId")
+        local cost = player:Data():Get("SelectedCurrencyCost")
+        local currencyName = player:Data():Get("SelectedCurrencyName")
+        local costCurrency = player:Data():Get("SelectedCostCurrency")
+        local isHonor = player:Data():Get("IsHonorPurchase") == 1
 
         if not amount or not currencyId or not cost or not currencyName then
             player:SendBroadcastMessage("An error occurred. Please try again.")

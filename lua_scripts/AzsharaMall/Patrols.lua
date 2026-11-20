@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 37 then return end
+
 local TwiggyFlight
 local TwiggyFlightActive
 local lastEvent = {}

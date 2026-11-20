@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 631 then return end
+
 local function LichKingLoop(eventId, delay, repeats, lk)
     if lk:IsDead() or not lk:IsInCombat() then
         StopLuaEvent(lk)
@@ -35,11 +37,11 @@ local function LichKingLoop(eventId, delay, repeats, lk)
 				local ragingSpirit = player:GetNearestCreature(30, 36633)
 				
 				if ragingSpirit and not ragingSpirit:IsDead() then
-					local lastAttackTime = player:GetData("LastSpiritAttack") or 0
+					local lastAttackTime = player:Data():Get("LastSpiritAttack") or 0
 					
 					if currentTime - lastAttackTime >= 1 then
                         player:DealDamage(ragingSpirit, ragingSpirit:GetMaxHealth() * (math.random() * 0.01 + 0.005))
-						player:SetData("LastSpiritAttack", currentTime)
+						player:Data():Set("LastSpiritAttack", currentTime)
 					end
 				end
 			end
@@ -89,12 +91,12 @@ local function LichKingLoop(eventId, delay, repeats, lk)
                         end
                         ]]
 
-                            local lastAttackTime = player:GetData("LastValkyrAttack") or 0
+                            local lastAttackTime = player:Data():Get("LastValkyrAttack") or 0
 
                             if currentTime - lastAttackTime >= 1 then
                                 local DMGtoDeal = (valkyr:GetMaxHealth() * (math.random() * 0.01 + 0.005)) / 2
                                 player:DealDamage(valkyr, DMGtoDeal)
-                                player:SetData("LastValkyrAttack", currentTime)
+                                player:Data():Set("LastValkyrAttack", currentTime)
                                 -- print("DPlayer "..player:GetName().." is damaging birdie for: "..DMGtoDeal.." HP!")
                             end
                         end
@@ -110,7 +112,7 @@ local function LichKingLoop(eventId, delay, repeats, lk)
             for _, player in pairs(players) do
                 local name = player:GetName()
                 if player:IsBot() and player ~= victim then
-                    local defileMoveTime = player:GetData("DefileMove") or 0
+                    local defileMoveTime = player:Data():Get("DefileMove") or 0
                     
                     if currentTime - defileMoveTime > 2.3 then
                         if not IsInRearHalf(lk, player) or player:GetDistance(lk) > 1 then
@@ -171,11 +173,11 @@ local function LichKingLoop(eventId, delay, repeats, lk)
 				local vileSpirit = player:GetNearestCreature(30, 37799)
 				
 				if vileSpirit and not vileSpirit:IsDead() then
-					local lastAttackTime = player:GetData("LastVileSpiritAttack") or 0
+					local lastAttackTime = player:Data():Get("LastVileSpiritAttack") or 0
 					
 					if currentTime - lastAttackTime >= 1 then
 						player:DealDamage(vileSpirit, vileSpirit:GetMaxHealth() * (math.random() * 0.01 + 0.005))
-						player:SetData("LastVileSpiritAttack", currentTime)
+						player:Data():Set("LastVileSpiritAttack", currentTime)
 					end
 				end
 			end
@@ -185,10 +187,10 @@ local function LichKingLoop(eventId, delay, repeats, lk)
     lk:RegisterEvent(LichKingLoop, 200, 1)
 end
 
-local function OnLKCombat(event, player, enemy)
-    if enemy and enemy:GetEntry() == 36597 then
-        StartLuaEvent(enemy, LichKingLoop)
-    end
+local function OnLKCombat(event, enemy, target)
+    if not enemy or enemy:GetEntry() ~= 36597 then return end
+    if IsLuaEventActive(enemy) then return end
+    StartLuaEvent(enemy, LichKingLoop)
 end
 
 function OnSoulReaperCast(event, caster, spell, skipCheck)
@@ -207,7 +209,7 @@ function OnDefilePrepare(event, caster, spell)
     local target = spell:GetTarget()
 	if not target then return end
 	if not target:IsPlayer() then return end
-    target:SetData("DefileMove", os.time())
+    target:Data():Set("DefileMove", os.time())
 	if target:IsBot() then UseRocketBoots(target) end
 end
 
@@ -217,13 +219,13 @@ local function OnReload(player)
             local LK = player:GetNearestCreature(100, 36597)
             if not LK then return end
             if LK:IsInCombat() then
-                OnLKCombat(_, player, LK)
+                OnLKCombat(_, LK, player)
             end
         end
     end
 end
 
-for _, player in ipairs(GetPlayersInWorld()) do OnReload(player) end
-RegisterPlayerEvent(33, OnLKCombat)
+if GetStateMap() then for _, player in ipairs(GetStateMap():GetPlayers()) do OnReload(player) end end
+RegisterCreatureEvent(36597, 1, OnLKCombat)
 RegisterSpellEvent(69409, 2, OnSoulReaperCast)
 RegisterSpellEvent(72762, 1, OnDefilePrepare)

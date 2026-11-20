@@ -1,3 +1,5 @@
+if GetStateMapId() == -1 then return end
+
 local ALLIANCE_FACTIONS = {
     [47] = true,   -- Ironforge
     [54] = true,   -- Gnomeregan

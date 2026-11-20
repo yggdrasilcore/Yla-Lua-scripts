@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 631 then return end
+
 local TWISTED_NIGHTMARE = 71941
 
 local function CheckHealer(eventId, delay, repeats, healer)
@@ -31,4 +33,7 @@ local function OnMapEnter(event, healer)
 end
 
 RegisterPlayerEvent(28, OnMapEnter)
-for _, player in ipairs(GetPlayersInWorld()) do OnMapEnter(nil, player) end
+local map = GetStateMap()
+if map then
+    for _, player in ipairs(map:GetPlayers()) do OnMapEnter(nil, player) end
+end

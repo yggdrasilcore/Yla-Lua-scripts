@@ -1,3 +1,5 @@
+if GetStateMapId() ~= 37 then return end
+
 local function OnHordePortal(e, g, p)
     if p:IsAlliance() then
         p:SendBroadcastMessage("You cannot use this portal.")

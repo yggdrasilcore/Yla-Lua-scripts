@@ -1,13 +1,14 @@
 function IsVIP(player)
-    return player:GetData("VIPTime") and player:GetData("VIPTime") > os.time()
+    return player:Data():Get("VIPTime") and player:Data():Get("VIPTime") > os.time()
 end
 
+-- Map-only reload warmer: world state never walks or resolves players.
 local function CheckVIPOnLoad()
     local playerNames = {}
     local accountIdMap = {}
     local accountIds = {}
-    
-    for _, player in pairs(GetPlayersInWorld()) do
+
+    for _, player in ipairs(GetStateMap() and GetStateMap():GetPlayers() or {}) do
         local name = player:GetName()
         local accountId = player:GetAccountId()
         
@@ -15,12 +16,12 @@ local function CheckVIPOnLoad()
         accountIdMap[name] = accountId
         table.insert(accountIds, accountId)
     end
-    
+
     if #accountIds == 0 then return end
     
-    local query = "SELECT account, viptime FROM accounts_vip WHERE account IN (" .. table.concat(accountIds, ",") .. ");"
+    local query = "SELECT account, viptime FROM ycore_yla.accounts_vip WHERE account IN (" .. table.concat(accountIds, ",") .. ");"
     
-    AuthDBQueryAsync(query, function(result)
+    CharDBQueryAsync(query, function(result)
         local vipTimeMap = {}
         
         if result then
@@ -32,12 +33,15 @@ local function CheckVIPOnLoad()
         end
         
         for _, name in ipairs(playerNames) do
-            local player = GetPlayerByName(name)
+            local player
+            for _, p in ipairs(GetStateMap():GetPlayers()) do
+                if p:GetName() == name then player = p break end
+            end
             if player and vipTimeMap[accountIdMap[name]] then
-                player:SetData("VIPTime", vipTimeMap[accountIdMap[name]])
-				print("VIP found: "..player:GetName()..", acc "..player:GetAccountId()..". VIPTime: "..player:GetData("VIPTime"))
+                player:Data():Set("VIPTime", vipTimeMap[accountIdMap[name]])
+				print("VIP found: "..player:GetName()..", acc "..player:GetAccountId()..".")
             elseif player then
-                player:SetData("VIPTime", 0)
+                player:Data():Set("VIPTime", 0)
             end
         end
     end)
@@ -45,23 +49,24 @@ end
 
 local function CheckVIP(event, player)
 	local name = player:GetName()
-	local acc = player:GetAccountId()
-    if isPlayerBot[name] then return end
+    if player:IsBot() then return end
 	
-	AuthDBQueryAsync("SELECT viptime FROM accounts_vip WHERE account = " .. player:GetAccountId() .. ";", function(result)
-		local player = GetPlayerByName(name)
+	CharDBQueryAsync("SELECT viptime FROM ycore_yla.accounts_vip WHERE account = " .. player:GetAccountId() .. ";", function(result)
+		local player
+		for _, p in ipairs(GetStateMap():GetPlayers()) do
+			if p:GetName() == name then player = p break end
+		end
 		if not player then return end
 		if result then
-			player:SetData("VIPTime", result:GetUInt32(0))
+			player:Data():Set("VIPTime", result:GetUInt32(0))
 		else
-			player:SetData("VIPTime", 0)
+			player:Data():Set("VIPTime", 0)
 		end
 	end)
 end
 
 local function VIPBotRepairOnResurrect(event, player)
-    local name = player:GetName()
-    if not isPlayerBot[name] then
+    if not player:IsBot() then
         if IsVIP(player) then
             player:DurabilityRepairAll(false)
             player:SendBroadcastMessage("Your Yggdrasil VIP subscription has repaired your gear.")
@@ -70,21 +75,17 @@ local function VIPBotRepairOnResurrect(event, player)
     end
     
     local bot = player
-    
-	-- Find bot's master
-    for botMasterName, bots in pairs(activeBots) do
-        for i, botName in ipairs(bots) do
-            if botName == name then
-				local botMaster = GetPlayerByName(botMasterName)
-				if not botMaster then return end
+
+	-- Find bot's master directly (no DB).
+    local shadow = bot:ToShadow()
+    local botMaster = shadow and shadow:GetMaster()
+    if botMaster then
 				if not IsVIP(botMaster) then
 					bot:SendUnitWhisper('My equipment has taken a 10% durability hit. Please repair my gear by whispering "repair" to me next to a repair vendor.', 0, botMaster)
 					return -- No valid VIP, do not repair
 				end
 				bot:DurabilityRepairAll(false)
 				bot:SendUnitWhisper("Your Yggdrasil VIP subscription has repaired my gear.", 0, botMaster)
-            end
-        end
     end
 end
 
@@ -139,31 +140,23 @@ local function VIPGMCommands(event, player, command)
             
             local targetAccountId = result:GetUInt32(0)
             local targetUsername = result:GetString(1)
-            
-            CharDBQueryAsync("SELECT name FROM characters WHERE account = " .. targetAccountId .. ";", function(charResult)
+
+            do
                 local gm = GetPlayerByName(gmName)
                 local charNames = {}
                 local onlineCharName = nil
-                
-                if charResult then
-                    repeat
-                        local charName = charResult:GetString(0)
+
+                for _, char in ipairs(GetCharacterCache()) do
+                    if char.accountId == targetAccountId then
+                        local charName = char.name
                         table.insert(charNames, charName)
-                        
+
                         if not onlineCharName then
                             local p = GetPlayerByName(charName)
                             if p then
-                                if isPlayerBot[charName] then
-                                    local botMaster = nil
-                                    for masterName, bots in pairs(activeBots) do
-                                        for i, botName in ipairs(bots) do
-                                            if botName == charName then
-                                                botMaster = GetPlayerByName(masterName)
-                                                break
-                                            end
-                                        end
-                                        if botMaster then break end
-                                    end
+                                local s = p:ToShadow()
+                                if s then
+                                    local botMaster = s:GetMaster()
                                     if botMaster then
                                         onlineCharName = botMaster:GetName()
                                     end
@@ -172,10 +165,10 @@ local function VIPGMCommands(event, player, command)
                                 end
                             end
                         end
-                    until not charResult:NextRow()
+                    end
                 end
                 
-                AuthDBQueryAsync("SELECT viptime FROM accounts_vip WHERE account = " .. targetAccountId .. ";", function(vipResult)
+                CharDBQueryAsync("SELECT viptime FROM ycore_yla.accounts_vip WHERE account = " .. targetAccountId .. ";", function(vipResult)
                     local gm = GetPlayerByName(gmName)
                     
                     local currentVIPTime = vipResult and vipResult:GetUInt32(0) or 0
@@ -184,19 +177,19 @@ local function VIPGMCommands(event, player, command)
                     local baseTime = math.max(currentVIPTime, currentTime)
                     local newVIPTime = baseTime + (days * 24 * 60 * 60)
                     
-                    AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+                    CharDBExecute("INSERT INTO ycore_yla.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
                     
                     local charListStr = #charNames > 0 and table.concat(charNames, ", ") or "no characters"
                     
                     local freshOnlinePlayer = onlineCharName and GetPlayerByName(onlineCharName) or nil
                     if freshOnlinePlayer then
-                        freshOnlinePlayer:SetData("VIPTime", newVIPTime)
+                        freshOnlinePlayer:Data():Set("VIPTime", newVIPTime)
                         freshOnlinePlayer:SendBroadcastMessage("A GM has granted you " .. days .. " VIP days. Your VIP status has been updated!")
                     end
                     
                     if gm then gm:SendBroadcastMessage("Added " .. days .. " VIP days to " .. targetUsername .. " (" .. charListStr .. "). New VIP expires: " .. os.date("%Y-%m-%d %H:%M:%S", newVIPTime)) end
                 end)
-            end)
+            end
         end)
         
         return false
@@ -211,37 +204,39 @@ local function VIPGMCommands(event, player, command)
             return false
         end
         
-        CharDBQueryAsync("SELECT name, account FROM characters WHERE name = '" .. targetName .. "' COLLATE utf8mb4_general_ci;", function(result)
+        do
             local gm = GetPlayerByName(gmName)
-            
-            if not result then
-                if gm then gm:SendBroadcastMessage("Player '" .. targetName .. "' does not exist.") end
-                return
+
+            local row = GetCharacterCacheByName(targetName)
+            if not row then
+                for _, char in ipairs(GetCharacterCache()) do
+                    if char.name:lower() == targetName:lower() then
+                        row = char
+                        break
+                    end
+                end
             end
-            
-            local charName = result:GetString(0)
-            local targetAccountId = result:GetUInt32(1)
+
+            if not row then
+                if gm then gm:SendBroadcastMessage("Player '" .. targetName .. "' does not exist.") end
+                return false
+            end
+
+            local charName = row.name
+            local targetAccountId = row.accountId
             local targetPlayer = GetPlayerByName(charName)
             
-            -- Check if target is a bot, if so find its master
-            if targetPlayer and isPlayerBot[charName] then
-                local botMaster = nil
-                for masterName, bots in pairs(activeBots) do
-                    for i, botName in ipairs(bots) do
-                        if botName == charName then
-                            botMaster = GetPlayerByName(masterName)
-                            break
-                        end
-                    end
-                    if botMaster then break end
-                end
-                
+            -- Check if target is a bot, if so find its master directly
+            if targetPlayer then
+                local s = targetPlayer:ToShadow()
+                local botMaster = s and s:GetMaster()
+
                 if botMaster then
                     targetPlayer = botMaster
                     charName = botMaster:GetName()
                     targetAccountId = botMaster:GetAccountId()
                     if gm then gm:SendBroadcastMessage("Adding VIP to " .. targetName .. "'s master: " .. botMaster:GetName()) end
-                else
+                elseif s then
                     if gm then gm:SendBroadcastMessage("Could not find master for bot: " .. targetName) end
                     return
                 end
@@ -251,7 +246,7 @@ local function VIPGMCommands(event, player, command)
                 local gm = GetPlayerByName(gmName)
                 local username = acctResult and acctResult:GetString(0) or "unknown"
                 
-                AuthDBQueryAsync("SELECT viptime FROM accounts_vip WHERE account = " .. targetAccountId .. ";", function(vipResult)
+                CharDBQueryAsync("SELECT viptime FROM ycore_yla.accounts_vip WHERE account = " .. targetAccountId .. ";", function(vipResult)
                     local gm = GetPlayerByName(gmName)
                     local targetPlayer = GetPlayerByName(charName)
                     
@@ -261,10 +256,10 @@ local function VIPGMCommands(event, player, command)
                     local baseTime = math.max(currentVIPTime, currentTime)
                     local newVIPTime = baseTime + (days * 24 * 60 * 60)
                     
-                    AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+                    CharDBExecute("INSERT INTO ycore_yla.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
                     
                     if targetPlayer then
-                        targetPlayer:SetData("VIPTime", newVIPTime)
+                        targetPlayer:Data():Set("VIPTime", newVIPTime)
                         targetPlayer:SendBroadcastMessage("A GM has granted you " .. days .. " VIP days. Your VIP status has been updated!")
                         if gm then gm:SendBroadcastMessage("Added " .. days .. " VIP days to " .. username .. " (" .. targetPlayer:GetName() .. "). New VIP expires: " .. os.date("%Y-%m-%d %H:%M:%S", newVIPTime)) end
                     else
@@ -272,8 +267,8 @@ local function VIPGMCommands(event, player, command)
                     end
                 end)
             end)
-        end)
-        
+        end
+
         return false
     elseif addSingleMatch then
         local daysStr = addSingleMatch
@@ -291,23 +286,14 @@ local function VIPGMCommands(event, player, command)
             local selectedName = targetPlayer:GetName()
             
             -- Check if selected character is a bot
-            if isPlayerBot[selectedName] then
-                -- Find the bot's master
-                local botMaster = nil
-                for masterName, bots in pairs(activeBots) do
-                    for i, botName in ipairs(bots) do
-                        if botName == selectedName then
-                            botMaster = GetPlayerByName(masterName)
-                            break
-                        end
-                    end
-                    if botMaster then break end
-                end
+            do
+                local s = targetPlayer:ToShadow()
+                local botMaster = s and s:GetMaster()
                 
                 if botMaster then
                     targetPlayer = botMaster
                     player:SendBroadcastMessage("Adding VIP to " .. selectedName .. "'s master: " .. botMaster:GetName())
-                else
+                elseif s then
                     player:SendBroadcastMessage("Could not find master for bot: " .. selectedName)
                     return false
                 end
@@ -317,15 +303,15 @@ local function VIPGMCommands(event, player, command)
         end
         
         local targetAccountId = targetPlayer:GetAccountId()
-        local currentVIPTime = targetPlayer:GetData("VIPTime") or 0
+        local currentVIPTime = targetPlayer:Data():Get("VIPTime") or 0
         local currentTime = os.time()
         
         local baseTime = math.max(currentVIPTime, currentTime)
         local newVIPTime = baseTime + (days * 24 * 60 * 60)
         
-        AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+        CharDBExecute("INSERT INTO ycore_yla.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
         
-        targetPlayer:SetData("VIPTime", newVIPTime)
+        targetPlayer:Data():Set("VIPTime", newVIPTime)
         
         if targetPlayer == player then
             player:SendBroadcastMessage("Added " .. days .. " VIP days to yourself. New VIP expires: " .. os.date("%Y-%m-%d %H:%M:%S", newVIPTime))
@@ -350,37 +336,29 @@ local function VIPGMCommands(event, player, command)
             return false
         end
         
-        -- Check if target is a bot, if so find its master
-        if isPlayerBot[targetName] then
-            local botMaster = nil
-            for masterName, bots in pairs(activeBots) do
-                for i, botName in ipairs(bots) do
-                    if botName == targetName then
-                        botMaster = GetPlayerByName(masterName)
-                        break
-                    end
-                end
-                if botMaster then break end
-            end
+        -- Check if target is a bot, if so find its master directly
+        do
+            local s = targetPlayer:ToShadow()
+            local botMaster = s and s:GetMaster()
             
             if botMaster then
                 targetPlayer = botMaster
                 player:SendBroadcastMessage("Removing VIP from " .. targetName .. "'s master: " .. botMaster:GetName())
-            else
+            elseif s then
                 player:SendBroadcastMessage("Could not find master for bot: " .. targetName)
                 return false
             end
         end
         
         local targetAccountId = targetPlayer:GetAccountId()
-        local currentVIPTime = targetPlayer:GetData("VIPTime") or 0
+        local currentVIPTime = targetPlayer:Data():Get("VIPTime") or 0
         local currentTime = os.time()
         
         local newVIPTime = math.max(currentTime, currentVIPTime - (days * 24 * 60 * 60))
         
-        AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+        CharDBExecute("INSERT INTO ycore_yla.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
         
-        targetPlayer:SetData("VIPTime", newVIPTime)
+        targetPlayer:Data():Set("VIPTime", newVIPTime)
         
         if newVIPTime <= currentTime then
             player:SendBroadcastMessage("Removed " .. days .. " VIP days from " .. targetPlayer:GetName() .. ". VIP is now INACTIVE.")
@@ -407,23 +385,14 @@ local function VIPGMCommands(event, player, command)
             local selectedName = targetPlayer:GetName()
             
             -- Check if selected character is a bot
-            if isPlayerBot[selectedName] then
-                -- Find the bot's master
-                local botMaster = nil
-                for masterName, bots in pairs(activeBots) do
-                    for i, botName in ipairs(bots) do
-                        if botName == selectedName then
-                            botMaster = GetPlayerByName(masterName)
-                            break
-                        end
-                    end
-                    if botMaster then break end
-                end
+            do
+                local s = targetPlayer:ToShadow()
+                local botMaster = s and s:GetMaster()
                 
                 if botMaster then
                     targetPlayer = botMaster
                     player:SendBroadcastMessage("Removing VIP from " .. selectedName .. "'s master: " .. botMaster:GetName())
-                else
+                elseif s then
                     player:SendBroadcastMessage("Could not find master for bot: " .. selectedName)
                     return false
                 end
@@ -433,14 +402,14 @@ local function VIPGMCommands(event, player, command)
         end
         
         local targetAccountId = targetPlayer:GetAccountId()
-        local currentVIPTime = targetPlayer:GetData("VIPTime") or 0
+        local currentVIPTime = targetPlayer:Data():Get("VIPTime") or 0
         local currentTime = os.time()
         
         local newVIPTime = math.max(currentTime, currentVIPTime - (days * 24 * 60 * 60))
         
-        AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+        CharDBExecute("INSERT INTO ycore_yla.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. newVIPTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
         
-        targetPlayer:SetData("VIPTime", newVIPTime)
+        targetPlayer:Data():Set("VIPTime", newVIPTime)
         
         if newVIPTime <= currentTime then
             if targetPlayer == player then
@@ -468,23 +437,15 @@ local function VIPGMCommands(event, player, command)
             return false
         end
         
-        -- Check if target is a bot, if so find its master
-        if isPlayerBot[targetName] then
-            local botMaster = nil
-            for masterName, bots in pairs(activeBots) do
-                for i, botName in ipairs(bots) do
-                    if botName == targetName then
-                        botMaster = GetPlayerByName(masterName)
-                        break
-                    end
-                end
-                if botMaster then break end
-            end
+        -- Check if target is a bot, if so find its master directly
+        do
+            local s = targetPlayer:ToShadow()
+            local botMaster = s and s:GetMaster()
             
             if botMaster then
                 targetPlayer = botMaster
                 player:SendBroadcastMessage("Removing all VIP from " .. targetName .. "'s master: " .. botMaster:GetName())
-            else
+            elseif s then
                 player:SendBroadcastMessage("Could not find master for bot: " .. targetName)
                 return false
             end
@@ -493,9 +454,9 @@ local function VIPGMCommands(event, player, command)
         local targetAccountId = targetPlayer:GetAccountId()
         local currentTime = os.time()
         
-        AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. currentTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+        CharDBExecute("INSERT INTO ycore_yla.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. currentTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
         
-        targetPlayer:SetData("VIPTime", currentTime)
+        targetPlayer:Data():Set("VIPTime", currentTime)
         
         player:SendBroadcastMessage("Removed all VIP time from " .. targetPlayer:GetName() .. ". VIP is now INACTIVE.")
         targetPlayer:SendBroadcastMessage("A GM has removed all VIP time from your account. Your VIP status has been updated!")
@@ -509,23 +470,14 @@ local function VIPGMCommands(event, player, command)
             local selectedName = targetPlayer:GetName()
             
             -- Check if selected character is a bot
-            if isPlayerBot[selectedName] then
-                -- Find the bot's master
-                local botMaster = nil
-                for masterName, bots in pairs(activeBots) do
-                    for i, botName in ipairs(bots) do
-                        if botName == selectedName then
-                            botMaster = GetPlayerByName(masterName)
-                            break
-                        end
-                    end
-                    if botMaster then break end
-                end
+            do
+                local s = targetPlayer:ToShadow()
+                local botMaster = s and s:GetMaster()
                 
                 if botMaster then
                     targetPlayer = botMaster
                     player:SendBroadcastMessage("Removing all VIP from " .. selectedName .. "'s master: " .. botMaster:GetName())
-                else
+                elseif s then
                     player:SendBroadcastMessage("Could not find master for bot: " .. selectedName)
                     return false
                 end
@@ -537,9 +489,9 @@ local function VIPGMCommands(event, player, command)
         local targetAccountId = targetPlayer:GetAccountId()
         local currentTime = os.time()
         
-        AuthDBExecute("INSERT INTO accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. currentTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
+        CharDBExecute("INSERT INTO ycore_yla.accounts_vip (account, viptime) VALUES (" .. targetAccountId .. ", " .. currentTime .. ") ON DUPLICATE KEY UPDATE VIPTIME = VALUES(VIPTIME);")
         
-        targetPlayer:SetData("VIPTime", currentTime)
+        targetPlayer:Data():Set("VIPTime", currentTime)
         
         if targetPlayer == player then
             player:SendBroadcastMessage("Removed all VIP time from yourself. VIP is now INACTIVE.")
@@ -565,7 +517,7 @@ local function VIPGMCommands(event, player, command)
             return false
         end
         
-        local vipTime = targetPlayer:GetData("VIPTime") or 0
+        local vipTime = targetPlayer:Data():Get("VIPTime") or 0
         local currentTime = os.time()
         
         if vipTime > currentTime then
@@ -597,32 +549,21 @@ local function VIPGMCommands(event, player, command)
             local selectedChar = player:GetSelection():ToPlayer():GetName()
             
             -- Check if selected character is a bot
-            if isPlayerBot[selectedChar] then
-                -- Find the bot's master
-                local botMaster = nil
-                for masterName, bots in pairs(activeBots) do
-                    for i, botName in ipairs(bots) do
-                        if botName == selectedChar then
-                            botMaster = GetPlayerByName(masterName)
-                            break
-                        end
-                    end
-                    if botMaster then break end
-                end
-                
-                if botMaster then
-                    targetPlayer = botMaster
-                    player:SendBroadcastMessage("Checking VIP status of " .. selectedChar .. "'s master: " .. botMaster:GetName())
-                else
-                    player:SendBroadcastMessage("Could not find master for bot: " .. selectedChar)
-                    return false
-                end
+            local sel = player:GetSelection():ToPlayer()
+            local s = sel and sel:ToShadow()
+            local botMaster = s and s:GetMaster()
+            if botMaster then
+                targetPlayer = botMaster
+                player:SendBroadcastMessage("Checking VIP status of " .. selectedChar .. "'s master: " .. botMaster:GetName())
+            elseif s then
+                player:SendBroadcastMessage("Could not find master for bot: " .. selectedChar)
+                return false
             else
                 targetPlayer = player:GetSelection():ToPlayer()
             end
         end
         
-        local vipTime = targetPlayer:GetData("VIPTime") or 0
+        local vipTime = targetPlayer:Data():Get("VIPTime") or 0
         local currentTime = os.time()
         
         if vipTime > currentTime then
@@ -662,7 +603,7 @@ local function VIPCommands(event, player, command)
     if cmd == "vip" and player:GetGMRank() == 0 then
         if not CheckVIPCmd(player) then return false end
         
-        local vipTime = player:GetData("VIPTime") or 0
+        local vipTime = player:Data():Get("VIPTime") or 0
         local currentTime = os.time()
         
         if vipTime > currentTime then
@@ -684,17 +625,14 @@ local function VIPCommands(event, player, command)
         
     elseif cmd == "vip mail" then
         if not CheckVIPCmd(player) then return false end
-        local guid = player:GetGUIDLow()
         local currentTime = os.time()
-        if not mailboxtime[guid] then 
-            mailboxtime[guid] = 0
-        end
-        
-        if mailboxtime[guid] <= currentTime then
+        local mailboxCD = player:Data():Get("VIPMailboxCD") or 0
+
+        if mailboxCD <= currentTime then
             player:CastSpell(player, 54710, true)
-            mailboxtime[guid] = currentTime + 900
+            player:Data():Set("VIPMailboxCD", currentTime + 900)
         else
-            local remainingTime = mailboxtime[guid] - currentTime
+            local remainingTime = mailboxCD - currentTime
             local minutes = math.floor(remainingTime / 60)
             local seconds = remainingTime % 60
             
@@ -714,8 +652,13 @@ local function VIPCommands(event, player, command)
     end
 end
 
-CheckVIPOnLoad() -- Sets players with VIP as active VIP on load/reload ELUNA
-RegisterPlayerEvent(28, CheckVIP)
-RegisterPlayerEvent(36, VIPBotRepairOnResurrect)
-RegisterPlayerEvent(42, VIPCommands)
-RegisterPlayerEvent(42, VIPGMCommands)
+-- Commands use world-only lookups (GetPlayerByName, GetCharacterCache), so
+-- they live in the world state; gameplay events live on the maps.
+if GetStateMapId() == -1 then -- World stuff
+    RegisterPlayerEvent(42, VIPCommands)
+    RegisterPlayerEvent(42, VIPGMCommands)
+else -- Map stuff
+    CheckVIPOnLoad() -- Sets players with VIP as active VIP on load/reload ELUNA
+    RegisterPlayerEvent(28, CheckVIP)
+    RegisterPlayerEvent(36, VIPBotRepairOnResurrect)
+end

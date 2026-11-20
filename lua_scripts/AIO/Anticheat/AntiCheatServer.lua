@@ -1,12 +1,12 @@
 local function StartAntiClipCheck(player)
-    player:SetData("LastPosX", player:GetX())
-    player:SetData("LastPosY", player:GetY())
-    player:SetData("LastPosZ", player:GetZ())
+    player:Data():Set("LastPosX", player:GetX())
+    player:Data():Set("LastPosY", player:GetY())
+    player:Data():Set("LastPosZ", player:GetZ())
     
     local eventId = player:RegisterEvent(function(e, d, r, player)
-        local lastX = player:GetData("LastPosX")
-        local lastY = player:GetData("LastPosY")
-        local lastZ = player:GetData("LastPosZ")
+        local lastX = player:Data():Get("LastPosX")
+        local lastY = player:Data():Get("LastPosY")
+        local lastZ = player:Data():Get("LastPosZ")
         if not lastX then return end
         
         local curX, curY, curZ = player:GetX(), player:GetY(), player:GetZ()
@@ -32,12 +32,12 @@ local function StartAntiClipCheck(player)
 			end
 		end
 
-        player:SetData("LastPosX", curX)
-        player:SetData("LastPosY", curY)
-        player:SetData("LastPosZ", curZ)
+        player:Data():Set("LastPosX", curX)
+        player:Data():Set("LastPosY", curY)
+        player:Data():Set("LastPosZ", curZ)
     end, 150, 0)
     
-    player:SetData("StartAntiClipCheck", eventId)
+    player:Data():Set("StartAntiClipCheck", eventId)
 end
 
 local function SendAntiCheatChecks(player)
@@ -53,18 +53,18 @@ local function SendAntiCheatChecks(player)
         player:SendAddonMessage("AIO_AntiCheat_Water", tostring(player:IsUnderWater()), 7, player)
     end, 1000, 0)
     
-    player:SetData("SendAntiCheatChecks", eventId)
+    player:Data():Set("SendAntiCheatChecks", eventId)
 end
 
 local function StartElunaAnticheat(event, player)
-    if isPlayerBot[player:GetName()] then return end
+    if player:IsBot() then return end
     
-    if player:GetData("SendAntiCheatChecks") then 
-        player:RemoveEventById(player:GetData("SendAntiCheatChecks"))
+    if player:Data():Get("SendAntiCheatChecks") then 
+        player:RemoveEventById(player:Data():Get("SendAntiCheatChecks"))
     end 
     
-    if player:GetData("StartAntiClipCheck") then
-        player:RemoveEventById(player:GetData("StartAntiClipCheck"))
+    if player:Data():Get("StartAntiClipCheck") then
+        player:RemoveEventById(player:Data():Get("StartAntiClipCheck"))
     end
     
     SendAntiCheatChecks(player)
@@ -88,18 +88,17 @@ function OnAIOAntiCheatCommand(event, player, command)
         elseif arg == "SpeedHack" then
             local clientSpd, closestSpd = command:match("SpeedHack%s+(%S+)%s+(%S+)")
             
-            -- Allowed speed deviations
-            if player:IsFalling() and clientSpd then
-                local speed = tonumber(clientSpd)
-                if speed == 5    -- Skips normal falling
-                or speed == 40   -- Skips most knockbacks, incl LK shadow traps
-                then return false end
-            end
-            
-            -- Skip knockbacks, which are mostly speed 40
-            if player:IsFalling() and clientSpd and tonumber(clientSpd) == 40 then
-                return false
-            end
+            -- Skip falling entirely
+            if player:IsFalling() then return false end
+
+            -- Allowed client speeds
+            local speed = tonumber(clientSpd)
+            if speed == 7.50
+            or speed == 17.50
+            or speed == 5.00
+            or speed == 28.00
+            or speed == 40.00
+            then return false end
             
             local state = player:IsUnderWater() and "Swimming" or player:IsFlying() and "Flying" or player:IsFalling() and "Falling" or "Walking"
             SendToDiscord("SpeedHack detected. Offending player: "..player:GetName()..". Pos: "..string.format("%.2f, %.2f, %.2f", x, y, z)..". Map: "..player:GetMapId()..(clientSpd and ". Client speed: "..clientSpd..", Server speed: "..closestSpd or "")..". State: "..state)
@@ -111,6 +110,7 @@ function OnAIOAntiCheatCommand(event, player, command)
                 player:KickPlayer()
             end
         elseif arg == "FlyHack" then
+            if math.abs(z - player:GetGroundZ()) <= 1 or math.abs(z - player:GetFloorZ()) <= 1 then return false end
             if not player:IsOutdoors() then
                 player:AddAura(43775, player)
                 player:RegisterEvent(function(e, d, r, player)
@@ -128,15 +128,16 @@ function OnAIOAntiCheatCommand(event, player, command)
     end
 end
 
-local function ReloadEluna(event)
-    CreateLuaEvent(function()
-        local players = GetPlayersInWorld()
-        for _, player in ipairs(players) do
-            StartElunaAnticheat(event, player)
-        end
-    end, 5000, 1)
+if GetStateMapId() == -1 then
+    RegisterPlayerEvent(42, OnAIOAntiCheatCommand)
+else
+    RegisterPlayerEvent(28, StartElunaAnticheat)
+    for _, player in ipairs(GetStateMap() and GetStateMap():GetPlayers() or {}) do
+        player:Data():Set("LastPosX", nil)
+        player:Data():Set("LastPosY", nil)
+        player:Data():Set("LastPosZ", nil)
+        player:Data():Set("StartAntiClipCheck", nil)
+        player:Data():Set("SendAntiCheatChecks", nil)
+        StartElunaAnticheat(nil, player)
+    end
 end
-
-RegisterPlayerEvent(42, OnAIOAntiCheatCommand)
-RegisterPlayerEvent(28, StartElunaAnticheat)
-RegisterServerEvent(33, ReloadEluna)

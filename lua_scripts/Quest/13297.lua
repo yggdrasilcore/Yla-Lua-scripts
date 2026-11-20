@@ -1,3 +1,6 @@
+-- Icecrown-only script (map 571): quest 13297 Neutralizing the Plague.
+if GetStateMapId() ~= 571 then return end
+
 local function OnSpawn(event, creature)
     local entry = creature:GetEntry()
     

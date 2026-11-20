@@ -136,77 +136,156 @@ local customFamilyNames = {
     ["Abyssal Flamewalker"] = 30
 }
 
+-- DB setup and world queries below only run in the world state.
+if GetStateMapId() == -1 then
+    if MakeMorphTable then
+        CharDBExecute("CREATE TABLE IF NOT EXISTS ycore_yla.character_morphs (`guid` int DEFAULT NULL, `name` text, `id` int DEFAULT NULL, `form` int DEFAULT NULL, `active` smallint DEFAULT NULL, UNIQUE KEY `unique_guid_form` (`guid`, `id`))")
+    end
+    if MakeMorphItem then
+        WorldDBExecute("REPLACE INTO `item_template` (`entry`, `class`, `subclass`, `SoundOverrideSubclass`, `name`, `displayid`, `Quality`, `Flags`, `FlagsExtra`, `BuyCount`, `BuyPrice`, `SellPrice`, `InventoryType`, `AllowableClass`, `AllowableRace`, `ItemLevel`, `RequiredLevel`, `RequiredSkill`, `RequiredSkillRank`, `requiredspell`, `requiredhonorrank`, `RequiredCityRank`, `RequiredReputationFaction`, `RequiredReputationRank`, `maxcount`, `stackable`, `ContainerSlots`, `stat_type1`, `stat_value1`, `stat_type2`, `stat_value2`, `stat_type3`, `stat_value3`, `stat_type4`, `stat_value4`, `stat_type5`, `stat_value5`, `stat_type6`, `stat_value6`, `stat_type7`, `stat_value7`, `stat_type8`, `stat_value8`, `stat_type9`, `stat_value9`, `stat_type10`, `stat_value10`, `ScalingStatDistribution`, `ScalingStatValue`, `dmg_min1`, `dmg_max1`, `dmg_type1`, `dmg_min2`, `dmg_max2`, `dmg_type2`, `armor`, `holy_res`, `fire_res`, `nature_res`, `frost_res`, `shadow_res`, `arcane_res`, `delay`, `ammo_type`, `RangedModRange`, `spellid_1`, `spelltrigger_1`, `spellcharges_1`, `spellppmRate_1`, `spellcooldown_1`, `spellcategory_1`, `spellcategorycooldown_1`, `spellid_2`, `spelltrigger_2`, `spellcharges_2`, `spellppmRate_2`, `spellcooldown_2`, `spellcategory_2`, `spellcategorycooldown_2`, `spellid_3`, `spelltrigger_3`, `spellcharges_3`, `spellppmRate_3`, `spellcooldown_3`, `spellcategory_3`, `spellcategorycooldown_3`, `spellid_4`, `spelltrigger_4`, `spellcharges_4`, `spellppmRate_4`, `spellcooldown_4`, `spellcategory_4`, `spellcategorycooldown_4`, `spellid_5`, `spelltrigger_5`, `spellcharges_5`, `spellppmRate_5`, `spellcooldown_5`, `spellcategory_5`, `spellcategorycooldown_5`, `bonding`, `description`, `PageText`, `LanguageID`, `PageMaterial`, `startquest`, `lockid`, `Material`, `sheath`, `RandomProperty`, `RandomSuffix`, `block`, `itemset`, `MaxDurability`, `area`, `Map`, `BagFamily`, `TotemCategory`, `socketColor_1`, `socketContent_1`, `socketColor_2`, `socketContent_2`, `socketColor_3`, `socketContent_3`, `socketBonus`, `GemProperties`, `RequiredDisenchantSkill`, `ArmorDamageModifier`, `duration`, `ItemLimitCategory`, `HolidayId`, `ScriptName`, `DisenchantID`, `FoodType`, `minMoneyLoot`, `maxMoneyLoot`, `flagsCustom`, `VerifiedBuild`) values('5041','0','8','-1','Demonic Scroll','6423','6','8388608','0','1','0','0','0','256','-1','0','0','0','0','0','0','0','0','0','1','1','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','24312','0','0','0','-1','0','-1','0','0','0','0','-1','0','-1','0','0','0','0','-1','0','-1','0','0','0','0','-1','0','-1','0','0','0','0','-1','0','-1','0','This scroll lets you absorb the forms of demon enemies to apply them on your demon pets.','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','-1','0','0','0','0','','0','0','0','0','0','1');")
+    end
+    if MakeMorphVendor then
+        WorldDBExecute("REPLACE INTO `creature_template` (`entry`, `difficulty_entry_1`, `difficulty_entry_2`, `difficulty_entry_3`, `KillCredit1`, `KillCredit2`, `name`, `subname`, `IconName`, `gossip_menu_id`, `minlevel`, `maxlevel`, `exp`, `faction`, `npcflag`, `speed_walk`, `speed_run`, `speed_swim`, `speed_flight`, `detection_range`, `scale`, `rank`, `dmgschool`, `DamageModifier`, `BaseAttackTime`, `RangeAttackTime`, `BaseVariance`, `RangeVariance`, `unit_class`, `unit_flags`, `unit_flags2`, `dynamicflags`, `family`, `trainer_type`, `trainer_spell`, `trainer_class`, `trainer_race`, `type`, `type_flags`, `lootid`, `pickpocketloot`, `skinloot`, `PetSpellDataId`, `VehicleId`, `mingold`, `maxgold`, `AIName`, `MovementType`, `HoverHeight`, `HealthModifier`, `ManaModifier`, `ArmorModifier`, `ExperienceModifier`, `RacialLeader`, `movementId`, `RegenHealth`, `mechanic_immune_mask`, `spell_school_immune_mask`, `flags_extra`, `ScriptName`, `VerifiedBuild`) values('190087','0','0','0','0','0','Ethereal Pet Morpher','Pet Morph Vendor','','0','80','80','0','35','1','1','1.14286','1','1','20','1.1','3','0','0','0','0','1','1','1','0','2048','0','0','0','0','0','0','0','0','0','0','0','0','0','1','1','','1','1','1','0','0','1','0','0','0','0','0','0','','0')")
+        WorldDBExecute("REPLACE INTO `creature_template_model` (`CreatureID`, `Idx`, `CreatureDisplayID`, `DisplayScale`, `Probability`, `VerifiedBuild`) values('190087','0','19647','1','1','0');")
+    end
+end -- world-only DB setup (WorldDBExecute/CharDBExecute above must not run on maps)
 
-if not (GetCoreName() == "AzerothCore") then
-	print("[Demon Morph Module]: Incompatible core detected. This module only works on AzerothCore as it requires RegisterPlayerEvent PLAYER_EVENT_ON_PET_ADDED_TO_WORLD.")
-	return
+-- Shared demon list: world publishes entry -> family with SetWorldData,
+-- maps adopt it on demand with GetWorldData (never the other way around).
+-- Per-player morphs live on player:Data() under DATA_KEY.
+local demonCache
+
+local DATA_KEY = "DemonMorphState"
+
+local function LoadDemonCache()
+    if demonCache then return demonCache end
+    local shared = GetWorldData("DemonMorpherCache")
+    if not shared then return end
+    if type(shared) == "table" and shared.AsTable then
+        shared = shared:AsTable()
+    end
+    if type(shared) ~= "table" then return end
+    demonCache = shared
+    return demonCache
 end
 
-if MakeMorphTable then
-	CharDBExecute("CREATE TABLE IF NOT EXISTS `character_morphs` (`guid` int DEFAULT NULL, `name` text, `id` int DEFAULT NULL, `form` int DEFAULT NULL, `active` smallint DEFAULT NULL, UNIQUE KEY `unique_guid_form` (`guid`, `id`))")
-end
-if MakeMorphItem then
-	WorldDBExecute("REPLACE INTO `item_template` (`entry`, `class`, `subclass`, `SoundOverrideSubclass`, `name`, `displayid`, `Quality`, `Flags`, `FlagsExtra`, `BuyCount`, `BuyPrice`, `SellPrice`, `InventoryType`, `AllowableClass`, `AllowableRace`, `ItemLevel`, `RequiredLevel`, `RequiredSkill`, `RequiredSkillRank`, `requiredspell`, `requiredhonorrank`, `RequiredCityRank`, `RequiredReputationFaction`, `RequiredReputationRank`, `maxcount`, `stackable`, `ContainerSlots`, `stat_type1`, `stat_value1`, `stat_type2`, `stat_value2`, `stat_type3`, `stat_value3`, `stat_type4`, `stat_value4`, `stat_type5`, `stat_value5`, `stat_type6`, `stat_value6`, `stat_type7`, `stat_value7`, `stat_type8`, `stat_value8`, `stat_type9`, `stat_value9`, `stat_type10`, `stat_value10`, `ScalingStatDistribution`, `ScalingStatValue`, `dmg_min1`, `dmg_max1`, `dmg_type1`, `dmg_min2`, `dmg_max2`, `dmg_type2`, `armor`, `holy_res`, `fire_res`, `nature_res`, `frost_res`, `shadow_res`, `arcane_res`, `delay`, `ammo_type`, `RangedModRange`, `spellid_1`, `spelltrigger_1`, `spellcharges_1`, `spellppmRate_1`, `spellcooldown_1`, `spellcategory_1`, `spellcategorycooldown_1`, `spellid_2`, `spelltrigger_2`, `spellcharges_2`, `spellppmRate_2`, `spellcooldown_2`, `spellcategory_2`, `spellcategorycooldown_2`, `spellid_3`, `spelltrigger_3`, `spellcharges_3`, `spellppmRate_3`, `spellcooldown_3`, `spellcategory_3`, `spellcategorycooldown_3`, `spellid_4`, `spelltrigger_4`, `spellcharges_4`, `spellppmRate_4`, `spellcooldown_4`, `spellcategory_4`, `spellcategorycooldown_4`, `spellid_5`, `spelltrigger_5`, `spellcharges_5`, `spellppmRate_5`, `spellcooldown_5`, `spellcategory_5`, `spellcategorycooldown_5`, `bonding`, `description`, `PageText`, `LanguageID`, `PageMaterial`, `startquest`, `lockid`, `Material`, `sheath`, `RandomProperty`, `RandomSuffix`, `block`, `itemset`, `MaxDurability`, `area`, `Map`, `BagFamily`, `TotemCategory`, `socketColor_1`, `socketContent_1`, `socketColor_2`, `socketContent_2`, `socketColor_3`, `socketContent_3`, `socketBonus`, `GemProperties`, `RequiredDisenchantSkill`, `ArmorDamageModifier`, `duration`, `ItemLimitCategory`, `HolidayId`, `ScriptName`, `DisenchantID`, `FoodType`, `minMoneyLoot`, `maxMoneyLoot`, `flagsCustom`, `VerifiedBuild`) values('5041','0','8','-1','Demonic Scroll','6423','6','8388608','0','1','0','0','0','256','-1','0','0','0','0','0','0','0','0','0','1','1','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','24312','0','0','0','-1','0','-1','0','0','0','0','-1','0','-1','0','0','0','0','-1','0','-1','0','0','0','0','-1','0','-1','0','0','0','0','-1','0','-1','0','This scroll lets you absorb the forms of demon enemies to apply them on your demon pets.','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','-1','0','0','0','0','','0','0','0','0','0','1');")
-end
-if MakeMorphVendor then
-	WorldDBExecute("REPLACE INTO `creature_template` (`entry`, `difficulty_entry_1`, `difficulty_entry_2`, `difficulty_entry_3`, `KillCredit1`, `KillCredit2`, `name`, `subname`, `IconName`, `gossip_menu_id`, `minlevel`, `maxlevel`, `exp`, `faction`, `npcflag`, `speed_walk`, `speed_run`, `speed_swim`, `speed_flight`, `detection_range`, `scale`, `rank`, `dmgschool`, `DamageModifier`, `BaseAttackTime`, `RangeAttackTime`, `BaseVariance`, `RangeVariance`, `unit_class`, `unit_flags`, `unit_flags2`, `dynamicflags`, `family`, `trainer_type`, `trainer_spell`, `trainer_class`, `trainer_race`, `type`, `type_flags`, `lootid`, `pickpocketloot`, `skinloot`, `PetSpellDataId`, `VehicleId`, `mingold`, `maxgold`, `AIName`, `MovementType`, `HoverHeight`, `HealthModifier`, `ManaModifier`, `ArmorModifier`, `ExperienceModifier`, `RacialLeader`, `movementId`, `RegenHealth`, `mechanic_immune_mask`, `spell_school_immune_mask`, `flags_extra`, `ScriptName`, `VerifiedBuild`) values('190087','0','0','0','0','0','Ethereal Pet Morpher','Pet Morph Vendor','','0','80','80','0','35','1','1','1.14286','1','1','20','1.1','3','0','0','0','0','1','1','1','0','2048','0','0','0','0','0','0','0','0','0','0','0','0','0','1','1','','1','1','1','0','0','1','0','0','0','0','0','0','','0')")
-	WorldDBExecute("REPLACE INTO `creature_template_model` (`CreatureID`, `Idx`, `CreatureDisplayID`, `DisplayScale`, `Probability`, `VerifiedBuild`) values('190087','0','19647','1','1','0');")
-end
-
-local demonCache = {}
-
--- These are player GUID-specific storage tables. Consider moving to player:SetData("tableName", value) instead of Lua tables
-local morphCount = {}
-local playerMorphChoice = {}
-local morph15 = {}
-local morph16 = {}
-local morph17 = {}
-local morph19 = {}
-local morph23 = {}
-local morph29 = {}
-local morph30 = {}
-local logincheck = {}
-local morphIdCache = {}
-
-local function CacheCreatures()
-    local demonCount = 0
-
-    -- Demon cache
-    WorldDBQueryAsync("SELECT entry, name FROM creature_template WHERE type = 3 OR name = 'Arcane Devourer' OR name = 'Corruptor' OR name = 'Tainted Arcane Wrath' OR name = 'Vile Familiar' OR name = 'Grell'", function(demonResults)
-
-		if demonResults then
-			repeat
-				local entry = demonResults:GetUInt32(0)
-				local name = demonResults:GetString(1)
-				demonCache[entry] = {name = name}
-				demonCount = demonCount + 1
-			until not demonResults:NextRow()
-		end
-	end)
-end
-
-local function CountTotalMorphs(player)
-    local guid = player:GetGUIDLow()
-    if morphCount[guid] then
-        return morphCount[guid]
-    else
-        local result = CharDBQuery("SELECT COUNT(*) FROM character_morphs WHERE guid = "..guid)
-        if result then
-            morphCount[guid] = math.min(result:GetUInt32(0), MaxMorphSkill)
-            return morphCount[guid]
+local function FamilyForName(creatureName)
+    local lower = string.lower(creatureName)
+    for familyId, familyName in pairs(familyNames) do
+        if string.find(lower, string.lower(familyName), 1, true) then
+            return familyId
         end
-        return 0
+    end
+    for customName, customFamily in pairs(customFamilyNames) do
+        if string.find(lower, string.lower(customName), 1, true) then
+            return customFamily
+        end
+    end
+end
+
+local function MatchFamily(entry, creatureName)
+    local cache = LoadDemonCache()
+    if not cache then return end
+    if cache[entry] then
+        return cache[entry]
+    end
+    return FamilyForName(creatureName)
+end
+
+-- World-only: build entry -> family once and publish it.
+local function CacheCreatures()
+    WorldDBQueryAsync("SELECT entry, name FROM creature_template WHERE type = 3 OR name = 'Arcane Devourer' OR name = 'Corruptor' OR name = 'Tainted Arcane Wrath' OR name = 'Vile Familiar' OR name = 'Grell'", function(demonResults)
+        local cache = {}
+        if demonResults then
+            repeat
+                local entry = demonResults:GetUInt32(0)
+                local name = demonResults:GetString(1)
+                cache[entry] = FamilyForName(name) or 0
+            until not demonResults:NextRow()
+        end
+        SetWorldData("DemonMorpherCache", cache)
+    end)
+end
+
+local function LoadData(player)
+    local stored = player:Data():Get(DATA_KEY)
+    if stored then
+        return stored:AsTable()
+    end
+    return {}
+end
+
+local function SaveData(player, d)
+    player:Data():Set(DATA_KEY, d)
+end
+
+local function Find(list, displayId)
+    for n = 1, #list do
+        if list[n] == displayId then
+            return true
+        end
+    end
+    return false
+end
+
+local function Skill(d)
+    return math.min(#(d.ids or {}), MaxMorphSkill)
+end
+
+-- Map-only, druid-style lazy loader: returns nil while the async DB read is
+-- in flight; callers must bail out until d.ids exists.
+local function PlayerData(player)
+    local d = LoadData(player)
+    if d.ids then return d end
+    if d.loading then return end
+    d.loading = true
+    SaveData(player, d)
+    local name = player:GetName()
+    local guid = player:GetGUIDLow()
+    CharDBQueryAsync("SELECT id, form, active FROM ycore_yla.character_morphs WHERE guid = " .. guid, function(result)
+        local p
+        for _, pl in pairs(GetStateMap():GetPlayers()) do
+            if pl:GetName() == name then
+                p = pl
+                break
+            end
+        end
+        if not p then return end
+        local ids, active = {}, {}
+        if result then
+            repeat
+                local morphId = result:GetUInt32(0)
+                local morphForm = result:GetUInt32(1)
+                table.insert(ids, morphId)
+                if result:GetUInt32(2) == 1 and familyNames[morphForm] then
+                    active[morphForm] = morphId
+                end
+            until not result:NextRow()
+        end
+        local pd = LoadData(p)
+        pd.ids, pd.active, pd.loading = ids, active, nil
+        SaveData(p, pd)
+    end)
+end
+
+local function FindPlayerOnMap(name)
+    for _, pl in pairs(GetStateMap():GetPlayers()) do
+        if pl:GetName() == name then
+            return pl
+        end
     end
 end
 
 local function OnKillCreature(event, player, creature)
     if player:GetClass() ~= 9 then return end
     if not player:HasItem(ITEM_ID) then return end
-    local guid = player:GetGUIDLow()
+    if not LoadDemonCache() then return end
+    local d = PlayerData(player)
+    if not d or not d.ids then return end
     local entry = creature:GetEntry()
     local displayId = creature:GetDisplayId()
     local creatureName = creature:GetName()
-    
+
     if displayId == 7949 -- Disallowed display IDs (identical to standard Felhunter). Consider making this a table to feed all non-unique display models
     or displayId == 6172
     or displayId == 6173
@@ -222,69 +301,29 @@ local function OnKillCreature(event, player, creature)
     if entry == 12217 then -- Imp corruptor
         matchedFamily = 23
     else
-        if demonCache[entry] then
-            matchedFamily = demonCache[entry].family
-        else
-            for familyId, familyName in pairs(familyNames) do
-                if string.find(string.lower(creatureName), string.lower(familyName)) then
-                    matchedFamily = familyId
-                    break
-                end
-            end
-        end
-
-        if not matchedFamily then
-            for customName, customFamily in pairs(customFamilyNames) do
-                if string.find(string.lower(creatureName), string.lower(customName)) then
-                    matchedFamily = customFamily
-                    break
-                end
-            end
-        end
+        matchedFamily = MatchFamily(entry, creatureName)
     end
 
-    if matchedFamily then
+    if matchedFamily and matchedFamily ~= 0 then
+        if Find(d.ids, displayId) then
+            return
+        end
+
+        local guid = player:GetGUIDLow()
         local escapedName = string.gsub(creatureName, "'", "''")
 
-		if morphIdCache[guid] then
-			local found = false
-			for _, id in ipairs(morphIdCache[guid]) do
-				if id == displayId then
-					found = true
-					break
-				end
-			end
-
-			-- If `displayId` is already in the cache, exit
-			if found then
-				return
-			end
-		end
-		
-        CharDBExecute("REPLACE INTO character_morphs (guid, name, id, form, active) VALUES (" .. guid .. ", '" .. escapedName .. "', " .. displayId .. ", " .. (matchedFamily or 0) .. ", 0)") -- Consider moving db saves to onPlayerSave instead of creature kill
-        local familyNames = {
-            [15] = "Felhunter",
-            [16] = "Voidwalker",
-            [17] = "Succubus",
-            [19] = "Doomguard",
-            [23] = "Imp",
-            [29] = "Felguard",
-            [30] = "Infernal"
-        }
+        CharDBExecute("REPLACE INTO ycore_yla.character_morphs (guid, name, id, form, active) VALUES (" .. guid .. ", '" .. escapedName .. "', " .. displayId .. ", " .. matchedFamily .. ", 0)") -- Consider moving db saves to onPlayerSave instead of creature kill
 
         local familyName = familyNames[matchedFamily] or "demon"
-		
-		if morphCount[guid] then morphCount[guid] = morphCount[guid] + 1 end
-		
-        local skillMessage = CountTotalMorphs(player) < MaxMorphSkill and " Your morph skill has increased to " .. CountTotalMorphs(player)+1 .. "." or ""
+
+        table.insert(d.ids, displayId)
+        SaveData(player, d)
+
+        local skill = Skill(d)
+        local skillMessage = skill < MaxMorphSkill and " Your morph skill has increased to " .. skill .. "." or ""
 
         player:SendBroadcastMessage("You have captured " .. creatureName .. "'s essence and learned how to morph your " .. familyName .. " into their form." .. skillMessage)
-		
-		if not morphIdCache[guid] then
-            morphIdCache[guid] = {}
-        end
-		table.insert(morphIdCache[guid], displayId)
-	end
+    end
 end
 
 local function ShowInitialGossipMenu(player)
@@ -302,6 +341,12 @@ local function ShowInitialGossipMenu(player)
 end
 
 local function OnItemGossipHello(event, player, item, object)
+    if not LoadDemonCache() then return false end
+    local d = PlayerData(player)
+    if not d or not d.ids then
+        player:SendAreaTriggerMessage("Loading your morphs, try again in a moment.")
+        return false
+    end
 	if player:GetClass() == 9 then
         player:GossipComplete()
         ShowInitialGossipMenu(player)
@@ -321,7 +366,12 @@ local function OnPlayerGossipHello(player, object)
     player:GossipSendMenu(1, object, 99)
 end
 
-local function OnItemGossipSelect(event, player, object, sender, intid, code)	
+local function OnItemGossipSelect(event, player, object, sender, intid, code)
+    local d = PlayerData(player)
+    if not d or not d.ids then
+        player:SendAreaTriggerMessage("Loading your morphs, try again in a moment.")
+        return
+    end
     if intid == 999 then
         OnPlayerGossipHello(player, object)
         return
@@ -349,22 +399,11 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
             end
             if pet then
                 pet:DeMorph()
-                CharDBExecute("UPDATE character_morphs SET active = 0 WHERE guid = " .. player:GetGUIDLow() .. " AND form = " .. pet:GetCreatureFamily())
-                if pet:GetCreatureFamily() == 15 then
-                    morph15[guid] = nil
-                elseif pet:GetCreatureFamily() == 16 then
-                    morph16[guid] = nil
-                elseif pet:GetCreatureFamily() == 17 then
-                    morph17[guid] = nil
-                elseif pet:GetCreatureFamily() == 19 then
-                    morph19[guid] = nil
-                elseif pet:GetCreatureFamily() == 23 then
-                    morph23[guid] = nil
-                elseif pet:GetCreatureFamily() == 29 then
-                    morph29[guid] = nil
-                elseif pet:GetCreatureFamily() == 30 then
-                    morph30[guid] = nil
-                end
+                CharDBExecute("UPDATE ycore_yla.character_morphs SET active = 0 WHERE guid = " .. player:GetGUIDLow() .. " AND form = " .. pet:GetCreatureFamily())
+                local rd = LoadData(player)
+                rd.active = rd.active or {}
+                rd.active[pet:GetCreatureFamily()] = nil
+                SaveData(player, rd)
             else
                 player:SendBroadcastMessage("Your demon is too far away!")
             end
@@ -376,13 +415,14 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
     end
     
     -- Function to show specific page of morphs
-    local function ShowMorphsPage(player, formId, page)
-        local guid = player:GetGUIDLow()
-        local playername = player:GetName()
+    local function ShowMorphsPage(p, formId, page)
+        local guid = p:GetGUIDLow()
+        local playername = p:GetName()
         local ITEMS_PER_PAGE = 10
-        
-        CharDBQueryAsync("SELECT name, id FROM character_morphs WHERE guid = "..guid.." AND form = "..formId, function(results)
-            local player = GetPlayerByName(playername)
+
+        CharDBQueryAsync("SELECT name, id FROM ycore_yla.character_morphs WHERE guid = "..guid.." AND form = "..formId, function(results)
+            local player = FindPlayerOnMap(playername)
+            if not player then return end
             
             if results then
                 -- Store all results in a table for pagination
@@ -452,7 +492,8 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
     
     -- Handle demon family selection (15-30)
     if familyNames[intid] then
-        chosenFamily = intid
+        d.choice = intid
+        SaveData(player, d)
         ShowMorphsPage(player, intid, 1)
         return
     end
@@ -461,7 +502,13 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
     local guid = player:GetGUIDLow()
     local name = player:GetName()
     
-    playerMorphChoice[player:GetGUIDLow()] = intid
+    local chosenFamily = d.choice
+    if not chosenFamily then
+        OnPlayerGossipHello(player, player)
+        return
+    end
+    d.lastChoice = intid
+    SaveData(player, d)
     local petGUID = player:GetPetGUID()
     if petGUID then
         local nearbyUnits = player:GetCreaturesInRange(100)
@@ -473,136 +520,76 @@ local function OnItemGossipSelect(event, player, object, sender, intid, code)
             end
         end
         if pet then
-            summonedPetFamily = pet:GetCreatureFamily()
+            local summonedPetFamily = pet:GetCreatureFamily()
             if summonedPetFamily == chosenFamily then
                 pet:SetDisplayId(intid)
             end
         end
     end
     
-    CharDBQueryAsync("SELECT name FROM character_morphs WHERE guid = " .. guid .. " AND form = " .. chosenFamily .. " AND id = " .. intid, function(morphNameResult)
-        local player = GetPlayerByName(name)
+    local selFamily, selId, selName = chosenFamily, intid, name
+    CharDBQueryAsync("SELECT name FROM ycore_yla.character_morphs WHERE guid = " .. guid .. " AND form = " .. selFamily .. " AND id = " .. selId, function(morphNameResult)
+        local p = FindPlayerOnMap(selName)
+        if not p then return end
         local morphName = "Unknown Morph"
         if morphNameResult then
             morphName = morphNameResult:GetString(0)
         end
-        player:SendBroadcastMessage("You have morphed your "..familyNames[chosenFamily].." into "..morphName..".")
+        p:SendBroadcastMessage("You have morphed your "..familyNames[selFamily].." into "..morphName..".")
     end)
     
-    CharDBExecute("UPDATE character_morphs SET active = (form = " .. chosenFamily .. " AND id = " .. intid .. ") WHERE guid = " .. guid .. " AND form = " .. chosenFamily)
+    CharDBExecute("UPDATE ycore_yla.character_morphs SET active = (form = " .. chosenFamily .. " AND id = " .. intid .. ") WHERE guid = " .. guid .. " AND form = " .. chosenFamily)
     
-    if chosenFamily == 15 then
-        morph15[guid] = intid
-        morph16[guid] = nil
-        morph17[guid] = nil
-        morph19[guid] = nil
-        morph23[guid] = nil
-        morph29[guid] = nil
-        morph30[guid] = nil
-    elseif chosenFamily == 16 then
-        morph15[guid] = nil
-        morph16[guid] = intid
-        morph17[guid] = nil
-        morph19[guid] = nil
-        morph23[guid] = nil
-        morph29[guid] = nil
-        morph30[guid] = nil
-    elseif chosenFamily == 17 then
-        morph15[guid] = nil
-        morph16[guid] = nil
-        morph17[guid] = intid
-        morph19[guid] = nil
-        morph23[guid] = nil
-        morph29[guid] = nil
-        morph30[guid] = nil
-    elseif chosenFamily == 19 then
-        morph15[guid] = nil
-        morph16[guid] = nil
-        morph17[guid] = nil
-        morph19[guid] = intid
-        morph23[guid] = nil
-        morph29[guid] = nil
-        morph30[guid] = nil
-    elseif chosenFamily == 23 then
-        morph15[guid] = nil
-        morph16[guid] = nil
-        morph17[guid] = nil
-        morph19[guid] = nil
-        morph23[guid] = intid
-        morph29[guid] = nil
-        morph30[guid] = nil
-    elseif chosenFamily == 29 then
-        morph15[guid] = nil
-        morph16[guid] = nil
-        morph17[guid] = nil
-        morph19[guid] = nil
-        morph23[guid] = nil
-        morph29[guid] = intid
-        morph30[guid] = nil
-    elseif chosenFamily == 30 then
-        morph15[guid] = nil
-        morph16[guid] = nil
-        morph17[guid] = nil
-        morph19[guid] = nil
-        morph23[guid] = nil
-        morph29[guid] = nil
-        morph30[guid] = intid
-    end
+    local da = LoadData(player)
+    da.active = da.active or {}
+    da.active[chosenFamily] = intid
+    SaveData(player, da)
     OnPlayerGossipHello(player, player)
 end
 
+local function PetFamily(pet)
+    local family = pet:GetCreatureFamily()
+    if pet:GetName() == "Infernal" then
+        family = 30
+    end
+    return family
+end
+
+local function ApplyPetMorph(pet, playerName)
+    local p = FindPlayerOnMap(playerName)
+    if not p then return end
+    local d = LoadData(p)
+    if not d or not d.active then return end
+    local family = PetFamily(pet)
+    if d.active[family] then
+        pet:SetDisplayId(d.active[family])
+        return true
+    end
+end
+
 local function OnPetAddedToWorld(event, player, pet)
-    local guid = player:GetGUIDLow()
-	local summonedPetFamily = pet:GetCreatureFamily()
-	local petName = pet:GetName()
-	if petName == "Infernal" then
-		summonedPetFamily = 30
-	end
-	
-	if summonedPetFamily == 15 and morph15[guid] then
-		pet:SetDisplayId(morph15[guid])
-	elseif pet:GetCreatureFamily() == 16 and morph16[guid] then
-		pet:SetDisplayId(morph16[guid])
-	elseif pet:GetCreatureFamily() == 17 and morph17[guid] then
-		pet:SetDisplayId(morph17[guid])
-	elseif pet:GetCreatureFamily() == 19 and morph19[guid] then
-		pet:SetDisplayId(morph19[guid])
-	elseif pet:GetCreatureFamily() == 23 and morph23[guid] then
-		pet:SetDisplayId(morph23[guid])
-	elseif pet:GetCreatureFamily() == 29 and morph29[guid] then
-		pet:SetDisplayId(morph29[guid])
-	elseif pet:GetCreatureFamily() == 30 and morph30[guid] then
-		pet:SetDisplayId(morph30[guid])
-	elseif not logincheck[guid] then
-		logincheck[guid] = true
-		pet:RegisterEvent(function(eventId, delay, repeats, pet) -- Circumvents async db delay on login
-			if summonedPetFamily == 15 and morph15[guid] then
-				pet:SetDisplayId(morph15[guid])
-				pet:RemoveEventById(eventId)
-			elseif pet:GetCreatureFamily() == 16 and morph16[guid] then
-				pet:SetDisplayId(morph16[guid])
-				pet:RemoveEventById(eventId)
-			elseif pet:GetCreatureFamily() == 17 and morph17[guid] then
-				pet:SetDisplayId(morph17[guid])
-				pet:RemoveEventById(eventId)
-			elseif pet:GetCreatureFamily() == 19 and morph19[guid] then
-				pet:SetDisplayId(morph19[guid])
-				pet:RemoveEventById(eventId)
-			elseif pet:GetCreatureFamily() == 23 and morph23[guid] then
-				pet:SetDisplayId(morph23[guid])
-				pet:RemoveEventById(eventId)
-			elseif pet:GetCreatureFamily() == 29 and morph29[guid] then
-				pet:SetDisplayId(morph29[guid])
-				pet:RemoveEventById(eventId)
-			elseif pet:GetCreatureFamily() == 30 and morph30[guid] then
-				pet:SetDisplayId(morph30[guid])
-				pet:RemoveEventById(eventId)
-			end
-		end, 20, 4)
-	end
+    local d = PlayerData(player)
+    if d and d.active then
+        local family = PetFamily(pet)
+        if d.active[family] then
+            pet:SetDisplayId(d.active[family])
+            return
+        end
+    end
+    local playerName = player:GetName()
+    pet:RegisterEvent(function(eventId, delay, repeats, p) -- Circumvents async db delay on login
+        if ApplyPetMorph(p, playerName) then
+            p:RemoveEventById(eventId)
+        end
+    end, 20, 4)
 end
 
 local function OnGossipHello(event, player, object)
+    local d = PlayerData(player)
+    if not d or not d.ids then
+        player:SendAreaTriggerMessage("Loading your morphs, try again in a moment.")
+        return
+    end
 	if player:GetClass() == 9 then
 		player:GossipClearMenu()
 		player:GossipMenuAddItem(0, "I hear you're interested in transforming your demon pets' forms...", 0, 1)
@@ -613,6 +600,8 @@ local function OnGossipHello(event, player, object)
 end
 
 local function OnGossipSelect(event, player, object, sender, intid, code)
+    LoadDemonCache()
+    PlayerData(player)
     if intid == 1 then
 
         player:GossipClearMenu()
@@ -654,115 +643,25 @@ local function OnGossipSelect(event, player, object, sender, intid, code)
     end
 end
 
-local function OnReloadEluna(event)
-    local players = GetPlayersInWorld()
-    for _, player in ipairs(players) do
-		if player:HasItem(ITEM_ID) then
-			local guid = player:GetGUIDLow()
-			local name = player:GetName()
-			
-			CharDBQueryAsync("SELECT id, form, active FROM character_morphs WHERE guid = " .. guid, function(result)
-				if result then
-					repeat
-						local morphId = result:GetUInt32(0)
-						local morphForm = result:GetUInt32(1)
-						local isActive = result:GetUInt32(2)
-						if not morphIdCache[guid] then
-							morphIdCache[guid] = {}
-						end
-						table.insert(morphIdCache[guid], morphId)
-
-						morphCount[guid] = (morphCount[guid] or 0) + 1
-						
-						if morphForm == 15 then
-							morph15[guid] = morphId
-						elseif morphForm == 16 then
-							morph16[guid] = morphId
-						elseif morphForm == 17 then
-							morph17[guid] = morphId
-						elseif morphForm == 19 then
-							morph19[guid] = morphId
-						elseif morphForm == 23 then
-							morph23[guid] = morphId
-						elseif morphForm == 29 then
-							morph29[guid] = morphId
-						elseif morphForm == 30 then
-							morph30[guid] = morphId
-						end
-
-					until not result:NextRow()
-				end
-			end)
-		end
-	end
-end
-		
--- Cache player's morphs on login if they have the required item
-local function OnPlayerLogin(event, player)
-    if player:HasItem(ITEM_ID) then
-		local guid = player:GetGUIDLow()
-		local name = player:GetName()
-		
-        CharDBQueryAsync("SELECT id, form, active FROM character_morphs WHERE guid = " .. guid, function(result)
-			player = GetPlayerByName(name)
-			if result then
-				repeat
-					local morphId = result:GetUInt32(0)
-					local morphForm = result:GetUInt32(1)
-					local isActive = result:GetUInt32(2)
-					if not morphIdCache[guid] then
-						morphIdCache[guid] = {}
-					end
-					table.insert(morphIdCache[guid], morphId)
-
-					morphCount[guid] = (morphCount[guid] or 0) + 1
-					
-					if morphForm == 15 then
-						morph15[guid] = morphId
-					elseif morphForm == 16 then
-						morph16[guid] = morphId
-					elseif morphForm == 17 then
-						morph17[guid] = morphId
-					elseif morphForm == 19 then
-						morph19[guid] = morphId
-					elseif morphForm == 23 then
-						morph23[guid] = morphId
-					elseif morphForm == 29 then
-						morph29[guid] = morphId
-					elseif morphForm == 30 then
-						morph30[guid] = morphId
-					end
-
-				until not result:NextRow()
-			end
-		end)
-    end
+-- Map-only: adopt the world-published demon list and lazy-load the player's
+-- morphs when they enter. Async work re-resolves the player by map walk.
+local function OnPlayerEnterMap(event, player)
+    if player:GetClass() ~= 9 then return end
+    if not player:HasItem(ITEM_ID) then return end
+    LoadDemonCache()
+    PlayerData(player)
 end
 
-local function OnPlayerLogout(event, player)
-    local guid = player:GetGUIDLow()
-    demonCache[guid] = nil
-    playerMorphChoice[guid] = nil
-    morphCount[guid] = nil
-	logincheck[guid] = nil
-	morph15[guid] = nil
-	morph16[guid] = nil
-	morph17[guid] = nil
-	morph19[guid] = nil
-	morph23[guid] = nil
-	morph29[guid] = nil
-	morph30[guid] = nil
-	morphIdCache[guid] = nil
+-- World publishes the shared demon list; maps register gameplay events.
+if GetStateMapId() == -1 then -- World stuff
+    CacheCreatures()
+else -- Map stuff
+    RegisterPlayerEvent(7, OnKillCreature)
+    RegisterPlayerEvent(28, OnPlayerEnterMap)
+    RegisterPlayerEvent(43, OnPetAddedToWorld)
+    RegisterItemGossipEvent(ITEM_ID, 1, OnItemGossipHello)
+    RegisterPlayerGossipEvent(99, 1, OnPlayerGossipHello)
+    RegisterPlayerGossipEvent(99, 2, OnItemGossipSelect)
+    RegisterCreatureGossipEvent(NPC_ID, 1, OnGossipHello)
+    RegisterCreatureGossipEvent(NPC_ID, 2, OnGossipSelect)
 end
-
-CacheCreatures()
-RegisterPlayerEvent(3, OnPlayerLogin)
-RegisterPlayerEvent(4, OnPlayerLogout)
-RegisterPlayerEvent(7, OnKillCreature)
-RegisterServerEvent(33, OnReloadEluna)
-RegisterPlayerEvent(43, OnPetAddedToWorld)
-RegisterItemGossipEvent(ITEM_ID, 1, OnItemGossipHello)
-RegisterPlayerGossipEvent(99, 1, OnPlayerGossipHello)
-RegisterPlayerGossipEvent(99, 2, OnItemGossipSelect)
-RegisterCreatureGossipEvent(NPC_ID, 1, OnGossipHello)
-RegisterCreatureGossipEvent(NPC_ID, 2, OnGossipSelect)

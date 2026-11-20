@@ -1,3 +1,6 @@
+-- Quests 12432 and 12437 Riding the Red Rocket - Grizzly Hills Venture Bay.
+if GetStateMapId() ~= 571 then return end
+
 local function OnSpawn(event, creature)
     local player = creature:GetNearestPlayer(15)
     if player then

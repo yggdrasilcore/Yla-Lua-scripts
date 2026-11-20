@@ -1,3 +1,6 @@
+-- Quest 12664 Dark Horizon - Zul'Drak.
+if GetStateMapId() ~= 571 then return end
+
 local NPC_ID = 28666
 local MENU_ID = 9732
 local SPELL_ID = 52194

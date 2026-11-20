@@ -1,3 +1,5 @@
+if GetStateMapId() == -1 then return end
+
 local oachanoaevent
 local oachanoaeventplayer
 local repeatcount
@@ -19,17 +21,26 @@ local function CompletionEvent(player)
             oachanoa:SendUnitYell("Well done, " .. oachanoaeventplayer .. ". Your display of respect is duly noted. Now, I have information for you that you must convey to the Kalu'ak.", 0)
 			
 			oachanoa:RegisterEvent(function(eventId, delay, repeats, oachanoa) --First whisper
-				player = GetPlayerByName(oachanoaeventplayer)
+				player = nil
+				for _, p in ipairs(GetStateMap():GetPlayers()) do
+					if p:GetName() == oachanoaeventplayer then player = p break end
+				end
 				oachanoa:SendUnitWhisper("Simply put, you must tell the tuskarr that they cannot run. If they do so, their spirits will be destroyed by the evil rising within Northrend.", 0, player)
 			end, 10000, 1)
 			
 			oachanoa:RegisterEvent(function(eventId, delay, repeats, oachanoa) --Second whisper
-				player = GetPlayerByName(oachanoaeventplayer)
+				player = nil
+				for _, p in ipairs(GetStateMap():GetPlayers()) do
+					if p:GetName() == oachanoaeventplayer then player = p break end
+				end
 				oachanoa:SendUnitWhisper("Tell the mystic that his people are to stand and fight alongside the Horde and Alliance against the forces of Malygos and the Lich King.", 0, player)
 			end, 20500, 1)
 			
 			oachanoa:RegisterEvent(function(eventId, delay, repeats, oachanoa) --Last whisper
-				player = GetPlayerByName(oachanoaeventplayer)
+				player = nil
+				for _, p in ipairs(GetStateMap():GetPlayers()) do
+					if p:GetName() == oachanoaeventplayer then player = p break end
+				end
 				if player then
 					oachanoa:SendUnitWhisper("Now swim back with the knowledge I have granted you. Do what you can for them, "..player:GetRaceAsString()..".", 0, player)
 					oachanoaevent = nil
@@ -104,7 +115,10 @@ local function PearloftheDepthsUse(event, go, player)
 				oachanoa:SendUnitYell("I will lay a mild compulsion upon you. Jump into the depths before me so that you put yourself into my element and thereby display your submission.", 0)
 			end
 			
-			player = GetPlayerByName(oachanoaeventplayer) -- Retrieving player in new sub-function
+			player = nil
+			for _, p in ipairs(GetStateMap():GetPlayers()) do
+				if p:GetName() == oachanoaeventplayer then player = p break end
+			end
 			
 			if player and go:GetDistance(player) < 80 and player:GetZ() > 50 then -- Verifying player existence and location
 			

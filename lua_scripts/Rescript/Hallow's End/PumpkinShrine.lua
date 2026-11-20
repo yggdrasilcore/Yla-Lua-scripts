@@ -1,3 +1,5 @@
+if GetStateMapId() == -1 then return end
+
 local horsemanTimer = {}
 
 function PumpkinGossip(event, player, gameObject, sender, action)

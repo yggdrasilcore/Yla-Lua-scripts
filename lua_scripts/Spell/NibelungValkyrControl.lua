@@ -1,7 +1,3 @@
--- Makes Nibelung Valkyrs controllable by permanent pet classes (frost mage with glyph, warlock) as they were in retail
--- Written by mostly nick :) for Yggdrasil WoW
-local ValkyrAttack = {}
-local ValkyrFollow = {}
 
 local function NibelungValkyrFix(event, packet, player)
     if not player then
@@ -15,9 +11,9 @@ local function NibelungValkyrFix(event, packet, player)
         local petGuid = packet:ReadGUID()  -- Read the Pet GUID
         local count = packet:ReadUByte()   -- Read the count (uint8)
         if count == 2 then
-            ValkyrAttack[player:GetName()] = os.time()
+            player:Data():Set("ValkyrAttack", os.time())
         elseif count == 1 then
-            ValkyrFollow[player:GetName()] = os.time()
+            player:Data():Set("ValkyrFollow", os.time())
         end
     end
 end
@@ -26,13 +22,26 @@ local function OnValkyrSpawn(event, player, pet)
     if pet:GetEntry() == 38391
     or pet:GetEntry() == 38392
     then
-        name = player:GetName()
+        local name = player:GetName()
         
         pet:RegisterEvent(function(eventId, delay, repeats, pet)
             if pet then
-                local player = GetPlayerByName(name)
-                local attackTime = ValkyrAttack[name] or 0
-                local followTime = ValkyrFollow[name] or 0
+                local player
+                for _, p in ipairs(GetStateMap():GetPlayers()) do
+                    if p:GetName() == name then player = p break end
+                end
+                if not player then
+                    local owner = pet:GetOwner()
+                    if owner and owner:IsPlayer() then
+                        player = owner:ToPlayer()
+                    end
+                end
+                if not player then
+                    RemoveEventById(eventId)
+                    return
+                end
+                local attackTime = player:Data():Get("ValkyrAttack") or 0
+                local followTime = player:Data():Get("ValkyrFollow") or 0
 
                 if attackTime > followTime and attackTime > os.time() - 1.5 then
                     pet:SetReactState(2)

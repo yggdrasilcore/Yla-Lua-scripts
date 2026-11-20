@@ -1,3 +1,6 @@
+-- Northrend-only script (map 571): quest 12973 escorts Brann to Frosthold.
+if GetStateMapId() ~= 571 then return end
+
 local eventActive = false
 
 local function StartDialogueSequence(eventId, delay, repeats, brann)
@@ -71,16 +74,16 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
     currentDelay = currentDelay + 1000
 	
 	magni:RegisterEvent(function(eventId, delay, repeats, creature)
-		if creature:GetData("dialogueProcessed") == 1 then return end
-		creature:SetData("dialogueProcessed", 1)
+		if creature:Data():Get("dialogueProcessed") == 1 then return end
+		creature:Data():Set("dialogueProcessed", 1)
 		creature:SendUnitYell("Look, Lagnus, I consider you a capable man, but my patience is wearing thin. I know that Muradin is here, can you point me to him or not?", 0)
 		creature:SetRooted(false)
 	end, currentDelay, 1)
     currentDelay = currentDelay + 1000
 
 	magni:RegisterEvent(function(eventId, delay, repeats, creature)
-		if creature:GetData("dialogueProcessed2") == 1 then return end
-		creature:SetData("dialogueProcessed2", 1)
+		if creature:Data():Get("dialogueProcessed2") == 1 then return end
+		creature:Data():Set("dialogueProcessed2", 1)
 		creature:SetSpeed(1, 1.6)
 		creature:MoveTo(1, 6696.5, -298.78, 989.33)
     end, currentDelay, 1)
@@ -94,8 +97,8 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
     currentDelay = currentDelay + 11000
 
     magni:RegisterEvent(function(eventId, delay, repeats, creature)
-		if creature:GetData("dialogueProcessed3") == 1 then return end
-		creature:SetData("dialogueProcessed3", 1)
+		if creature:Data():Get("dialogueProcessed3") == 1 then return end
+		creature:Data():Set("dialogueProcessed3", 1)
         creature:SendUnitYell("Brother! There you are! I can barely believe my eyes... you're alive!", 0)
         creature:NearTeleport(creature:GetX(), creature:GetY(), creature:GetZ(), 3.44)
 		
@@ -114,8 +117,8 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
     currentDelay = currentDelay + 6000*0.61
 
     magni:RegisterEvent(function(eventId, delay, repeats, creature)
-		if creature:GetData("dialogueProcessed4") == 1 then return end
-		creature:SetData("dialogueProcessed4", 1)
+		if creature:Data():Get("dialogueProcessed4") == 1 then return end
+		creature:Data():Set("dialogueProcessed4", 1)
         creature:SendUnitSay("It's so good to see you again, Muradin. And what's this I heard about you being a King in your own right now? The Bronzebeards were always destined to greatness.", 0)
     end, currentDelay, 1)
     currentDelay = currentDelay + 7000
@@ -126,8 +129,8 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
     currentDelay = currentDelay + 6000
 
     magni:RegisterEvent(function(eventId, delay, repeats, creature)
-		if creature:GetData("dialogueProcessed5") == 1 then return end
-		creature:SetData("dialogueProcessed5", 1)
+		if creature:Data():Get("dialogueProcessed5") == 1 then return end
+		creature:Data():Set("dialogueProcessed5", 1)
         creature:SendUnitSay("So it seems! And you haven't lost any muscle yourself. Do you remember anything of what happened, Muradin? Fate as turned ill in your absence.", 0)
     end, currentDelay, 1)
     currentDelay = currentDelay + 7000
@@ -146,8 +149,8 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
     currentDelay = currentDelay + 3000
 
     magni:RegisterEvent(function(eventId, delay, repeats, creature)
-		if creature:GetData("dialogueProcessed6") == 1 then return end
-		creature:SetData("dialogueProcessed6", 1)
+		if creature:Data():Get("dialogueProcessed6") == 1 then return end
+		creature:Data():Set("dialogueProcessed6", 1)
         creature:SendUnitSay("He's not the boy of your memories anymore, Muradin. He's become something else entirely.", 0)
     end, currentDelay, 1)
     currentDelay = currentDelay + 7000*0.61
@@ -168,8 +171,8 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
     currentDelay = currentDelay + 7000
 
     magni:RegisterEvent(function(eventId, delay, repeats, creature)
-		if creature:GetData("dialogueProcessed7") == 1 then return end
-		creature:SetData("dialogueProcessed7", 1)
+		if creature:Data():Get("dialogueProcessed7") == 1 then return end
+		creature:Data():Set("dialogueProcessed7", 1)
         creature:SendUnitSay("Are you sure Muradin? I just got you back after years of thinking you were dead. I do not want to lose you again.", 0)
     end, currentDelay, 1)
     currentDelay = currentDelay + 9000*0.61
@@ -180,8 +183,8 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
     currentDelay = currentDelay + 5000*0.61
 
     magni:RegisterEvent(function(eventId, delay, repeats, creature)
-		if creature:GetData("dialogueProcessed8") == 1 then return end
-		creature:SetData("dialogueProcessed8", 1)
+		if creature:Data():Get("dialogueProcessed8") == 1 then return end
+		creature:Data():Set("dialogueProcessed8", 1)
         creature:SendUnitSay("So be it then. I have to return to my people, brothers. Come back to me in one piece.", 0)
     end, currentDelay, 1)
     currentDelay = currentDelay + 7000*0.61
@@ -215,8 +218,8 @@ local function StartDialogueSequence(eventId, delay, repeats, brann)
     currentDelay = currentDelay + 100*0.61
 	
     magni:RegisterEvent(function(eventId, delay, repeats, creature)
-		if creature:GetData("dialogueProcessed9") == 1 then return end
-		creature:SetData("dialogueProcessed9", 1)
+		if creature:Data():Get("dialogueProcessed9") == 1 then return end
+		creature:Data():Set("dialogueProcessed9", 1)
 		creature:SetSpeed(1, 0.4)
         creature:MoveTo(1,6733,-285,990)
     end, currentDelay, 1)

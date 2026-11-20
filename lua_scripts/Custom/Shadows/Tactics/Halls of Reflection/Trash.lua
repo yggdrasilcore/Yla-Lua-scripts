@@ -1,10 +1,11 @@
+if GetStateMapId() ~= 668 then return end
+
 local function TargetPriorityTrash(event, player, _)
     if not (player:GetMapId() == 668) then return end
     
     player:RegisterEvent(function(e,d,r, player)
-        local group = player:GetGroup() 
-        if not group then return end
-        
+        if not player:IsInGroup() then return end
+
         local prioTarget
         
         local priorityIds = {38175, 38172, 38177, 38173, 38176}
@@ -44,9 +45,9 @@ local function TargetPriorityTrash(event, player, _)
         end
             
         if prioTarget then
-            if prioTarget:GetData("SkullSet") then return end
-            prioTarget:SetData("SkullSet", true)
-            group:SetTargetIcon(7, prioTarget:GetGUID(), player:GetGUID())
+            -- No map-side latch: dedupe lives world-side (per icon+target
+            -- with expiry), so a lost message never blocks a retry.
+            SetTargetIconDeferred(player, 7, prioTarget)
         end
     end, 500, 1)
 end

@@ -1,3 +1,5 @@
+if GetStateMapId() ~= -1 then return end
+
 local message1 = "|cff00ccff Welcome to Yggdrasil! Please join our Discord server to stay updated. https://discord.gg/PCcCWFBdTQ"
 local message2 = "|cff00ccff Remember to ask Twiggy if you have questions about Yggdrasil and the server's features."
 local message3 = "|cff00ccff We reward social media, streaming and other content about Yggdrasil with Community Tokens, exchangable for VIP and vanity items! Check in with Twiggy or Discord to learn more."

@@ -1,3 +1,6 @@
+-- Northrend-only script (map 571): quest 11590 Abduction (Beryl Point, Borean Tundra).
+if GetStateMapId() ~= 571 then return end
+
 local CREATURE_ENTRY = 25316
 local CONVERTED_NPC_ID = 25474
 local SPELL_ID = 45611

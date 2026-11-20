@@ -26,7 +26,37 @@ Item link icon to Are You sure text
 Forked by mostly nick :) to include UI, saving, applying and deleting sets, hiding items, and support for certain new weapon combinations.
 ]]
 
-local itemIconCache = require("itemIconCache")
+local SLOT_ICONS = {
+    ["Head"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Head",
+    ["Shoulders"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Shoulder",
+    ["Shirt"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Shirt",
+    ["Chest"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Chest",
+    ["Waist"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Waist",
+    ["Legs"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Legs",
+    ["Feet"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Feet",
+    ["Wrists"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Wrists",
+    ["Hands"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Hands",
+    ["Back"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Chest",
+    ["Main hand"] = "Interface/PaperDoll/UI-PaperDoll-Slot-MainHand",
+    ["Off hand"] = "Interface/PaperDoll/UI-PaperDoll-Slot-SecondaryHand",
+    ["Ranged"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Ranged",
+    ["Tabard"] = "Interface/PaperDoll/UI-PaperDoll-Slot-Tabard",
+}
+-- Login (3) runs globally, map change (28) / equip (29) / gossip run in map
+-- states. The mog caches are populated per state by the login/map-change
+-- handler each state sees; the packet repair handler below reads live DB data.
+
+-- Item GUIDs are 48-bit counters. Eluna's GetUInt64 returns a 64-bit userdata;
+-- convert it to a Lua number (exact up to 2^53) and always serialize it as an
+-- integer so the SQL never loses precision or uses scientific notation.
+local function ToGuidNumber(value)
+    if type(value) == "number" then return value end
+    return tonumber(tostring(value)) or 0
+end
+
+local function GuidToString(value)
+    return string.format("%.0f", ToGuidNumber(value))
+end
 
 ---------------------------------------------------------------------------------
 -- Transmog item vendor vars
@@ -229,15 +259,80 @@ end
 --[[
 typedef UNORDERED_MAP<uint32, uint32> transmogData
 typedef UNORDERED_MAP<uint32, transmogData> transmogMap
-static transmogMap entryMap -- entryMap[pGUID][iGUID] = entry
-static transmogData dataMap -- dataMap[iGUID] = pGUID
+Per-player mappings now live in player:Data() ("TransmogEntries"/"TransmogData").
 ]]
-local entryMap = {}
-local dataMap = {}
+-- Per-player transmog mappings live in player:Data() (reload-proof, per-player,
+-- destroyed on logout) instead of file-local guid-keyed tables that bled
+-- between players and broke across states/reloads. The item-vendor ItemCache
+-- below stays shared via WorldData.
+local function GetTransmogEntries(player)
+    if not player then
+        return nil
+    end
+    local v = player:Data():Get("TransmogEntries")
+    if v ~= nil and type(v) == "table" and v.AsTable then
+        return v:AsTable()
+    end
+    if type(v) == "table" then
+        return v
+    end
+    return nil
+end
+
+-- State-aware re-resolve for async CharDBQueryAsync callbacks: map states
+-- only see their own map players, so GetPlayerByName is world-only.
+local function ResolveTransmogPlayer(name)
+    if not name then
+        return nil
+    end
+    if GetStateMapId() == -1 then
+        return GetPlayerByName(name)
+    end
+    for _, pl in pairs(GetStateMap():GetPlayers()) do
+        if pl:GetName() == name then
+            return pl
+        end
+    end
+end
+
+local function SetTransmogEntries(player, t)
+    if player then
+        player:Data():Set("TransmogEntries", t)
+    end
+end
+
+local function GetTransmogData(player)
+    if not player then
+        return nil
+    end
+    local v = player:Data():Get("TransmogData")
+    if v ~= nil and type(v) == "table" and v.AsTable then
+        return v:AsTable()
+    end
+    if type(v) == "table" then
+        return v
+    end
+    return nil
+end
+
+local function SetTransmogData(player, t)
+    if player then
+        player:Data():Set("TransmogData", t)
+    end
+end
 
 local function GetSlotName(slot, locale)
     if not SlotNames[slot] then return end
     return locale and SlotNames[slot][locale+1] or SlotNames[slot][1]
+end
+
+local function GetItemIcon(entry)
+    local itemTemplate = GetItemTemplate(entry)
+    local icon = itemTemplate and itemTemplate:GetIcon()
+    if icon and icon ~= "" then
+        return "Interface/ICONS/" .. icon
+    end
+    return "Interface/ICONS/INV_Misc_QuestionMark"
 end
 
 local function GetFakePrice(item)
@@ -259,21 +354,36 @@ end
 
 local function GetFakeEntry(item)
     local guid = item and item:GetGUIDLow()
-    if guid and dataMap[guid] then
-        if entryMap[dataMap[guid]] then
-            return entryMap[dataMap[guid]][guid]
+    if not guid then
+        return
+    end
+    local owner = item:GetOwner()
+    if not owner then
+        return
+    end
+    local data = GetTransmogData(owner)
+    if data and data[guid] then
+        local entries = GetTransmogEntries(owner)
+        if entries then
+            return entries[guid]
         end
     end
 end
 
-local function DeleteFakeFromDB(itemGUID)
-    if dataMap[itemGUID] then
-        if entryMap[dataMap[itemGUID]] then
-            entryMap[dataMap[itemGUID]][itemGUID] = nil
+local function DeleteFakeFromDB(itemGUID, player)
+    if player then
+        local entries = GetTransmogEntries(player)
+        if entries then
+            entries[itemGUID] = nil
+            SetTransmogEntries(player, entries)
         end
-        dataMap[itemGUID] = nil
+        local data = GetTransmogData(player)
+        if data then
+            data[itemGUID] = nil
+            SetTransmogData(player, data)
+        end
     end
-    CharDBExecute("DELETE FROM custom_transmogrification WHERE GUID = "..itemGUID)
+    CharDBExecute("DELETE FROM ycore_yla.custom_transmogrification WHERE GUID = " .. GuidToString(itemGUID))
 end
 
 local function DeleteFakeEntry(item)
@@ -281,7 +391,7 @@ local function DeleteFakeEntry(item)
         return false
     end
     item:GetOwner():UpdateUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (item:GetSlot() * ITEM_SLOT_MULTIPLIER), item:GetEntry())
-    DeleteFakeFromDB(item:GetGUIDLow())
+    DeleteFakeFromDB(item:GetGUIDLow(), item:GetOwner())
     return true
 end
 
@@ -291,12 +401,13 @@ local function SetFakeEntry(item, entry)
         local pGUID = player:GetGUIDLow()
         local iGUID = item:GetGUIDLow()
         player:UpdateUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (item:GetSlot() * ITEM_SLOT_MULTIPLIER), entry)
-        if not entryMap[pGUID] then
-            entryMap[pGUID] = {}
-        end
-        entryMap[pGUID][iGUID] = entry
-        dataMap[iGUID] = pGUID
-        CharDBExecute("REPLACE INTO custom_transmogrification (GUID, FakeEntry, Owner) VALUES ("..iGUID..", "..entry..", "..pGUID..")")
+        local entries = GetTransmogEntries(player) or {}
+        entries[iGUID] = entry
+        SetTransmogEntries(player, entries)
+        local data = GetTransmogData(player) or {}
+        data[iGUID] = pGUID
+        SetTransmogData(player, data)
+        CharDBExecute("REPLACE INTO ycore_yla.custom_transmogrification (GUID, FakeEntry, Owner) VALUES (" .. GuidToString(iGUID) .. ", " .. entry .. ", " .. pGUID .. ")")
     end
 end
 
@@ -440,7 +551,6 @@ end
     
 local function OnGossipHello(event, player, creature)
     player:GossipClearMenu()
-    local guidlow = player:GetGUIDLow()
     player:GossipMenuAddItem(4, "|TInterface/ICONS/INV_Misc_Book_11:31:31:-24:0|t" .. LocText(20, player), HOW, 0)
     for slot = EQUIPMENT_SLOT_START, EQUIPMENT_SLOT_END-1 do
         local transmogrified = player:GetItemByPos(INVENTORY_SLOT_BAG_0, slot)  
@@ -449,16 +559,17 @@ local function OnGossipHello(event, player, creature)
                 local slotName = GetSlotName(slot, player:GetDbcLocale())
                 if slotName then
                     local entry = transmogrified and GetFakeEntry(transmogrified) or 0
-                    if entryMap[guidlow][transmogrified:GetEntry()] then
-                        entry = entryMap[guidlow][transmogrified:GetEntry()]
+                    local mogEntries = GetTransmogEntries(player)
+                    if mogEntries and mogEntries[transmogrified:GetEntry()] then
+                        entry = mogEntries[transmogrified:GetEntry()]
                     end
                     local icon
                     if entry == 21 or entry == 1 then
                         icon = "Interface/ICONS/INV_Misc_QuestionMark"
                     elseif entry > 21 then
-                        icon = "Interface/ICONS/" .. itemIconCache[entry] or "Interface/ICONS/INV_Misc_QuestionMark"  -- Use a default icon if not found in cache
+                        icon = GetItemIcon(entry)
                     else
-                        icon = itemIconCache[slotName] or "Interface/ICONS/INV_Misc_QuestionMark"
+                        icon = SLOT_ICONS[slotName] or "Interface/ICONS/INV_Misc_QuestionMark"
                     end
                     
                     player:GossipMenuAddItem(3, "|T" .. icon .. ":31:31:-24:0|t".. slotName, EQUIPMENT_SLOT_END, slot)
@@ -487,9 +598,9 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
         local guidlow = player:GetGUIDLow()
         sets[guidlow] = {}
         
-        CharDBQueryAsync("SELECT PresetID, SetName, SetData FROM custom_transmogrification_sets WHERE Owner = " .. guidlow, -- Asyncing query as a hybrid between performance and load as I'm too lazy to create a dynamic cache
+        CharDBQueryAsync("SELECT PresetID, SetName, SetData FROM ycore_yla.custom_transmogrification_sets WHERE Owner = " .. guidlow, -- Asyncing query as a hybrid between performance and load as I'm too lazy to create a dynamic cache
             function(result)
-                local player = GetPlayerByName(playername) -- Refetching current player object
+                local player = ResolveTransmogPlayer(playername) -- Refetching current player object
                 if result then
                     local index = 1
                     repeat
@@ -544,12 +655,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
                     if num and num > 24 then
                         setspresent = true
                         local itemId = num
-                        local icon
-                        if itemId and itemIconCache[itemId] then
-                            icon = "Interface/ICONS/" .. itemIconCache[itemId]
-                        else
-                            icon = "Interface/ICONS/INV_Misc_QuestionMark"
-                        end
+                        local icon = GetItemIcon(itemId)
                         player:GossipMenuAddItem(4, "|T" .. icon .. ":31:31:-24:0|t" .. GetItemLink(itemId), PRESETS + 2, 0)
                     end
                 end
@@ -570,7 +676,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
         local presetID = uiAction
         local guidlow = player:GetGUIDLow()
         if presetID then
-            CharDBExecute("DELETE FROM custom_transmogrification_sets WHERE Owner = " .. guidlow .. " AND PresetID = " .. presetID)
+            CharDBExecute("DELETE FROM ycore_yla.custom_transmogrification_sets WHERE Owner = " .. guidlow .. " AND PresetID = " .. presetID)
         end
         OnGossipHello(event, player, creature)
     
@@ -617,7 +723,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
                             if entry == 1 or entry == 21 then
                                 icon = "Interface/ICONS/INV_Misc_QuestionMark"
                             else
-                                icon = "Interface/ICONS/" .. itemIconCache[entry] or "Interface/ICONS/INV_Misc_QuestionMark"
+                                icon = GetItemIcon(entry)
                             end
                             cost = cost + GetSpecialPrice(transmogrified)
                             local itemId = transmogrified:GetEntry()
@@ -638,9 +744,9 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
         local guid = player:GetGUIDLow()
         local playername = player:GetName()
         
-        CharDBQueryAsync("SELECT MAX(PresetID) as PresetID FROM custom_transmogrification_sets WHERE Owner = " .. guid,
+        CharDBQueryAsync("SELECT MAX(PresetID) as PresetID FROM ycore_yla.custom_transmogrification_sets WHERE Owner = " .. guid,
             function(query)
-                local player = GetPlayerByName(playername)
+                local player = ResolveTransmogPlayer(playername)
                 local presetID = 1
                 if query then
                     local row = query:GetRow()
@@ -666,7 +772,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
                 end
                 
                 CharDBExecute(string.format(
-                    "INSERT INTO `custom_transmogrification_sets` (`Owner`, `PresetID`, `SetName`, `SetData`) VALUES (%d, %d, '%s', '%s')",
+                    "INSERT INTO ycore_yla.custom_transmogrification_sets (`Owner`, `PresetID`, `SetName`, `SetData`) VALUES (%d, %d, '%s', '%s')",
                     guid,
                     presetID,
                     name,
@@ -686,12 +792,13 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
         local iGUID = transmogrified:GetGUIDLow()
         local entry = 21
         player:UpdateUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * ITEM_SLOT_MULTIPLIER), 1)
-        if not entryMap[pGUID] then
-            entryMap[pGUID] = {}
-        end
-        entryMap[pGUID][iGUID] = entry
-        dataMap[iGUID] = pGUID
-        CharDBExecute("REPLACE INTO custom_transmogrification (GUID, FakeEntry, Owner) VALUES ("..iGUID..", 21, "..pGUID..")")
+        local hideEntries = GetTransmogEntries(player) or {}
+        hideEntries[iGUID] = entry
+        SetTransmogEntries(player, hideEntries)
+        local hideData = GetTransmogData(player) or {}
+        hideData[iGUID] = pGUID
+        SetTransmogData(player, hideData)
+        CharDBExecute("REPLACE INTO ycore_yla.custom_transmogrification (GUID, FakeEntry, Owner) VALUES (" .. GuidToString(iGUID) .. ", 21, " .. pGUID .. ")")
 
         player:EmoteState(66)
         player:RegisterEvent(function(eventId, delay, repeats, player) -- Hack to fix non-updating item display IDs
@@ -723,7 +830,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
                     if SuitableForTransmogrification(player, transmogrified, transmogrifier) then
                         if not _items[lowGUID][display] then
                             itemId = transmogrifier:GetEntry()
-                            icon = "Interface/ICONS/" .. itemIconCache[itemId] or "Interface/ICONS/INV_Misc_QuestionMark" 
+                            icon = GetItemIcon(itemId)
                             limit = limit + 1
                             _items[lowGUID][display] = {transmogrifier:GetBagSlot(), transmogrifier:GetSlot()}
                             local popup = LocText(4, player).."\n |T" .. icon .. ":31:31:-24:-10|t".. transmogrifier:GetName(player:GetDbcLocale()).." \n \n \n"
@@ -749,7 +856,7 @@ local function OnGossipSelect(event, player, creature, slotid, uiAction, code)
                             if SuitableForTransmogrification(player, transmogrified, transmogrifier) then
                                 if not _items[lowGUID][display] then
                                     itemId = transmogrifier:GetEntry()
-                                    icon = "Interface/ICONS/" .. itemIconCache[itemId] or "Interface/ICONS/INV_Misc_QuestionMark" 
+                                    icon = GetItemIcon(itemId)
                                     limit = limit + 1
                                     _items[lowGUID][display] = {transmogrifier:GetBagSlot(), transmogrifier:GetSlot()}
                                     local popup = LocText(4, player).."\n |T" .. icon .. ":31:31:-24:-10|t".. transmogrifier:GetName(player:GetDbcLocale()).." \n \n \n"
@@ -864,56 +971,93 @@ local function OnLogin(event, player)
     end
     local playername = player:GetName()
     applyMogOnMapChange[playerGUID] = nil
-    
-    entryMap[playerGUID] = {}
-    CharDBQueryAsync("SELECT GUID, FakeEntry FROM custom_transmogrification WHERE Owner = "..playerGUID, function(result)
-        local player = GetPlayerByName(playername)
+
+    SetTransmogEntries(player, {})
+    SetTransmogData(player, {})
+    CharDBQueryAsync("SELECT GUID, FakeEntry FROM ycore_yla.custom_transmogrification WHERE Owner = "..playerGUID, function(result)
+        local player = ResolveTransmogPlayer(playername)
+        if not player then
+            applyMogOnMapChange[playerGUID] = true
+            return
+        end
+        local entries = {}
+        local data = {}
         if result then
             repeat
-                local itemGUID = result:GetUInt32(0)
+                local itemGUID = ToGuidNumber(result:GetUInt64(0))
                 local fakeEntry = result:GetUInt32(1)
-                dataMap[itemGUID] = playerGUID
-                entryMap[playerGUID][itemGUID] = fakeEntry
+                data[itemGUID] = playerGUID
+                entries[itemGUID] = fakeEntry
             until not result:NextRow()
 
             for slot = EQUIPMENT_SLOT_START, EQUIPMENT_SLOT_END-1 do
-                if not player then
-                    applyMogOnMapChange[playerGUID] = true
-                    return
-                end
                 local item = player:GetItemByPos(INVENTORY_SLOT_BAG_0, slot)
                 if item then
-                    if entryMap[playerGUID] then
-                        if entryMap[playerGUID][item:GetGUIDLow()] then
-                            player:SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (item:GetSlot() * ITEM_SLOT_MULTIPLIER), entryMap[playerGUID][item:GetGUIDLow()])
-                        end
+                    local fentry = entries[item:GetGUIDLow()]
+                    if fentry then
+                        player:SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (item:GetSlot() * ITEM_SLOT_MULTIPLIER), fentry)
                     end
                 end
             end
         end
+        SetTransmogEntries(player, entries)
+        SetTransmogData(player, data)
     end)
 end
 
 local function OnLogout(event, player)
-    local pGUID = player:GetGUIDLow()
-    entryMap[pGUID] = nil
+    -- Transmog mappings live in player:Data() and are destroyed on logout.
+    applyMogOnMapChange[player:GetGUIDLow()] = nil
 end
 
 local function OnEquip(event, player, item, bag, slot)
     local fentry = GetFakeEntry(item)
     if fentry then
         if item:GetOwnerGUID() ~= player:GetGUID() then
-            DeleteFakeFromDB(item:GetGUIDLow())
+            DeleteFakeFromDB(item:GetGUIDLow(), player)
             return
         end
         player:SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * ITEM_SLOT_MULTIPLIER), fentry)
     end
 end
 
-if PrepareDBTable then
-    CharDBQuery([[CREATE TABLE IF NOT EXISTS `custom_transmogrification` (`GUID` INT(10) UNSIGNED NOT NULL, `FakeEntry` INT(10) UNSIGNED NOT NULL, `Owner` INT(10) UNSIGNED NOT NULL, PRIMARY KEY (`GUID`));]])
-    CharDBQuery("DELETE FROM custom_transmogrification WHERE NOT EXISTS (SELECT 1 FROM item_instance WHERE item_instance.guid = custom_transmogrification.GUID)")
+if PrepareDBTable and GetStateMapId() == -1 then
+    CharDBQuery([[CREATE TABLE IF NOT EXISTS ycore_yla.custom_transmogrification (`GUID` BIGINT UNSIGNED NOT NULL, `FakeEntry` INT(10) UNSIGNED NOT NULL, `Owner` INT(10) UNSIGNED NOT NULL, PRIMARY KEY (`GUID`));]])
+    -- Existing installs may still have the old 32-bit GUID column.
+    CharDBQuery("ALTER TABLE ycore_yla.custom_transmogrification MODIFY `GUID` BIGINT UNSIGNED NOT NULL")
+    CharDBQuery("DELETE FROM ycore_yla.custom_transmogrification WHERE NOT EXISTS (SELECT 1 FROM item_instance WHERE item_instance.guid = custom_transmogrification.GUID)")
 end
+
+
+---------------------------------------------------------------------------------
+-- Transmog item vendor events
+---------------------------------------------------------------------------------
+
+local function AdoptTransmogItemCache()
+    local shared = GetWorldData("TransmogItemCache")
+    if type(shared) == "table" and shared.AsTable then
+        shared = shared:AsTable()
+    end
+    if type(shared) ~= "table" or type(shared.cache) ~= "table" then
+        return false
+    end
+    ItemCache["Cache"] = shared.cache
+    return true
+end
+
+local function LoadItemCache()
+    if ItemCache["Cache"] and next(ItemCache["Cache"]) then
+        return ItemCache["Cache"]
+    end
+    if AdoptTransmogItemCache() then
+        return ItemCache["Cache"]
+    end
+end
+
+---------------------------------------------------------------------------------
+-- Transmog item vendor events end
+---------------------------------------------------------------------------------
+
 
 ---------------------------------------------------------------------------------
 -- Transmog item vendor script start
@@ -959,6 +1103,7 @@ function ItemCache.LoadCache()
 			return a.name < b.name
 		end)
 		baseRows = nil
+		SetWorldData("TransmogItemCache", {cache = ItemCache["Cache"]})
 	end
 
 	local function collectIds(result)
@@ -1115,7 +1260,7 @@ function ItemCache.GenerateSearchMenu(player, object, currentPage)
     for i = low, high do
         local item = results[i]
         if item then
-            player:GossipMenuAddItem(4, "|TInterface/ICONS/" .. itemIconCache[item.entry] .. ":31:31:-24:0|t" .. item.name, 0, 2000000 + item.entry)
+            player:GossipMenuAddItem(4, "|T" .. GetItemIcon(item.entry) .. ":31:31:-24:0|t" .. item.name, 0, 2000000 + item.entry)
         end
     end
 	
@@ -1184,7 +1329,7 @@ function DisplayArmorItems(player, object, items, currentIntid)
 		for i = startIndex, endIndex do
 			local item = items[i]
 			if item and item.name and item.entry then
-				player:GossipMenuAddItem(1, "|TInterface/ICONS/" .. itemIconCache[item.entry] .. ":31:31:-24:0|t" .. item.name, 0, 2000000 + item.entry)
+				player:GossipMenuAddItem(1, "|T" .. GetItemIcon(item.entry) .. ":31:31:-24:0|t" .. item.name, 0, 2000000 + item.entry)
 			end
 		end
 		-- Add pagination options
@@ -1217,7 +1362,7 @@ function DisplaySlotItems(player, object, items, currentIntid)
 		for i = startIndex, endIndex do
 			local item = items[i]
 			if item and item.name and item.entry then
-				player:GossipMenuAddItem(1, "|TInterface/ICONS/" .. itemIconCache[item.entry] .. ":31:31:-24:0|t" .. item.name, 0, 2000000 + item.entry)
+				player:GossipMenuAddItem(1, "|T" .. GetItemIcon(item.entry) .. ":31:31:-24:0|t" .. item.name, 0, 2000000 + item.entry)
 			end
 		end
 		if page > 1 then
@@ -1246,6 +1391,10 @@ local function MogVendorHello(event, player, object)
 end
 
 local function MogVendorSelect(event, player, object, sender, intid, code)
+	if not LoadItemCache() then
+		player:SendAreaTriggerMessage("Loading vendor items, try again in a moment.")
+		return
+	end
 	if intid == 0 then
 		return MogVendorHello(event, player, object)
 	
@@ -1269,7 +1418,7 @@ local function MogVendorSelect(event, player, object, sender, intid, code)
 		for i = startIndex, endIndex do
 			local item = results[i]
 			if item then
-				player:GossipMenuAddItem(1, "|TInterface/ICONS/" .. itemIconCache[item.entry] .. ":31:31:-24:0|t" .. item.name, 0, 2000000 + item.entry)
+				player:GossipMenuAddItem(1, "|T" .. GetItemIcon(item.entry) .. ":31:31:-24:0|t" .. item.name, 0, 2000000 + item.entry)
 			end
 		end
 		
@@ -1462,7 +1611,7 @@ local function MogVendorSelect(event, player, object, sender, intid, code)
 			itemCost = math.max(itemCost, 100)
 		end
 		
-		player:GossipMenuAddItem(0, "|TInterface/ICONS/" .. itemIconCache[itemId] .. ":31:31:-24:0|tInspect " .. itemLink .. "\n \nClick here to receive an inspect link. \n \n ", 0, 7000000 + itemId)
+		player:GossipMenuAddItem(0, "|T" .. GetItemIcon(itemId) .. ":31:31:-24:0|tInspect " .. itemLink .. "\n \nClick here to receive an inspect link. \n \n ", 0, 7000000 + itemId)
 			
 		if level == 0 then
 			local reqLevel = math.ceil(itemLevel / 2.5)
@@ -1476,7 +1625,7 @@ local function MogVendorSelect(event, player, object, sender, intid, code)
 		
 		if PlayerHasEnoughCurrency(player, itemCost) then
 			if PlayerHasEnoughFreeSlots(player, 1) then
-				player:GossipMenuAddItem(0, "|TInterface/ICONS/" .. itemIconCache[itemId] .. ":31:31:-24:0|tBuy " .. itemLink .. "?\n \nClick here to buy the item.\nPrice:  " .. itemCost .. " "..CURRENCY_NAME.."\n \n ", 0, 8000000 + itemId)
+				player:GossipMenuAddItem(0, "|T" .. GetItemIcon(itemId) .. ":31:31:-24:0|tBuy " .. itemLink .. "?\n \nClick here to buy the item.\nPrice:  " .. itemCost .. " "..CURRENCY_NAME.."\n \n ", 0, 8000000 + itemId)
 			else
 				player:SendAreaTriggerMessage("Your bags are full!")
 				player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_bag_19:31:31:-24:0|tNot enough bag space!\n \nYou don't have enough bag space to buy " .. itemLink .. ". \n \n ", 0, 0)
@@ -1515,7 +1664,7 @@ local function MogVendorSelect(event, player, object, sender, intid, code)
 			itemCost = math.max(itemCost, 100)
 		end
 		
-		player:GossipMenuAddItem(0, "|TInterface/ICONS/" .. itemIconCache[itemId] .. ":31:31:-24:0|tInspect " .. itemLink .. "\n \nClick here to receive an inspect link. \n \n ", 0, 7000000 + itemId)
+		player:GossipMenuAddItem(0, "|T" .. GetItemIcon(itemId) .. ":31:31:-24:0|tInspect " .. itemLink .. "\n \nClick here to receive an inspect link. \n \n ", 0, 7000000 + itemId)
 		
 		if level == 0 then
 			local reqLevel = math.ceil(itemLevel / 2.5)
@@ -1529,7 +1678,7 @@ local function MogVendorSelect(event, player, object, sender, intid, code)
 		
 		if PlayerHasEnoughCurrency(player, itemCost) then
 			if PlayerHasEnoughFreeSlots(player, 1) then
-				player:GossipMenuAddItem(0, "|TInterface/ICONS/" .. itemIconCache[itemId] .. ":31:31:-24:0|tBuy " .. itemLink .. "?\n \nClick here to buy the item.\nPrice:  " .. itemCost .. " "..CURRENCY_NAME.."\n \n ", 0, 8000000 + itemId)
+				player:GossipMenuAddItem(0, "|T" .. GetItemIcon(itemId) .. ":31:31:-24:0|tBuy " .. itemLink .. "?\n \nClick here to buy the item.\nPrice:  " .. itemCost .. " "..CURRENCY_NAME.."\n \n ", 0, 8000000 + itemId)
 			else
 				player:GossipMenuAddItem(0, "|TInterface/ICONS/inv_misc_bag_19:31:31:-24:0|tNot enough bag space!\n \nYou don't have enough bag space to buy " .. itemLink .. ". \n \n ", 0, 0)
 				player:SendAreaTriggerMessage("Your bags are full!")
@@ -1544,55 +1693,59 @@ local function MogVendorSelect(event, player, object, sender, intid, code)
 end
 
 ---------------------------------------------------------------------------------
--- Transmog item vendor events
----------------------------------------------------------------------------------
-
-ItemCache.LoadCache()
-
-RegisterCreatureGossipEvent(TRANSMOG_VENDOR_NPC_ID, 1, MogVendorHello)
-RegisterCreatureGossipEvent(TRANSMOG_VENDOR_NPC_ID, 2, MogVendorSelect)
-
----------------------------------------------------------------------------------
--- Transmog item vendor events end
----------------------------------------------------------------------------------
-
-
----------------------------------------------------------------------------------
 -- Transmogrify items event registrations
 ---------------------------------------------------------------------------------
 
 local function OnRepair(event, packet, player)
-    for slot = EQUIPMENT_SLOT_START, EQUIPMENT_SLOT_END-1 do
-        local item = player:GetItemByPos(INVENTORY_SLOT_BAG_0, slot)
-        if item then
-            local fentry = GetFakeEntry(item)
-            if fentry then
-                local origentry = item:GetEntry()
-                local slot = item:GetSlot()
-                player:SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * ITEM_SLOT_MULTIPLIER), item:GetEntry())
-                player:RegisterEvent(function(eventId, delay, repeats, player)
-                    if player then
-                        player:SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * ITEM_SLOT_MULTIPLIER), fentry)
-                    end
-                end, 100, 1)
+    local playerName = player:GetName()
+    local repairOwner = player:GetGUIDLow()
+    CharDBQueryAsync("SELECT GUID, FakeEntry FROM ycore_yla.custom_transmogrification WHERE Owner = " .. repairOwner, function(result)
+        local player = ResolveTransmogPlayer(playerName)
+        if not player then
+            return
+        end
+        local liveEntries = {}
+        if result then
+            repeat
+                liveEntries[ToGuidNumber(result:GetUInt64(0))] = result:GetUInt32(1)
+            until not result:NextRow()
+        end
+        for slot = EQUIPMENT_SLOT_START, EQUIPMENT_SLOT_END-1 do
+            local item = player:GetItemByPos(INVENTORY_SLOT_BAG_0, slot)
+            if item then
+                local fentry = liveEntries[item:GetGUIDLow()]
+                if fentry then
+                    local origentry = item:GetEntry()
+                    local slot = item:GetSlot()
+                    player:SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * ITEM_SLOT_MULTIPLIER), item:GetEntry())
+                    player:RegisterEvent(function(eventId, delay, repeats, player)
+                        if player then
+                            player:SetUInt32Value(PLAYER_VISIBLE_ITEM_1_ENTRYID + (slot * ITEM_SLOT_MULTIPLIER), fentry)
+                        end
+                    end, 100, 1)
+                end
             end
         end
-    end
+    end)
 end
 
-RegisterPlayerEvent(3, OnLogin)
-RegisterPlayerEvent(28, OnLogin) -- On map change, in case player zones into expired/invalid instance
-RegisterPlayerEvent(4, OnLogout)
-RegisterPlayerEvent(29, OnEquip)
-RegisterPacketEvent(0x2A8, 5, OnRepair)
-
-RegisterCreatureGossipEvent(NPC_Entry, 1, OnGossipHello)
-RegisterCreatureGossipEvent(NPC_Entry, 2, OnGossipSelect)
-
-local plrs = GetPlayersInWorld() -- Equivalent of ELUNA reload
-if plrs then
-    for k, player in ipairs(plrs) do
-        OnLogin(k, player)
+if GetStateMapId() == -1 then -- World stuff
+    ItemCache.LoadCache()
+    RegisterPlayerEvent(3, OnLogin)
+    for _, _p in ipairs(GetPlayersInWorld() or {}) do -- Catch-up for already-online players (server start or reload).
+        OnLogin(3, _p)
+    end
+else -- Map stuff
+    RegisterPlayerEvent(28, OnLogin) -- On map change, in case player zones into expired/invalid instance
+    RegisterPlayerEvent(4, OnLogout)
+    RegisterPlayerEvent(29, OnEquip)
+    RegisterPacketEvent(0x2A8, 5, OnRepair)
+    RegisterCreatureGossipEvent(NPC_Entry, 1, OnGossipHello)
+    RegisterCreatureGossipEvent(NPC_Entry, 2, OnGossipSelect)
+    RegisterCreatureGossipEvent(TRANSMOG_VENDOR_NPC_ID, 1, MogVendorHello)
+    RegisterCreatureGossipEvent(TRANSMOG_VENDOR_NPC_ID, 2, MogVendorSelect)
+    for _, _p in ipairs(GetStateMap() and GetStateMap():GetPlayers() or {}) do -- Catch-up for already-online players (server start or reload).
+        OnLogin(3, _p)
     end
 end
 

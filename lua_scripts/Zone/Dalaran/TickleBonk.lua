@@ -1,3 +1,6 @@
+-- Dalaran-only map script: the sweep, spawn and NPC timers all run in the
+-- map state that owns the players. No world-state lookups needed.
+if GetStateMapId() ~= 571 then return end
 local EVENT_INTERVAL_MIN = 10 * 60 * 1000 -- 10 minutes in milliseconds
 local EVENT_INTERVAL_MAX = 20 * 60 * 1000 -- 20 minutes in milliseconds
 local SPAWN_NPC_ID = 32838
@@ -31,7 +34,7 @@ end
 local function NormalBonkTime(eventId, delay, repeats)
     -- Get all players in the world
     local targetplayer
-    local players = GetPlayersInWorld()
+    local players = GetStateMap():GetPlayers()
     local eligiblePlayers = {}
 
     -- Find eligible players in Dalaran with Z > 640
@@ -57,7 +60,10 @@ local function NormalBonkTime(eventId, delay, repeats)
             npc:SetSpeed(1, 0.4)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
-                chosenPlayer = GetPlayerByName(targetplayer)
+                chosenPlayer = nil
+                for _, _p in ipairs(GetStateMap():GetPlayers()) do
+                    if _p:GetName() == targetplayer then chosenPlayer = _p break end
+                end
                 if chosenPlayer then
                     npc:MoveFollow(chosenPlayer, 0.2, 2.8)
                     if chosenPlayer:IsMounted() then
@@ -69,7 +75,10 @@ local function NormalBonkTime(eventId, delay, repeats)
             end, 10000, 1)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
-                chosenPlayer = GetPlayerByName(targetplayer)
+                chosenPlayer = nil
+                for _, _p in ipairs(GetStateMap():GetPlayers()) do
+                    if _p:GetName() == targetplayer then chosenPlayer = _p break end
+                end
                 if chosenPlayer then
                     npc:SetRooted(true)
                     npc:SendUnitEmote("Minigob Manabonk tickles ".. chosenPlayer:GetName()..".")
@@ -78,7 +87,10 @@ local function NormalBonkTime(eventId, delay, repeats)
             end, 12000, 1)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
-                chosenPlayer = GetPlayerByName(targetplayer)
+                chosenPlayer = nil
+                for _, _p in ipairs(GetStateMap():GetPlayers()) do
+                    if _p:GetName() == targetplayer then chosenPlayer = _p break end
+                end
                 if chosenPlayer then
                     npc:EmoteState(11) -- laugh
                     npc:SetFaction(1194)
@@ -86,7 +98,10 @@ local function NormalBonkTime(eventId, delay, repeats)
             end, 12500, 1)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
-                chosenPlayer = GetPlayerByName(targetplayer)
+                chosenPlayer = nil
+                for _, _p in ipairs(GetStateMap():GetPlayers()) do
+                    if _p:GetName() == targetplayer then chosenPlayer = _p break end
+                end
                 if chosenPlayer then
                     npc:SetRooted(false)
                     npc:SetSpeed(0, 2)
@@ -120,7 +135,7 @@ local function BonkTime(eventId, delay, repeats)
         return
     end
 
-    local players = GetPlayersInWorld()
+    local players = GetStateMap():GetPlayers()
     local eligiblePlayers = {}
     
     for _, player in pairs(players) do
@@ -144,7 +159,10 @@ local function BonkTime(eventId, delay, repeats)
             npc:SetSpeed(1, 0.4)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
-                chosenPlayer = GetPlayerByName(targetplayer)
+                chosenPlayer = nil
+                for _, _p in ipairs(GetStateMap():GetPlayers()) do
+                    if _p:GetName() == targetplayer then chosenPlayer = _p break end
+                end
                 if chosenPlayer then
                     npc:MoveFollow(chosenPlayer, 0.2, 2.8)
                     if chosenPlayer:IsMounted() then
@@ -156,7 +174,10 @@ local function BonkTime(eventId, delay, repeats)
             end, 10000, 1)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
-                chosenPlayer = GetPlayerByName(targetplayer)
+                chosenPlayer = nil
+                for _, _p in ipairs(GetStateMap():GetPlayers()) do
+                    if _p:GetName() == targetplayer then chosenPlayer = _p break end
+                end
                 if chosenPlayer then
                     npc:SetRooted(true)
                     npc:SendUnitSay("Trick or treat!", 0)
@@ -164,7 +185,10 @@ local function BonkTime(eventId, delay, repeats)
             end, 12000, 1)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
-                chosenPlayer = GetPlayerByName(targetplayer)
+                chosenPlayer = nil
+                for _, _p in ipairs(GetStateMap():GetPlayers()) do
+                    if _p:GetName() == targetplayer then chosenPlayer = _p break end
+                end
                 if chosenPlayer then
                     npc:EmoteState(11)
                     npc:SetFaction(679)
@@ -172,7 +196,10 @@ local function BonkTime(eventId, delay, repeats)
             end, 12500, 1)
             
             npc:RegisterEvent(function(eventId, delay, repeats, npc)
-                chosenPlayer = GetPlayerByName(targetplayer)
+                chosenPlayer = nil
+                for _, _p in ipairs(GetStateMap():GetPlayers()) do
+                    if _p:GetName() == targetplayer then chosenPlayer = _p break end
+                end
                 if chosenPlayer then
                     npc:SetRooted(false)
                     npc:SetSpeed(0, 2)
@@ -230,7 +257,7 @@ local function OnLeaveCombat(event, creature, target)
     creature:RemoveEvents()
 end
 
--- Initial event setup
+-- Initial event setup: one sweep per Dalaran map state, re-arms itself.
 local initialDelay = math.random(EVENT_INTERVAL_MIN, EVENT_INTERVAL_MAX)
 CreateLuaEvent(BonkTime, initialDelay, 1)
 RegisterCreatureEvent(SPAWN_NPC_ID, 1, OnEnterCombat)

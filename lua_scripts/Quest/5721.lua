@@ -1,3 +1,6 @@
+-- Eastern Plaguelands-only script (map 0): quest 5721 The Battle of Darrowshire.
+if GetStateMapId() ~= 0 then return end
+
 -- RP addition for https://github.com/TrinityCore/TrinityCore/issues/14172
 -- Made by mostly nick :)
 

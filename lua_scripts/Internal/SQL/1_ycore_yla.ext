@@ -1,0 +1,28 @@
+if GetStateMapId() == -1 then
+    CharDBQuery("CREATE DATABASE IF NOT EXISTS ycore_yla")
+    CharDBQuery("CREATE TABLE IF NOT EXISTS ycore_yla.updates (`name` varchar(255) NOT NULL, `run` int unsigned NOT NULL, PRIMARY KEY (`name`))")
+end
+
+function YcoreYlaUpdate(name, fn)
+    if GetStateMapId() ~= -1 then return end
+
+    if CharDBQuery("SELECT 1 FROM ycore_yla.updates WHERE name = '" .. name .. "' LIMIT 1") then
+        print("[ycore_yla] Skipping " .. name)
+        return
+    end
+
+    print("[ycore_yla] Running " .. name)
+    fn()
+
+    local run = os.time()
+    CharDBQueryAsync("INSERT INTO ycore_yla.updates (name, run) VALUES ('" .. name .. "', " .. run .. ")", function()
+        CharDBQueryAsync("SELECT run FROM ycore_yla.updates WHERE name = '" .. name .. "' LIMIT 1", function(result)
+            if result and result:GetUInt32(0) == run then
+                print("[ycore_yla] Applied " .. name)
+                RunCommand(".server restart 5")
+            else
+                print("[ycore_yla] ERROR: " .. name .. " was not inserted into ycore_yla.updates")
+            end
+        end)
+    end)
+end

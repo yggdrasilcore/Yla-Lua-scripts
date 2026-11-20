@@ -1,13 +1,5 @@
--- Brewfest event: Shadows throw beer samples at Dark Iron Guzzlers (23709)
--- Improvements:
---  * Max 2 shadows per guzzler, tracked via guzzler:SetData("ShadowAssignees", {[botGuidLow]=os.time()})
---    Stale claims (> CLAIM_TIMEOUT_SEC) are pruned, so if guzzler still alive a new shadow can claim it.
---  * Auto-trigger via CreateLuaEvent that only starts shadows inside 00-05 and 30-35 minute windows
---    while game event 24 (Brewfest) is active. Manual item (33096) trigger kept as fallback.
-
 local GUZZLER_ENTRY = 23709
 local BEER_GO_ENTRY = 186189
-local BREWFEST_EVENT_ID = 24
 local THROW_SPELL_ID = 42436
 local ITEM_ENTRY = 33096
 
@@ -17,16 +9,18 @@ local SEARCH_RANGE = 100
 local THROW_RANGE = 17
 local MELEE_PICKUP_RANGE = 5
 local LOOP_DELAY_MS = 250
-local LOOP_REPEATS = 1200 -- 250ms x 1200 = 5 minutes
+local LOOP_REPEATS = 1200
 local BEER_REFETCH_SEC = 60
 local THROW_COOLDOWN_SEC = 3
+local guzzlerEventStarted = {}
 
--- ---------------------------------------------------------------------------
--- Per-guzzler claim helpers (stored on the guzzler itself via SetData + os.time)
--- ---------------------------------------------------------------------------
+local function IsInBrewfestAmbushWindow()
+    local secsPastHour = GetGameTime() % 3600
+    return secsPastHour <= (5 * 60) or (secsPastHour >= 1800 and secsPastHour <= 2100)
+end
 
 local function GetClaimTable(guzzler)
-    local t = guzzler:GetData("ShadowAssignees")
+    local t = guzzler:Data():Get("ShadowAssignees")
     if type(t) ~= "table" then
         t = {}
     end
@@ -46,8 +40,8 @@ local function PruneClaims(guzzler, now)
         end
     end
     if changed then
-        guzzler:SetData("ShadowAssignees", claims)
-        guzzler:SetData("ShadowClaimTime", now) -- store os.time the setdata was saved, per requirement
+        guzzler:Data():Set("ShadowAssignees", claims)
+        guzzler:Data():Set("ShadowClaimTime", now)
     end
     return claims, count
 end
@@ -60,18 +54,17 @@ local function TryClaimGuzzler(guzzler, bot)
     local claims, count = PruneClaims(guzzler, now)
     local botGuid = bot:GetGUIDLow()
     if claims[botGuid] then
-        -- Refresh own claim so it does not expire while actively fighting
         claims[botGuid] = now
-        guzzler:SetData("ShadowAssignees", claims)
-        guzzler:SetData("ShadowClaimTime", now)
+        guzzler:Data():Set("ShadowAssignees", claims)
+        guzzler:Data():Set("ShadowClaimTime", now)
         return true
     end
     if count >= MAX_SHADOWS_PER_GUZZLER then
-        return false -- already 2 fresh shadows on it
+        return false
     end
     claims[botGuid] = now
-    guzzler:SetData("ShadowAssignees", claims)
-    guzzler:SetData("ShadowClaimTime", now)
+    guzzler:Data():Set("ShadowAssignees", claims)
+    guzzler:Data():Set("ShadowClaimTime", now)
     return true
 end
 
@@ -79,7 +72,7 @@ local function ReleaseGuzzler(guzzler, bot)
     if not guzzler then
         return
     end
-    local ok, claims = pcall(function() return guzzler:GetData("ShadowAssignees") end)
+    local ok, claims = pcall(function() return guzzler:Data():Get("ShadowAssignees") end)
     if not ok or type(claims) ~= "table" then
         return
     end
@@ -87,13 +80,12 @@ local function ReleaseGuzzler(guzzler, bot)
     if claims[botGuid] then
         claims[botGuid] = nil
         pcall(function()
-            guzzler:SetData("ShadowAssignees", claims)
-            guzzler:SetData("ShadowClaimTime", os.time())
+            guzzler:Data():Set("ShadowAssignees", claims)
+            guzzler:Data():Set("ShadowClaimTime", os.time())
         end)
     end
 end
 
--- Release this bot's stale claim from every guzzler in range except the one we keep.
 local function ReleaseFromOtherGuzzlers(bot, keepGuzzler)
     local keepGuid = keepGuzzler and keepGuzzler:GetGUIDLow() or nil
     local others = bot:GetCreaturesInRange(SEARCH_RANGE, GUZZLER_ENTRY, 0, 1) or {}
@@ -104,11 +96,9 @@ local function ReleaseFromOtherGuzzlers(bot, keepGuzzler)
     end
 end
 
--- Prefer closest claimable guzzler. Returns claimed creature or nil.
 local function FindClaimableGuzzler(bot)
     local guzzlers = bot:GetCreaturesInRange(SEARCH_RANGE, GUZZLER_ENTRY, 0, 1) or {}
     if #guzzlers == 0 then
-        -- Fallback for cores where GetCreaturesInRange hostile/dead filter behaves differently
         local nearest = bot:GetNearestCreature(SEARCH_RANGE, GUZZLER_ENTRY)
         if nearest and nearest:IsAlive() then
             guzzlers = { nearest }
@@ -124,13 +114,12 @@ local function FindClaimableGuzzler(bot)
             return g
         end
     end
-    return nil -- all nearby guzzlers already have 2 fresh shadows on them
+    return nil
 end
 
 local function CleanupShadow(bot, eventId)
-    local claimedGuid = bot:GetData("ClaimedGuzzlerGUID")
+    local claimedGuid = bot:Data():Get("ClaimedGuzzlerGUID")
     if claimedGuid then
-        -- Best effort: release if still in range, otherwise it expires after CLAIM_TIMEOUT_SEC anyway
         local guzzlers = bot:GetCreaturesInRange(SEARCH_RANGE, GUZZLER_ENTRY, 0, 0) or {}
         for _, g in ipairs(guzzlers) do
             if g:GetGUIDLow() == claimedGuid then
@@ -138,9 +127,9 @@ local function CleanupShadow(bot, eventId)
                 break
             end
         end
-        bot:SetData("ClaimedGuzzlerGUID", nil)
+        bot:Data():Set("ClaimedGuzzlerGUID", nil)
     end
-    bot:SetData("GuzzlerEventStarted", false)
+    guzzlerEventStarted[bot:GetGUIDLow()] = nil
     if eventId then
         bot:RemoveEventById(eventId)
     end
@@ -150,15 +139,15 @@ local function TryStartShadowLoop(bot)
     if not bot or not bot:IsBot() then
         return false
     end
-    if bot:GetData("GuzzlerEventStarted") then
+    if guzzlerEventStarted[bot:GetGUIDLow()] then
         return false
     end
     if bot:IsDead() then
         return false
     end
-    bot:SetData("GuzzlerEventStarted", true)
-    bot:SetData("ClaimedGuzzlerGUID", nil)
-    bot:RegisterEvent(ShadowsFightGuzzlersLoop, LOOP_DELAY_MS, LOOP_REPEATS) -- Repeat for 5 minutes
+    guzzlerEventStarted[bot:GetGUIDLow()] = true
+    bot:Data():Set("ClaimedGuzzlerGUID", nil)
+    bot:RegisterEvent(ShadowsFightGuzzlersLoop, LOOP_DELAY_MS, LOOP_REPEATS)
     return true
 end
 
@@ -174,43 +163,41 @@ function ShadowsFightGuzzlersLoop(event, delays, repeats, player)
         CleanupShadow(player, nil)
         return
     else
-        player:SetData("GuzzlerEventStarted", true)
+        guzzlerEventStarted[player:GetGUIDLow()] = true
     end
 
-    -- Claim (max 2 per guzzler, stale claims >3s pruned inside TryClaimGuzzler)
-    -- Always run full 5 min: if no claimable guzzler, idle this tick and retry next tick.
     local guzzler = FindClaimableGuzzler(player)
     if not guzzler then
         return
     end
 
-    player:SetData("ClaimedGuzzlerGUID", guzzler:GetGUIDLow())
+    player:Data():Set("ClaimedGuzzlerGUID", guzzler:GetGUIDLow())
     ReleaseFromOtherGuzzlers(player, guzzler)
 
-    local fetchedBeer = player:GetData("FetchedBeer")
+    local fetchedBeer = player:Data():Get("FetchedBeer")
     if not fetchedBeer then fetchedBeer = 0 end
 
-    if (fetchedBeer + BEER_REFETCH_SEC < os.time()) then -- Get a beer sample if we don't have one
+    if (fetchedBeer + BEER_REFETCH_SEC < os.time()) then
         local nearestBeer = player:GetNearestGameObject(SEARCH_RANGE, BEER_GO_ENTRY)
         if not nearestBeer then
-            player:SetData("FetchedBeer", os.time()) -- Failover to ensure shadows can participate in event
+            player:Data():Set("FetchedBeer", os.time())
         elseif player:GetExactDistance(nearestBeer) >= MELEE_PICKUP_RANGE then
             player:MoveTo(9999, nearestBeer:GetX(), nearestBeer:GetY(), nearestBeer:GetZ(), true)
         elseif player:GetExactDistance(nearestBeer) < MELEE_PICKUP_RANGE then
-            player:MoveStop() -- Simulate picked-up beer
-            player:SetData("FetchedBeer", os.time())
+            player:MoveStop()
+            player:Data():Set("FetchedBeer", os.time())
         end
-    elseif player:GetExactDistance(guzzler) > THROW_RANGE then -- Too far from claimed guzzler? Move to it
+    elseif player:GetExactDistance(guzzler) > THROW_RANGE then
         player:MoveTo(9999, guzzler:GetX(), guzzler:GetY(), guzzler:GetZ(), true)
     elseif player:GetExactDistance(guzzler) <= THROW_RANGE and not player:IsWithinLoS(guzzler) then
         player:MoveTo(9999, guzzler:GetX(), guzzler:GetY(), guzzler:GetZ(), true)
     elseif player:GetExactDistance(guzzler) <= THROW_RANGE and player:IsWithinLoS(guzzler) then
         player:MoveStop()
         player:SetFacingToObject(guzzler)
-        local lastBrewfestSampleDrink = player:GetData("LastBrewfestSampleDrink")
+        local lastBrewfestSampleDrink = player:Data():Get("LastBrewfestSampleDrink")
         if not lastBrewfestSampleDrink or (lastBrewfestSampleDrink + THROW_COOLDOWN_SEC < os.time()) then
-            player:SetData("LastBrewfestSampleDrink", os.time())
-            player:CastSpell(guzzler, THROW_SPELL_ID, false) -- Kill guzzler if near and within LoS
+            player:Data():Set("LastBrewfestSampleDrink", os.time())
+            player:CastSpell(guzzler, THROW_SPELL_ID, false)
         end
     end
 end
@@ -218,66 +205,17 @@ end
 local function ShadowsFightGuzzlers(event, player, item, target)
     if player:IsBot() then return end
 
+    if not IsInBrewfestAmbushWindow() then return end
+
     if not player:GetNearestCreature(SEARCH_RANGE, GUZZLER_ENTRY) then return end
 
     for _, bot in ipairs(player:GetPlayersInRange(SEARCH_RANGE)) do
-        if bot:IsBot() and not bot:GetData("GuzzlerEventStarted") then
+        if bot:IsBot() and not guzzlerEventStarted[bot:GetGUIDLow()] then
             TryStartShadowLoop(bot)
         end
     end
 end
 
-RegisterItemEvent(ITEM_ENTRY, 2, ShadowsFightGuzzlers)
-
--- ---------------------------------------------------------------------------
--- Timed auto-trigger: only during Brewfest ambush windows (:00-:05 and :30-:35)
--- ---------------------------------------------------------------------------
-
-local function IsInBrewfestAmbushWindow()
-    -- GetGameTime() returns unix seconds. % 3600 => seconds past the hour, TZ-independent.
-    -- 0-300s = :00-:05, 1800-2100s = :30-:35
-    local secsPastHour = GetGameTime() % 3600
-    return secsPastHour <= (5 * 60) or (secsPastHour >= 1800 and secsPastHour <= 2100)
+if GetStateMapId() == 0 or GetStateMapId() == 1 then
+    RegisterItemEvent(ITEM_ENTRY, 2, ShadowsFightGuzzlers)
 end
-
-local granularEventId = nil
-
-local function BrewfestAutoTrigger(eventId, delay, repeats)
-    if not IsGameEventActive(BREWFEST_EVENT_ID) then
-        return
-    end
-    if not IsInBrewfestAmbushWindow() then
-        return -- only trigger shadows during :00-:05 and :30-:35, per Brewfest Dark Iron schedule
-    end
-
-    local started = 0
-    for _, p in ipairs(GetPlayersInWorld()) do
-        if p and p:IsBot() and not p:GetData("GuzzlerEventStarted") and not p:IsDead() then
-            -- GetNearestCreature is cheaper than GetCreaturesInRange, use as pre-filter
-            if p:GetNearestCreature(SEARCH_RANGE, GUZZLER_ENTRY) then
-                if TryStartShadowLoop(p) then
-                    started = started + 1
-                    if started >= 20 then
-                        break -- throttle: max 20 new shadows per minute-tick to avoid lag spikes
-                    end
-                end
-            end
-        end
-    end
-end
-
-local function BrewfestScheduler()
-    if IsGameEventActive(BREWFEST_EVENT_ID) then
-        if not granularEventId then
-            granularEventId = CreateLuaEvent(BrewfestAutoTrigger, 60 * 1000, 0)
-            BrewfestAutoTrigger()
-        end
-    elseif granularEventId then
-        RemoveEventById(granularEventId)
-        granularEventId = nil
-    end
-end
-
--- Coarse poll: every 15 min check if Brewfest is active, then arm per-minute window checks.
-CreateLuaEvent(BrewfestScheduler, 15 * 60 * 1000, 0)
-BrewfestScheduler() -- initial check at load so we don't wait 15 min after restart/reload
