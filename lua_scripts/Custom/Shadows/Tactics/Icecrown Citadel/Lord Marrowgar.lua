@@ -35,7 +35,7 @@ local SUPPRESS_MS              = 900000
 -- ============================================================
 
 local function GetColdflames(marrowgar)
-    return marrowgar:GetCreaturesInRange(200, COLDFLAME_ENTRY) or {}
+    return marrowgar:GetCreaturesInRange(200, COLDFLAME_ENTRY)
 end
 
 local function InColdflame(px, py, coldflames, bossX, bossY)
@@ -274,7 +274,7 @@ local function MarrowgarHandleTanks(marrowgar, botTanks)
 
     local victim = marrowgar:GetVictim()
 
-    if victim and victim:IsPlayer() and not isPlayerBot[victim:GetName()] then
+    if victim and victim:IsPlayer() and not victim:IsBot() then
         if not IsAtPos(victim, tankPos[1], tankPos[2], 5) then
             local vx, vy, vz = victim:GetLocation()
             for _, tank in ipairs(botTanks) do
@@ -322,8 +322,8 @@ local function MarrowgarHandleNonTanks(marrowgar, botHealers, botDPS, botTanks, 
     local bx, by, bz  = marrowgar:GetLocation()
     local orientation = marrowgar:GetO()
 
-    local tankAnchorX = #botTanks > 0 and botTanks[1]:GetX() or tankPos[1]
-    local tankAnchorY = #botTanks > 0 and botTanks[1]:GetY() or tankPos[2]
+    local tankAnchorX = botTanks[1]:GetX()
+    local tankAnchorY = botTanks[1]:GetY()
 
     local spike = GetNearestBoneSpike(marrowgar)
 
@@ -389,7 +389,7 @@ local function MarrowgarLoop(eventId, delay, repeats, marrowgar)
     local bots       = {}
 
     for _, player in ipairs(allPlayers) do
-        if player:IsAlive() and player:IsInCombat() and isPlayerBot[player:GetName()] then
+        if player:IsAlive() and player:IsInCombat() and player:IsBot() then
             table.insert(bots, player)
         end
     end
@@ -401,7 +401,7 @@ local function MarrowgarLoop(eventId, delay, repeats, marrowgar)
 
     for _, bot in ipairs(bots) do
         local shadow = bot:ToShadow()
-        if shadow and not shadow:IsMovementSuppressed() then
+        if not shadow:IsMovementSuppressed() then
             shadow:SuppressMovement(SUPPRESS_MS)
         end
     end
@@ -455,7 +455,7 @@ RegisterCreatureEvent(MARROWGAR_ENTRY, 1, MarrowgarOnEnterCombat)
 
 local function MarrowgarOnLeaveCombat(event, marrowgar)
     local map = marrowgar:GetMap()
-    for _, player in ipairs(map and map:GetPlayers() or {}) do
+    for _, player in ipairs(map:GetPlayers()) do
         local shadow = player:ToShadow()
         if shadow then
             shadow:ClearMovementSuppression()
