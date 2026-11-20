@@ -2,7 +2,7 @@ if GetStateMapId() ~= -1 then return end
 
 if not (GetRealmID() == 1) then return end -- Only on prod
 
-local DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1271259248697020416/d06Mm8lDRGspWsVpAwU1p2ZgJNlDWinTLdnOZqE7krNPLV6R9bjWM8jL5Kif0X6tQlmo"
+local WebhookConfig = require("Internal/WebhookConfig")
 
 local function SanitizeForJSON(str)
     -- Replace any non-printable or control characters with spaces
@@ -27,7 +27,7 @@ end
 local function SendToDiscord(message)
     message = SanitizeForJSON(message)
     local payload = '{"content": "' .. message .. '"}'
-    HttpRequest("POST", DISCORD_WEBHOOK_URL, payload, "application/json", function(status, body, headers)
+    HttpRequest("POST", WebhookConfig.ticket, payload, "application/json", function(status, body, headers)
         if status == 204 then
             print("Message successfully sent to Discord!")
         else

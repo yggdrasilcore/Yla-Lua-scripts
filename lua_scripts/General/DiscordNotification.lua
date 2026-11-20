@@ -1,4 +1,5 @@
-DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1250058781799481407/oBiVwgFyrHiNPgNfISKKXIT1rHGMZ30I8ofXvUZp7dVE6MDwVR92xToo1UVs8nE2o-Ug"
+local WebhookConfig = require("Internal/WebhookConfig")
+
 local lastSent = 0
 
 function SendToDiscord(message)
@@ -13,7 +14,7 @@ function SendToDiscord(message)
     lastSent = now
 
     local payload = '{"content": "' .. message .. '"}'
-    HttpRequest("POST", DISCORD_WEBHOOK_URL, payload, "application/json", function(status, body, headers)
+    HttpRequest("POST", WebhookConfig.notification, payload, "application/json", function(status, body, headers)
         if status == 204 then
             print("Message successfully sent to Discord!")
         else
