@@ -456,7 +456,7 @@ end
 RegisterCreatureEvent(MARROWGAR_ENTRY, 1, MarrowgarOnEnterCombat)
 
 local function MarrowgarOnLeaveCombat(event, marrowgar)
-    for _, player in ipairs(marrowgar:GetPlayersInRange(100)) do
+    for _, player in ipairs(marrowgar:GetPlayersInRange(200)) do
         local shadow = player:ToShadow()
         if shadow then
             shadow:ClearMovementSuppression()
