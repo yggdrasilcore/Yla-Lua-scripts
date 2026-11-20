@@ -26,8 +26,7 @@ local CANNON_COOLDOWN          = 1
 -- Trash, misc.
 local KORKRON_ENTRIES          = { 36957, 36960 }
 local SKYBREAKERS_ENTRIES      = { 36950, 36961 }
-local KORKRON_RANGED_ENTRIES   = { 36982, 36968 } -- Kor'kron Rocketeer, Kor'kron Axethrower
-local SKYBREAKER_RANGED_ENTRIES = { 36978, 36969 } -- Skybreaker Mortar Soldier, Skybreaker Rifleman
+local RANGED_TARGET_ENTRIES    = { 36982, 36968 } -- Kor'kron Rocketeer, Kor'kron Axethrower
 local CANNON_TARGET_ENTRIES    = {
     36982, -- Kor'kron Rocketeer
     36978, -- Skybreaker Mortar Soldier
@@ -563,7 +562,7 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
         -- DPS
 
         if not mage then
-            HandleDpsTarget(player, SKYBREAKERS_ENTRIES, SKYBREAKER_RANGED_ENTRIES, HORDE_SHIP_EDGE_Y, HORDE_SHIP_EDGE_Z)
+            HandleDpsTarget(player, SKYBREAKERS_ENTRIES, RANGED_TARGET_ENTRIES, HORDE_SHIP_EDGE_Y, HORDE_SHIP_EDGE_Z)
         else
             SetBotTarget(player, nil)
         end
@@ -820,7 +819,7 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
     else -- DPS stuff
 
         if not mage then
-            HandleDpsTarget(player, KORKRON_ENTRIES, KORKRON_RANGED_ENTRIES, ALLY_SKYBREAKER_WALK_LIMIT, ALLY_SHIP_EDGE_Z)
+            HandleDpsTarget(player, KORKRON_ENTRIES, RANGED_TARGET_ENTRIES, ALLY_SKYBREAKER_WALK_LIMIT, ALLY_SHIP_EDGE_Z)
         else
             SetBotTarget(player, nil)
         end
