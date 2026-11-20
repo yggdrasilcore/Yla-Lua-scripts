@@ -273,36 +273,19 @@ local function HandleCannonEntry(player)
     return true
 end
 
-local function FindNearestTarget(player, entries)
-    local best, bestDist
-    for _, entry in ipairs(entries) do
-        for _, creature in ipairs(player:GetCreaturesInRange(200, entry, 1, 1)) do
-            local dist = player:GetDistance(creature)
-            if not best or dist < bestDist then
-                best, bestDist = creature, dist
-            end
-        end
-    end
-    return best
-end
-
-local function SetBotTarget(player, target)
-    local guid = target and target:GetGUIDLow() or 0
-    if guid == 0 and (player:Data():Get("GunshipTarget") or 0) == 0 then return end
-    player:Data():Set("GunshipTarget", guid)
-    player:ToShadow():SetTarget(target)
-end
-
 local function HandleDpsTarget(player, boarderEntries, rangedEntries, edgeY, edgeZ)
-    if player:HasCasterSpec() then
-        local target = FindNearestTarget(player, rangedEntries)
-        SetBotTarget(player, target)
-        if target and player:GetTransport() ~= target:GetTransport()
-            and not IsAtPos(player, player:GetX(), edgeY, 2) then
+    local isCaster = player:HasCasterSpec()
+    local entries = isCaster and rangedEntries or boarderEntries
+    local target = player:GetNearestCreature(200, entries[1], 1, 1)
+        or player:GetNearestCreature(200, entries[2], 1, 1)
+    player:ToShadow():SetTarget(target)
+    if not target then return end
+    if isCaster then
+        if player:GetDistance(target) > 35 and not IsAtPos(player, player:GetX(), edgeY, 2) then
             MoveImmediately(player, player:GetX(), edgeY, edgeZ)
         end
-    else
-        SetBotTarget(player, FindNearestTarget(player, boarderEntries))
+    elseif player:GetDistance(target) > 5 then
+        MoveImmediately(player, target:GetX(), target:GetY(), target:GetZ())
     end
 end
 
@@ -398,9 +381,14 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
 
     -- Off tank: stay on Ogrim at HORDE_OGRIM_TANK_POS, cycle threat on Skybreaker boarders
     if IsTank(player) and offTank and offTank == player then
-        SetBotTarget(player, FindNearestTarget(player, SKYBREAKERS_ENTRIES))
+        local boarder = player:GetNearestCreature(200, SKYBREAKERS_ENTRIES[1], 1, 1) or player:GetNearestCreature(200, SKYBREAKERS_ENTRIES[2], 1, 1)
+        player:ToShadow():SetTarget(boarder)
         local tx, ty = HORDE_OGRIM_TANK_POS[1], HORDE_OGRIM_TANK_POS[2]
-        if IsAtPos(player, tx, ty, 2) then
+        if boarder then
+            if player:GetDistance(boarder) > 5 then
+                MoveImmediately(player, boarder:GetX(), boarder:GetY(), boarder:GetZ())
+            end
+        elseif IsAtPos(player, tx, ty, 2) then
             AddRootAura(player, 2000)
         else
             MoveImmediately(player, tx, ty, HORDE_OGRIM_TANK_POS[3])
@@ -484,11 +472,11 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
     if IsTank(player) and mainTank and mainTank == player then
         ApplyDamageReductionStacks(player, (20 + player:GetDifficulty()*15), 30000)
         if not mage then
-            SetBotTarget(player, FindNearestTarget(player, SKYBREAKERS_ENTRIES))
+            player:ToShadow():SetTarget(player:GetNearestCreature(200, SKYBREAKERS_ENTRIES[1], 1, 1) or player:GetNearestCreature(200, SKYBREAKERS_ENTRIES[2], 1, 1))
         elseif muradin and py > HORDE_SKYBREAKER_Y_LIMIT then
-            SetBotTarget(player, muradin)
+            player:ToShadow():SetTarget(muradin)
         else
-            SetBotTarget(player, nil)
+            player:ToShadow():SetTarget(nil)
         end
 
         -- anyForward check: tank should not jump back if DPS are still on Skybreaker
@@ -563,8 +551,13 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
 
         if not mage then
             HandleDpsTarget(player, SKYBREAKERS_ENTRIES, RANGED_TARGET_ENTRIES, HORDE_SHIP_EDGE_Y, HORDE_SHIP_EDGE_Z)
+        elseif player:GetTransport() == mage:GetTransport() then
+            player:ToShadow():SetTarget(mage)
+            if player:GetDistance(mage) > (player:HasCasterSpec() and 35 or 5) then
+                MoveImmediately(player, mage:GetX(), mage:GetY(), mage:GetZ())
+            end
         else
-            SetBotTarget(player, nil)
+            player:ToShadow():SetTarget(nil)
         end
 
         -- Save bots from falling through Skybreaker deck
@@ -675,10 +668,15 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
 
     -- Off tank stuff
     if IsTank(player) and offTank and offTank == player then
-        SetBotTarget(player, FindNearestTarget(player, KORKRON_ENTRIES))
+        local boarder = player:GetNearestCreature(200, KORKRON_ENTRIES[1], 1, 1) or player:GetNearestCreature(200, KORKRON_ENTRIES[2], 1, 1)
+        player:ToShadow():SetTarget(boarder)
         local tx, ty = ALLY_SKYBREAKER_START_POS.x, ALLY_SKYBREAKER_START_POS.y + 5
         if player:GetSelection() then player:SetFacingToObject(player:GetSelection()) end
-        if IsAtPos(player, tx, ty, 2) then
+        if boarder then
+            if player:GetDistance(boarder) > 5 then
+                MoveImmediately(player, boarder:GetX(), boarder:GetY(), boarder:GetZ())
+            end
+        elseif IsAtPos(player, tx, ty, 2) then
             AddRootAura(player, 2000)
         else
             MoveImmediately(player, tx, ty, GetCorrectedZ(tx, ty) or pz)
@@ -747,11 +745,11 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
     if IsTank(player) and mainTank and mainTank == player then
         ApplyDamageReductionStacks(player, (20 + player:GetDifficulty()*15), 30000)
         if not mage then
-            SetBotTarget(player, FindNearestTarget(player, KORKRON_ENTRIES))
+            player:ToShadow():SetTarget(player:GetNearestCreature(200, KORKRON_ENTRIES[1], 1, 1) or player:GetNearestCreature(200, KORKRON_ENTRIES[2], 1, 1))
         elseif saurfang and py < ALLY_OGRIM_Y_LIMIT then
-            SetBotTarget(player, saurfang)
+            player:ToShadow():SetTarget(saurfang)
         else
-            SetBotTarget(player, nil)
+            player:ToShadow():SetTarget(nil)
         end
         if py < ALLY_OGRIM_Y_LIMIT then
             if not player:HasAura(ORGRIMS_HAMMER_DECK_AURA) then
@@ -820,8 +818,13 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
 
         if not mage then
             HandleDpsTarget(player, KORKRON_ENTRIES, RANGED_TARGET_ENTRIES, ALLY_SKYBREAKER_WALK_LIMIT, ALLY_SHIP_EDGE_Z)
+        elseif player:GetTransport() == mage:GetTransport() then
+            player:ToShadow():SetTarget(mage)
+            if player:GetDistance(mage) > (player:HasCasterSpec() and 35 or 5) then
+                MoveImmediately(player, mage:GetX(), mage:GetY(), mage:GetZ())
+            end
         else
-            SetBotTarget(player, nil)
+            player:ToShadow():SetTarget(nil)
         end
 
         -- Save bots from falling through Ogrim's Hammer
