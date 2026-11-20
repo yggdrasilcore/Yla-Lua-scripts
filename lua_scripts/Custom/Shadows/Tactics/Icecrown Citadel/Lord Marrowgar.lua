@@ -167,20 +167,16 @@ end
 
 local function MarrowgarMarkBoneSpike(marrowgar, allPlayers)
     local spike = GetNearestBoneSpike(marrowgar)
-    if not spike then
-        marrowgar:SetData("MarkedSpikeGUID", nil)
-        return
-    end
+    if not spike then return end
 
     local spikeGUID = spike:GetGUID()
-    if marrowgar:GetData("MarkedSpikeGUID") == spikeGUID then return end
 
     for _, player in ipairs(allPlayers) do
         if player:IsAlive() then
             local group = player:GetGroup()
             if group then
+                if group:GetTargetIcon(7) == spikeGUID then return end
                 group:SetTargetIcon(7, spikeGUID, player:GetGUID())
-                marrowgar:SetData("MarkedSpikeGUID", spikeGUID)
                 return
             end
         end
@@ -443,7 +439,6 @@ local function MarrowgarOnEnterCombat(event, marrowgar, target)
         if player:GetDifficulty() > 1 then ApplyHiddenBuffsToShadows(player) end
     end
 
-    marrowgar:SetData("MarkedSpikeGUID", nil)
     StartLuaEvent(marrowgar, MarrowgarLoop)
 end
 
