@@ -26,7 +26,7 @@ local CANNON_COOLDOWN          = 1
 -- Trash, misc.
 local KORKRON_ENTRIES          = { 36957, 36960 }
 local SKYBREAKERS_ENTRIES      = { 36950, 36961 }
-local RANGED_TARGET_ENTRIES    = { 36982, 36968 } -- Kor'kron Rocketeer, Kor'kron Axethrower
+local RANGED_TARGET_ENTRIES    = { 36969, 36968 } -- Skybreaker Rifleman, Kor'kron Axethrower
 local CANNON_TARGET_ENTRIES    = {
     36982, -- Kor'kron Rocketeer
     36978, -- Skybreaker Mortar Soldier
