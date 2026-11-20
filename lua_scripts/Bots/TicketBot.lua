@@ -5,28 +5,25 @@ if not (GetRealmID() == 1) then return end -- Only on prod
 local WebhookConfig = require("Internal/WebhookConfig")
 
 local function SanitizeForJSON(str)
-    -- Replace any non-printable or control characters with spaces
+    -- Replace control and non-ASCII characters
     str = str:gsub('[%z\1-\31\127-\255]', ' ')
-    
-    -- Basic JSON escapes
+
+    -- JSON escapes (backslash must be first)
     str = str:gsub('\\', '\\\\')
           :gsub('"', '\\"')
           :gsub('\n', '\\n')
           :gsub('\r', '\\r')
           :gsub('\t', '\\t')
-          :gsub('\b', '\\b')
-          :gsub('\f', '\\f')
-          :gsub('/', '\\/')
-    
-    -- Remove any remaining problematic characters
-    str = str:gsub('[^%w%s%p]', '')
-    
+
     return str
 end
 
 local function SendToDiscord(message)
     message = SanitizeForJSON(message)
-    local payload = '{"content": "' .. message .. '"}'
+    if #message > 1900 then
+        message = message:sub(1, 1900) .. ' [truncated]'
+    end
+    local payload = '{"content": "' .. message .. '", "allowed_mentions": {"parse": []}}'
     HttpRequest("POST", WebhookConfig.ticket, payload, "application/json", function(status, body, headers)
         if status == 204 then
             print("Message successfully sent to Discord!")
