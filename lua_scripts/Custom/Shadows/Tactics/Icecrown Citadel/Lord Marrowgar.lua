@@ -28,6 +28,7 @@ local HUNTER_MAX_DIST          = 26
 local HEALER_TANK_MAX_DIST     = 40
 local CONE_HALF_ANGLE          = math.rad(22.5)
 local tickTimer                = 200
+local SUPPRESS_MS              = 900000
 
 -- ============================================================
 -- Helpers
@@ -398,6 +399,13 @@ local function MarrowgarLoop(eventId, delay, repeats, marrowgar)
         return
     end
 
+    for _, bot in ipairs(bots) do
+        local shadow = bot:ToShadow()
+        if shadow and not shadow:IsMovementSuppressed() then
+            shadow:SuppressMovement(SUPPRESS_MS)
+        end
+    end
+
     local coldflames = GetColdflames(marrowgar)
 
     local botTanks   = {}
@@ -435,7 +443,10 @@ local function MarrowgarOnEnterCombat(event, marrowgar, target)
 
     for _, player in ipairs(marrowgar:GetPlayersInRange(100)) do
         local shadow = player:ToShadow()
-        if shadow then shadow:ToggleCombatStrategy("-icc") end
+        if shadow then
+            shadow:SuppressMovement(SUPPRESS_MS)
+            shadow:ToggleCombatStrategy("-icc")
+        end
         if player:GetDifficulty() > 1 then ApplyHiddenBuffsToShadows(player) end
     end
 
@@ -450,7 +461,10 @@ local function MarrowgarOnLeaveCombat(event, marrowgar)
     local map = marrowgar:GetMap()
     for _, player in ipairs(map and map:GetPlayers() or {}) do
         local shadow = player:ToShadow()
-        if shadow then shadow:ToggleCombatStrategy("+icc") end
+        if shadow then
+            shadow:ClearMovementSuppression()
+            shadow:ToggleCombatStrategy("+icc")
+        end
     end
 end
 
