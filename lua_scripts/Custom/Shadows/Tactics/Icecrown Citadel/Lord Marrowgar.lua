@@ -434,20 +434,29 @@ end
 -- Enter / Leave Combat
 -- ============================================================
 
-local function MarrowgarOnEnterCombat(event, player, marrowgar)
-    if marrowgar and marrowgar:GetEntry() == MARROWGAR_ENTRY then
-        marrowgar:SetData("MarkedSpikeGUID", nil)
-        TogglePlayerbotScript(player, "icc", false)
+local function MarrowgarOnEnterCombat(event, marrowgar, target)
+    if not marrowgar or marrowgar:GetEntry() ~= MARROWGAR_ENTRY then return end
+
+    for _, player in ipairs(marrowgar:GetPlayersInRange(100)) do
+        local shadow = player:ToShadow()
+        if shadow then shadow:ToggleCombatStrategy("-icc") end
         if player:GetDifficulty() > 1 then ApplyHiddenBuffsToShadows(player) end
-        StartLuaEvent(marrowgar, MarrowgarLoop)
+    end
+
+    marrowgar:SetData("MarkedSpikeGUID", nil)
+    StartLuaEvent(marrowgar, MarrowgarLoop)
+end
+
+RegisterCreatureEvent(MARROWGAR_ENTRY, 1, MarrowgarOnEnterCombat)
+
+local function MarrowgarOnLeaveCombat(event, marrowgar)
+    if not marrowgar or marrowgar:GetEntry() ~= MARROWGAR_ENTRY then return end
+
+    local map = marrowgar:GetMap()
+    for _, player in ipairs(map and map:GetPlayers() or {}) do
+        local shadow = player:ToShadow()
+        if shadow then shadow:ToggleCombatStrategy("+icc") end
     end
 end
 
-RegisterPlayerEvent(33, MarrowgarOnEnterCombat)
-
-local function MarrowgarOnLeaveCombat(event, player)
-    if player:GetMapId() ~= 631 then return end
-    TogglePlayerbotScript(player, "icc", true)
-end
-
-RegisterPlayerEvent(34, MarrowgarOnLeaveCombat)
+RegisterCreatureEvent(MARROWGAR_ENTRY, 2, MarrowgarOnLeaveCombat)
