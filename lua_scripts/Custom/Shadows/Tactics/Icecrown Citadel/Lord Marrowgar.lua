@@ -322,8 +322,10 @@ local function MarrowgarHandleNonTanks(marrowgar, botHealers, botDPS, botTanks, 
     local bx, by, bz  = marrowgar:GetLocation()
     local orientation = marrowgar:GetO()
 
-    local tankAnchorX = botTanks[1]:GetX()
-    local tankAnchorY = botTanks[1]:GetY()
+    local tankAnchorX, tankAnchorY = tankPos[1], tankPos[2]
+    if botTanks[1] then
+        tankAnchorX, tankAnchorY = botTanks[1]:GetX(), botTanks[1]:GetY()
+    end
 
     local spike = GetNearestBoneSpike(marrowgar)
 
