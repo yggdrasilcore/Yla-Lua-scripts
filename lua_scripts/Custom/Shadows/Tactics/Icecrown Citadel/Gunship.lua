@@ -8,7 +8,7 @@ local SAURFANG_ENTRY           = 36939
 local ALLY_FIGHT_MAGE_ENTRY    = 37117
 local HORDE_FIGHT_MAGE_ENTRY   = 37116
 -- Transport game objects
-local OGRIM_ENTRY              = 37215
+local ORGRIM_ENTRY             = 37215
 local SKYBREAKER_ENTRY         = 37540
 -- Spells
 local ROCKET_PACK_SPELL        = 68645
@@ -16,13 +16,19 @@ local ORGRIMS_HAMMER_DECK_AURA = 70121
 -- Cannons
 local CANNON_ALLY_ENTRY        = 36838
 local CANNON_HORDE_ENTRY       = 36839
--- TODO: fill in the real cannon spell IDs
-local CANNON_BLAST_ALLY        = 0
-local CANNON_BLAST_HORDE       = 0
-local INCINERATING_BLAST_ALLY  = 0
-local INCINERATING_BLAST_HORDE = 0
+local CANNON_BLAST_ALLY        = 69399
+local CANNON_BLAST_HORDE       = 70172
+local INCINERATING_BLAST_ALLY  = 69401
+local INCINERATING_BLAST_HORDE = 70174
+local CANNON_BLAST_COOLDOWN    = 1000
+local INCINERATING_COOLDOWN    = 3000
 local RIDE_VEHICLE_SPELL       = 46598
-local CANNON_COOLDOWN          = 1
+-- Rocket Artillery
+local ROCKET_ARTILLERY         = 69679
+local ROCKET_ARTILLERY_SPEED   = 16.5
+local ROCKET_RADIUS            = 4
+local ROCKET_ESCAPE            = 6
+local GUNSHIP_SAFE_Z           = 530
 -- Trash, misc.
 local KORKRON_ENTRIES          = { 36957, 36960 }
 local SKYBREAKERS_ENTRIES      = { 36950, 36961 }
@@ -38,14 +44,14 @@ local CANNON_TARGET_ENTRIES    = {
 local ZAFOD                    = 37184
 
 -- TRANSPORTS
-local OGRIMS_HAMMER = 201812
+local ORGRIMS_HAMMER = 201812
 local SKYBREAKER    = 201811
 
 -- Ally pos
 local ALLY_SKYBREAKER_START_POS   = { x = -391, y = 2058, z = 466.6 }
-local ALLY_OGRIM_TANK_JUMP        = { x = -368, y = 2022, z = 467.6 }
+local ALLY_ORGRIM_TANK_JUMP        = { x = -368, y = 2022, z = 467.6 }
 local ALLY_HEALER_POS             = { x = -387, y = 2047, z = 467.54 }
-local ALLY_OGRIM_Y_LIMIT          = 2023
+local ALLY_ORGRIM_Y_LIMIT          = 2023
 local ALLY_SKYBREAKER_Y_LIMIT     = 2041
 local ALLY_SKYBREAKER_WALK_LIMIT  = 2045
 local ALLY_Y_LIMIT                = 2100
@@ -59,16 +65,16 @@ local ALLY_BAND_Y_MAX             = 2053
 local JUMP_COOLDOWN               = 2
 
 -- Horde pos
-local HORDE_OGRIM_START_POS       = { x = -414.33, y = 2409.74, z = 472.41 }
+local HORDE_ORGRIM_START_POS       = { x = -414.33, y = 2409.74, z = 472.41 }
 local HORDE_SKYBREAKER_TANK_JUMP  = { x = -452.26, y = 2458.43, z = 470.15 }
 local HORDE_HEALER_POS            = { x = -432.38, y = 2427.99, z = 472.25 }
 local HORDE_SKYBREAKER_Y_LIMIT    = 2453
 local HORDE_ORGIM_Y_LIMIT         = 2429
 local HORDE_Y_LIMIT               = 2360
 local HORDE_SKYBREAKER_JUMP_POS   = { x = -437.62, y = 2454.50, z = 470.60 }
-local HORDE_OGRIM_JUMP_POS        = { x = -433.09, y = 2425.85, z = 471.73 }
-local HORDE_OGRIM_TANK_POS        = { HORDE_OGRIM_START_POS.x, HORDE_OGRIM_START_POS.y - 10, HORDE_OGRIM_START_POS.z }
-local HORDE_OGRIM_TANK_TRANSITION = { x = -436.86, y = 2426.79, z = 471.97 }
+local HORDE_ORGRIM_JUMP_POS        = { x = -433.09, y = 2425.85, z = 471.73 }
+local HORDE_ORGRIM_TANK_POS        = { HORDE_ORGRIM_START_POS.x, HORDE_ORGRIM_START_POS.y - 10, HORDE_ORGRIM_START_POS.z }
+local HORDE_ORGRIM_TANK_TRANSITION = { x = -436.86, y = 2426.79, z = 471.97 }
 local HORDE_MIN_Z                 = 471.5
 local HORDE_MAX_Z                 = 490
 local HORDE_JUMP_EXEMPT           = 473
@@ -89,6 +95,56 @@ end
 local function JumpCooldown(x1, y1, z1, x2, y2, z2)
     local dist = math.sqrt((x2-x1)^2 + (y2-y1)^2 + (z2-z1)^2)
     return dist / 5
+end
+
+local MOVE_STALL_TIME = 2000
+
+-- Rockets in flight: { x, y, z, t } where t is the impact time.
+local Rockets = {}
+
+local function GetRocketBlocked(x, y, now)
+    for guid, rocket in pairs(Rockets) do
+        if now >= rocket.t then
+            Rockets[guid] = nil
+        elseif (x - rocket.x)^2 + (y - rocket.y)^2 < ROCKET_RADIUS^2 then
+            return true
+        end
+    end
+    return false
+end
+
+local function MoveToDest(player, x, y, z)
+    local px, py, pz = player:GetLocation()
+    local now = GetCurrTime()
+    if (px - x)^2 + (py - y)^2 + (pz - z)^2 <= 1 then return end
+
+    local lx = player:Data():Get("GunshipMoveX")
+    local ly = player:Data():Get("GunshipMoveY")
+    local lz = player:Data():Get("GunshipMoveZ")
+    if lx and ly and lz and (x - lx)^2 + (y - ly)^2 + (z - lz)^2 <= 1 then
+        local gx, gy, gz = player:Data():Get("GunshipMoveFromX"), player:Data():Get("GunshipMoveFromY"), player:Data():Get("GunshipMoveFromZ")
+        local stillNear = gx and gy and gz and (px - gx)^2 + (py - gy)^2 + (pz - gz)^2 <= 4
+        if stillNear and now - player:Data():Get("GunshipMoveTime") < MOVE_STALL_TIME then return end
+    end
+
+    player:Data():Set("GunshipMoveX", x)
+    player:Data():Set("GunshipMoveY", y)
+    player:Data():Set("GunshipMoveZ", z)
+    player:Data():Set("GunshipMoveFromX", px)
+    player:Data():Set("GunshipMoveFromY", py)
+    player:Data():Set("GunshipMoveFromZ", pz)
+    player:Data():Set("GunshipMoveTime", now)
+    player:MoveTo(1, x, y, z, true)
+end
+
+local function MoveToUnit(player, unit, range)
+    local px, py, pz = player:GetLocation()
+    local ux, uy, uz = unit:GetLocation()
+    local dx, dy = px - ux, py - uy
+    local dist = math.sqrt(dx * dx + dy * dy)
+    if dist <= range then return end
+    if dist < 0.1 then dx, dy, dist = 1, 0, 1 end
+    MoveToDest(player, ux + dx / dist * range, uy + dy / dist * range, uz)
 end
 
 local function HandleRocketPack(event, player)
@@ -127,16 +183,6 @@ local function BuildThreat(tank, target)
     end
 end
 
-local function GetMageChanneling(player)
-    local mages = player:GetCreaturesInRange(200, ALLY_FIGHT_MAGE_ENTRY)
-    for _, mage in ipairs(mages) do
-        if mage:IsCasting() and IsAtPos(mage, -372, 1994, 3) then
-            return mage
-        end
-    end
-    return nil
-end
-
 local function RemovePassengerFromTransport(transport, player)
     if not transport or not player then return end
     local x, y, z, o = player:GetLocation()
@@ -162,14 +208,9 @@ local function AddToEnemyTransport(player, enemy)
     local current = player:GetTransport()
     if current then
         if current == transport then return end
-        print("[GunshipDebug] " .. player:GetName() .. " removing from existing transport "..current:GetName()..", ID: " .. tostring(current:GetGUIDLow()))
         RemovePassengerFromTransport(current, player)
     end
     AddPassengerToTransport(transport, player)
-    local newTransport = player:GetTransport()
-    if not newTransport then
-        print("[GunshipDebug] " .. player:GetName() .. " failed to add transport Ogrim's Hammer ID " .. tostring(transport:GetGUIDLow()))
-    end
 end
 
 local function AddToFactionTransport(player)
@@ -181,13 +222,9 @@ local function AddToFactionTransport(player)
     local current = player:GetTransport()
     if current then
         if current == transport then return end
-        print("[GunshipDebug] " .. player:GetName() .. " removing from existing transport "..current:GetName()..", ID: " .. tostring(current:GetGUIDLow()))
         RemovePassengerFromTransport(current, player)
     end
     AddPassengerToTransport(transport, player)
-    if not player:GetTransport() then
-        print("[GunshipDebug] " .. player:GetName() .. " has no transport after add to SKybreaker ID " .. tostring(transport:GetGUIDLow()))
-    end
 end
 
 local function MarkTargetSkull(player, target)
@@ -223,10 +260,16 @@ local function HandleCannonFire(player)
     local entry = cannon:GetEntry()
     if entry ~= CANNON_ALLY_ENTRY and entry ~= CANNON_HORDE_ENTRY then return end
 
-    if (player:Data():Get("GunshipCannonCooldown") or 0) > os.time() then return end
+    local now = GetCurrTime()
+    local data = player:Data()
+    local blastReady = now >= (data:Get("GunshipCannonBlastReady") or 0)
+    local incineratingReady = now >= (data:Get("GunshipIncineratingBlastReady") or 0)
+    if not blastReady and not incineratingReady then return end
 
     local target = FindCannonTarget(player)
     if not target then return end
+
+    cannon:SetFacingToObject(target)
 
     local cannonBlast, incineratingBlast
     if entry == CANNON_ALLY_ENTRY then
@@ -235,15 +278,14 @@ local function HandleCannonFire(player)
         cannonBlast, incineratingBlast = CANNON_BLAST_HORDE, INCINERATING_BLAST_HORDE
     end
 
-    local shots = (player:Data():Get("GunshipCannonShots") or 0) + 1
-    player:Data():Set("GunshipCannonShots", shots)
-
-    local spell = cannonBlast
-    if shots % 5 == 0 then
-        spell = incineratingBlast
+    if blastReady then
+        cannon:CastSpellAoF(target:GetX(), target:GetY(), target:GetZ(), cannonBlast, true)
+        data:Set("GunshipCannonBlastReady", now + CANNON_BLAST_COOLDOWN)
     end
-    cannon:CastSpell(target, spell, true)
-    player:Data():Set("GunshipCannonCooldown", os.time() + CANNON_COOLDOWN)
+    if incineratingReady then
+        cannon:CastSpellAoF(target:GetX(), target:GetY(), target:GetZ(), incineratingBlast, true)
+        data:Set("GunshipIncineratingBlastReady", now + INCINERATING_COOLDOWN)
+    end
 end
 
 local function HandleCannonEntry(player)
@@ -266,7 +308,7 @@ local function HandleCannonEntry(player)
     if not best then return false end
 
     if player:GetDistance(best) > 5 then
-        MoveImmediately(player, best:GetX(), best:GetY(), best:GetZ())
+        MoveToUnit(player, best, 3)
     else
         player:CastSpell(best, RIDE_VEHICLE_SPELL, true)
     end
@@ -282,11 +324,43 @@ local function HandleDpsTarget(player, boarderEntries, rangedEntries, edgeY, edg
     if not target then return end
     if isCaster then
         if player:GetDistance(target) > 35 and not IsAtPos(player, player:GetX(), edgeY, 2) then
-            MoveImmediately(player, player:GetX(), edgeY, edgeZ)
+            MoveToDest(player, player:GetX(), edgeY, edgeZ)
         end
     elseif player:GetDistance(target) > 5 then
-        MoveImmediately(player, target:GetX(), target:GetY(), target:GetZ())
+        MoveToUnit(player, target, 3)
     end
+end
+
+local function OnRocketArtillery(event, caster, spell)
+    local x, y, z = spell:GetTargetDest()
+    if not x then
+        print("[GunshipDebug] rocket with no destination from " .. caster:GetName())
+        return
+    end
+
+    local dist = math.sqrt((caster:GetX() - x)^2 + (caster:GetY() - y)^2 + (caster:GetZ() - z)^2)
+    local impact = GetCurrTime() + dist / ROCKET_ARTILLERY_SPEED * 1000
+    Rockets[caster:GetGUIDLow()] = { x = x, y = y, z = z, t = impact }
+    print("[GunshipDebug] rocket from " .. caster:GetName() .. " -> " .. tostring(x) .. "," .. tostring(y) .. "," .. tostring(z) ..
+        " dist=" .. string.format("%.1f", dist) .. " impact in " .. tostring(impact - GetCurrTime()) .. "ms")
+end
+
+local function HandleRocketAvoidance(player)
+    local px, py, pz = player:GetLocation()
+    local now = GetCurrTime()
+    if not GetRocketBlocked(px, py, now) then return false end
+    for _, rocket in pairs(Rockets) do
+        local dist = math.sqrt((px - rocket.x)^2 + (py - rocket.y)^2)
+        if dist < ROCKET_RADIUS then
+            print("[GunshipDebug] " .. player:GetName() .. " on rocket landing " .. tostring(rocket.x) .. "," .. tostring(rocket.y) ..
+                " dist=" .. string.format("%.2f", dist) .. " impact=" .. tostring(rocket.t - now) .. "ms from " .. tostring(px) .. "," .. tostring(py) .. "," .. tostring(pz))
+        end
+    end
+    RemoveRootAura(player)
+    MoveToDest(player, px, py, pz)
+    local mx, my = player:GetLocation()
+    print("[GunshipDebug] " .. player:GetName() .. " after move dest=" .. tostring(player:Data():Get("GunshipMoveX")) .. "," .. tostring(player:Data():Get("GunshipMoveY")) .. "," .. tostring(player:Data():Get("GunshipMoveZ")) .. " now at " .. tostring(mx) .. "," .. tostring(my))
+    return true
 end
 
 local function GunshipHordeActions(eventId, delay, repeats, player)
@@ -307,23 +381,26 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
     -- Fight over
     local Skybreaker = player:GetNearestCreature(200, SKYBREAKER_ENTRY, 0, 0)
     if Skybreaker and (Skybreaker:IsDead() or Skybreaker:GetHealth() == 1) then
-        player:NearTeleport(HORDE_OGRIM_START_POS.x, HORDE_OGRIM_START_POS.y, HORDE_OGRIM_START_POS.z, player:GetO())
-        AddToFactionTransport(player)
-        AddRootAura(player, 20000)
+        local zafod = player:GetNearestCreature(200, ZAFOD)
+        if not (zafod and player:GetTransport() == zafod:GetTransport()) then
+            player:NearTeleport(HORDE_ORGRIM_START_POS.x, HORDE_ORGRIM_START_POS.y, HORDE_ORGRIM_START_POS.z, player:GetO())
+            AddToFactionTransport(player)
+        end
+        if player:GetZ() < GUNSHIP_SAFE_Z then AddRootAura(player, 10000) end
         HandleRocketPack(33, player)
         return
     end
 
-    -- Outside of Ogrim's Hammer main deck? Correct pos.
+    -- Outside of Orgrim's Hammer main deck? Correct pos.
     if (pz >= 400 and pz <= 469) or py < 2360 or py > 2500 then
-        player:NearTeleport(HORDE_OGRIM_START_POS.x, HORDE_OGRIM_START_POS.y, HORDE_OGRIM_START_POS.z, player:GetO())
+        player:NearTeleport(HORDE_ORGRIM_START_POS.x, HORDE_ORGRIM_START_POS.y, HORDE_ORGRIM_START_POS.z, player:GetO())
         player:RegisterEvent(GunshipLoop, 200, 1)
         return
     end
     
-    -- Z correction on Ogrim's Hammer deck
-    local inOgrimRect = (px >= -438 and px <= -406) and (py >= 2365 and py <= 2429)
-    if inOgrimRect then
+    -- Z correction on Orgrim's Hammer deck
+    local inOrgrimRect = (px >= -438 and px <= -406) and (py >= 2365 and py <= 2429)
+    if inOrgrimRect then
         local minZ = px > -420 and 472 or 473
         if pz + 1 < minZ then
             player:NearTeleport(px, py, minZ, player:GetO())
@@ -379,19 +456,24 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
     -- Facing correction
     if player:GetSelection() then player:SetFacingToObject(player:GetSelection()) end
 
-    -- Off tank: stay on Ogrim at HORDE_OGRIM_TANK_POS, cycle threat on Skybreaker boarders
+    if HandleRocketAvoidance(player) then
+        player:RegisterEvent(GunshipLoop, 200, 1)
+        return
+    end
+
+    -- Off tank: stay on Orgrim at HORDE_ORGRIM_TANK_POS, cycle threat on Skybreaker boarders
     if IsTank(player) and offTank and offTank == player then
         local boarder = player:GetNearestCreature(200, SKYBREAKERS_ENTRIES[1], 1, 1) or player:GetNearestCreature(200, SKYBREAKERS_ENTRIES[2], 1, 1)
         player:ToShadow():SetTarget(boarder)
-        local tx, ty = HORDE_OGRIM_TANK_POS[1], HORDE_OGRIM_TANK_POS[2]
+        local tx, ty = HORDE_ORGRIM_TANK_POS[1], HORDE_ORGRIM_TANK_POS[2]
         if boarder then
             if player:GetDistance(boarder) > 5 then
-                MoveImmediately(player, boarder:GetX(), boarder:GetY(), boarder:GetZ())
+                MoveToUnit(player, boarder, 3)
             end
-        elseif IsAtPos(player, tx, ty, 2) then
+        elseif IsAtPos(player, tx, ty, 2) and not GetRocketBlocked(px, py, GetCurrTime()) then
             AddRootAura(player, 2000)
         else
-            MoveImmediately(player, tx, ty, HORDE_OGRIM_TANK_POS[3])
+            MoveToDest(player, tx, ty, HORDE_ORGRIM_TANK_POS[3])
         end
         local skullTarget = nil
         for _, entry in ipairs(SKYBREAKERS_ENTRIES) do
@@ -423,24 +505,24 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
     -- Healers: pin to HORDE_HEALER_POS, root 5s on arrival
     if player:HasHealSpec() then
         local tx, ty = HORDE_HEALER_POS.x, HORDE_HEALER_POS.y
-        if IsAtPos(player, tx, ty, 1) then
+        if IsAtPos(player, tx, ty, 1) and not GetRocketBlocked(px, py, GetCurrTime()) then
             AddRootAura(player, 5000)
         else
-            MoveImmediately(player, tx + math.random(-1, 1), ty + math.random(-1, 1), HORDE_HEALER_POS.z)
+            MoveToDest(player, tx + math.random(-1, 1), ty + math.random(-1, 1), HORDE_HEALER_POS.z)
         end
         player:RegisterEvent(GunshipLoop, 200, 1)
         return
     end
 
-    -- DPS: free roam on Ogrim deck if no mage
+    -- DPS: free roam on Orgrim deck if no mage
     if not mage and py <= 2422 and not (IsTank(player) and mainTank and mainTank == player) then
         player:RegisterEvent(GunshipLoop, 200, 1)
         return
     end
 
-    -- DPS and main tank: route back to start if drifted into Ogrim edge zone and no mage
+    -- DPS and main tank: route back to start if drifted into Orgrim edge zone and no mage
     if not mage and py > 2422 and py <= HORDE_ORGIM_Y_LIMIT then
-        MoveImmediately(player, HORDE_OGRIM_START_POS.x, HORDE_OGRIM_START_POS.y, HORDE_OGRIM_START_POS.z)
+        MoveToDest(player, HORDE_ORGRIM_START_POS.x, HORDE_ORGRIM_START_POS.y, HORDE_ORGRIM_START_POS.z)
         player:RegisterEvent(GunshipLoop, 200, 1)
         return
     end
@@ -451,17 +533,15 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
         return
     end
 
-    -- Between ships: rocket jump toward Skybreaker if mage, toward Ogrim if not
+    -- Between ships: rocket jump toward Skybreaker if mage, toward Orgrim if not
     if py > 2428 and py < HORDE_SKYBREAKER_Y_LIMIT and not (player == mainTank) then
         player:MoveStop()
-        if mage and not mainTank or (mainTank and mainTank:GetY() > HORDE_SKYBREAKER_Y_LIMIT) then
-            print("[GunshipDebug] " .. player:GetName() .. " between ships, mage present and tank ready, jumping to Skybreaker")
+        if mage and mage:IsCasting() and (not mainTank or mainTank:GetY() > HORDE_SKYBREAKER_Y_LIMIT) then
             AllowSpellCast(player) local aura = player:AddAura(65985, player) if aura then aura:SetDuration(3000) end player:CastSpellAoF(HORDE_SKYBREAKER_JUMP_POS.x, HORDE_SKYBREAKER_JUMP_POS.y, HORDE_SKYBREAKER_JUMP_POS.z, ROCKET_PACK_SPELL, true)
         elseif mage then
             AddRootAura(player, 15000)
         elseif not mage and py > 2429 then
-            print("[GunshipDebug] " .. player:GetName() .. " between ships, no mage, jumping back to Ogrim")
-            AllowSpellCast(player) local aura = player:AddAura(65985, player) if aura then aura:SetDuration(3000) end player:CastSpellAoF(HORDE_OGRIM_START_POS.x, HORDE_OGRIM_START_POS.y, HORDE_OGRIM_START_POS.z, ROCKET_PACK_SPELL, true)
+            AllowSpellCast(player) local aura = player:AddAura(65985, player) if aura then aura:SetDuration(3000) end player:CastSpellAoF(HORDE_ORGRIM_START_POS.x, HORDE_ORGRIM_START_POS.y, HORDE_ORGRIM_START_POS.z, ROCKET_PACK_SPELL, true)
         end
         player:Data():Set("GunshipJumpCooldown", os.time() + JUMP_COOLDOWN)
         player:RegisterEvent(GunshipLoop, 200, 1)
@@ -471,9 +551,7 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
     -- Main tank: taunt/threat Muradin on Skybreaker, jump when mage appears
     if IsTank(player) and mainTank and mainTank == player then
         ApplyDamageReductionStacks(player, (20 + player:GetDifficulty()*15), 30000)
-        if not mage then
-            player:ToShadow():SetTarget(player:GetNearestCreature(200, SKYBREAKERS_ENTRIES[1], 1, 1) or player:GetNearestCreature(200, SKYBREAKERS_ENTRIES[2], 1, 1))
-        elseif muradin and py > HORDE_SKYBREAKER_Y_LIMIT then
+        if muradin and py > HORDE_SKYBREAKER_Y_LIMIT then
             player:ToShadow():SetTarget(muradin)
         else
             player:ToShadow():SetTarget(nil)
@@ -491,8 +569,7 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
             end
             
             if not anyForward and not mage then
-                print("[GunshipDebug] " .. player:GetName() .. " main tank jumping back to Ogrim's Hammer!")
-                AllowSpellCast(player) local aura = player:AddAura(65985, player) if aura then aura:SetDuration(3000) end player:CastSpellAoF(HORDE_OGRIM_TANK_TRANSITION.x, HORDE_OGRIM_TANK_TRANSITION.y, HORDE_OGRIM_TANK_TRANSITION.z, ROCKET_PACK_SPELL, true)
+                AllowSpellCast(player) local aura = player:AddAura(65985, player) if aura then aura:SetDuration(3000) end player:CastSpellAoF(HORDE_ORGRIM_TANK_TRANSITION.x, HORDE_ORGRIM_TANK_TRANSITION.y, HORDE_ORGRIM_TANK_TRANSITION.z, ROCKET_PACK_SPELL, true)
                 player:Data():Set("GunshipJumpCooldown", os.time() + JUMP_COOLDOWN)
                 player:RegisterEvent(GunshipLoop, 200, 1)
                 return
@@ -500,7 +577,7 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
                 if IsAtPos(player, HORDE_SKYBREAKER_TANK_JUMP.x, HORDE_SKYBREAKER_TANK_JUMP.y, 2) then
                     AddRootAura(player, 2000)
                 else
-                    MoveImmediately(player, HORDE_SKYBREAKER_TANK_JUMP.x, HORDE_SKYBREAKER_TANK_JUMP.y, HORDE_SKYBREAKER_TANK_JUMP.z)
+                    MoveToDest(player, HORDE_SKYBREAKER_TANK_JUMP.x, HORDE_SKYBREAKER_TANK_JUMP.y, HORDE_SKYBREAKER_TANK_JUMP.z)
                 end
             end
 
@@ -524,25 +601,24 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
                 if IsAtPos(player, HORDE_SKYBREAKER_TANK_JUMP.x, HORDE_SKYBREAKER_TANK_JUMP.y, 2) then
                     AddRootAura(player, 2000)
                 else
-                    MoveImmediately(player, HORDE_SKYBREAKER_TANK_JUMP.x, HORDE_SKYBREAKER_TANK_JUMP.y, HORDE_SKYBREAKER_TANK_JUMP.z)
+                    MoveToDest(player, HORDE_SKYBREAKER_TANK_JUMP.x, HORDE_SKYBREAKER_TANK_JUMP.y, HORDE_SKYBREAKER_TANK_JUMP.z)
                 end
             end
         end
 
         if mage then
-            if py < HORDE_OGRIM_TANK_TRANSITION.y - 2 then
+            if py < HORDE_ORGRIM_TANK_TRANSITION.y - 2 then
                 UseRocketBoots(player)
-                MoveImmediately(player, HORDE_OGRIM_TANK_TRANSITION.x, HORDE_OGRIM_TANK_TRANSITION.y, HORDE_OGRIM_TANK_TRANSITION.z)
-            elseif py >= HORDE_OGRIM_TANK_TRANSITION.y - 1 and py <= HORDE_SKYBREAKER_Y_LIMIT then
+                MoveToDest(player, HORDE_ORGRIM_TANK_TRANSITION.x, HORDE_ORGRIM_TANK_TRANSITION.y, HORDE_ORGRIM_TANK_TRANSITION.z)
+            elseif py >= HORDE_ORGRIM_TANK_TRANSITION.y - 1 and py <= HORDE_SKYBREAKER_Y_LIMIT then
                 AllowSpellCast(player) local aura = player:AddAura(65985, player) if aura then aura:SetDuration(3000) end player:CastSpellAoF(HORDE_SKYBREAKER_JUMP_POS.x - 3, HORDE_SKYBREAKER_JUMP_POS.y, HORDE_SKYBREAKER_JUMP_POS.z, ROCKET_PACK_SPELL, true)
                 player:Data():Set("GunshipJumpCooldown", os.time() + JUMP_COOLDOWN)
-                print("MT Jumping to skybreaker")
             elseif py > HORDE_SKYBREAKER_Y_LIMIT then
                 player:Data():Set("GunshipJumpCooldown", 0)
                 if IsAtPos(player, HORDE_SKYBREAKER_TANK_JUMP.x, HORDE_SKYBREAKER_TANK_JUMP.y, 2) then
                     AddRootAura(player, 2000)
                 else
-                    MoveImmediately(player, HORDE_SKYBREAKER_TANK_JUMP.x, HORDE_SKYBREAKER_TANK_JUMP.y, HORDE_SKYBREAKER_TANK_JUMP.z)
+                    MoveToDest(player, HORDE_SKYBREAKER_TANK_JUMP.x, HORDE_SKYBREAKER_TANK_JUMP.y, HORDE_SKYBREAKER_TANK_JUMP.z)
                 end
             end
         end
@@ -554,7 +630,7 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
         elseif player:GetTransport() == mage:GetTransport() then
             player:ToShadow():SetTarget(mage)
             if player:GetDistance(mage) > (player:HasCasterSpec() and 35 or 5) then
-                MoveImmediately(player, mage:GetX(), mage:GetY(), mage:GetZ())
+                MoveToUnit(player, mage, player:HasCasterSpec() and 30 or 3)
             end
         else
             player:ToShadow():SetTarget(nil)
@@ -573,16 +649,16 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
         if target then player:SetFacingToObject(target) end
 
         if py < 2422 and mage then
-            -- Too far back on Ogrim, walk to jump edge
-            MoveImmediately(player, -429.911, 2423, 471.86655)
+            -- Too far back on Orgrim, walk to jump edge
+            MoveToDest(player, -429.911, 2423, 471.86655)
         elseif py > HORDE_SKYBREAKER_Y_LIMIT then
             -- On Skybreaker
             player:Data():Set("GunshipJumpCooldown", 0)
             if not mage then
                 if not IsAtPos(player, HORDE_SKYBREAKER_JUMP_POS.x, HORDE_SKYBREAKER_JUMP_POS.y, 2) then
-                    MoveImmediately(player, HORDE_SKYBREAKER_JUMP_POS.x, HORDE_SKYBREAKER_JUMP_POS.y, HORDE_SKYBREAKER_JUMP_POS.z)
+                    MoveToDest(player, HORDE_SKYBREAKER_JUMP_POS.x, HORDE_SKYBREAKER_JUMP_POS.y, HORDE_SKYBREAKER_JUMP_POS.z)
                 else
-                    AllowSpellCast(player) local aura = player:AddAura(65985, player) if aura then aura:SetDuration(3000) end player:CastSpellAoF(HORDE_OGRIM_JUMP_POS.x, HORDE_OGRIM_JUMP_POS.y, HORDE_OGRIM_JUMP_POS.z, ROCKET_PACK_SPELL, true)
+                    AllowSpellCast(player) local aura = player:AddAura(65985, player) if aura then aura:SetDuration(3000) end player:CastSpellAoF(HORDE_ORGRIM_JUMP_POS.x, HORDE_ORGRIM_JUMP_POS.y, HORDE_ORGRIM_JUMP_POS.z, ROCKET_PACK_SPELL, true)
                     player:Data():Set("GunshipJumpCooldown", os.time() + JUMP_COOLDOWN)
                 end
             end
@@ -607,11 +683,14 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
     local px, py, pz = player:GetLocation()
     
     -- Fight over, do not re-schedule event
-    local Ogrim = player:GetNearestCreature(200, OGRIM_ENTRY, 0, 0)
-    if Ogrim and (Ogrim:IsDead() or Ogrim:GetHealth() == 1) then
-        player:NearTeleport(ALLY_SKYBREAKER_START_POS.x, ALLY_SKYBREAKER_START_POS.y, ALLY_SKYBREAKER_START_POS.z, player:GetO())
-        AddToFactionTransport(player)
-        AddRootAura(player, 20000)
+    local Orgrim = player:GetNearestCreature(200, ORGRIM_ENTRY, 0, 0)
+    if Orgrim and (Orgrim:IsDead() or Orgrim:GetHealth() == 1) then
+        local zafod = player:GetNearestCreature(200, ZAFOD)
+        if not (zafod and player:GetTransport() == zafod:GetTransport()) then
+            player:NearTeleport(ALLY_SKYBREAKER_START_POS.x, ALLY_SKYBREAKER_START_POS.y, ALLY_SKYBREAKER_START_POS.z, player:GetO())
+            AddToFactionTransport(player)
+        end
+        if player:GetZ() < GUNSHIP_SAFE_Z then AddRootAura(player, 10000) end
         HandleRocketPack(33, player)
         return
     end 
@@ -640,7 +719,14 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
         return
     end
 
-    local mage = GetMageChanneling(player)
+    local mage = nil
+    local mages = player:GetCreaturesInRange(200, ALLY_FIGHT_MAGE_ENTRY)
+    for _, m in ipairs(mages) do
+        if m:IsCasting() and m:GetX() < -366 then
+            mage = m
+            break
+        end
+    end
     local saurfang = player:GetNearestCreature(200, SAURFANG_ENTRY)
     if saurfang and saurfang:GetZ() + 1 < saurfang:GetFloorZ() then
         saurfang:NearTeleport(saurfang:GetX(), saurfang:GetY(), saurfang:GetFloorZ(), saurfang:GetO())
@@ -652,7 +738,7 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
     player:Data():Set("GunshipTick", tick)
 
     -- Ensure bots are added to transports
-    if py < ALLY_OGRIM_Y_LIMIT then
+    if py < ALLY_ORGRIM_Y_LIMIT then
         AddToEnemyTransport(player, saurfang)
     elseif py > ALLY_SKYBREAKER_Y_LIMIT then
         AddToFactionTransport(player)
@@ -666,6 +752,11 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
     -- Target prio mage, always
     if mage then MarkTargetSkull(player, mage) end
 
+    if HandleRocketAvoidance(player) then
+        player:RegisterEvent(GunshipLoop, 200, 1)
+        return
+    end
+
     -- Off tank stuff
     if IsTank(player) and offTank and offTank == player then
         local boarder = player:GetNearestCreature(200, KORKRON_ENTRIES[1], 1, 1) or player:GetNearestCreature(200, KORKRON_ENTRIES[2], 1, 1)
@@ -674,12 +765,12 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
         if player:GetSelection() then player:SetFacingToObject(player:GetSelection()) end
         if boarder then
             if player:GetDistance(boarder) > 5 then
-                MoveImmediately(player, boarder:GetX(), boarder:GetY(), boarder:GetZ())
+                MoveToUnit(player, boarder, 3)
             end
-        elseif IsAtPos(player, tx, ty, 2) then
+        elseif IsAtPos(player, tx, ty, 2) and not GetRocketBlocked(px, py, GetCurrTime()) then
             AddRootAura(player, 2000)
         else
-            MoveImmediately(player, tx, ty, GetCorrectedZ(tx, ty) or pz)
+            MoveToDest(player, tx, ty, GetCorrectedZ(tx, ty) or pz)
         end
         local skullTarget = nil
         for _, entry in ipairs(KORKRON_ENTRIES) do
@@ -706,10 +797,10 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
     -- Healer stuff
     if player:HasHealSpec() then
         local tx, ty = ALLY_HEALER_POS.x, ALLY_HEALER_POS.y
-        if IsAtPos(player, tx, ty, 4) then
+        if IsAtPos(player, tx, ty, 4) and not GetRocketBlocked(px, py, GetCurrTime()) then
             AddRootAura(player, 3000)
         else
-            MoveImmediately(player, tx + math.random(-2.8, 2.8), ty + math.random(-2.8, 2.8), GetCorrectedZ(tx, ty) or pz)
+            MoveToDest(player, tx + math.random(-2.8, 2.8), ty + math.random(-2.8, 2.8), GetCorrectedZ(tx, ty) or pz)
         end
         player:RegisterEvent(GunshipLoop, 200, 1)
         return
@@ -718,13 +809,13 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
     -- Keep players on Skybreaker deck if no mage. There's a bit of a stutter due to the edge being higher but I think it's probably OK as is
     if not mage then
         if ((player:HasMeleeSpec() or player:HasTankSpec()) and py <= ALLY_SKYBREAKER_WALK_LIMIT + 5) then
-            MoveImmediately(player, ALLY_SKYBREAKER_START_POS.x + math.random(-2, 2), ALLY_SKYBREAKER_START_POS.y + math.random(-2, 2), ALLY_SKYBREAKER_START_POS.z)
+            MoveToDest(player, ALLY_SKYBREAKER_START_POS.x + math.random(-2, 2), ALLY_SKYBREAKER_START_POS.y + math.random(-2, 2), ALLY_SKYBREAKER_START_POS.z)
         elseif (py < ALLY_SKYBREAKER_Y_LIMIT + 2 and py >= ALLY_SKYBREAKER_Y_LIMIT) then
-            MoveImmediately(player, px, ALLY_SKYBREAKER_WALK_LIMIT + math.random(-0.5, 0.5), 467.55)
+            MoveToDest(player, px, ALLY_SKYBREAKER_WALK_LIMIT + math.random(-0.5, 0.5), 467.55)
         end
     end
 
-    -- Don't jump between Skybreaker and Ogrim if we have recently jumped
+    -- Don't jump between Skybreaker and Orgrim if we have recently jumped
     if (player:Data():Get("GunshipJumpCooldown") or 0) > os.time() then
         player:RegisterEvent(GunshipLoop, 200, 1)
         return
@@ -732,7 +823,7 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
 
     -- If we are between ships and no mage is present, jump back to Skybreaker
     if not mage and not mainTank then
-        if py >= ALLY_OGRIM_Y_LIMIT and py <= ALLY_SKYBREAKER_Y_LIMIT then
+        if py >= ALLY_ORGRIM_Y_LIMIT and py <= ALLY_SKYBREAKER_Y_LIMIT then
             local tx, ty = ALLY_SKYBREAKER_START_POS.x, ALLY_SKYBREAKER_START_POS.y
             AllowSpellCast(player) local aura = player:AddAura(65985, player) if aura then aura:SetDuration(3000) end player:CastSpellAoF(tx, ty, GetCorrectedZ(tx, ty) or pz, ROCKET_PACK_SPELL, true)
             player:Data():Set("GunshipJumpCooldown", os.time() + JUMP_COOLDOWN)
@@ -744,14 +835,12 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
     -- Main tank stuff
     if IsTank(player) and mainTank and mainTank == player then
         ApplyDamageReductionStacks(player, (20 + player:GetDifficulty()*15), 30000)
-        if not mage then
-            player:ToShadow():SetTarget(player:GetNearestCreature(200, KORKRON_ENTRIES[1], 1, 1) or player:GetNearestCreature(200, KORKRON_ENTRIES[2], 1, 1))
-        elseif saurfang and py < ALLY_OGRIM_Y_LIMIT then
+        if saurfang and py < ALLY_ORGRIM_Y_LIMIT then
             player:ToShadow():SetTarget(saurfang)
         else
             player:ToShadow():SetTarget(nil)
         end
-        if py < ALLY_OGRIM_Y_LIMIT then
+        if py < ALLY_ORGRIM_Y_LIMIT then
             if not player:HasAura(ORGRIMS_HAMMER_DECK_AURA) then
                 player:AddAura(ORGRIMS_HAMMER_DECK_AURA, player)
             end
@@ -768,10 +857,10 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
                 end
             end
             if mage then
-                if IsAtPos(player, ALLY_OGRIM_TANK_JUMP.x, ALLY_OGRIM_TANK_JUMP.y, 2) then
+                if IsAtPos(player, ALLY_ORGRIM_TANK_JUMP.x, ALLY_ORGRIM_TANK_JUMP.y, 2) then
                     AddRootAura(player, 2000)
                 else
-                    MoveImmediately(player, ALLY_OGRIM_TANK_JUMP.x, ALLY_OGRIM_TANK_JUMP.y, ALLY_OGRIM_TANK_JUMP.z)
+                    MoveToDest(player, ALLY_ORGRIM_TANK_JUMP.x, ALLY_ORGRIM_TANK_JUMP.y, ALLY_ORGRIM_TANK_JUMP.z)
                 end
             end
         end
@@ -779,12 +868,12 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
             if py > ALLY_SKYBREAKER_WALK_LIMIT + 2 then
                 local tx, ty = ALLY_SKYBREAKER_START_POS.x, ALLY_SKYBREAKER_Y_LIMIT
                 UseRocketBoots(player)
-                MoveImmediately(player, tx, ty, GetCorrectedZ(tx, ty) or pz)
+                MoveToDest(player, tx, ty, GetCorrectedZ(tx, ty) or pz)
             elseif py <= ALLY_SKYBREAKER_WALK_LIMIT and py >= ALLY_SKYBREAKER_Y_LIMIT then
-                AllowSpellCast(player) local aura = player:AddAura(65985, player) if aura then aura:SetDuration(3000) end player:CastSpellAoF(ALLY_OGRIM_TANK_JUMP.x, ALLY_OGRIM_TANK_JUMP.y, ALLY_OGRIM_TANK_JUMP.z, ROCKET_PACK_SPELL, true)
+                AllowSpellCast(player) local aura = player:AddAura(65985, player) if aura then aura:SetDuration(3000) end player:CastSpellAoF(ALLY_ORGRIM_TANK_JUMP.x, ALLY_ORGRIM_TANK_JUMP.y, ALLY_ORGRIM_TANK_JUMP.z, ROCKET_PACK_SPELL, true)
                 player:Data():Set("GunshipJumpCooldown", os.time() + JUMP_COOLDOWN)
             elseif py < ALLY_SKYBREAKER_Y_LIMIT then
-                if py < ALLY_OGRIM_Y_LIMIT then
+                if py < ALLY_ORGRIM_Y_LIMIT then
                     player:Data():Set("GunshipJumpCooldown", 0)
                 end
             end
@@ -794,22 +883,21 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
                 local anyForward = false
                 local players = player:GetPlayersInRange(200)
                 for _, p in ipairs(players) do
-                    if not IsTank(p) and p:GetY() < ALLY_OGRIM_Y_LIMIT then
+                    if not IsTank(p) and p:GetY() < ALLY_ORGRIM_Y_LIMIT then
                         anyForward = true
                         break
                     end
                 end
                 if not anyForward then
-                    print("[GunshipDebug] " .. player:GetName() .. " main tank jumping back to skybreaker!")
                     RemoveRootAura(player)
                     AllowSpellCast(player) player:CastSpellAoF(ALLY_SKYBREAKER_START_POS.x, ALLY_SKYBREAKER_START_POS.y - 5, ALLY_SKYBREAKER_START_POS.z, ROCKET_PACK_SPELL, true)
                     player:Data():Set("GunshipJumpCooldown", os.time() + JUMP_COOLDOWN)
                 else
-                    if IsAtPos(player, ALLY_OGRIM_TANK_JUMP.x, ALLY_OGRIM_TANK_JUMP.y, 2) then
+                    if IsAtPos(player, ALLY_ORGRIM_TANK_JUMP.x, ALLY_ORGRIM_TANK_JUMP.y, 2) then
                         AddRootAura(player, 2000)
                     else
                         RemoveRootAura(player)
-                        MoveImmediately(player, ALLY_OGRIM_TANK_JUMP.x, ALLY_OGRIM_TANK_JUMP.y, ALLY_OGRIM_TANK_JUMP.z)
+                        MoveToDest(player, ALLY_ORGRIM_TANK_JUMP.x, ALLY_ORGRIM_TANK_JUMP.y, ALLY_ORGRIM_TANK_JUMP.z)
                     end
                 end
             end
@@ -821,14 +909,14 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
         elseif player:GetTransport() == mage:GetTransport() then
             player:ToShadow():SetTarget(mage)
             if player:GetDistance(mage) > (player:HasCasterSpec() and 35 or 5) then
-                MoveImmediately(player, mage:GetX(), mage:GetY(), mage:GetZ())
+                MoveToUnit(player, mage, player:HasCasterSpec() and 30 or 3)
             end
         else
             player:ToShadow():SetTarget(nil)
         end
 
-        -- Save bots from falling through Ogrim's Hammer
-        if py < ALLY_OGRIM_Y_LIMIT then
+        -- Save bots from falling through Orgrim's Hammer
+        if py < ALLY_ORGRIM_Y_LIMIT then
             if pz < 466 then
                 player:NearTeleport(px, py, 466.7, player:GetO())
                 AddToEnemyTransport(player, saurfang)
@@ -839,27 +927,27 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
         local target = player:GetSelection()
         if target then player:SetFacingToObject(target) end
         
-        local distToTank = math.abs(px - ALLY_OGRIM_TANK_JUMP.x)
-        if py >= ALLY_OGRIM_Y_LIMIT and py <= ALLY_SKYBREAKER_Y_LIMIT and not mage then
+        local distToTank = math.abs(px - ALLY_ORGRIM_TANK_JUMP.x)
+        if py >= ALLY_ORGRIM_Y_LIMIT and py <= ALLY_SKYBREAKER_Y_LIMIT and not mage then
             local tx, ty = ALLY_SKYBREAKER_START_POS.x, ALLY_SKYBREAKER_START_POS.y
             AllowSpellCast(player) local aura = player:AddAura(65985, player) if aura then aura:SetDuration(3000) end player:CastSpellAoF(tx, ty, GetCorrectedZ(tx, ty) or pz, ROCKET_PACK_SPELL, true)
             player:Data():Set("GunshipJumpCooldown", os.time() + JUMP_COOLDOWN)
         elseif py > ALLY_SKYBREAKER_WALK_LIMIT and mage then
-            MoveImmediately(player, px, ALLY_SKYBREAKER_Y_LIMIT, GetCorrectedZ(px, ALLY_SKYBREAKER_Y_LIMIT) or pz)
-        elseif py >= ALLY_OGRIM_Y_LIMIT and py <= ALLY_SKYBREAKER_WALK_LIMIT and mage then
-            if not mainTank or (mainTank and mainTank:GetY() < ALLY_OGRIM_Y_LIMIT) then
-                local tx = ALLY_OGRIM_TANK_JUMP.x - 12 + math.random(-2, 2)
-                local ty = ALLY_OGRIM_TANK_JUMP.y - 4 - math.random(0, 2)
-                AllowSpellCast(player) local aura = player:AddAura(65985, player) if aura then aura:SetDuration(3000) end player:CastSpellAoF(tx, ty, ALLY_OGRIM_TANK_JUMP.z, ROCKET_PACK_SPELL, true)
+            MoveToDest(player, px, ALLY_SKYBREAKER_Y_LIMIT, GetCorrectedZ(px, ALLY_SKYBREAKER_Y_LIMIT) or pz)
+        elseif py >= ALLY_ORGRIM_Y_LIMIT and py <= ALLY_SKYBREAKER_WALK_LIMIT and mage and mage:IsCasting() then
+            if not mainTank or (mainTank and mainTank:GetY() < ALLY_ORGRIM_Y_LIMIT) then
+                local tx = ALLY_ORGRIM_TANK_JUMP.x - 12 + math.random(-2, 2)
+                local ty = ALLY_ORGRIM_TANK_JUMP.y - 4 - math.random(0, 2)
+                AllowSpellCast(player) local aura = player:AddAura(65985, player) if aura then aura:SetDuration(3000) end player:CastSpellAoF(tx, ty, ALLY_ORGRIM_TANK_JUMP.z, ROCKET_PACK_SPELL, true)
                 player:Data():Set("GunshipJumpCooldown", os.time() + JUMP_COOLDOWN)
             end
-        elseif py < ALLY_OGRIM_Y_LIMIT then
+        elseif py < ALLY_ORGRIM_Y_LIMIT then
             player:Data():Set("GunshipJumpCooldown", 0)
             if not mage then
-                if not IsAtPos(player, px, ALLY_OGRIM_Y_LIMIT, 2) then
-                    MoveImmediately(player, px, ALLY_OGRIM_Y_LIMIT, math.min(pz, ALLY_OGRIM_TANK_JUMP.z))
+                if not IsAtPos(player, px, ALLY_ORGRIM_Y_LIMIT, 2) then
+                    MoveToDest(player, px, ALLY_ORGRIM_Y_LIMIT, math.min(pz, ALLY_ORGRIM_TANK_JUMP.z))
                 else
-                    AllowSpellCast(player) local aura = player:AddAura(65985, player) if aura then aura:SetDuration(3000) end player:CastSpellAoF(px, py + 30, ALLY_OGRIM_TANK_JUMP.z, ROCKET_PACK_SPELL, true)
+                    AllowSpellCast(player) local aura = player:AddAura(65985, player) if aura then aura:SetDuration(3000) end player:CastSpellAoF(px, py + 30, ALLY_ORGRIM_TANK_JUMP.z, ROCKET_PACK_SPELL, true)
                     player:Data():Set("GunshipJumpCooldown", os.time() + JUMP_COOLDOWN)
                 end
             end
@@ -905,29 +993,38 @@ local function GunshipOnEnterCombat(event, player, creature)
     
     if player:GetDifficulty() > 1 then ApplyHiddenBuffsToShadows(player) end -- Buff on HC
 
-    -- player:ToShadow():SuppressMovement(900000) -- Not supported on Gunship yet, must set target manually first
-    
+    player:ToShadow():SuppressMovement(900000)
+
+    -- DPS and tanks: targeting is driven by the script
+    if not player:HasHealSpec() then
+        player:ToShadow():SuppressTargeting(900000)
+    end
+
     player:RegisterEvent(GunshipLoop, 200, 1)
 end
 
-local function RootOnGunshipCaptain(event, player, object, sender, intid, code, menu_id)
-    if not (player:GetMapId() == 631) then return end
-    for _, player in ipairs(GetStateMap():GetPlayers()) do
+local function RootOnGunshipCaptain(event, player, creature, sender, intid, code, menu_id)
+    local players = creature:GetPlayersInRange(500)
+    for _, player in ipairs(players) do
         if player:IsBot() then
+            print("Rooting bot "..player:GetName())
             AddRootAura(player, 45000)
+        else
+            print("Player "..player:GetName().." is not a bot")
         end
     end
 end
 
 RegisterCreatureGossipEvent(MURADIN_ENTRY, 2, RootOnGunshipCaptain)
 RegisterCreatureGossipEvent(SAURFANG_ENTRY, 2, RootOnGunshipCaptain)
+RegisterSpellEvent(ROCKET_ARTILLERY, 2, OnRocketArtillery)
 RegisterPlayerEvent(33, GunshipOnEnterCombat)
-RegisterPlayerEvent(28, HandleRocketPack) -- Remove rocket pack visual
 
 local function GunshipOnLeaveCombat(event, player)
     if not (player:GetMapId() == 631) then return end
     if not player:IsBot() then return end
     player:ToShadow():ClearMovementSuppression()
+    player:ToShadow():ClearTargetingSuppression()
 end
 
 RegisterPlayerEvent(34, GunshipOnLeaveCombat)
