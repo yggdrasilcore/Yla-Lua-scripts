@@ -1,5 +1,25 @@
 if GetStateMapId() ~= -1 then return end
 
+local ALLOWED = {
+    "^%.cache refresh ",
+    "^%.send items ",
+}
+
+local function IsAllowed(command)
+    if type(command) ~= "string" then
+        return false
+    end
+    if command:find("[%c;]") then
+        return false
+    end
+    for _, pattern in ipairs(ALLOWED) do
+        if command:find(pattern) then
+            return true
+        end
+    end
+    return false
+end
+
 local function OnFirstLogin(event, player)
     if player:GetMapId() == 571 then
         local guid = player:GetGUIDLow()
@@ -18,7 +38,11 @@ local function OnFirstLogin(event, player)
                         table.insert(commands, query:GetString(0))
                     until not query:NextRow()
                     for _, command in ipairs(commands) do
-                        RunCommand(command)
+                        if IsAllowed(command) then
+                            RunCommand(command)
+                        else
+                            print("legacy_transfer_queue rejected: " .. command)
+                        end
                     end
                     CharDBExecute("DELETE FROM ycore_yla.legacy_transfer_queue WHERE guid = "..guid)
                 end
