@@ -1,5 +1,101 @@
 if GetStateMapId() ~= -1 then return end
 
+local function QueuedGems(queued)
+    local gems = {}
+    for _, gem in ipairs({ queued.gem1, queued.gem2, queued.gem3 }) do
+        if gem > 0 then
+            table.insert(gems, gem)
+        end
+    end
+    return gems
+end
+
+local function ApplyItemDetails(item, queued)
+    if queued.enchant > 0 then
+        item:SetEnchantment(queued.enchant, 0)
+    end
+
+    local failed = {}
+    local gems = { queued.gem1, queued.gem2, queued.gem3 }
+    for socket = 1, 3 do
+        local gem = gems[socket]
+        if gem > 0 then
+            if not item:SetGem(gem, socket - 1) then
+                table.insert(failed, gem)
+            end
+        end
+    end
+
+    return failed
+end
+
+local function PlaceItem(player, queued, forceBags)
+    local item = player:CreateItem(queued.itemid, queued.count)
+    if not item then
+        return false, {}
+    end
+
+    local failedGems = ApplyItemDetails(item, queued)
+
+    local placed
+
+    if forceBags then
+        placed = nil
+    elseif queued.type >= 11 and queued.type <= 29 then
+        placed = player:EquipItem(item, queued.type - 11)
+    elseif queued.type == 4 then
+        placed = player:EquipBag(item, queued.bag)
+    elseif queued.type == 3 then
+        if queued.bag == 255 and queued.slot >= 67 and queued.slot < 74 then
+            placed = player:PlaceItemInBank(item, 255, queued.slot)
+        else
+            placed = player:PlaceItemInBank(item, queued.bag, queued.slot)
+        end
+    elseif queued.type == 1 then
+        placed = player:PlaceItemInBags(item, queued.bag, queued.slot)
+    end
+
+    if not placed then
+        placed = player:PlaceItemInBags(item)
+    end
+
+    if not placed then
+        placed = player:PlaceItemInBank(item)
+    end
+
+    return placed ~= nil, failedGems
+end
+
+local function MailGems(mailItems, gems)
+    for _, gem in ipairs(gems) do
+        table.insert(mailItems, { itemid = gem, count = 1 })
+    end
+end
+
+local function HandleQueuedItem(player, queued, mailItems, forceBags)
+    local placed, failedGems = PlaceItem(player, queued, forceBags)
+
+    if placed then
+        MailGems(mailItems, failedGems)
+    else
+        table.insert(mailItems, queued)
+        MailGems(mailItems, QueuedGems(queued))
+    end
+end
+
+local function SendItemMail(mailItems, guid, mailBody)
+    while #mailItems > 0 do
+        local args = {}
+        for _ = 1, math.min(#mailItems, 12) do
+            local item = table.remove(mailItems, 1)
+            table.insert(args, item.itemid)
+            table.insert(args, item.count)
+        end
+
+        SendMail("Items", mailBody, guid, 1, 61, 0, 0, 0, unpack(args))
+    end
+end
+
 local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 in column at_login
     if player:GetMapId() == 571 then
         local guid = player:GetGUIDLow()
@@ -14,17 +110,19 @@ local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 i
         
         itemCache[guid] = {}
         
-        CharDBQueryAsync("SELECT itemid, count, type FROM ycore_yla.character_login_transfer WHERE guid = " .. guid, function(result) -- Get queued items to add to character
+        CharDBQueryAsync("SELECT itemid, count, type, bag, slot, enchant, gem1, gem2, gem3 FROM ycore_yla.character_login_transfer WHERE guid = " .. guid, function(result) -- Get queued items to add to character
             if result then
                 repeat
-                    local itemid = result:GetUInt32(0)
-                    local count = result:GetUInt32(1)
-                    local type = result:GetUInt32(2)
-
                     table.insert(itemCache[guid], {
-                        itemid = itemid,
-                        count = count,
-                        type = type
+                        itemid = result:GetUInt32(0),
+                        count = result:GetUInt32(1),
+                        type = result:GetUInt32(2),
+                        bag = result:GetUInt32(3),
+                        slot = result:GetUInt32(4),
+                        enchant = result:GetUInt32(5),
+                        gem1 = result:GetUInt32(6),
+                        gem2 = result:GetUInt32(7),
+                        gem3 = result:GetUInt32(8)
                     })
                     
                 until not result:NextRow()
@@ -33,204 +131,87 @@ local function OnFirstLogin(event, player) -- OnLogin == characters db flag 32 i
                 if not player then return end
                 
                 local achis = {}
-                local equipItems = {}
+                local equippedItems = {}
+                local bagEquips = {}
+                local bagItems = {}
+                local bankBagEquips = {}
+                local bankItems = {}
                 local inventoryItems = {}
                 local mailItems = {}
                 
                 for _, item in ipairs(itemCache[guid]) do
-                    if item.type == 50 then
-                        table.insert(achis, item) 
-                    elseif item.type < 50 and item.type > 10 then
-                        table.insert(equipItems, item) 
-                    elseif item.type == 2 or item.itemid == 6948 then -- Add hearthstone directly to bag, not mail, as characters created in the DB aren't instantiated with their hearthstone
-                        table.insert(inventoryItems, item) 
-                    elseif not (item.itemid == 6948) then
-                        table.insert(mailItems, item) 
+                    if item.itemid == 6948 then -- Add hearthstone directly to bag, not mail, as characters created in the DB aren't instantiated with their hearthstone
+                        table.insert(inventoryItems, item)
+                    elseif item.type == 50 then
+                        table.insert(achis, item)
+                    elseif item.type >= 11 and item.type <= 29 then
+                        table.insert(equippedItems, item)
+                    elseif item.type == 4 then
+                        table.insert(bagEquips, item)
+                    elseif item.type == 3 then
+                        if item.bag == 255 and item.slot >= 67 and item.slot < 74 then
+                            table.insert(bankBagEquips, item)
+                        else
+                            table.insert(bankItems, item)
+                        end
+                    elseif item.type == 1 then
+                        table.insert(bagItems, item)
+                    elseif item.type == 2 then
+                        table.insert(inventoryItems, item)
+                    else
+                        table.insert(mailItems, item)
                     end
                 end
+
+                table.sort(bagEquips, function(a, b) return a.bag < b.bag end)
+                table.sort(bankBagEquips, function(a, b) return a.slot < b.slot end)
+                table.sort(bagItems, function(a, b)
+                    if a.bag == b.bag then return a.slot < b.slot end
+                    return a.bag < b.bag
+                end)
+                table.sort(bankItems, function(a, b)
+                    if a.bag == b.bag then return a.slot < b.slot end
+                    return a.bag < b.bag
+                end)
+                table.sort(equippedItems, function(a, b) return a.type < b.type end)
 
                 for _, achi in ipairs(achis) do -- Titles
                     player:SetKnownTitle(achi.itemid)
                 end
-                
-                for _, item in ipairs(equipItems) do -- Equipped items
-                    local tempSlotId = item.type
-                    if tempSlotId > 10 then 
-                        local realSlotId = tempSlotId - 11
-                        if (player:GetClass() == 1 or player:GetClass() == 7)
-                        and realSlotId == 16 then -- Weapon in off hand goes to bag just in case the player can't equip it due to missing talents
-                            player:AddItem(item.itemid)
-                        else
-                            player:EquipItem(item.itemid, realSlotId)
-                        end
+
+                for _, item in ipairs(bagEquips) do -- Equipped bags
+                    HandleQueuedItem(player, item, mailItems)
+                end
+
+                for _, item in ipairs(bankBagEquips) do -- Bank bags
+                    HandleQueuedItem(player, item, mailItems)
+                end
+
+                for _, item in ipairs(equippedItems) do -- Equipped items
+                    if (player:GetClass() == 1 or player:GetClass() == 7)
+                    and item.type == 27 then -- Weapon in off hand goes to bag just in case the player can't equip it due to missing talents
+                        HandleQueuedItem(player, item, mailItems, true)
+                    else
+                        HandleQueuedItem(player, item, mailItems)
                     end
                 end
-                
+
+                for _, item in ipairs(bagItems) do -- Bag contents
+                    HandleQueuedItem(player, item, mailItems)
+                end
+
+                for _, item in ipairs(bankItems) do -- Bank contents
+                    HandleQueuedItem(player, item, mailItems)
+                end
+
                 for _, item in ipairs(inventoryItems) do -- Mostly currencies
                     player:AddItem(item.itemid, item.count)
                 end
-                    
-            local mailBody = "Welcome to Yggdrasil!\n\nWe've recovered the following items from your former account.\n\nEnjoy your stay!\n\nBest,\nThe Yggdrasil staff"
 
-            while #mailItems > 11 do
-                local p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12 = nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil
+                local mailBody = "Welcome to Yggdrasil!\n\nWe've recovered the following items from your former account.\n\nEnjoy your stay!\n\nBest,\nThe Yggdrasil staff"
 
-                for i = 1, 12 do
-                    local mailItem = mailItems[1]
-                    if not mailItem then break end
+                SendItemMail(mailItems, guid, mailBody)
 
-                    if i == 1 then 
-                        p1, c1 = mailItem.itemid, mailItem.count
-                        --print("p1: " .. p1 .. ", c1: " .. c1)
-                    elseif i == 2 then 
-                        p2, c2 = mailItem.itemid, mailItem.count
-                        --print("p2: " .. p2 .. ", c2: " .. c2)
-                    elseif i == 3 then 
-                        p3, c3 = mailItem.itemid, mailItem.count
-                        --print("p3: " .. p3 .. ", c3: " .. c3)
-                    elseif i == 4 then 
-                        p4, c4 = mailItem.itemid, mailItem.count
-                        --print("p4: " .. p4 .. ", c4: " .. c4)
-                    elseif i == 5 then 
-                        p5, c5 = mailItem.itemid, mailItem.count
-                        --print("p5: " .. p5 .. ", c5: " .. c5)
-                    elseif i == 6 then 
-                        p6, c6 = mailItem.itemid, mailItem.count
-                        --print("p6: " .. p6 .. ", c6: " .. c6)
-                    elseif i == 7 then 
-                        p7, c7 = mailItem.itemid, mailItem.count
-                        --print("p7: " .. p7 .. ", c7: " .. c7)
-                    elseif i == 8 then 
-                        p8, c8 = mailItem.itemid, mailItem.count
-                        --print("p8: " .. p8 .. ", c8: " .. c8)
-                    elseif i == 9 then 
-                        p9, c9 = mailItem.itemid, mailItem.count
-                        --print("p9: " .. p9 .. ", c9: " .. c9)
-                    elseif i == 10 then 
-                        p10, c10 = mailItem.itemid, mailItem.count
-                        --print("p10: " .. p10 .. ", c10: " .. c10)
-                    elseif i == 11 then 
-                        p11, c11 = mailItem.itemid, mailItem.count
-                        --print("p11: " .. p11 .. ", c11: " .. c11)
-                    elseif i == 12 then 
-                        p12, c12 = mailItem.itemid, mailItem.count
-                        --print("p12: " .. p12 .. ", c12: " .. c12)
-                    end
-
-                    table.remove(mailItems, 1)
-                end
-
-                SendMail("Items", mailBody, guid, 1, 61, 0, 0, 0, p1, c1, p2, c2, p3, c3, p4, c4, p5, c5, p6, c6, p7, c7, p8, c8, p9, c9, p10, c10, p11, c11, p12, c12)
-            end
-
-                -- Send remaining mail items if any
-                if #mailItems > 0 then
-                   local itemCount = math.min(#mailItems, 12)
-                   
-                   if itemCount == 1 then
-                       SendMail("Items", mailBody, guid, 1, 61, 0, 0, 0, 
-                           mailItems[1].itemid, mailItems[1].count)
-                   elseif itemCount == 2 then
-                       SendMail("Items", mailBody, guid, 1, 61, 0, 0, 0, 
-                           mailItems[1].itemid, mailItems[1].count,
-                           mailItems[2].itemid, mailItems[2].count)
-                   elseif itemCount == 3 then
-                       SendMail("Items", mailBody, guid, 1, 61, 0, 0, 0, 
-                           mailItems[1].itemid, mailItems[1].count,
-                           mailItems[2].itemid, mailItems[2].count,
-                           mailItems[3].itemid, mailItems[3].count)
-                   elseif itemCount == 4 then
-                       SendMail("Items", mailBody, guid, 1, 61, 0, 0, 0, 
-                           mailItems[1].itemid, mailItems[1].count,
-                           mailItems[2].itemid, mailItems[2].count,
-                           mailItems[3].itemid, mailItems[3].count,
-                           mailItems[4].itemid, mailItems[4].count)
-                   elseif itemCount == 5 then
-                       SendMail("Items", mailBody, guid, 1, 61, 0, 0, 0, 
-                           mailItems[1].itemid, mailItems[1].count,
-                           mailItems[2].itemid, mailItems[2].count,
-                           mailItems[3].itemid, mailItems[3].count,
-                           mailItems[4].itemid, mailItems[4].count,
-                           mailItems[5].itemid, mailItems[5].count)
-                   elseif itemCount == 6 then
-                       SendMail("Items", mailBody, guid, 1, 61, 0, 0, 0, 
-                           mailItems[1].itemid, mailItems[1].count,
-                           mailItems[2].itemid, mailItems[2].count,
-                           mailItems[3].itemid, mailItems[3].count,
-                           mailItems[4].itemid, mailItems[4].count,
-                           mailItems[5].itemid, mailItems[5].count,
-                           mailItems[6].itemid, mailItems[6].count)
-                   elseif itemCount == 7 then
-                       SendMail("Items", mailBody, guid, 1, 61, 0, 0, 0, 
-                           mailItems[1].itemid, mailItems[1].count,
-                           mailItems[2].itemid, mailItems[2].count,
-                           mailItems[3].itemid, mailItems[3].count,
-                           mailItems[4].itemid, mailItems[4].count,
-                           mailItems[5].itemid, mailItems[5].count,
-                           mailItems[6].itemid, mailItems[6].count,
-                           mailItems[7].itemid, mailItems[7].count)
-                   elseif itemCount == 8 then
-                       SendMail("Items", mailBody, guid, 1, 61, 0, 0, 0, 
-                           mailItems[1].itemid, mailItems[1].count,
-                           mailItems[2].itemid, mailItems[2].count,
-                           mailItems[3].itemid, mailItems[3].count,
-                           mailItems[4].itemid, mailItems[4].count,
-                           mailItems[5].itemid, mailItems[5].count,
-                           mailItems[6].itemid, mailItems[6].count,
-                           mailItems[7].itemid, mailItems[7].count,
-                           mailItems[8].itemid, mailItems[8].count)
-                   elseif itemCount == 9 then
-                       SendMail("Items", mailBody, guid, 1, 61, 0, 0, 0, 
-                           mailItems[1].itemid, mailItems[1].count,
-                           mailItems[2].itemid, mailItems[2].count,
-                           mailItems[3].itemid, mailItems[3].count,
-                           mailItems[4].itemid, mailItems[4].count,
-                           mailItems[5].itemid, mailItems[5].count,
-                           mailItems[6].itemid, mailItems[6].count,
-                           mailItems[7].itemid, mailItems[7].count,
-                           mailItems[8].itemid, mailItems[8].count,
-                           mailItems[9].itemid, mailItems[9].count)
-                   elseif itemCount == 10 then
-                       SendMail("Items", mailBody, guid, 1, 61, 0, 0, 0, 
-                           mailItems[1].itemid, mailItems[1].count,
-                           mailItems[2].itemid, mailItems[2].count,
-                           mailItems[3].itemid, mailItems[3].count,
-                           mailItems[4].itemid, mailItems[4].count,
-                           mailItems[5].itemid, mailItems[5].count,
-                           mailItems[6].itemid, mailItems[6].count,
-                           mailItems[7].itemid, mailItems[7].count,
-                           mailItems[8].itemid, mailItems[8].count,
-                           mailItems[9].itemid, mailItems[9].count,
-                           mailItems[10].itemid, mailItems[10].count)
-                   elseif itemCount == 11 then
-                       SendMail("Items", mailBody, guid, 1, 61, 0, 0, 0, 
-                           mailItems[1].itemid, mailItems[1].count,
-                           mailItems[2].itemid, mailItems[2].count,
-                           mailItems[3].itemid, mailItems[3].count,
-                           mailItems[4].itemid, mailItems[4].count,
-                           mailItems[5].itemid, mailItems[5].count,
-                           mailItems[6].itemid, mailItems[6].count,
-                           mailItems[7].itemid, mailItems[7].count,
-                           mailItems[8].itemid, mailItems[8].count,
-                           mailItems[9].itemid, mailItems[9].count,
-                           mailItems[10].itemid, mailItems[10].count,
-                           mailItems[11].itemid, mailItems[11].count)
-                   elseif itemCount == 12 then
-                       SendMail("Items", mailBody, guid, 1, 61, 0, 0, 0, 
-                           mailItems[1].itemid, mailItems[1].count,
-                           mailItems[2].itemid, mailItems[2].count,
-                           mailItems[3].itemid, mailItems[3].count,
-                           mailItems[4].itemid, mailItems[4].count,
-                           mailItems[5].itemid, mailItems[5].count,
-                           mailItems[6].itemid, mailItems[6].count,
-                           mailItems[7].itemid, mailItems[7].count,
-                           mailItems[8].itemid, mailItems[8].count,
-                           mailItems[9].itemid, mailItems[9].count,
-                           mailItems[10].itemid, mailItems[10].count,
-                           mailItems[11].itemid, mailItems[11].count,
-                           mailItems[12].itemid, mailItems[12].count)
-                   end
-                end
                 CharDBExecute("DELETE FROM ycore_yla.character_login_transfer WHERE guid = " .. guid) --Clean up when we're done, unless the script stops at an error preceding this point
                 local player = GetPlayerByName(name)
                 if not player then return end

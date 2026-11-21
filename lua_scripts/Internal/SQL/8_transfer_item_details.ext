@@ -1,0 +1,21 @@
+-- Adds decoded item placement details to the character transfer queue.
+local columns = {
+    bag = "int DEFAULT NULL",
+    slot = "int DEFAULT NULL",
+    enchant = "int DEFAULT NULL",
+    gem1 = "int DEFAULT NULL",
+    gem2 = "int DEFAULT NULL",
+    gem3 = "int DEFAULT NULL",
+}
+
+local function transfer_item_details()
+    for name, definition in pairs(columns) do
+        if not CharDBQuery("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = 'ycore_yla' AND TABLE_NAME = 'character_login_transfer' AND COLUMN_NAME = '" .. name .. "' LIMIT 1") then
+            CharDBQuery("ALTER TABLE `ycore_yla`.`character_login_transfer` ADD COLUMN `" .. name .. "` " .. definition)
+        end
+    end
+end
+
+CreateLuaEvent(function()
+    YcoreYlaUpdate("transfer_item_details", transfer_item_details)
+end, 5000, 1)
