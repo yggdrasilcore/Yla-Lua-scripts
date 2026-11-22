@@ -17,9 +17,6 @@ end
 
 local function OnEnterDTK(event, player)
     if not player:IsBot() then return end
-    if not (player:GetMapId() == MAP_ID) then
-        return
-    end
 
     player:RegisterEvent(StartDrakTharonKeepTactics, TICK_TIMER, 0)
 end

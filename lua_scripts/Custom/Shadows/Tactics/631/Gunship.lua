@@ -1124,15 +1124,4 @@ RegisterCreatureEvent(SKYBREAKER_ENTRY, 9, GunshipOnShipDamageTaken)
 RegisterSpellEvent(ROCKET_ARTILLERY, 2, OnRocketArtillery)
 RegisterPlayerEvent(33, GunshipOnEnterCombat)
 
-local function GunshipOnLeaveCombat(event, player)
-    if not (player:GetMapId() == 631) then return end
-    if (player:GetZ() < 490 or player:GetZ() > 350) then return end
-    if not player:IsBot() then return end
-    player:ToShadow():ClearMovementSuppression()
-    player:ToShadow():ClearTargetingSuppression()
-    RemoveRootAura(player)
-end
-
-RegisterPlayerEvent(34, GunshipOnLeaveCombat)
-
 if GetStateMap() then for _, player in ipairs(GetStateMap():GetPlayers()) do GunshipOnEnterCombat(nil, player, nil) end end
