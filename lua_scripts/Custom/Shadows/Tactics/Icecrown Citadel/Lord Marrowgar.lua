@@ -722,6 +722,24 @@ end
 
 RegisterCreatureEvent(MARROWGAR_ENTRY, 2, MarrowgarOnLeaveCombat)
 
+local function MarrowgarOnDied(event, marrowgar, killer)
+    StopLuaEvent(marrowgar)
+    for _, player in ipairs(marrowgar:GetPlayersInRange(200)) do
+        local shadow = player:ToShadow()
+        if shadow then
+            local target = shadow:GetTarget()
+            if target and target:GetGUIDLow() == marrowgar:GetGUIDLow() then
+                shadow:ClearTarget()
+            end
+            shadow:ClearMovementSuppression()
+            shadow:ClearTargetingSuppression()
+            shadow:ToggleCombatStrategy("+icc")
+        end
+    end
+end
+
+RegisterCreatureEvent(MARROWGAR_ENTRY, 4, MarrowgarOnDied)
+
 if GetStateMap() then
     for _, player in ipairs(GetStateMap():GetPlayers()) do
         if player:IsAlive() and player:IsInCombat() and IsInsidePentagon(player:GetX(), player:GetY()) then
