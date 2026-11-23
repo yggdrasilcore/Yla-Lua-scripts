@@ -1,5 +1,3 @@
-if GetStateMapId() == -1 then return end
-
 local function RootWatchdogLoop(eventId, delay, repeats, player)
     if not player:IsBot() then player:RemoveEventById(eventId) return end
     if player:IsRooted() and not player:HasUnitState(0x00000400) then
@@ -12,9 +10,9 @@ local function OnPlayerMapChange(event, player)
 end
 
 RegisterPlayerEvent(28, OnPlayerMapChange)
-if GetStateMap() then
-    for _, player in ipairs(GetStateMap():GetPlayers()) do
-        if not player:IsBot() then return end
+
+for _, player in ipairs(GetPlayersInWorld()) do
+    if player:IsBot() then
         player:RegisterEvent(RootWatchdogLoop, 5000, 0)
     end
 end
