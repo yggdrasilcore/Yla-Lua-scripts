@@ -101,6 +101,8 @@ local function JumpCooldown(x1, y1, z1, x2, y2, z2)
 end
 
 local MOVE_STALL_TIME = 2000
+local MOVE_RETARGET_DISTANCE = 2
+local POINT_MOTION_TYPE = 8
 local JUMP_MAX_TIME = 5000
 local JUMP_REACH_TOLERANCE = 3
 local JUMP_REACH_Z_TOLERANCE = 1
@@ -176,7 +178,9 @@ local function MoveToDest(player, x, y, z)
     local lx = player:Data():Get("GunshipMoveX")
     local ly = player:Data():Get("GunshipMoveY")
     local lz = player:Data():Get("GunshipMoveZ")
-    if lx and ly and lz and (x - lx)^2 + (y - ly)^2 + (z - lz)^2 <= 1 then
+    if lx and ly and lz and (x - lx)^2 + (y - ly)^2 + (z - lz)^2 <= MOVE_RETARGET_DISTANCE^2 then
+        -- already walking to this spot: reissuing every tick restarts the spline mid-flight
+        if player:GetMovementType() == POINT_MOTION_TYPE then return end
         local gx, gy, gz = player:Data():Get("GunshipMoveFromX"), player:Data():Get("GunshipMoveFromY"), player:Data():Get("GunshipMoveFromZ")
         local stillNear = gx and gy and gz and (px - gx)^2 + (py - gy)^2 + (pz - gz)^2 <= 4
         if stillNear and now - player:Data():Get("GunshipMoveTime") < MOVE_STALL_TIME then return end
@@ -885,7 +889,13 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
         if IsAtPos(player, tx, ty, 4) and not GetRocketBlocked(px, py, GetCurrTime()) then
             AddRootAura(player, 3000)
         else
-            MoveToDest(player, tx + math.random(-2.8, 2.8), ty + math.random(-2.8, 2.8), GetCorrectedZ(tx, ty) or pz)
+            local ox, oy = player:Data():Get("GunshipHealOffsetX"), player:Data():Get("GunshipHealOffsetY")
+            if not ox or not oy then
+                ox, oy = math.random(-2.8, 2.8), math.random(-2.8, 2.8)
+                player:Data():Set("GunshipHealOffsetX", ox)
+                player:Data():Set("GunshipHealOffsetY", oy)
+            end
+            MoveToDest(player, tx + ox, ty + oy, GetCorrectedZ(tx, ty) or pz)
         end
         player:RegisterEvent(GunshipLoop, 200, 1)
         return
@@ -894,7 +904,13 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
     -- Keep players on Skybreaker deck if no mage. There's a bit of a stutter due to the edge being higher but I think it's probably OK as is
     if not mage then
         if ((player:HasMeleeSpec() or player:HasTankSpec()) and py <= ALLY_SKYBREAKER_WALK_LIMIT + 5) then
-            MoveToDest(player, ALLY_SKYBREAKER_START_POS.x + math.random(-2, 2), ALLY_SKYBREAKER_START_POS.y + math.random(-2, 2), ALLY_SKYBREAKER_START_POS.z)
+            local ox, oy = player:Data():Get("GunshipDeckOffsetX"), player:Data():Get("GunshipDeckOffsetY")
+            if not ox or not oy then
+                ox, oy = math.random(-2, 2), math.random(-2, 2)
+                player:Data():Set("GunshipDeckOffsetX", ox)
+                player:Data():Set("GunshipDeckOffsetY", oy)
+            end
+            MoveToDest(player, ALLY_SKYBREAKER_START_POS.x + ox, ALLY_SKYBREAKER_START_POS.y + oy, ALLY_SKYBREAKER_START_POS.z)
         elseif (py < ALLY_SKYBREAKER_Y_LIMIT + 2 and py >= ALLY_SKYBREAKER_Y_LIMIT) then
             MoveToDest(player, px, ALLY_SKYBREAKER_WALK_LIMIT + math.random(-0.5, 0.5), 467.55)
         end

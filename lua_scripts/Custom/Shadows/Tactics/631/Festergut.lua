@@ -338,8 +338,14 @@ function FestergutHandleSpore(festergut, bots, sporePlayers, cachedSporeCount, g
             end
 
             if closestPos then
-                local offsetX = math.random(-2, 2)
-                local offsetY = math.random(-2, 2)
+                local offsetX = bot:Data():Get("FestergutSporeOffsetX")
+                local offsetY = bot:Data():Get("FestergutSporeOffsetY")
+                if not offsetX or not offsetY then
+                    offsetX = math.random(-2, 2)
+                    offsetY = math.random(-2, 2)
+                    bot:Data():Set("FestergutSporeOffsetX", offsetX)
+                    bot:Data():Set("FestergutSporeOffsetY", offsetY)
+                end
                 if not IsAtPos(bot, closestPos[1] + offsetX, closestPos[2] + offsetY, 3) then
                     MoveImmediately(bot, closestPos[1] + offsetX, closestPos[2] + offsetY, closestPos[3])
                 else
