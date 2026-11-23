@@ -181,17 +181,15 @@ local function MoveToDest(player, x, y, z)
     if lx and ly and lz and (x - lx)^2 + (y - ly)^2 + (z - lz)^2 <= MOVE_RETARGET_DISTANCE^2 then
         -- already walking to this spot: reissuing every tick restarts the spline mid-flight
         if player:GetMovementType() == POINT_MOTION_TYPE then return end
-        local gx, gy, gz = player:Data():Get("GunshipMoveFromX"), player:Data():Get("GunshipMoveFromY"), player:Data():Get("GunshipMoveFromZ")
-        local stillNear = gx and gy and gz and (px - gx)^2 + (py - gy)^2 + (pz - gz)^2 <= 4
-        if stillNear and now - player:Data():Get("GunshipMoveTime") < MOVE_STALL_TIME then return end
+        -- stopped at the destination: another move would just be a micro-step
+        if (px - x)^2 + (py - y)^2 + (pz - z)^2 <= MOVE_RETARGET_DISTANCE^2 then return end
+        -- stopped short: give the previous attempt time to make progress before retrying
+        if now - player:Data():Get("GunshipMoveTime") < MOVE_STALL_TIME then return end
     end
 
     player:Data():Set("GunshipMoveX", x)
     player:Data():Set("GunshipMoveY", y)
     player:Data():Set("GunshipMoveZ", z)
-    player:Data():Set("GunshipMoveFromX", px)
-    player:Data():Set("GunshipMoveFromY", py)
-    player:Data():Set("GunshipMoveFromZ", pz)
     player:Data():Set("GunshipMoveTime", now)
     player:MoveTo(1, x, y, z, true)
 end
@@ -604,11 +602,19 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
 
     -- Healers: pin to HORDE_HEALER_POS, root 5s on arrival
     if player:HasHealSpec() then
-        local tx, ty = HORDE_HEALER_POS.x, HORDE_HEALER_POS.y
+        local offsetX = player:Data():Get("GunshipHordeHealOffsetX")
+        local offsetY = player:Data():Get("GunshipHordeHealOffsetY")
+        if not offsetX or not offsetY then
+            offsetX = math.random(-1, 1)
+            offsetY = math.random(-1, 1)
+            player:Data():Set("GunshipHordeHealOffsetX", offsetX)
+            player:Data():Set("GunshipHordeHealOffsetY", offsetY)
+        end
+        local tx, ty = HORDE_HEALER_POS.x + offsetX, HORDE_HEALER_POS.y + offsetY
         if IsAtPos(player, tx, ty, 1) and not GetRocketBlocked(px, py, GetCurrTime()) then
             AddRootAura(player, 5000)
         else
-            MoveToDest(player, tx + math.random(-1, 1), ty + math.random(-1, 1), HORDE_HEALER_POS.z)
+            MoveToDest(player, tx, ty, HORDE_HEALER_POS.z)
         end
         player:RegisterEvent(GunshipLoop, 200, 1)
         return

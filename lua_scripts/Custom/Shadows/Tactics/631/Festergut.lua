@@ -382,10 +382,16 @@ function FestergutHandleMelee(festergut, botMelee, gooPos)
             target = tankPos
         end
 
-        local offsetX = math.random(-2, 2)
-        local offsetY = math.random(-2, 2)
-        if not IsAtPos(player, target[1], target[2], 3) then
-            player:MoveTo(1, target[1] + offsetX, target[2] + offsetY, target[3], true)
+        local offsetX = player:Data():Get("FestergutMeleeOffsetX")
+        local offsetY = player:Data():Get("FestergutMeleeOffsetY")
+        if not offsetX or not offsetY then
+            offsetX = math.random(-2, 2)
+            offsetY = math.random(-2, 2)
+            player:Data():Set("FestergutMeleeOffsetX", offsetX)
+            player:Data():Set("FestergutMeleeOffsetY", offsetY)
+        end
+        if not IsAtPos(player, target[1] + offsetX, target[2] + offsetY, 3) then
+            MoveImmediately(player, target[1] + offsetX, target[2] + offsetY, target[3])
         else
             TryRootAtPos(player, gooPos, 2000)
         end
