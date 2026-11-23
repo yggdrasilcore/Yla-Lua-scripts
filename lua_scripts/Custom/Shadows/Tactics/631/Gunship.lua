@@ -100,6 +100,9 @@ local function JumpCooldown(x1, y1, z1, x2, y2, z2)
     return dist / 5
 end
 
+local MOVE_STALL_TIME = 2000
+local MOVE_RETARGET_DISTANCE = 2
+local POINT_MOTION_TYPE = 8
 local JUMP_MAX_TIME = 5000
 local JUMP_REACH_TOLERANCE = 3
 local JUMP_REACH_Z_TOLERANCE = 1
@@ -172,7 +175,22 @@ local function MoveToDest(player, x, y, z)
         return
     end
 
-    if player:IsMoving() then return end
+    local lx = player:Data():Get("GunshipMoveX")
+    local ly = player:Data():Get("GunshipMoveY")
+    local lz = player:Data():Get("GunshipMoveZ")
+    if lx and ly and lz and (x - lx)^2 + (y - ly)^2 + (z - lz)^2 <= MOVE_RETARGET_DISTANCE^2 then
+        -- already walking to this spot: reissuing every tick restarts the spline mid-flight
+        if player:GetMovementType() == POINT_MOTION_TYPE then return end
+        -- stopped at the destination: another move would just be a micro-step
+        if (px - x)^2 + (py - y)^2 + (pz - z)^2 <= MOVE_RETARGET_DISTANCE^2 then return end
+        -- stopped short: give the previous attempt time to make progress before retrying
+        if now - player:Data():Get("GunshipMoveTime") < MOVE_STALL_TIME then return end
+    end
+
+    player:Data():Set("GunshipMoveX", x)
+    player:Data():Set("GunshipMoveY", y)
+    player:Data():Set("GunshipMoveZ", z)
+    player:Data():Set("GunshipMoveTime", now)
     player:MoveTo(1, x, y, z, true)
 end
 
@@ -1077,10 +1095,22 @@ local function GunshipOnShipDamageTaken(event, creature, attacker, damage)
     for _, player in ipairs(creature:GetMap():GetPlayers()) do
         if player:IsBot() and player:GetInstanceId() == instanceId then
             player:NearTeleport(RECOVERY_POS.x, RECOVERY_POS.y, RECOVERY_POS.z, player:GetO())
+            AddRootAura(player, 60000)
         end
     end
 end
 
+local function RootOnGunshipCaptain(event, player, creature, sender, intid, code, menu_id)
+    local players = creature:GetPlayersInRange(500)
+    for _, player in ipairs(players) do
+        if player:IsBot() then
+            AddRootAura(player, 45000)
+        end
+    end
+end
+
+RegisterCreatureGossipEvent(MURADIN_ENTRY, 2, RootOnGunshipCaptain)
+RegisterCreatureGossipEvent(SAURFANG_ENTRY, 2, RootOnGunshipCaptain)
 RegisterCreatureEvent(ORGRIM_ENTRY, 9, GunshipOnShipDamageTaken)
 RegisterCreatureEvent(SKYBREAKER_ENTRY, 9, GunshipOnShipDamageTaken)
 RegisterSpellEvent(ROCKET_ARTILLERY, 2, OnRocketArtillery)
