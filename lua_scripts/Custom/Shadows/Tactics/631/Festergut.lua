@@ -207,8 +207,9 @@ function FestergutHandleTanks(festergut, botTanks, gooPos)
         ApplyDamageReductionStacks(tank, (20 + tank:GetDifficulty()*15), 30000)
         if safeTankPos then
             if not IsAtPos(tank, safeTankPos[1], safeTankPos[2], 5) then
-                local tx, ty, tz = tank:GetLocation()
-                MoveImmediately(tank, safeTankPos[1], safeTankPos[2], safeTankPos[3])
+                if not tank:IsMoving() then
+                    tank:MoveTo(1, safeTankPos[1], safeTankPos[2], safeTankPos[3], true)
+                end
             else
                 TryRootAtPos(tank, gooPos, 2000)
             end
@@ -317,7 +318,9 @@ function FestergutHandleSpore(festergut, bots, sporePlayers, cachedSporeCount, g
                 if sp:GetName() == assignedName and sp:IsBot() then
                     local tp = sporePositions[i]
                     if not IsAtPos(sp, tp[1], tp[2], 3) then
-                        MoveImmediately(sp, tp[1], tp[2], tp[3])
+                        if not sp:IsMoving() then
+                            sp:MoveTo(1, tp[1], tp[2], tp[3], true)
+                        end
                     else
                         TryRootAtPos(sp, gooPos, 2000)
                     end
@@ -347,7 +350,9 @@ function FestergutHandleSpore(festergut, bots, sporePlayers, cachedSporeCount, g
                     bot:Data():Set("FestergutSporeOffsetY", offsetY)
                 end
                 if not IsAtPos(bot, closestPos[1] + offsetX, closestPos[2] + offsetY, 3) then
-                    MoveImmediately(bot, closestPos[1] + offsetX, closestPos[2] + offsetY, closestPos[3])
+                    if not bot:IsMoving() then
+                        bot:MoveTo(1, closestPos[1] + offsetX, closestPos[2] + offsetY, closestPos[3], true)
+                    end
                 else
                     TryRootAtPos(bot, gooPos, 2000)
                 end
@@ -554,7 +559,9 @@ function FestergutHandleHealersCasters(festergut, botHealers, botCasters, botTan
         local pos = player:Data():Get("FestergutSpreadPos")
         if pos then pos = pos:AsTable() end
         if pos and not IsAtPos(player, pos.x, pos.y, 2) then
-            MoveImmediately(player, pos.x, pos.y, pos.z)
+            if not player:IsMoving() then
+                player:MoveTo(1, pos.x, pos.y, pos.z, true)
+            end
         elseif pos then
             TryRootAtPos(player, gooPos, 2000)
         end
@@ -564,7 +571,9 @@ function FestergutHandleHealersCasters(festergut, botHealers, botCasters, botTan
         local pos = player:Data():Get("FestergutSpreadPos")
         if pos then pos = pos:AsTable() end
         if pos and not IsAtPos(player, pos.x, pos.y, 2) then
-            MoveImmediately(player, pos.x, pos.y, pos.z)
+            if not player:IsMoving() then
+                player:MoveTo(1, pos.x, pos.y, pos.z, true)
+            end
         elseif pos then
             TryRootAtPos(player, gooPos, 2000)
         end
