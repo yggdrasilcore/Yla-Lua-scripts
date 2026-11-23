@@ -391,7 +391,9 @@ function FestergutHandleMelee(festergut, botMelee, gooPos)
             player:Data():Set("FestergutMeleeOffsetY", offsetY)
         end
         if not IsAtPos(player, target[1] + offsetX, target[2] + offsetY, 3) then
-            MoveImmediately(player, target[1] + offsetX, target[2] + offsetY, target[3])
+            if not player:IsMoving() then
+                player:MoveTo(1, target[1] + offsetX, target[2] + offsetY, target[3], true)
+            end
         else
             TryRootAtPos(player, gooPos, 2000)
         end
