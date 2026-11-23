@@ -100,9 +100,6 @@ local function JumpCooldown(x1, y1, z1, x2, y2, z2)
     return dist / 5
 end
 
-local MOVE_STALL_TIME = 2000
-local MOVE_RETARGET_DISTANCE = 2
-local POINT_MOTION_TYPE = 8
 local JUMP_MAX_TIME = 5000
 local JUMP_REACH_TOLERANCE = 3
 local JUMP_REACH_Z_TOLERANCE = 1
@@ -175,22 +172,7 @@ local function MoveToDest(player, x, y, z)
         return
     end
 
-    local lx = player:Data():Get("GunshipMoveX")
-    local ly = player:Data():Get("GunshipMoveY")
-    local lz = player:Data():Get("GunshipMoveZ")
-    if lx and ly and lz and (x - lx)^2 + (y - ly)^2 + (z - lz)^2 <= MOVE_RETARGET_DISTANCE^2 then
-        -- already walking to this spot: reissuing every tick restarts the spline mid-flight
-        if player:GetMovementType() == POINT_MOTION_TYPE then return end
-        -- stopped at the destination: another move would just be a micro-step
-        if (px - x)^2 + (py - y)^2 + (pz - z)^2 <= MOVE_RETARGET_DISTANCE^2 then return end
-        -- stopped short: give the previous attempt time to make progress before retrying
-        if now - player:Data():Get("GunshipMoveTime") < MOVE_STALL_TIME then return end
-    end
-
-    player:Data():Set("GunshipMoveX", x)
-    player:Data():Set("GunshipMoveY", y)
-    player:Data():Set("GunshipMoveZ", z)
-    player:Data():Set("GunshipMoveTime", now)
+    if player:IsMoving() then return end
     player:MoveTo(1, x, y, z, true)
 end
 
@@ -427,7 +409,6 @@ local function HandleRocketAvoidance(player)
         destX, destY = px + math.cos(angle) * escape, py + math.sin(angle) * escape
     end
 
-    RemoveRootAura(player)
     MoveToDest(player, destX, destY, pz)
     return true
 end
@@ -568,9 +549,7 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
             if player:GetDistance(boarder) > 5 then
                 MoveToUnit(player, boarder, 3)
             end
-        elseif IsAtPos(player, tx, ty, 2) and not GetRocketBlocked(px, py, GetCurrTime()) then
-            AddRootAura(player, 2000)
-        else
+        elseif not IsAtPos(player, tx, ty, 2) or GetRocketBlocked(px, py, GetCurrTime()) then
             MoveToDest(player, tx, ty, HORDE_ORGRIM_TANK_POS[3])
         end
         local skullTarget = nil
@@ -611,9 +590,7 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
             player:Data():Set("GunshipHordeHealOffsetY", offsetY)
         end
         local tx, ty = HORDE_HEALER_POS.x + offsetX, HORDE_HEALER_POS.y + offsetY
-        if IsAtPos(player, tx, ty, 1) and not GetRocketBlocked(px, py, GetCurrTime()) then
-            AddRootAura(player, 5000)
-        else
+        if not IsAtPos(player, tx, ty, 1) or GetRocketBlocked(px, py, GetCurrTime()) then
             MoveToDest(player, tx, ty, HORDE_HEALER_POS.z)
         end
         player:RegisterEvent(GunshipLoop, 200, 1)
@@ -644,8 +621,6 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
         player:MoveStop()
         if mage and mage:IsCasting() and (not mainTank or mainTank:GetY() > HORDE_SKYBREAKER_Y_LIMIT) then
             RocketJump(player, HORDE_SKYBREAKER_JUMP_POS.x, HORDE_SKYBREAKER_JUMP_POS.y, HORDE_SKYBREAKER_JUMP_POS.z)
-        elseif mage then
-            AddRootAura(player, 15000)
         elseif not mage and py > 2429 then
             RocketJump(player, HORDE_ORGRIM_START_POS.x, HORDE_ORGRIM_START_POS.y, HORDE_ORGRIM_START_POS.z)
         end
@@ -680,9 +655,7 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
                 player:RegisterEvent(GunshipLoop, 200, 1)
                 return
             elseif anyForward then
-                if IsAtPos(player, HORDE_SKYBREAKER_TANK_JUMP.x, HORDE_SKYBREAKER_TANK_JUMP.y, 2) then
-                    AddRootAura(player, 2000)
-                else
+                if not IsAtPos(player, HORDE_SKYBREAKER_TANK_JUMP.x, HORDE_SKYBREAKER_TANK_JUMP.y, 2) then
                     MoveToDest(player, HORDE_SKYBREAKER_TANK_JUMP.x, HORDE_SKYBREAKER_TANK_JUMP.y, HORDE_SKYBREAKER_TANK_JUMP.z)
                 end
             end
@@ -694,8 +667,6 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
             if muradin then
                 if not IsAtPos(muradin, px, py - 3, 4) then
                     muradin:MoveTo(999, px, py - 3, pz)
-                else
-                    AddRootAura(muradin, 2000)
                 end
                 player:SetFacingToObject(muradin)
                 Taunt(player, muradin, true)
@@ -704,9 +675,7 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
                 end
             end
             if mage then
-                if IsAtPos(player, HORDE_SKYBREAKER_TANK_JUMP.x, HORDE_SKYBREAKER_TANK_JUMP.y, 2) then
-                    AddRootAura(player, 2000)
-                else
+                if not IsAtPos(player, HORDE_SKYBREAKER_TANK_JUMP.x, HORDE_SKYBREAKER_TANK_JUMP.y, 2) then
                     MoveToDest(player, HORDE_SKYBREAKER_TANK_JUMP.x, HORDE_SKYBREAKER_TANK_JUMP.y, HORDE_SKYBREAKER_TANK_JUMP.z)
                 end
             end
@@ -721,9 +690,7 @@ local function GunshipHordeActions(eventId, delay, repeats, player)
                 player:Data():Set("GunshipJumpCooldown", os.time() + JUMP_COOLDOWN)
             elseif py > HORDE_SKYBREAKER_Y_LIMIT then
                 player:Data():Set("GunshipJumpCooldown", 0)
-                if IsAtPos(player, HORDE_SKYBREAKER_TANK_JUMP.x, HORDE_SKYBREAKER_TANK_JUMP.y, 2) then
-                    AddRootAura(player, 2000)
-                else
+                if not IsAtPos(player, HORDE_SKYBREAKER_TANK_JUMP.x, HORDE_SKYBREAKER_TANK_JUMP.y, 2) then
                     MoveToDest(player, HORDE_SKYBREAKER_TANK_JUMP.x, HORDE_SKYBREAKER_TANK_JUMP.y, HORDE_SKYBREAKER_TANK_JUMP.z)
                 end
             end
@@ -862,9 +829,7 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
             if player:GetDistance(boarder) > 5 then
                 MoveToUnit(player, boarder, 3)
             end
-        elseif IsAtPos(player, tx, ty, 2) and not GetRocketBlocked(px, py, GetCurrTime()) then
-            AddRootAura(player, 2000)
-        else
+        elseif not IsAtPos(player, tx, ty, 2) or GetRocketBlocked(px, py, GetCurrTime()) then
             MoveToDest(player, tx, ty, GetCorrectedZ(tx, ty) or pz)
         end
         local skullTarget = nil
@@ -892,9 +857,7 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
     -- Healer stuff
     if player:HasHealSpec() then
         local tx, ty = ALLY_HEALER_POS.x, ALLY_HEALER_POS.y
-        if IsAtPos(player, tx, ty, 4) and not GetRocketBlocked(px, py, GetCurrTime()) then
-            AddRootAura(player, 3000)
-        else
+        if not IsAtPos(player, tx, ty, 4) or GetRocketBlocked(px, py, GetCurrTime()) then
             local ox, oy = player:Data():Get("GunshipHealOffsetX"), player:Data():Get("GunshipHealOffsetY")
             if not ox or not oy then
                 ox, oy = math.random(-2.8, 2.8), math.random(-2.8, 2.8)
@@ -954,8 +917,6 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
             if saurfang then
                 if not IsAtPos(saurfang, px, py - 3, 4) then
                     saurfang:MoveTo(999, px, py - 3, pz)
-                else
-                    AddRootAura(saurfang, 2000)
                 end
                 player:SetFacingToObject(saurfang)
                 Taunt(player, saurfang, true)
@@ -964,9 +925,7 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
                 end
             end
             if mage then
-                if IsAtPos(player, ALLY_ORGRIM_TANK_JUMP.x, ALLY_ORGRIM_TANK_JUMP.y, 2) then
-                    AddRootAura(player, 2000)
-                else
+                if not IsAtPos(player, ALLY_ORGRIM_TANK_JUMP.x, ALLY_ORGRIM_TANK_JUMP.y, 2) then
                     MoveToDest(player, ALLY_ORGRIM_TANK_JUMP.x, ALLY_ORGRIM_TANK_JUMP.y, ALLY_ORGRIM_TANK_JUMP.z)
                 end
             end
@@ -986,7 +945,6 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
             end
         else
             if py < ALLY_SKYBREAKER_Y_LIMIT then
-                RemoveRootAura(player)
                 local anyForward = false
                 local players = player:GetPlayersInRange(200)
                 for _, p in ipairs(players) do
@@ -996,16 +954,10 @@ local function GunshipAllianceActions(eventId, delay, repeats, player)
                     end
                 end
                 if not anyForward then
-                    RemoveRootAura(player)
                     RocketJump(player, ALLY_SKYBREAKER_START_POS.x, ALLY_SKYBREAKER_START_POS.y - 5, ALLY_SKYBREAKER_START_POS.z, true)
                     player:Data():Set("GunshipJumpCooldown", os.time() + JUMP_COOLDOWN)
-                else
-                    if IsAtPos(player, ALLY_ORGRIM_TANK_JUMP.x, ALLY_ORGRIM_TANK_JUMP.y, 2) then
-                        AddRootAura(player, 2000)
-                    else
-                        RemoveRootAura(player)
-                        MoveToDest(player, ALLY_ORGRIM_TANK_JUMP.x, ALLY_ORGRIM_TANK_JUMP.y, ALLY_ORGRIM_TANK_JUMP.z)
-                    end
+                elseif not IsAtPos(player, ALLY_ORGRIM_TANK_JUMP.x, ALLY_ORGRIM_TANK_JUMP.y, 2) then
+                    MoveToDest(player, ALLY_ORGRIM_TANK_JUMP.x, ALLY_ORGRIM_TANK_JUMP.y, ALLY_ORGRIM_TANK_JUMP.z)
                 end
             end
         end
@@ -1125,22 +1077,10 @@ local function GunshipOnShipDamageTaken(event, creature, attacker, damage)
     for _, player in ipairs(creature:GetMap():GetPlayers()) do
         if player:IsBot() and player:GetInstanceId() == instanceId then
             player:NearTeleport(RECOVERY_POS.x, RECOVERY_POS.y, RECOVERY_POS.z, player:GetO())
-            AddRootAura(player, 60000)
         end
     end
 end
 
-local function RootOnGunshipCaptain(event, player, creature, sender, intid, code, menu_id)
-    local players = creature:GetPlayersInRange(500)
-    for _, player in ipairs(players) do
-        if player:IsBot() then
-            AddRootAura(player, 45000)
-        end
-    end
-end
-
-RegisterCreatureGossipEvent(MURADIN_ENTRY, 2, RootOnGunshipCaptain)
-RegisterCreatureGossipEvent(SAURFANG_ENTRY, 2, RootOnGunshipCaptain)
 RegisterCreatureEvent(ORGRIM_ENTRY, 9, GunshipOnShipDamageTaken)
 RegisterCreatureEvent(SKYBREAKER_ENTRY, 9, GunshipOnShipDamageTaken)
 RegisterSpellEvent(ROCKET_ARTILLERY, 2, OnRocketArtillery)
