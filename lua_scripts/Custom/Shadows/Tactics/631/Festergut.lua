@@ -18,6 +18,8 @@ local GOO_AVOID_DIST     = 13
 local SPREAD_MIN_DIST    = 13
 local tickTimer          = 200
 local HC_RECALC_INTERVAL = 3
+local SUPPRESS_MS        = 900000
+local SILENCE_S          = 0.1
 
 -- ============================================================
 -- Helpers
@@ -54,12 +56,10 @@ local function GetBloatStacks(player)
     return 0
 end
 
-local function TryRootAtPos(player, gooPos, duration)
-    if not NearGoo(player:GetX(), player:GetY(), gooPos) then
-        AddRootAura(player, duration)
-    else
-        player:RemoveAura(35340)
-    end
+local function MoveBot(player, x, y, z)
+    if player:IsMoving() then return end
+    DisableSpellCast(player, SILENCE_S)
+    player:MoveTo(1, x, y, z, true)
 end
 
 -- ============================================================
@@ -84,6 +84,13 @@ local function FestergutLoop(eventId, delay, repeats, festergut)
     if #bots == 0 then
         StopLuaEvent(festergut)
         return
+    end
+
+    for _, bot in ipairs(bots) do
+        local shadow = bot:ToShadow()
+        if not shadow:IsMovementSuppressed() then
+            shadow:SuppressMovement(SUPPRESS_MS)
+        end
     end
 
     -- for _, bot in ipairs(bots) do DisableManualSpells(bot) end
@@ -207,10 +214,7 @@ function FestergutHandleTanks(festergut, botTanks, gooPos)
         ApplyDamageReductionStacks(tank, (20 + tank:GetDifficulty()*15), 30000)
         if safeTankPos then
             if not IsAtPos(tank, safeTankPos[1], safeTankPos[2], 5) then
-                local tx, ty, tz = tank:GetLocation()
-                MoveImmediately(tank, safeTankPos[1], safeTankPos[2], safeTankPos[3])
-            else
-                TryRootAtPos(tank, gooPos, 2000)
+                MoveBot(tank, safeTankPos[1], safeTankPos[2], safeTankPos[3])
             end
         else
             UseDefensive(tank)
@@ -317,9 +321,7 @@ function FestergutHandleSpore(festergut, bots, sporePlayers, cachedSporeCount, g
                 if sp:GetName() == assignedName and sp:IsBot() then
                     local tp = sporePositions[i]
                     if not IsAtPos(sp, tp[1], tp[2], 3) then
-                        MoveImmediately(sp, tp[1], tp[2], tp[3])
-                    else
-                        TryRootAtPos(sp, gooPos, 2000)
+                        MoveBot(sp, tp[1], tp[2], tp[3])
                     end
                     break
                 end
@@ -338,12 +340,16 @@ function FestergutHandleSpore(festergut, bots, sporePlayers, cachedSporeCount, g
             end
 
             if closestPos then
-                local offsetX = math.random(-2, 2)
-                local offsetY = math.random(-2, 2)
+                local offsetX = bot:Data():Get("FestergutSporeOffsetX")
+                local offsetY = bot:Data():Get("FestergutSporeOffsetY")
+                if not offsetX or not offsetY then
+                    offsetX = math.random(-2, 2)
+                    offsetY = math.random(-2, 2)
+                    bot:Data():Set("FestergutSporeOffsetX", offsetX)
+                    bot:Data():Set("FestergutSporeOffsetY", offsetY)
+                end
                 if not IsAtPos(bot, closestPos[1] + offsetX, closestPos[2] + offsetY, 3) then
-                    MoveImmediately(bot, closestPos[1] + offsetX, closestPos[2] + offsetY, closestPos[3])
-                else
-                    TryRootAtPos(bot, gooPos, 2000)
+                    MoveBot(bot, closestPos[1] + offsetX, closestPos[2] + offsetY, closestPos[3])
                 end
             end
         end
@@ -376,12 +382,16 @@ function FestergutHandleMelee(festergut, botMelee, gooPos)
             target = tankPos
         end
 
-        local offsetX = math.random(-2, 2)
-        local offsetY = math.random(-2, 2)
-        if not IsAtPos(player, target[1], target[2], 3) then
-            player:MoveTo(1, target[1] + offsetX, target[2] + offsetY, target[3], true)
-        else
-            TryRootAtPos(player, gooPos, 2000)
+        local offsetX = player:Data():Get("FestergutMeleeOffsetX")
+        local offsetY = player:Data():Get("FestergutMeleeOffsetY")
+        if not offsetX or not offsetY then
+            offsetX = math.random(-2, 2)
+            offsetY = math.random(-2, 2)
+            player:Data():Set("FestergutMeleeOffsetX", offsetX)
+            player:Data():Set("FestergutMeleeOffsetY", offsetY)
+        end
+        if not IsAtPos(player, target[1] + offsetX, target[2] + offsetY, 3) then
+            MoveBot(player, target[1] + offsetX, target[2] + offsetY, target[3])
         end
     end
 end
@@ -540,9 +550,7 @@ function FestergutHandleHealersCasters(festergut, botHealers, botCasters, botTan
         local pos = player:Data():Get("FestergutSpreadPos")
         if pos then pos = pos:AsTable() end
         if pos and not IsAtPos(player, pos.x, pos.y, 2) then
-            MoveImmediately(player, pos.x, pos.y, pos.z)
-        elseif pos then
-            TryRootAtPos(player, gooPos, 2000)
+            MoveBot(player, pos.x, pos.y, pos.z)
         end
     end
 
@@ -550,9 +558,7 @@ function FestergutHandleHealersCasters(festergut, botHealers, botCasters, botTan
         local pos = player:Data():Get("FestergutSpreadPos")
         if pos then pos = pos:AsTable() end
         if pos and not IsAtPos(player, pos.x, pos.y, 2) then
-            MoveImmediately(player, pos.x, pos.y, pos.z)
-        elseif pos then
-            TryRootAtPos(player, gooPos, 2000)
+            MoveBot(player, pos.x, pos.y, pos.z)
         end
     end
 end
@@ -566,7 +572,10 @@ local function FestergutOnEnterCombat(event, festergut, target)
 
     for _, player in ipairs(festergut:GetPlayersInRange(100)) do
         local shadow = player:ToShadow()
-        if shadow then shadow:ToggleCombatStrategy("-icc") end
+        if shadow then
+            shadow:SuppressMovement(SUPPRESS_MS)
+            shadow:ToggleCombatStrategy("-icc")
+        end
         if player:GetDifficulty() > 1 then ApplyHiddenBuffsToShadows(player) end
     end
 
